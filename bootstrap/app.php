@@ -3,6 +3,7 @@
 use App\Http\Middleware\AuthenticateApiToken;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequestId;
+use App\Http\Middleware\RequirePermission;
 use App\Http\Middleware\RequireRole;
 use App\Http\Middleware\SecurityThrottle;
 use Illuminate\Foundation\Application;
@@ -18,7 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'role' => RequireRole::class,\n            'permission' => RequirePermission::class,
+            'role' => RequireRole::class,
+            'permission' => RequirePermission::class,
             'api.token' => AuthenticateApiToken::class,
             'security.throttle' => SecurityThrottle::class,
         ]);

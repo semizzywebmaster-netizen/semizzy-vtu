@@ -84,5 +84,5 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/addons/{addon}/activate', [AddonController::class, 'activate'])->middleware('permission:addons.manage')->name('admin.addons.activate');
         Route::post('/addons/{addon}/disable', [AddonController::class, 'disable'])->middleware('permission:addons.manage')->name('admin.addons.disable');
         Route::post('/addons/{addon}/archive', [AddonController::class, 'archive'])->middleware('permission:addons.manage')->name('admin.addons.archive');
-    });;
+    });
 });
