@@ -7,20 +7,62 @@ use App\Models\ProviderRequestLog;
 
 class ProviderRequestLogger
 {
-    public function record(ApiProvider $provider,string $operation,?string $serviceKey,ProviderResult $result,?int $durationMs,?string $idempotencyKey=null): void
+    private const SENSITIVE_KEYS = [
+        'token', 'api_key', 'secret', 'password', 'authorization',
+        'credential', 'private_key', 'signature', 'otp', 'webhook_key',
+    ];
+
+    public function record(ApiProvider $provider, string $operation, ?string $serviceKey, ProviderResult $result, ?int $durationMs, ?string $idempotencyKey = null): void
     {
         ProviderRequestLog::create([
-            'api_provider_id'=>$provider->id,'operation'=>$operation,'service_key'=>$serviceKey,
-            'status'=>$result->status,'provider_reference'=>$result->providerReference,
-            'idempotency_key'=>$idempotencyKey,'duration_ms'=>$durationMs,
-            'request_summary'=>'[REDACTED]','response_summary'=>$this->summary($result->data),
+            'api_provider_id' => $provider->id,
+            'operation' => $operation,
+            'service_key' => $serviceKey,
+            'status' => $result->status,
+            'provider_reference' => $result->providerReference,
+            'idempotency_key' => $idempotencyKey,
+            'duration_ms' => $durationMs,
+            'request_summary' => '[REDACTED]',
+            'response_summary' => $this->summary($result->data),
         ]);
     }
 
     private function summary(mixed $data): ?string
     {
-        if ($data===null) return null;
-        $encoded=json_encode($data,JSON_UNESCAPED_SLASHES);
-        return $encoded===false?'[UNSERIALIZABLE]':mb_substr($encoded,0,4000);
+        if ($data === null) {
+            return null;
+        }
+
+        $sanitized = $this->sanitize($data);
+        $encoded = json_encode($sanitized, JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+
+        return $encoded === false ? '[UNSERIALIZABLE]' : mb_substr($encoded, 0, 4000);
+    }
+
+    private function sanitize(mixed $value, ?string $key = null): mixed
+    {
+        if ($key !== null) {
+            $normalized = strtolower($key);
+            foreach (self::SENSITIVE_KEYS as $needle) {
+                if (str_contains($normalized, $needle)) {
+                    return '[REDACTED]';
+                }
+            }
+        }
+
+        if (is_array($value)) {
+            $safe = [];
+            foreach ($value as $childKey => $childValue) {
+                $safe[$childKey] = $this->sanitize($childValue, (string) $childKey);
+            }
+
+            return $safe;
+        }
+
+        if (is_object($value)) {
+            return $this->sanitize((array) $value);
+        }
+
+        return is_scalar($value) || $value === null ? $value : '[UNSERIALIZABLE]';
     }
 }
