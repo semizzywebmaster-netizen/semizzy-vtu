@@ -30,7 +30,7 @@ class RegisteredUserController extends Controller
             'role'=>'USER',
             'status'=>'active',
         ]);
-        Auth::login($user);
+        $user->sendEmailVerificationNotification();\n        Auth::login($user);
         $request->session()->regenerate();
         return redirect()->route('dashboard')->with('success','Account created successfully.');
     }
