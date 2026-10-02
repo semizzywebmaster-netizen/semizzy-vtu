@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\AuditEventController;
 use App\Http\Controllers\Admin\CatalogueController;
