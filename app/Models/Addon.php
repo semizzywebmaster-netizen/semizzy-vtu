@@ -11,7 +11,7 @@ class Addon extends Model
     use SoftDeletes;
 
     public const LIFECYCLE_STATES = [
-        'draft', 'validating', 'installing', 'installed', 'active',
+        'draft', 'validating', 'installing', 'installed', 'updating', 'active',
         'inactive', 'failed', 'archived',
     ];
 
@@ -45,10 +45,11 @@ class Addon extends Model
             'draft' => ['validating', 'archived'],
             'validating' => ['installing', 'failed', 'inactive'],
             'installing' => ['installed', 'failed', 'inactive'],
-            'installed' => ['active', 'inactive', 'archived'],
-            'active' => ['inactive', 'failed'],
-            'inactive' => ['validating', 'active', 'archived'],
-            'failed' => ['validating', 'inactive', 'archived'],
+            'installed' => ['active', 'inactive', 'archived', 'updating'],
+            'updating' => ['active', 'installed', 'inactive', 'failed'],
+            'active' => ['inactive', 'failed', 'updating'],
+            'inactive' => ['validating', 'active', 'archived', 'updating'],
+            'failed' => ['validating', 'inactive', 'archived', 'updating'],
             'archived' => [],
         ];
 
