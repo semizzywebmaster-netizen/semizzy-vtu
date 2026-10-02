@@ -38,7 +38,7 @@ const statusClass: Record<string, string> = {
 };
 
 export default function Addons({ addons }: Props) {
-  const [showRegister, setShowRegister] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);\n  const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   const submitRegister = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -56,6 +56,24 @@ export default function Addons({ addons }: Props) {
         setShowRegister(false);
         event.currentTarget.reset();
       },
+    });
+  };
+
+  const submitUpdate = (addon: Addon, event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const dependencies = String(form.get('dependencies') ?? '').split(',').map((v) => v.trim()).filter(Boolean);
+    const permissions = String(form.get('permissions') ?? '').split(',').map((v) => v.trim()).filter(Boolean);
+
+    router.post('/admin/addons/' + addon.id + '/update', {
+      identifier: addon.identifier,
+      name: String(form.get('name') ?? addon.name),
+      version: String(form.get('version') ?? ''),
+      compatibility: String(form.get('compatibility') ?? '') || null,
+      dependencies,
+      permissions,
+    }, {
+      onSuccess: () => setUpdatingId(null),
     });
   };
 
@@ -131,6 +149,11 @@ export default function Addons({ addons }: Props) {
                     {(addon.status === 'installed' || addon.status === 'inactive') && (
                       <button onClick={() => action('/admin/addons/' + addon.id + '/activate')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Activate</button>
                     )}
+                    {(addon.status === 'installed' || addon.status === 'active' || addon.status === 'inactive') && (
+                      <button onClick={() => setUpdatingId(updatingId === addon.id ? null : addon.id)} className="rounded-lg border border-indigo-300 px-3 py-2 text-xs font-bold text-indigo-700">
+                        {updatingId === addon.id ? 'Close update' : 'Update'}
+                      </button>
+                    )}
                     {addon.status === 'active' && (
                       <button onClick={() => action('/admin/addons/' + addon.id + '/disable')} className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-white">Disable</button>
                     )}
@@ -139,6 +162,23 @@ export default function Addons({ addons }: Props) {
                     )}
                   </div>
                 </div>
+
+                {updatingId === addon.id && (
+                  <form onSubmit={(event) => submitUpdate(addon, event)} className="mt-5 rounded-xl border border-indigo-100 bg-indigo-50 p-4">
+                    <p className="text-sm font-bold text-slate-900">Update addon</p>
+                    <p className="mt-1 text-xs text-slate-600">The version must be newer than v{addon.version}. Core validates compatibility and dependencies before committing the update.</p>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <input name="name" defaultValue={addon.name} placeholder="Addon name" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" required />
+                      <input name="version" placeholder="New version, e.g. 1.1.0" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" required />
+                      <input name="compatibility" defaultValue="" placeholder="Core compatibility, e.g. >=2.0.0" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
+                      <input name="dependencies" defaultValue={addon.dependencies.map((d) => typeof d === 'string' ? d : d.identifier).filter(Boolean).join(',')} placeholder="Dependencies (comma separated)" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
+                      <input name="permissions" defaultValue={addon.permissions.join(',')} placeholder="Permissions (comma separated)" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm md:col-span-2" />
+                    </div>
+                    <div className="mt-3">
+                      <button type="submit" className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white">Validate & update</button>
+                    </div>
+                  </form>
+                )}
 
                 <div className="mt-5 grid gap-4 border-t border-slate-100 pt-4 md:grid-cols-2">
                   <div>
