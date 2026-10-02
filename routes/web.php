@@ -46,7 +46,7 @@ Route::post('/admin/login', [AuthenticatedSessionController::class, 'storeAdmin'
 
 Route::middleware(['auth'])->group(function (): void {
     Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->middleware('verified')->name('dashboard');
-    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');\n    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');\n    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->middleware('throttle:30,1')->name('notifications.read-all');\n    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->middleware('throttle:60,1')->name('notifications.read');
     Route::post('/profile/password', [UpdatePasswordController::class, 'store'])->middleware('throttle:5,1')->name('profile.password.update');
 
     Route::middleware('role:ADMIN,STAFF,SUPPORT')->prefix('admin')->group(function (): void {
