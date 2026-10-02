@@ -5,6 +5,7 @@ namespace App\Services\Catalogue;
 use App\Models\ApiProvider;
 use App\Models\Service;
 use App\Services\Providers\ProviderCapabilityRegistry;
+use App\Services\Providers\ProviderRequestLogger;
 use App\Services\Providers\RestJsonProviderAdapter;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
@@ -15,19 +16,36 @@ final class ProviderCatalogueSyncService
         private RestJsonProviderAdapter $adapter,
         private ProviderCapabilityRegistry $registry,
         private CatalogueImportService $importer,
+        private ProviderRequestLogger $logger,
     ) {}
 
     public function sync(ApiProvider $provider, Service $service): int
     {
-        $this->registry->validate($provider);
+        if (! $provider->enabled || $provider->paused) {
+            throw new InvalidArgumentException('Provider must be enabled and unpaused before catalogue sync.');
+        }
 
-        if (!in_array('catalogue_retrieval', $provider->capabilities ?? [], true)) {
+        if (! in_array($provider->verification_status, ['sandbox_verified', 'live_verified'], true)
+            || ! in_array($provider->integration_status, ['sandbox_verified', 'live_verified'], true)) {
+            throw new InvalidArgumentException('Provider must pass sandbox or live verification before catalogue sync.');
+        }
+
+        if (! $this->registry->supports($provider, 'catalogue_retrieval')) {
             throw new InvalidArgumentException('Provider does not support catalogue retrieval.');
         }
 
-        $result=$this->adapter->execute($provider, 'catalogue_retrieval', [
+        $this->registry->validate($provider);
+        $started = microtime(true);
+        $result = $this->adapter->execute($provider, 'catalogue_retrieval', [
             'service' => $service->key,
         ]);
+        $this->logger->record(
+            $provider,
+            'catalogue_retrieval',
+            $service->key,
+            $result,
+            (int) round((microtime(true) - $started) * 1000),
+        );
 
         if (!$result->accepted) {
             throw new InvalidArgumentException(
