@@ -78,7 +78,7 @@ class CatalogueController extends Controller
         $service=Service::findOrFail($data['service_id']);
         try {
             $count=$sync->sync($provider,$service);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             return back()->with('error','Catalogue sync failed safely: '.mb_substr($e->getMessage(),0,500));
         }
         return back()->with('success',"Catalogue sync completed. {$count} product record(s) processed.");
