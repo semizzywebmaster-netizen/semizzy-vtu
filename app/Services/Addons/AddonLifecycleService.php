@@ -19,42 +19,22 @@ class AddonLifecycleService
                 ->lockForUpdate()
                 ->first();
 
-            if ($existing?->trashed()) {
+            if ($existing) {
                 throw ValidationException::withMessages([
-                    'identifier' => 'An archived addon with this identifier already exists and must not be silently recreated.',
+                    'identifier' => 'This addon is already registered. Use the explicit update lifecycle for a new version.',
                 ]);
             }
 
-            if ($existing && in_array($existing->status, ['installing', 'validating'], true)) {
-                throw ValidationException::withMessages([
-                    'identifier' => 'The addon is already undergoing a lifecycle operation.',
-                ]);
-            }
-
-            $addon = $existing ?? new Addon();
-            $from = $addon->exists ? $addon->status : null;
-
-            $addon->fill([
-                'identifier' => $manifest['identifier'],
-                'name' => $manifest['name'],
-                'version' => $manifest['version'],
-                'status' => $existing ? $existing->status : 'draft',
-                'compatibility_constraint' => $manifest['compatibility'] ?? null,
-                'dependencies' => $manifest['dependencies'] ?? [],
-                'permissions' => $manifest['permissions'] ?? [],
-                'navigation' => $manifest['navigation'] ?? [],
-                'settings_schema' => $manifest['settings'] ?? [],
-                'manifest' => $manifest,
-                'package_checksum' => $manifest['checksum'] ?? null,
-                'last_error' => null,
-            ]);
+            $addon = new Addon();
+            $addon->fill($this->manifestAttributes($manifest));
+            $addon->status = 'draft';
             $addon->save();
 
             $addon->lifecycleEvents()->create([
                 'addon_identifier' => $addon->identifier,
                 'event' => 'registered',
-                'from_status' => $from,
-                'to_status' => $addon->status,
+                'from_status' => null,
+                'to_status' => 'draft',
                 'message' => 'Addon manifest registered.',
                 'context' => ['version' => $addon->version],
                 'actor_id' => $actorId,
@@ -80,11 +60,12 @@ class AddonLifecycleService
 
                 $this->transition($addon, 'validating', 'install_started', 'Addon validation started.', $actorId);
                 $this->assertManifest($addon);
-                $this->assertDependencies($addon);
+                $this->assertCoreCompatibility($addon->compatibility_constraint);
+                $this->assertDependencies($addon->dependencies);
                 $this->transition($addon, 'installing', 'installing', 'Addon installation started.', $actorId);
 
                 $this->recordStep($addon, 'register', 'Addon registration validated.');
-                $this->recordStep($addon, 'migrate', 'Addon migration contract validated; no addon code is executed by Core.');
+                $this->recordMigrationContract($addon);
                 $this->recordStep($addon, 'initialize', 'Addon initialization contract validated; no addon code is executed by Core.');
                 $this->recordStep($addon, 'health', 'Addon health contract validated.');
 
@@ -107,9 +88,79 @@ class AddonLifecycleService
                 return $addon->fresh();
             });
         } catch (Throwable $e) {
-            $this->persistInstallFailure($addonId, $actorId, $e);
+            $this->persistFailure($addonId, $actorId, $e, 'install_failed');
             throw $e;
         }
+    }
+
+    public function update(Addon $addon, array $manifest, ?int $actorId = null): Addon
+    {
+        $manifest = $this->validateManifest($manifest);
+
+        if ($manifest['identifier'] !== $addon->identifier) {
+            throw ValidationException::withMessages([
+                'identifier' => 'Update manifest identifier must match the installed addon.',
+            ]);
+        }
+
+        if (version_compare($manifest['version'], $addon->version, '<=')) {
+            throw ValidationException::withMessages([
+                'version' => "Update version {$manifest['version']} must be newer than {$addon->version}.",
+            ]);
+        }
+
+        $addonId = $addon->id;
+
+        try {
+            return DB::transaction(function () use ($addonId, $manifest, $actorId): Addon {
+                $addon = Addon::query()->lockForUpdate()->findOrFail($addonId);
+
+                if (!in_array($addon->status, ['installed', 'active', 'inactive'], true)) {
+                    throw ValidationException::withMessages([
+                        'addon' => 'Only installed, active, or inactive addons can be updated.',
+                    ]);
+                }
+
+                $wasActive = $addon->status === 'active';
+
+                $this->assertCoreCompatibility($manifest['compatibility'] ?? null);
+                $this->assertDependencies($manifest['dependencies'] ?? []);
+                $this->transition($addon, 'updating', 'update_started', 'Addon update started.', $actorId);
+                $this->recordStep($addon, 'register', 'Update manifest validated.');
+                $this->recordMigrationContract($addon, $manifest);
+                $this->recordStep($addon, 'initialize', 'Addon update initialization contract validated; no addon code is executed by Core.');
+                $this->recordStep($addon, 'health', 'Addon update health contract validated.');
+
+                $from = $addon->status;
+                $addon->fill($this->manifestAttributes($manifest));
+                $addon->status = $wasActive ? 'active' : 'installed';
+                $addon->last_error = null;
+                $addon->save();
+
+                $addon->lifecycleEvents()->create([
+                    'addon_identifier' => $addon->identifier,
+                    'event' => 'updated',
+                    'from_status' => $from,
+                    'to_status' => $addon->status,
+                    'message' => "Addon updated successfully to version {$addon->version}.",
+                    'context' => ['version' => $addon->version],
+                    'actor_id' => $actorId,
+                ]);
+
+                return $addon->fresh();
+            });
+        } catch (Throwable $e) {
+            $this->persistFailure($addonId, $actorId, $e, 'update_failed');
+            throw $e;
+        }
+    }
+
+    public function canUpdate(Addon $addon, array $manifest): bool
+    {
+        $manifest = $this->validateManifest($manifest);
+
+        return $manifest['identifier'] === $addon->identifier
+            && version_compare($manifest['version'], $addon->version, '>');
     }
 
     public function activate(Addon $addon, ?int $actorId = null): Addon
@@ -139,9 +190,26 @@ class AddonLifecycleService
         ]);
     }
 
-    private function persistInstallFailure(int $addonId, ?int $actorId, Throwable $exception): void
+    private function manifestAttributes(array $manifest): array
     {
-        DB::transaction(function () use ($addonId, $actorId, $exception): void {
+        return [
+            'identifier' => $manifest['identifier'],
+            'name' => $manifest['name'],
+            'version' => $manifest['version'],
+            'compatibility_constraint' => $manifest['compatibility'] ?? null,
+            'dependencies' => $manifest['dependencies'] ?? [],
+            'permissions' => $manifest['permissions'] ?? [],
+            'navigation' => $manifest['navigation'] ?? [],
+            'settings_schema' => $manifest['settings'] ?? [],
+            'manifest' => $manifest,
+            'package_checksum' => $manifest['checksum'] ?? null,
+            'last_error' => null,
+        ];
+    }
+
+    private function persistFailure(int $addonId, ?int $actorId, Throwable $exception, string $event): void
+    {
+        DB::transaction(function () use ($addonId, $actorId, $exception, $event): void {
             $addon = Addon::query()->lockForUpdate()->find($addonId);
 
             if (!$addon || $addon->status === 'archived') {
@@ -156,10 +224,10 @@ class AddonLifecycleService
 
             $addon->lifecycleEvents()->create([
                 'addon_identifier' => $addon->identifier,
-                'event' => 'install_failed',
+                'event' => $event,
                 'from_status' => $from,
                 'to_status' => 'failed',
-                'message' => 'Addon installation failed; transaction changes were rolled back and diagnostics were persisted.',
+                'message' => 'Addon lifecycle operation failed; transactional changes were rolled back and diagnostics were persisted.',
                 'context' => ['error' => $exception->getMessage()],
                 'actor_id' => $actorId,
             ]);
@@ -235,10 +303,33 @@ class AddonLifecycleService
         ]);
     }
 
-    private function assertDependencies(Addon $addon): void
+    private function recordMigrationContract(Addon $addon, ?array $manifest = null): void
     {
-        foreach ($addon->dependencies ?? [] as $dependency) {
+        $migrations = ($manifest ?? $addon->manifest)['migrations'] ?? [];
+
+        if (!is_array($migrations)) {
+            throw ValidationException::withMessages([
+                'migrations' => 'Addon migrations contract must be an array.',
+            ]);
+        }
+
+        foreach ($migrations as $migration) {
+            if (!is_string($migration) || trim($migration) === '') {
+                throw ValidationException::withMessages([
+                    'migrations' => 'Each addon migration contract entry must be a non-empty string.',
+                ]);
+            }
+
+            $this->recordStep($addon, 'migration_' . sha1($migration), "Migration contract registered: {$migration}");
+        }
+    }
+
+    private function assertDependencies(array $dependencies): void
+    {
+        foreach ($dependencies as $dependency) {
             $identifier = is_string($dependency) ? $dependency : ($dependency['identifier'] ?? null);
+            $constraint = is_string($dependency) ? null : ($dependency['constraint'] ?? null);
+
             if (!$identifier) {
                 throw ValidationException::withMessages([
                     'dependencies' => 'Every addon dependency must contain an identifier.',
@@ -248,14 +339,65 @@ class AddonLifecycleService
             $required = Addon::query()
                 ->where('identifier', $identifier)
                 ->where('status', 'active')
-                ->exists();
+                ->first();
 
             if (!$required) {
                 throw ValidationException::withMessages([
                     'dependencies' => "Required active addon dependency [{$identifier}] is not installed.",
                 ]);
             }
+
+            if ($constraint !== null && !$this->satisfiesConstraint($required->version, $constraint)) {
+                throw ValidationException::withMessages([
+                    'dependencies' => "Addon dependency [{$identifier}] version {$required->version} does not satisfy [{$constraint}].",
+                ]);
+            }
         }
+    }
+
+    private function assertCoreCompatibility(?string $constraint): void
+    {
+        if ($constraint !== null && trim($constraint) !== '' && !$this->satisfiesConstraint(
+            (string) config('app.core_version', '2.0.0'),
+            $constraint
+        )) {
+            throw ValidationException::withMessages([
+                'compatibility' => 'Addon is not compatible with the installed SEMIZZY ONE Core version.',
+            ]);
+        }
+    }
+
+    private function satisfiesConstraint(string $version, string $constraint): bool
+    {
+        $constraint = trim($constraint);
+
+        if ($constraint === '' || $constraint === '*' || strtolower($constraint) === 'x') {
+            return true;
+        }
+
+        if (preg_match('/^\^(\d+)\.(\d+)\.(\d+)$/', $constraint, $m)) {
+            $major = (int) $m[1];
+            $lower = "{$major}.{$m[2]}.{$m[3]}";
+            $upper = ($major + 1) . '.0.0';
+
+            return version_compare($version, $lower, '>=') && version_compare($version, $upper, '<');
+        }
+
+        if (preg_match('/^~(\d+)\.(\d+)\.(\d+)$/', $constraint, $m)) {
+            $lower = "{$m[1]}.{$m[2]}.{$m[3]}";
+            $upper = "{$m[1]}." . ((int) $m[2] + 1) . '.0';
+
+            return version_compare($version, $lower, '>=') && version_compare($version, $upper, '<');
+        }
+
+        if (preg_match('/^(>=|<=|>|<|=)?\s*(\d+)\.(\d+)\.(\d+)$/', $constraint, $m)) {
+            $operator = $m[1] ?: '=';
+            return version_compare($version, "{$m[2]}.{$m[3]}.{$m[4]}", $operator);
+        }
+
+        throw ValidationException::withMessages([
+            'compatibility' => "Unsupported version constraint [{$constraint}]. Use exact, comparison, ^x.y.z, or ~x.y.z syntax.",
+        ]);
     }
 
     private function assertManifest(Addon $addon): void
@@ -273,9 +415,7 @@ class AddonLifecycleService
 
     private function validateManifest(array $manifest): array
     {
-        $required = ['identifier', 'name', 'version'];
-
-        foreach ($required as $key) {
+        foreach (['identifier', 'name', 'version'] as $key) {
             if (!isset($manifest[$key]) || !is_string($manifest[$key]) || trim($manifest[$key]) === '') {
                 throw ValidationException::withMessages([
                     $key => "Addon manifest field [{$key}] is required.",
@@ -295,10 +435,28 @@ class AddonLifecycleService
             ]);
         }
 
-        foreach (['dependencies', 'permissions', 'navigation', 'settings'] as $key) {
+        foreach (['dependencies', 'permissions', 'navigation', 'settings', 'migrations'] as $key) {
             if (isset($manifest[$key]) && !is_array($manifest[$key])) {
                 throw ValidationException::withMessages([
                     $key => "Addon manifest field [{$key}] must be an array.",
+                ]);
+            }
+        }
+
+        foreach ($manifest['dependencies'] ?? [] as $dependency) {
+            if (is_string($dependency)) {
+                continue;
+            }
+
+            if (!is_array($dependency) || !isset($dependency['identifier']) || !is_string($dependency['identifier'])) {
+                throw ValidationException::withMessages([
+                    'dependencies' => 'Dependency entries must be strings or objects with an identifier.',
+                ]);
+            }
+
+            if (isset($dependency['constraint']) && !is_string($dependency['constraint'])) {
+                throw ValidationException::withMessages([
+                    'dependencies' => 'Dependency constraints must be strings.',
                 ]);
             }
         }
