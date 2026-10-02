@@ -66,7 +66,7 @@ class SystemHealthService
     private function appKeyCheck(): array
     {
         $key = (string) config('app.key', '');
-        $ok = $key !== '' && ! str_contains($key, 'base64:') ? true : $key !== '';
+        $ok = $key !== '';
 
         return $this->result(
             'app_key',
@@ -95,7 +95,7 @@ class SystemHealthService
                 'key' => 'database',
                 'label' => 'Database connection',
                 'status' => 'FAIL',
-                'message' => 'Database connection failed: '.mb_substr($exception->getMessage(), 0, 240),
+                'message' => 'Database connection failed. Check database configuration, credentials, network access, and permissions in the server environment.',
             ];
         }
     }
@@ -110,7 +110,7 @@ class SystemHealthService
             base_path('bootstrap/cache'),
         ];
 
-        $unwritable = array_values(array_filter($paths, fn (string $path): bool => ! is_dir($path) || ! is_writable($path)));
+        $pathLabels = [\n            storage_path() => 'storage',\n            storage_path('app') => 'storage/app',\n            storage_path('framework') => 'storage/framework',\n            storage_path('logs') => 'storage/logs',\n            base_path('bootstrap/cache') => 'bootstrap/cache',\n        ];\n        $unwritable = array_values(array_map(\n            fn (string $path): string => $pathLabels[$path] ?? 'required directory',\n            array_filter($paths, fn (string $path): bool => ! is_dir($path) || ! is_writable($path)),\n        ));
         $ok = $unwritable === [];
 
         return $this->result(
@@ -141,7 +141,7 @@ class SystemHealthService
                 'key' => 'cache',
                 'label' => 'Cache service',
                 'status' => 'FAIL',
-                'message' => 'Cache check failed: '.mb_substr($exception->getMessage(), 0, 240),
+                'message' => 'Cache check failed. Review the configured cache driver and storage permissions in the server environment.',
             ];
         }
     }
@@ -172,7 +172,7 @@ class SystemHealthService
                 'key' => 'queue',
                 'label' => 'Database queue',
                 'status' => 'FAIL',
-                'message' => 'Queue check failed: '.mb_substr($exception->getMessage(), 0, 240),
+                'message' => 'Queue check failed. Review the queue configuration and database permissions in the server environment.',
             ];
         }
     }
