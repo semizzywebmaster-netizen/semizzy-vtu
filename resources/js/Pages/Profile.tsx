@@ -1,4 +1,6 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+
+type SharedProps = { navigation?: { unreadNotifications?: number } };
 
 type Props = {
   user: {
@@ -11,6 +13,7 @@ type Props = {
 };
 
 export default function Profile({ user }: Props) {
+  const unreadCount = usePage<SharedProps>().props.navigation?.unreadNotifications ?? 0;
   const form = useForm({
     current_password: '',
     password: '',
@@ -63,7 +66,7 @@ export default function Profile({ user }: Props) {
             <a href="/dashboard" className="p-2">Home</a>
             <a href="/dashboard" className="p-2">Services</a>
             <a href="/dashboard" className="p-2">Transactions</a>
-            <a href="/notifications" className="p-2">Notifications</a>
+            <a href="/notifications" className="relative p-2">Notifications{unreadCount > 0 && <span className="ml-1 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}</a>
             <a href="/profile" className="p-2 text-slate-900">Profile</a>
           </div>
         </nav>
