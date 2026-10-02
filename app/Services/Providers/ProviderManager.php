@@ -38,7 +38,7 @@ class ProviderManager
             if(!$this->registry->supports($provider,$operation)) continue;
             try {
                 $this->registry->validate($provider);
-            } catch (\\Throwable $e) {
+            } catch (\Throwable $e) {
                 continue;
             }
             $started=microtime(true);
