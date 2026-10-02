@@ -57,6 +57,26 @@ class SupportTicketTest extends TestCase
         $this->assertSame('pending', $ticket->fresh()->status);
     }
 
+    public function test_staff_status_changes_are_audited(): void
+    {
+        $owner = $this->makeUser('ticket-status-owner@example.test');
+        $staff = $this->makeUser('ticket-status-staff@example.test', 'SUPPORT');
+        $ticket = SupportTicket::create([
+            'user_id' => $owner->id,
+            'reference' => 'SUP-STATUSCHANGE',
+            'subject' => 'Status audit test',
+            'category' => 'general',
+            'priority' => 'normal',
+            'status' => 'open',
+        ]);
+
+        $this->actingAs($staff)->patch('/support/'.$ticket->id.'/status', ['status' => 'resolved'])->assertRedirect();
+
+        $this->assertSame('resolved', $ticket->fresh()->status);
+        $event = \\App\\Models\\AuditEvent::query()->where('event', 'support.ticket.status_changed')->firstOrFail();
+        $this->assertSame(['from' => 'open', 'to' => 'resolved'], $event->context);
+    }
+
     public function test_guest_is_redirected_to_login(): void
     {
         $this->get('/support')->assertRedirect('/login');
