@@ -4,6 +4,9 @@ namespace App\\Http\\Controllers\\Admin;
 
 use App\\Http\\Controllers\\Controller;
 use App\\Models\\ProviderServiceProduct;
+use App\\Models\\ApiProvider;
+use App\\Models\\ProviderServiceMapping;
+use App\\Services\\Catalogue\\ProviderCatalogueSyncService;
 use App\\Models\\Service;
 use App\\Models\\ServiceCategory;
 use App\\Models\\ServiceProduct;
@@ -63,6 +66,32 @@ class CatalogueController extends Controller
             return back()->with('error','A product with this key already exists under this service.');
         ServiceProduct::create($data+['currency'=>strtoupper($data['currency']),'enabled'=>$data['enabled']??false]);
         return back()->with('success','Service product created.');
+    }
+
+    public function syncProvider(Request $request, ProviderCatalogueSyncService $sync): RedirectResponse
+    {
+        $data=$request->validate([
+            'api_provider_id'=>'required|integer|exists:api_providers,id',
+            'service_id'=>'required|integer|exists:services,id',
+        ]);
+        $provider=ApiProvider::findOrFail($data['api_provider_id']);
+        $service=Service::findOrFail($data['service_id']);
+        try {
+            $count=$sync->sync($provider,$service);
+        } catch (\\Throwable $e) {
+            return back()->with('error','Catalogue sync failed safely: '.mb_substr($e->getMessage(),0,500));
+        }
+        return back()->with('success',"Catalogue sync completed. {$count} product record(s) processed.");
+    }
+
+    public function toggleMapping(ProviderServiceMapping $mapping): RedirectResponse
+    {
+        $provider=$mapping->provider;
+        if (!$mapping->enabled && ($provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
+            return back()->with('error','A provider service mapping can only be enabled for a live-verified provider.');
+        }
+        $mapping->update(['enabled'=>!$mapping->enabled]);
+        return back()->with('success','Provider service mapping status updated.');
     }
 
     public function disableProduct(ServiceProduct $product): RedirectResponse
