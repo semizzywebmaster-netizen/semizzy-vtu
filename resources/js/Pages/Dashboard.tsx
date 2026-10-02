@@ -45,7 +45,7 @@ export default function Dashboard() {
               <div className="mt-4 flex flex-wrap gap-3">
                 <a className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" href="/admin/providers">Providers</a>
                 <a className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" href="/admin/catalogue">Catalogue</a>
-                {user?.role === 'ADMIN' && <><a className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" href="/admin/users">Users & staff</a><a className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" href="/admin/addons">Addons</a><a className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" href="/admin/security-events">Security events</a></>}
+                {user?.role === 'ADMIN' && <><a className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" href="/admin/users">Users & staff</a><a className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" href="/admin/addons">Addons</a><a className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" href="/admin/security-events">Security events</a><a className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" href="/admin/audit-events">Audit events</a></>}
                 <a className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" href="/admin/health">System health</a>
               </div>
             </section>

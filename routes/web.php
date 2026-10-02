@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AddonController;
+use App\Http\Controllers\Admin\AuditEventController;
 use App\Http\Controllers\Admin\CatalogueController;
 use App\Http\Controllers\Admin\ProviderController;
 use App\Http\Controllers\Admin\SystemHealthController;
@@ -61,6 +62,7 @@ Route::middleware(['auth'])->group(function (): void {
     Route::patch('/support/{ticket}/status', [SupportTicketController::class, 'updateStatus'])->whereNumber('ticket')->middleware('throttle:30,1')->name('support.status');
 
     Route::prefix('admin')->group(function (): void {
+        Route::get('/audit-events', [AuditEventController::class, 'index'])->middleware('permission:audit.view')->name('admin.audit-events.index');
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view')->name('admin.users.index');
         Route::patch('/users/{user}', [UserController::class, 'update'])->middleware('permission:users.manage')->name('admin.users.update');
         Route::get('/health', SystemHealthController::class)->middleware('permission:system.view')->name('admin.health');
