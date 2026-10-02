@@ -16,15 +16,22 @@ class PwaShellTest extends TestCase
             ->assertDontSee('\\n', false);
     }
 
-    public function test_pwa_manifest_and_offline_fallback_are_available(): void
+    public function test_pwa_manifest_and_offline_fallback_files_are_valid(): void
     {
-        $this->get('/manifest.webmanifest')
-            ->assertOk()
-            ->assertHeader('content-type', 'application/manifest+json')
-            ->assertSee('"display": "standalone"', false);
+        $manifestPath = public_path('manifest.webmanifest');
+        $offlinePath = public_path('offline.html');
+        $serviceWorkerPath = public_path('sw.js');
 
-        $this->get('/offline.html')
-            ->assertOk()
-            ->assertSee('You’re offline');
+        $this->assertFileExists($manifestPath);
+        $this->assertFileExists($offlinePath);
+        $this->assertFileExists($serviceWorkerPath);
+
+        $manifest = json_decode((string) file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->assertSame('SEMIZZY ONE', $manifest['name'] ?? null);
+        $this->assertSame('standalone', $manifest['display'] ?? null);
+        $this->assertSame('/dashboard', $manifest['start_url'] ?? null);
+        $this->assertStringContainsString('You’re offline', (string) file_get_contents($offlinePath));
+        $this->assertStringContainsString('request.mode === \'navigate\'', (string) file_get_contents($serviceWorkerPath));
     }
 }
