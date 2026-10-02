@@ -38,7 +38,7 @@ class ProviderController extends Controller
             'priority'=>'nullable|integer|min:0|max:100000',
         ]);
         $data['credentials']=$data['credentials']??[];
-        $data['enabled']=false; $data['paused']=false;
+        $data['enabled']=false; $data['paused']=true;
         $data['verification_status']='unverified'; $data['integration_status']='draft';
         ApiProvider::create($data);
         return back()->with('success','Provider saved as unverified and disabled.');
@@ -95,7 +95,8 @@ class ProviderController extends Controller
         if (!$provider->enabled && ($provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
             return back()->with('error','Provider must be live-verified before it can be enabled.');
         }
-        $provider->update(['enabled'=>!$provider->enabled]);
+        $enabled=!$provider->enabled;
+        $provider->update(['enabled'=>$enabled,'paused'=>!$enabled]);
         return back()->with('success','Provider status updated.');
     }
 }
