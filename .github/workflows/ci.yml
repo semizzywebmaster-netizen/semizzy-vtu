@@ -16,6 +16,7 @@ jobs:
           coverage: none
       - run: mkdir -p bootstrap/cache storage/app storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs
       - run: composer install --no-interaction --prefer-dist
+      - run: php -l public/index.php
       - run: cp .env.example .env
       - run: php artisan key:generate
       - run: php artisan test
