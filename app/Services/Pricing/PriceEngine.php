@@ -26,7 +26,7 @@ class PriceEngine
    if($rule->maximum_price!==null && $price->isGreaterThan(BigDecimal::of((string)$rule->maximum_price))) $price=BigDecimal::of((string)$rule->maximum_price);
    if($rule->rounding_increment>0){ $increment=BigDecimal::of((string)$rule->rounding_increment)->dividedBy(100,6,RoundingMode::HALF_UP); $price=$price->dividedBy($increment,0,RoundingMode::HALF_UP)->multipliedBy($increment); }
   }
-  return ['provider_cost'=>$cost->toScale(6,RoundingMode::HALF_UP),'customer_price'=>$price->toScale(2,RoundingMode::HALF_UP),'rule_id'=>$rule?->id,'currency'=>$product->currency];
+  return ['provider_cost'=>(string)$cost->toScale(6,RoundingMode::HALF_UP),'customer_price'=>(string)$price->toScale(2,RoundingMode::HALF_UP),'rule_id'=>$rule?->id,'currency'=>$product->currency];
  }
 
  private function rules(ServiceProduct $product,string $tier,?string $at):Illuminate\\Database\\Eloquent\\Collection
