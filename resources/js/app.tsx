@@ -6,7 +6,15 @@ type ViteImportMeta = ImportMeta & {
   glob: (pattern: string) => Record<string, () => Promise<unknown>>;
 };
 
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {\n  window.addEventListener('load', () => {\n    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {\n      // Offline support is optional; a failed registration must not block the app.\n    });\n  });\n}\n\ncreateInertiaApp({
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
+      // Offline support is optional; a failed registration must not block the app.
+    });
+  });
+}
+
+createInertiaApp({
   resolve: async (name) => {
     const pages = (import.meta as ViteImportMeta).glob('./Pages/**/*.tsx');
     const page = pages[`./Pages/${name}.tsx`];
