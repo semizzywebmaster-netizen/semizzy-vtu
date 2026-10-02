@@ -67,8 +67,8 @@ class CreateInitialAdmin extends Command
                     'password' => Hash::make($password),
                     'role' => 'ADMIN',
                     'status' => 'active',
-                    'email_verified_at' => now(),
                 ]);
+                $admin->forceFill(['email_verified_at' => now()])->save();
 
                 DB::table('system_settings')
                     ->where('key', 'core.initial_admin_created')
