@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\SupportTicket;
+use App\Models\User;
+use App\Notifications\CoreNotification;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -61,6 +63,19 @@ class SupportTicketController extends Controller
         });
 
         $audit->record('support.ticket.created', $ticket, ['category' => $ticket->category], $request);
+        $request->user()->notify(new CoreNotification(
+            'Support ticket created',
+            'Your support ticket '.$ticket->reference.' was created.',
+            '/support/'.$ticket->id,
+        ));
+        User::query()->where('status', 'active')->whereIn('role', ['ADMIN', 'STAFF', 'SUPPORT'])
+            ->whereKeyNot($request->user()->id)
+            ->get()
+            ->each(fn (User $recipient) => $recipient->notify(new CoreNotification(
+                'New support ticket',
+                'A new support ticket '.$ticket->reference.' needs attention.',
+                '/support/'.$ticket->id,
+            )));
 
         return redirect()->route('support.show', $ticket)->with('success', 'Support ticket created.');
     }
@@ -105,7 +120,24 @@ class SupportTicketController extends Controller
             ])->save();
         });
 
-        $audit->record('support.ticket.replied', $ticket, ['staff_reply' => $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT'])], $request);
+        $isStaffReply = $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']);
+        $audit->record('support.ticket.replied', $ticket, ['staff_reply' => $isStaffReply], $request);
+
+        if ($isStaffReply) {
+            $ticket->user()->first()?->notify(new CoreNotification(
+                'Support replied',
+                'Support replied to ticket '.$ticket->reference.'.',
+                '/support/'.$ticket->id,
+            ));
+        } else {
+            User::query()->where('status', 'active')->whereIn('role', ['ADMIN', 'STAFF', 'SUPPORT'])
+                ->get()
+                ->each(fn (User $recipient) => $recipient->notify(new CoreNotification(
+                    'Customer replied',
+                    'A customer replied to ticket '.$ticket->reference.'.',
+                    '/support/'.$ticket->id,
+                )));
+        }
 
         return back()->with('success', 'Reply added.');
     }
@@ -122,6 +154,11 @@ class SupportTicketController extends Controller
                 'from' => $previousStatus,
                 'to' => $data['status'],
             ], $request);
+            $ticket->user()->first()?->notify(new CoreNotification(
+                'Support ticket updated',
+                'Your support ticket '.$ticket->reference.' is now '.$data['status'].'.',
+                '/support/'.$ticket->id,
+            ));
         }
 
         return back()->with('success', 'Ticket status updated.');

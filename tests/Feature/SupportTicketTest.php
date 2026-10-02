@@ -27,6 +27,7 @@ class SupportTicketTest extends TestCase
         $this->assertSame($user->id, $ticket->user_id);
         $this->assertSame('open', $ticket->status);
         $this->assertSame('The service page is unavailable.', $ticket->messages()->firstOrFail()->message);
+        $this->assertSame(1, $user->notifications()->count());
     }
 
     public function test_user_can_only_see_their_own_tickets(): void
@@ -56,6 +57,7 @@ class SupportTicketTest extends TestCase
         $this->actingAs($staff)->post('/support/'.$ticket->id.'/reply', ['message' => 'We are checking this.'])->assertRedirect();
         $this->assertSame(2, $ticket->messages()->count());
         $this->assertSame('pending', $ticket->fresh()->status);
+        $this->assertSame(1, $owner->notifications()->count());
     }
 
     public function test_staff_status_changes_are_audited(): void
@@ -76,6 +78,7 @@ class SupportTicketTest extends TestCase
         $this->assertSame('resolved', $ticket->fresh()->status);
         $event = AuditEvent::query()->where('event', 'support.ticket.status_changed')->firstOrFail();
         $this->assertSame(['from' => 'open', 'to' => 'resolved'], $event->context);
+        $this->assertSame(1, $owner->notifications()->count());
     }
 
     public function test_guest_is_redirected_to_login(): void
