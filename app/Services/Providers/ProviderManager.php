@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Services\\Providers;
+namespace App\Services\Providers;
 
-use App\\Models\\ApiProvider;
-use Illuminate\\Support\\Collection;
+use App\Models\ApiProvider;
+use Illuminate\Support\Collection;
 use RuntimeException;
 
 class ProviderManager
