@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\UpdatePasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\SupportTicketController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -52,6 +53,11 @@ Route::middleware(['auth'])->group(function (): void {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->middleware('throttle:30,1')->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->middleware('throttle:60,1')->name('notifications.read');
     Route::post('/profile/password', [UpdatePasswordController::class, 'store'])->middleware('throttle:5,1')->name('profile.password.update');
+    Route::get('/support', [SupportTicketController::class, 'index'])->name('support.index');
+    Route::post('/support', [SupportTicketController::class, 'store'])->middleware('throttle:10,1')->name('support.store');
+    Route::get('/support/{ticket}', [SupportTicketController::class, 'show'])->whereNumber('ticket')->name('support.show');
+    Route::post('/support/{ticket}/reply', [SupportTicketController::class, 'reply'])->whereNumber('ticket')->middleware('throttle:20,1')->name('support.reply');
+    Route::patch('/support/{ticket}/status', [SupportTicketController::class, 'updateStatus'])->whereNumber('ticket')->middleware('throttle:30,1')->name('support.status');
 
     Route::middleware('role:ADMIN,STAFF,SUPPORT')->prefix('admin')->group(function (): void {
         Route::get('/health', SystemHealthController::class)->name('admin.health');
