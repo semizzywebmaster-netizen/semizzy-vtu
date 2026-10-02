@@ -1,6 +1,6 @@
 <?php
 
-namespace App\\Services\\Providers;
+namespace App\Services\Providers;
 
 use InvalidArgumentException;
 
