@@ -1,8 +1,8 @@
 <?php
 
-namespace App\\Services\\Providers;
+namespace App\Services\Providers;
 
-use App\\Models\\ApiProvider;
+use App\Models\ApiProvider;
 use InvalidArgumentException;
 
 class ProviderCapabilityRegistry
