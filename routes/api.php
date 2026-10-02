@@ -15,7 +15,7 @@ Route::middleware('auth:sanctum')->get('/v1/me', fn (Request $request) => respon
 ]))->name('api.v1.me');
 
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'security.throttle:api.tokens,10,60'])->group(function (): void {
     Route::post('/v1/tokens', [ApiTokenController::class, 'store'])->name('api.v1.tokens.store');
     Route::get('/v1/tokens', [ApiTokenController::class, 'index'])->name('api.v1.tokens.index');
     Route::delete('/v1/tokens/{token}', [ApiTokenController::class, 'destroy'])->whereNumber('token')->name('api.v1.tokens.destroy');
