@@ -30,7 +30,7 @@ class PriceEngine
   return ['provider_cost'=>(string)$cost->toScale(6,RoundingMode::HALF_UP),'customer_price'=>(string)$price->toScale(2,RoundingMode::HALF_UP),'rule_id'=>$rule?->id,'currency'=>$product->currency];
  }
 
- private function rules(ServiceProduct $product,string $tier,?string $at):\\Illuminate\\Database\\Eloquent\\Collection
+ private function rules(ServiceProduct $product,string $tier,?string $at):\Illuminate\Database\Eloquent\Collection
  {
   $time=$at?Carbon::parse($at):now();
   return PriceRule::query()->where('enabled',true)->where(function($q)use($product){$q->where(fn($x)=>$x->where('scope_type','PRODUCT')->where('scope_id',$product->id))->orWhere(fn($x)=>$x->where('scope_type','SERVICE')->where('scope_id',$product->service_id))->orWhere(fn($x)=>$x->where('scope_type','CATEGORY')->where('scope_id',$product->service->category_id))->orWhere('scope_type','GLOBAL');})
