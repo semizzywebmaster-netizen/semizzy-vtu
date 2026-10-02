@@ -65,19 +65,21 @@ class DashboardTest extends TestCase
                 ->where('metrics.1.label', 'Unread notifications')
                 ->where('metrics.1.value', 1)
                 ->has('quickLinks', 3)
-                ->missing('quickLinks.0.url', '/admin/users')
+                ->where('quickLinks.0.url', '/notifications')
             );
     }
 
     private function makeUser(string $email, string $role): User
     {
-        return User::create([
+        $user = User::create([
             'name' => 'Dashboard Test User',
             'email' => $email,
             'password' => 'Strong-Password-123!',
             'role' => $role,
             'status' => 'active',
-            'email_verified_at' => now(),
         ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        return $user;
     }
 }
