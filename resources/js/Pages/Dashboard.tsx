@@ -1,11 +1,13 @@
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import CoreMobileNav from '../Components/CoreMobileNav';
 
 type Metric = { label: string; value: number; description: string };
 type QuickLink = { label: string; url: string };
+type SharedProps = { navigation?: { unreadNotifications?: number } };
 type Props = { role: string; metrics: Metric[]; quickLinks: QuickLink[] };
 
 export default function Dashboard({ role, metrics, quickLinks }: Props) {
+  const unreadCount = usePage<SharedProps>().props.navigation?.unreadNotifications ?? 0;
   return (
     <>
       <Head title="Dashboard" />
@@ -41,7 +43,7 @@ export default function Dashboard({ role, metrics, quickLinks }: Props) {
 
           <p className="mt-8 text-xs text-slate-500">No demo balances, fabricated charts, or sample transactions are shown. Financial features remain unavailable until a separately reviewed addon is installed and enabled.</p>
 
-          <CoreMobileNav active="home" />
+          <CoreMobileNav active="home" unreadCount={unreadCount} />
         </div>
       </main>
     </>
