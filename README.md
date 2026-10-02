@@ -23,7 +23,7 @@ This repository was confirmed empty when the rebuild began. An empty repository 
 - Run automated checks with php artisan test and npm run typecheck when the relevant project files are present.
 - Never point automated tests at production. Do not place .env, provider credentials, production dumps, or private logs in Git.
 
-## cPanel deployment
+## PWA and offline behavior\n- The app provides an installable web manifest and an SVG app icon.\n- The service worker caches only the manifest, icon, and a static offline notice; it does not cache authenticated HTML, API responses, balances, provider data, or personal information.\n- Offline mode is an informational fallback, not an offline transaction mode. All live account and service actions require a network connection.\n\n## cPanel deployment
 Deploy the application outside public_html where possible and point the domain document root at the application's public/ directory. If the host cannot change document root, follow a carefully reviewed cPanel arrangement that keeps all application source, .env, vendor metadata, and storage outside public access. Require HTTPS and set APP_DEBUG=false.
 
 Use the real hosting paths in cron; example only:

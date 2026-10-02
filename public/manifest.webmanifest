@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "SEMIZZY ONE",
+  "short_name": "SEMIZZY",
+  "description": "SEMIZZY ONE modular platform core",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4338ca",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/semizzy-one.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
