@@ -1,20 +1,20 @@
 <?php
 
-namespace App\\Http\\Controllers\\Admin;
+namespace App\Http\Controllers\Admin;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\ProviderServiceProduct;
-use App\\Models\\ApiProvider;
-use App\\Models\\ProviderServiceMapping;
-use App\\Services\\Catalogue\\ProviderCatalogueSyncService;
-use App\\Models\\Service;
-use App\\Models\\ServiceCategory;
-use App\\Models\\ServiceProduct;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Inertia\\Inertia;
-use Inertia\\Response;
+use App\Http\Controllers\Controller;
+use App\Models\ProviderServiceProduct;
+use App\Models\ApiProvider;
+use App\Models\ProviderServiceMapping;
+use App\Services\Catalogue\ProviderCatalogueSyncService;
+use App\Models\Service;
+use App\Models\ServiceCategory;
+use App\Models\ServiceProduct;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class CatalogueController extends Controller
 {
