@@ -1,0 +1,40 @@
+<?php
+
+namespace App\\Services\\Pricing;
+
+use App\\Models\\PriceRule;
+use App\\Models\\ServiceProduct;
+use Brick\\Math\\BigDecimal;
+use Brick\\Math\\RoundingMode;
+use Illuminate\\Support\\Carbon;
+
+class PriceEngine
+{
+ public function quote(ServiceProduct $product,string $customerTier='USER',?string $at=null):array
+ {
+  $cost=BigDecimal::of((string)($product->provider_cost??'0'));
+  $rules=$this->rules($product,$customerTier,$at);
+  $rule=$rules->first();
+  $price=$cost;
+  if($rule){
+   $percentage=BigDecimal::of((string)$rule->percentage);
+   $fixed=BigDecimal::of((string)$rule->fixed_fee);
+   if($rule->rule_type==='fixed') $price=$cost->plus($fixed);
+   elseif($rule->rule_type==='percentage') $price=$cost->plus($cost->multipliedBy($percentage)->dividedBy(100,12,RoundingMode::HALF_UP));
+   else $price=$cost->plus($cost->multipliedBy($percentage)->dividedBy(100,12,RoundingMode::HALF_UP))->plus($fixed);
+   if($rule->minimum_price!==null && $price->isLessThan(BigDecimal::of((string)$rule->minimum_price))) $price=BigDecimal::of((string)$rule->minimum_price);
+   if($rule->maximum_price!==null && $price->isGreaterThan(BigDecimal::of((string)$rule->maximum_price))) $price=BigDecimal::of((string)$rule->maximum_price);
+  }
+  return ['provider_cost'=>$cost->toScale(6,RoundingMode::HALF_UP)->__toString(),'customer_price'=>$price->toScale(2,RoundingMode::HALF_UP)->__toString(),'rule_id'=>$rule?->id,'currency'=>$product->currency];
+ }
+
+ private function rules(ServiceProduct $product,string $tier,?string $at):Illuminate\\Database\\Eloquent\\Collection
+ {
+  $time=$at?Carbon::parse($at):now();
+  return PriceRule::query()->where('enabled',true)->where(function($q)use($product){$q->where(fn($x)=>$x->where('scope_type','PRODUCT')->where('scope_id',$product->id))->orWhere(fn($x)=>$x->where('scope_type','SERVICE')->where('scope_id',$product->service_id))->orWhere('scope_type','GLOBAL');})
+   ->where(function($q)use($tier){$q->whereNull('customer_tier')->orWhere('customer_tier',$tier);})
+   ->where(function($q)use($time){$q->whereNull('effective_from')->orWhere('effective_from','<=',$time);})
+   ->where(function($q)use($time){$q->whereNull('effective_to')->orWhere('effective_to','>=',$time);})
+   ->orderByRaw("CASE scope_type WHEN 'PRODUCT' THEN 1 WHEN 'SERVICE' THEN 2 WHEN 'CATEGORY' THEN 3 ELSE 4 END")->orderBy('priority')->get();
+ }
+}
