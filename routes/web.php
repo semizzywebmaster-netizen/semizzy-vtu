@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\CatalogueController;
 use App\Http\Controllers\Admin\ProviderController;
+use App\Http\Controllers\Admin\SystemHealthController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
@@ -38,6 +39,8 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->middleware('verified')->name('dashboard');
 
     Route::middleware('role:ADMIN,STAFF,SUPPORT')->prefix('admin')->group(function (): void {
+        Route::get('/health', SystemHealthController::class)->name('admin.health');
+
         Route::get('/providers', [ProviderController::class, 'index'])->name('admin.providers.index');
         Route::post('/providers', [ProviderController::class, 'store'])->name('admin.providers.store');
         Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->name('admin.providers.update');
