@@ -27,7 +27,7 @@ class ProviderCatalogueSyncTest extends TestCase
         $service = Service::create(['category_id' => $category->id, 'key' => 'test-service', 'name' => 'Test service']);
 
         $result = new ProviderResult(true, 'ACCEPTED', data: [
-            'products' => [['key' => 'bundle-1', 'name' => 'Bundle 1', 'cost' => '10.00']],
+            'products' => [['key' => 'bundle-1', 'name' => 'Bundle 1', 'provider_product_id' => 'provider-bundle-1', 'provider_cost' => '10.00', 'currency' => 'NGN']],
         ]);
         $adapter = Mockery::mock(RestJsonProviderAdapter::class);
         $adapter->shouldReceive('execute')->once()->with($provider, 'catalogue_retrieval', ['service' => 'test-service'])->andReturn($result);
@@ -36,8 +36,7 @@ class ProviderCatalogueSyncTest extends TestCase
         $registry->shouldReceive('validate')->once()->with($provider);
         $logger = Mockery::mock(ProviderRequestLogger::class);
         $logger->shouldReceive('record')->once()->with($provider, 'catalogue_retrieval', 'test-service', $result, Mockery::type('int'), null);
-        $importer = Mockery::mock(CatalogueImportService::class);
-        $importer->shouldReceive('import')->once()->with($provider, $service, $result->data['products'])->andReturn(1);
+        $importer = new CatalogueImportService();
 
         $sync = new ProviderCatalogueSyncService($adapter, $registry, $importer, $logger);
 
@@ -56,7 +55,7 @@ class ProviderCatalogueSyncTest extends TestCase
         $registry->shouldNotReceive('validate');
         $registry->shouldNotReceive('supports');
         $logger = Mockery::mock(ProviderRequestLogger::class);
-        $importer = Mockery::mock(CatalogueImportService::class);
+        $importer = new CatalogueImportService();
         $sync = new ProviderCatalogueSyncService($adapter, $registry, $importer, $logger);
 
         $this->expectException(InvalidArgumentException::class);
