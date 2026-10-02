@@ -1,4 +1,5 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
+import CoreMobileNav from '../Components/CoreMobileNav';
 
 type SharedProps = { navigation?: { unreadNotifications?: number } };
 
@@ -61,15 +62,7 @@ export default function Profile({ user }: Props) {
           </button>
         </form>
 
-        <nav className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 p-2 backdrop-blur md:static md:mt-6 md:border-0 md:bg-transparent md:p-0">
-          <div className="mx-auto flex max-w-3xl justify-around text-xs font-semibold text-slate-600 md:justify-start md:gap-5">
-            <a href="/dashboard" className="p-2">Home</a>
-            <a href="/dashboard" className="p-2">Services</a>
-            <a href="/dashboard" className="p-2">Transactions</a>
-            <a href="/notifications" className="relative p-2">Notifications{unreadCount > 0 && <span className="ml-1 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}</a>
-            <a href="/profile" className="p-2 text-slate-900">Profile</a>
-          </div>
-        </nav>
+        <CoreMobileNav active="profile" unreadCount={unreadCount} />
       </div>
     </main>
   );

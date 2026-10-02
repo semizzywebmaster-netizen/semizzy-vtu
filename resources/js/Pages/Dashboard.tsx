@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import CoreMobileNav from '../Components/CoreMobileNav';
 
 type Metric = { label: string; value: number; description: string };
 type QuickLink = { label: string; url: string };
@@ -40,15 +41,7 @@ export default function Dashboard({ role, metrics, quickLinks }: Props) {
 
           <p className="mt-8 text-xs text-slate-500">No demo balances, fabricated charts, or sample transactions are shown. Financial features remain unavailable until a separately reviewed addon is installed and enabled.</p>
 
-          <nav className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 p-2 backdrop-blur md:static md:mt-8 md:border-0 md:bg-transparent">
-            <div className="mx-auto flex max-w-6xl justify-around text-xs font-semibold text-slate-600 md:justify-start md:gap-5">
-              <a href="/dashboard" aria-current="page" className="p-2 text-indigo-700">Home</a>
-              <a href="/dashboard" className="p-2">Services</a>
-              <a href="/dashboard" className="p-2">Transactions</a>
-              <a href="/notifications" className="p-2">Notifications</a>
-              <a href="/profile" className="p-2">Profile</a>
-            </div>
-          </nav>
+          <CoreMobileNav active="home" />
         </div>
       </main>
     </>
