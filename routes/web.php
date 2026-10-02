@@ -3,7 +3,7 @@
 use App\\Http\\Controllers\\Admin\\AddonController;
 use App\\Http\\Controllers\\Admin\\ProviderController;
 use App\\Http\\Controllers\\Auth\\AuthenticatedSessionController;
-use App\\Http\\Controllers\\Auth\\RegisteredUserController;\nuse App\\Http\\Controllers\\Auth\\VerifyEmailController;
+use App\\Http\\Controllers\\Auth\\RegisteredUserController;use App\\Http\\Controllers\\Auth\\VerifyEmailController;
 use Illuminate\\Support\\Facades\\Route;
 use Inertia\\Inertia;
 
