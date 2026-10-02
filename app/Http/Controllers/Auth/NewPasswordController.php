@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Security\SecurityEventLogger;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,10 @@ use Inertia\Response;
 
 class NewPasswordController extends Controller
 {
+    public function __construct(private readonly SecurityEventLogger $securityEvents)
+    {
+    }
+
     public function create(Request $request): Response
     {
         return Inertia::render('Auth/ResetPassword', [
@@ -46,8 +51,13 @@ class NewPasswordController extends Controller
         );
 
         if ($status !== Password::PASSWORD_RESET) {
+            $this->securityEvents->record('auth.password_reset.failed', 'warning', [
+                'result' => $status,
+            ], $request);
             throw ValidationException::withMessages(['email' => __($status)]);
         }
+
+        $this->securityEvents->record('auth.password_reset.completed', 'info', [], $request);
 
         return redirect()->route('login')->with('success', 'Your password has been reset. You can now sign in.');
     }
