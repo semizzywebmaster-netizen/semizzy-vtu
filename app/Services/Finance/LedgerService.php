@@ -36,6 +36,6 @@ class LedgerService
         if(function_exists('bcadd')) return bcadd($a,$b,0);
         $a=ltrim($a,'0')?:'0'; $b=ltrim($b,'0')?:'0'; $carry=0; $out='';
         for($i=0,$j=0;$i<strlen($a)||$j<strlen($b);$i++,$j++){ $sum=($i<strlen($a)?ord($a[strlen($a)-1-$i])-48:0)+($j<strlen($b)?ord($b[strlen($b)-1-$j])-48:0)+$carry; $out=($sum%10).$out; $carry=intdiv($sum,10); }
-        return $carry.$out === '0'.$out ? $out : $carry.$out;
+        return $carry === 0 ? $out : $carry.$out;
     }
 }
