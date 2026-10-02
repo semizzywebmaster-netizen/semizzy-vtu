@@ -1,15 +1,15 @@
 <?php
 
-namespace App\\Http\\Controllers\\Admin;
+namespace App\Http\Controllers\Admin;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\ApiProvider;
-use App\\Services\\Providers\\ProviderTestService;
-use App\\Services\\Providers\\ProviderUrlGuard;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Inertia\\Inertia;
-use Inertia\\Response;
+use App\Http\Controllers\Controller;
+use App\Models\ApiProvider;
+use App\Services\Providers\ProviderTestService;
+use App\Services\Providers\ProviderUrlGuard;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class ProviderController extends Controller
 {
