@@ -5,6 +5,7 @@ namespace App\\Http\\Controllers\\Admin;
 use App\\Http\\Controllers\\Controller;
 use App\\Models\\ApiProvider;
 use App\\Services\\Providers\\ProviderTestService;
+use App\\Services\\Providers\\ProviderUrlGuard;
 use Illuminate\\Http\\RedirectResponse;
 use Illuminate\\Http\\Request;
 use Inertia\\Inertia;
@@ -33,10 +34,12 @@ class ProviderController extends Controller
             'documentation_url'=>'nullable|url:http,https|max:500',
             'official_website'=>'nullable|url:http,https|max:500',
             'environment'=>'required|in:sandbox,production',
-            'auth_type'=>'required|string|max:60',
+            'auth_type'=>'required|in:custom,bearer,basic,api_key_header',
+            'capabilities'=>'nullable|array','endpoints'=>'nullable|array','service_categories'=>'nullable|array',
             'credentials'=>'nullable|array',
             'priority'=>'nullable|integer|min:0|max:100000',
         ]);
+        app(ProviderUrlGuard::class)->validate($data['base_url'] ?? null);
         $data['credentials']=$data['credentials']??[];
         $data['enabled']=false; $data['paused']=true;
         $data['verification_status']='unverified'; $data['integration_status']='draft';
@@ -52,10 +55,12 @@ class ProviderController extends Controller
             'documentation_url'=>'nullable|url:http,https|max:500',
             'official_website'=>'nullable|url:http,https|max:500',
             'environment'=>'sometimes|required|in:sandbox,production',
-            'auth_type'=>'sometimes|required|string|max:60',
+            'auth_type'=>'sometimes|required|in:custom,bearer,basic,api_key_header',
+            'capabilities'=>'nullable|array','endpoints'=>'nullable|array','service_categories'=>'nullable|array',
             'credentials'=>'nullable|array',
             'priority'=>'nullable|integer|min:0|max:100000',
         ]);
+        app(ProviderUrlGuard::class)->validate($data['base_url'] ?? $provider->base_url);
         $provider->fill($data)->save();
         return back()->with('success','Provider updated.');
     }
