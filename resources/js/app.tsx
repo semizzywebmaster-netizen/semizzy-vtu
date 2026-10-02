@@ -3,10 +3,11 @@ import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 
 type ViteImportMeta = ImportMeta & {
+  env: { PROD: boolean };
   glob: (pattern: string) => Record<string, () => Promise<unknown>>;
 };
 
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+if ((import.meta as ViteImportMeta).env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
       // Offline support is optional; a failed registration must not block the app.
