@@ -1,12 +1,12 @@
 <?php
 
-namespace App\\Services\\Catalogue;
+namespace App\Services\Catalogue;
 
-use App\\Models\\ApiProvider;
-use App\\Models\\Service;
-use App\\Services\\Providers\\ProviderCapabilityRegistry;
-use App\\Services\\Providers\\RestJsonProviderAdapter;
-use Illuminate\\Support\\Arr;
+use App\Models\ApiProvider;
+use App\Models\Service;
+use App\Services\Providers\ProviderCapabilityRegistry;
+use App\Services\Providers\RestJsonProviderAdapter;
+use Illuminate\Support\Arr;
 use InvalidArgumentException;
 
 final class ProviderCatalogueSyncService
