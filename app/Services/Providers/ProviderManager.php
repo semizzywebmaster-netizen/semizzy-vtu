@@ -15,7 +15,7 @@ class ProviderManager
         $query=ApiProvider::query()
             ->where('enabled',true)
             ->where('paused',false)
-            ->whereHas('serviceMappings', fn($q)=>$q->where('service_key',$serviceKey)->where('enabled',true))
+            ->whereHas('serviceMappings', fn($q)=>$q->where(function($m) use ($serviceKey) { $m->where('service_key',$serviceKey)->orWhereHas('service', fn($s)=>$s->where('key',$serviceKey)); })->where('enabled',true))
             ->orderBy('priority');
 
         if ($operation === 'transaction_initiation') {
