@@ -69,7 +69,7 @@ class ProviderController extends Controller
     {
         try {
             $result=$tester->test($provider);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             $provider->forceFill([
                 'last_tested_at'=>now(),
                 'last_test_status'=>'FAILED',
