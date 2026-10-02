@@ -46,6 +46,9 @@ class NewPasswordController extends Controller
                     'remember_token' => Str::random(60),
                 ])->save();
 
+                // Reset links must also revoke any API tokens issued before the reset.
+                $user->tokens()->delete();
+
                 event(new PasswordReset($user));
             }
         );
@@ -57,7 +60,9 @@ class NewPasswordController extends Controller
             throw ValidationException::withMessages(['email' => __($status)]);
         }
 
-        $this->securityEvents->record('auth.password_reset.completed', 'info', [], $request);
+        $this->securityEvents->record('auth.password_reset.completed', 'info', [
+            'api_tokens_revoked' => true,
+        ], $request);
 
         return redirect()->route('login')->with('success', 'Your password has been reset. You can now sign in.');
     }

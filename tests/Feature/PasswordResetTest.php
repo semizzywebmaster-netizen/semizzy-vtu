@@ -58,6 +58,7 @@ class PasswordResetTest extends TestCase
             'status' => 'active',
         ]);
 
+        $user->createToken('before-password-reset');
         $this->post('/forgot-password', ['email' => $user->email])->assertSessionHasNoErrors();
 
         $notification = Notification::sent($user, ResetPassword::class)->first();
@@ -71,6 +72,7 @@ class PasswordResetTest extends TestCase
         ])->assertRedirect('/login');
 
         $this->assertTrue(Hash::check('New-Strong-Password-456!', $user->fresh()->password));
+        $this->assertSame(0, $user->fresh()->tokens()->count());
     }
 
     public function test_invalid_reset_token_is_rejected(): void

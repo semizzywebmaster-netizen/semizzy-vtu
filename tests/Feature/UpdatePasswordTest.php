@@ -21,6 +21,8 @@ class UpdatePasswordTest extends TestCase
             'status' => 'active',
         ]);
 
+        $user->createToken('before-password-change');
+
         $this->actingAs($user)
             ->post('/profile/password', [
                 'current_password' => 'Old-Strong-Password-123!',
@@ -34,6 +36,7 @@ class UpdatePasswordTest extends TestCase
 
         $this->assertTrue(Hash::check('New-Strong-Password-456!', $fresh->password));
         $this->assertNotSame('', (string) $fresh->remember_token);
+        $this->assertSame(0, $fresh->tokens()->count());
         $this->assertDatabaseHas('security_events', [
             'user_id' => $user->id,
             'event' => 'password.changed',

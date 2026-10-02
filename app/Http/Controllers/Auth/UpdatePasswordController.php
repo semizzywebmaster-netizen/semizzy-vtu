@@ -33,8 +33,12 @@ class UpdatePasswordController extends Controller
             'remember_token' => bin2hex(random_bytes(30)),
         ])->save();
 
+        // Password rotation revokes all previously issued API credentials.
+        $user->tokens()->delete();
+
         $this->securityEvents->record('password.changed', 'info', [
             'user_id' => $user->id,
+            'api_tokens_revoked' => true,
         ], $request);
 
         return back()->with('success', 'Your password has been changed.');
