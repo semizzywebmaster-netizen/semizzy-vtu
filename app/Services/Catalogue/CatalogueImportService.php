@@ -25,8 +25,11 @@ final class CatalogueImportService
             throw new InvalidArgumentException('Provider and service must exist before catalogue import.');
         }
 
-        if (!$provider->enabled || $provider->paused || $provider->integration_status === 'draft') {
-            throw new InvalidArgumentException('Catalogue import is not allowed for a disabled, paused, or draft provider.');
+        if ($provider->integration_status === 'draft' || $provider->verification_status === 'unverified' || $provider->verification_status === 'test_failed') {
+            throw new InvalidArgumentException('Catalogue import requires a verified provider integration.');
+        }
+        if (!in_array('catalogue_retrieval', $provider->capabilities ?? [], true)) {
+            throw new InvalidArgumentException('Provider does not declare catalogue retrieval capability.');
         }
 
         return DB::transaction(function () use ($provider, $service, $products): int {
