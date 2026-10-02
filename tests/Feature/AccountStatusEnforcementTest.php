@@ -32,6 +32,21 @@ class AccountStatusEnforcementTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_inactive_user_cannot_use_api_token_endpoints(): void
+    {
+        $user = $this->makeUser('api-suspended@example.test', 'suspended');
+
+        $this->actingAs($user)->getJson('/api/v1/tokens')
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Your account is not active. Contact support if you need assistance.');
+
+        $this->assertDatabaseHas('security_events', [
+            'user_id' => $user->id,
+            'event' => 'auth.inactive_account.api_denied',
+            'severity' => 'warning',
+        ]);
+    }
+
     public function test_active_user_can_access_profile(): void
     {
         $user = $this->makeUser('active@example.test', 'active');

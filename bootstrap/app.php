@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AuthenticateApiToken;
 use App\Http\Middleware\EnsureActiveAccount;
+use App\Http\Middleware\EnsureActiveApiAccount;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequestId;
 use App\Http\Middleware\RequirePermission;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->append(RequestId::class);
         $middleware->web(append: [EnsureActiveAccount::class, HandleInertiaRequests::class]);
+        $middleware->api(append: [EnsureActiveApiAccount::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
