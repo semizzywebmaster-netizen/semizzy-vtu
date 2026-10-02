@@ -73,7 +73,7 @@ class SupportTicketTest extends TestCase
         $this->actingAs($staff)->patch('/support/'.$ticket->id.'/status', ['status' => 'resolved'])->assertRedirect();
 
         $this->assertSame('resolved', $ticket->fresh()->status);
-        $event = \\App\\Models\\AuditEvent::query()->where('event', 'support.ticket.status_changed')->firstOrFail();
+        $event = AuditEvent::query()->where('event', 'support.ticket.status_changed')->firstOrFail();
         $this->assertSame(['from' => 'open', 'to' => 'resolved'], $event->context);
     }
 
