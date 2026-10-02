@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Security\SecurityEventLogger;
 use App\Services\Security\WebhookSignatureService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -47,6 +48,23 @@ class SecurityFoundationTest extends TestCase
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }
 
+    public function test_api_token_cannot_use_an_unassigned_ability(): void
+    {
+        $user = User::create([
+            'name' => 'Ability Test User',
+            'email' => 'ability-test@example.test',
+            'password' => 'Strong-Test-Password-123!',
+            'role' => 'USER',
+            'status' => 'active',
+        ]);
+
+        $token = $user->createToken('Limited client', ['profile.read']);
+
+        $this->withHeader('Authorization', 'Bearer '.$token->plainTextToken)
+            ->getJson('/api/v1/core-check')
+            ->assertForbidden();
+    }
+
     public function test_expired_api_token_is_rejected(): void
     {
         $user = User::create([
@@ -82,6 +100,39 @@ class SecurityFoundationTest extends TestCase
             'expires_at' => $tooFar,
         ])->assertUnprocessable()
             ->assertJsonValidationErrors('expires_at');
+    }
+
+    public function test_security_event_context_is_sanitized_recursively(): void
+    {
+        $user = User::create([
+            'name' => 'Event Test User',
+            'email' => 'event-test@example.test',
+            'password' => 'Strong-Test-Password-123!',
+            'role' => 'USER',
+            'status' => 'active',
+        ]);
+
+        app(SecurityEventLogger::class)->record('security.sanitization_test', 'warning', [
+            'safe' => 'kept',
+            'secret' => 'top-level-secret',
+            'nested' => [
+                'password' => 'nested-password',
+                'safe' => 'nested-kept',
+                'deep' => [
+                    'api_key' => 'nested-key',
+                    'value' => 'kept',
+                ],
+            ],
+        ], request());
+
+        $event = $user->securityEvents()->latest('id')->firstOrFail();
+
+        $this->assertSame('kept', $event->context['safe']);
+        $this->assertArrayNotHasKey('secret', $event->context);
+        $this->assertArrayNotHasKey('password', $event->context['nested']);
+        $this->assertSame('nested-kept', $event->context['nested']['safe']);
+        $this->assertArrayNotHasKey('api_key', $event->context['nested']['deep']);
+        $this->assertSame('kept', $event->context['nested']['deep']['value']);
     }
 
     public function test_webhook_signature_rejects_tampering_and_stale_signatures(): void
