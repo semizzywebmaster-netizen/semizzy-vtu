@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\UpdatePasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -45,6 +46,7 @@ Route::post('/admin/login', [AuthenticatedSessionController::class, 'storeAdmin'
 
 Route::middleware(['auth'])->group(function (): void {
     Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->middleware('verified')->name('dashboard');
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::post('/profile/password', [UpdatePasswordController::class, 'store'])->middleware('throttle:5,1')->name('profile.password.update');
 
     Route::middleware('role:ADMIN,STAFF,SUPPORT')->prefix('admin')->group(function (): void {
