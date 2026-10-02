@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ApiProvider;
 use App\Models\ProviderServiceMapping;
 use App\Models\ProviderServiceProduct;
+use App\Models\PriceRule;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\ServiceProduct;
@@ -36,17 +37,52 @@ class PriceEngineTest extends TestCase
             'enabled' => true,
         ]);
 
+        PriceRule::create([
+            'scope_type' => 'GLOBAL',
+            'scope_id' => null,
+            'customer_tier' => null,
+            'rule_type' => 'percentage',
+            'fixed_fee' => '0.000000',
+            'percentage' => '10.000000',
+            'enabled' => true,
+            'priority' => 100,
+        ]);
+
         $quote = app(PriceEngine::class)->quote($product);
 
         $this->assertSame($provider->id, $quote['provider_id']);
         $this->assertSame('123.450000', $quote['provider_cost']);
-        $this->assertSame('123.45', $quote['customer_price']);
+        $this->assertSame('135.80', $quote['customer_price']);
+        $this->assertNotNull($quote['rule_id']);
     }
 
     public function test_quote_fails_closed_when_no_live_verified_provider_cost_exists(): void
     {
         [, , $product] = $this->makeProduct();
         $product->forceFill(['provider_cost' => '50.00'])->save();
+
+        $this->expectException(InvalidArgumentException::class);
+        app(PriceEngine::class)->quote($product);
+    }
+
+    public function test_quote_fails_closed_without_a_selling_price_rule(): void
+    {
+        [, $service, $product] = $this->makeProduct();
+        $provider = $this->makeLiveProvider('price-no-rule-provider');
+        ProviderServiceMapping::create([
+            'api_provider_id' => $provider->id,
+            'service_id' => $service->id,
+            'service_key' => $service->key,
+            'enabled' => true,
+        ]);
+        ProviderServiceProduct::create([
+            'api_provider_id' => $provider->id,
+            'service_product_id' => $product->id,
+            'provider_product_id' => 'provider-no-rule',
+            'provider_cost' => '50.000000',
+            'currency' => 'NGN',
+            'enabled' => true,
+        ]);
 
         $this->expectException(InvalidArgumentException::class);
         app(PriceEngine::class)->quote($product);

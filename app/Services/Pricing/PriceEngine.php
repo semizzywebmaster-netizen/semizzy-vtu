@@ -23,6 +23,11 @@ class PriceEngine
         $resolvedProvider = $this->resolveProviderCost($product, $provider);
         $cost = BigDecimal::of($resolvedProvider['cost']);
         $rule = $this->rules($product, $customerTier, $at)->first();
+
+        if (! $rule) {
+            throw new InvalidArgumentException('No active selling-price rule is configured for this product and customer tier.');
+        }
+
         $price = $cost;
 
         if ($rule) {
