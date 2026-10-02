@@ -1,10 +1,10 @@
 <?php
 
-namespace App\\Services\\Finance;
+namespace App\Services\Finance;
 
-use App\\Models\\LedgerTransaction;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Str;
+use App\Models\LedgerTransaction;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class LedgerService
