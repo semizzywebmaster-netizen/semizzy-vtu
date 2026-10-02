@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Addon;
+use App\Services\Addons\AddonLifecycleService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -15,38 +15,62 @@ class AddonController extends Controller
     public function index(): Response
     {
         return Inertia::render('Admin/Addons', [
-            'addons'=>Addon::query()->latest()->get()->map(fn(Addon $a)=>[
-                'id'=>$a->id,'identifier'=>$a->identifier,'name'=>$a->name,'version'=>$a->version,
-                'status'=>$a->status,'last_error'=>$a->last_error,
+            'addons' => Addon::query()->latest()->get()->map(fn (Addon $addon) => [
+                'id' => $addon->id,
+                'identifier' => $addon->identifier,
+                'name' => $addon->name,
+                'version' => $addon->version,
+                'status' => $addon->status,
+                'last_error' => $addon->last_error,
+                'dependencies' => $addon->dependencies ?? [],
             ]),
         ]);
     }
 
-    public function activate(Addon $addon): RedirectResponse
+    public function register(Request $request, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        abort_unless($addon->canTransitionTo('active'), 409, 'Addon cannot transition to active from its current state.');
-        DB::transaction(function () use ($addon): void {
-            $from=$addon->status;
-            $addon->update(['status'=>'active','activated_at'=>now(),'last_error'=>null]);
-            $addon->lifecycleEvents()->create([
-                'addon_identifier'=>$addon->identifier,'event'=>'activated','from_status'=>$from,'to_status'=>'active',
-                'message'=>'Addon activated by administrator.','actor_id'=>auth()->id(),
-            ]);
-        });
-        return back()->with('success','Addon activated.');
+        $manifest = $request->validate([
+            'identifier' => ['required', 'string', 'max:100'],
+            'name' => ['required', 'string', 'max:150'],
+            'version' => ['required', 'string', 'max:50'],
+            'compatibility' => ['nullable', 'string', 'max:100'],
+            'dependencies' => ['nullable', 'array'],
+            'permissions' => ['nullable', 'array'],
+            'navigation' => ['nullable', 'array'],
+            'settings' => ['nullable', 'array'],
+            'checksum' => ['nullable', 'string', 'max:128'],
+        ]);
+
+        $lifecycle->register($manifest, $request->user()?->id);
+
+        return back()->with('success', 'Addon manifest registered.');
     }
 
-    public function disable(Addon $addon): RedirectResponse
+    public function install(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        abort_unless($addon->canTransitionTo('inactive'), 409, 'Addon cannot transition to inactive from its current state.');
-        DB::transaction(function () use ($addon): void {
-            $from=$addon->status;
-            $addon->update(['status'=>'inactive']);
-            $addon->lifecycleEvents()->create([
-                'addon_identifier'=>$addon->identifier,'event'=>'disabled','from_status'=>$from,'to_status'=>'inactive',
-                'message'=>'Addon disabled by administrator.','actor_id'=>auth()->id(),
-            ]);
-        });
-        return back()->with('success','Addon disabled.');
+        $lifecycle->install($addon, auth()->id());
+
+        return back()->with('success', 'Addon installed and left inactive until explicitly enabled.');
+    }
+
+    public function activate(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
+    {
+        $lifecycle->activate($addon, auth()->id());
+
+        return back()->with('success', 'Addon activated.');
+    }
+
+    public function disable(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
+    {
+        $lifecycle->disable($addon, auth()->id());
+
+        return back()->with('success', 'Addon disabled.');
+    }
+
+    public function archive(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
+    {
+        $lifecycle->archive($addon, auth()->id());
+
+        return back()->with('success', 'Addon archived.');
     }
 }
