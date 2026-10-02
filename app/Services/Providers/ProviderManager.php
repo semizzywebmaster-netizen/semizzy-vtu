@@ -12,9 +12,21 @@ class ProviderManager
 
     public function eligible(string $serviceKey,string $operation='transaction_initiation'): Collection
     {
-        return ApiProvider::query()->eligibleForNewTransactions()
+        $query=ApiProvider::query()
+            ->where('enabled',true)
+            ->where('paused',false)
             ->whereHas('serviceMappings', fn($q)=>$q->where('service_key',$serviceKey)->where('enabled',true))
-            ->orderBy('priority')->get();
+            ->orderBy('priority');
+
+        if ($operation === 'transaction_initiation') {
+            $query->where('integration_status','live_verified')
+                ->where('verification_status','live_verified');
+        } else {
+            $query->whereIn('integration_status',['live_verified','sandbox_verified'])
+                ->whereIn('verification_status',['live_verified','sandbox_verified']);
+        }
+
+        return $query->get();
     }
 
     public function execute(string $serviceKey,string $operation,array $payload=[],?string $idempotencyKey=null): ProviderResult
