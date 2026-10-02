@@ -21,7 +21,7 @@ class RegisteredUserController extends Controller
         $data = $request->validate([
             'name'=>'required|string|max:120',
             'email'=>'required|email|max:190|unique:users,email',
-            'password'=>['required','confirmed',Rules\\Password::defaults()],
+            'password'=>['required','confirmed',Rules\Password::defaults()],
         ]);
         $user=User::create([
             'name'=>$data['name'],
@@ -30,7 +30,8 @@ class RegisteredUserController extends Controller
             'role'=>'USER',
             'status'=>'active',
         ]);
-        $user->sendEmailVerificationNotification();\n        Auth::login($user);
+        $user->sendEmailVerificationNotification();
+        Auth::login($user);
         $request->session()->regenerate();
         return redirect()->route('dashboard')->with('success','Account created successfully.');
     }
