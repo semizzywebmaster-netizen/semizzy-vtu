@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AuthenticateApiToken;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RequestId;
 use App\Http\Middleware\RequireRole;
 use App\Http\Middleware\SecurityThrottle;
 use Illuminate\Foundation\Application;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.token' => AuthenticateApiToken::class,
             'security.throttle' => SecurityThrottle::class,
         ]);
+        $middleware->append(RequestId::class);
         $middleware->web(append: [HandleInertiaRequests::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
