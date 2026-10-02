@@ -15,15 +15,30 @@ class AddonController extends Controller
     public function index(): Response
     {
         return Inertia::render('Admin/Addons', [
-            'addons' => Addon::query()->latest()->get()->map(fn (Addon $addon) => [
-                'id' => $addon->id,
-                'identifier' => $addon->identifier,
-                'name' => $addon->name,
-                'version' => $addon->version,
-                'status' => $addon->status,
-                'last_error' => $addon->last_error,
-                'dependencies' => $addon->dependencies ?? [],
-            ]),
+            'addons' => Addon::query()
+                ->with(['lifecycleEvents' => fn ($query) => $query->latest()->limit(8)])
+                ->latest()
+                ->get()
+                ->map(fn (Addon $addon) => [
+                    'id' => $addon->id,
+                    'identifier' => $addon->identifier,
+                    'name' => $addon->name,
+                    'version' => $addon->version,
+                    'status' => $addon->status,
+                    'last_error' => $addon->last_error,
+                    'dependencies' => $addon->dependencies ?? [],
+                    'permissions' => $addon->permissions ?? [],
+                    'installed_at' => $addon->installed_at?->toISOString(),
+                    'activated_at' => $addon->activated_at?->toISOString(),
+                    'events' => $addon->lifecycleEvents->map(fn ($event) => [
+                        'id' => $event->id,
+                        'event' => $event->event,
+                        'from_status' => $event->from_status,
+                        'to_status' => $event->to_status,
+                        'message' => $event->message,
+                        'created_at' => $event->created_at?->toISOString(),
+                    ])->values(),
+                ]),
         ]);
     }
 
