@@ -14,7 +14,13 @@ class SecurityFoundationTest extends TestCase
 
     public function test_api_token_can_be_created_listed_and_revoked(): void
     {
-        $user = User::factory()->create();
+        $user = User::create([
+            'name' => 'Security Test User',
+            'email' => 'security-test@example.test',
+            'password' => 'Strong-Test-Password-123!',
+            'role' => 'USER',
+            'status' => 'active',
+        ]);
 
         $response = $this->actingAs($user)->postJson('/api/v1/tokens', [
             'name' => 'Test client',
