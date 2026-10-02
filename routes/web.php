@@ -20,7 +20,7 @@ Route::middleware('guest')->group(function (): void {
 });
 Route::get('/email/verify', fn () => Inertia::render('Auth/VerifyEmail'))->middleware('auth')->name('verification.notice');
 Route::get('/email/verify/{id}/{hash}', VerifyEmailController::class)->middleware(['auth','signed','throttle:6,1'])->name('verification.verify');
-Route::post('/email/verification-notification', function (\\Illuminate\\Http\\Request $request) {
+Route::post('/email/verification-notification', function (\Illuminate\Http\Request $request) {
     $request->user()->sendEmailVerificationNotification();
     return back()->with('success','Verification email sent.');
 })->middleware(['auth','throttle:6,1'])->name('verification.send');
