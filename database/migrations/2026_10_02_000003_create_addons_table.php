@@ -35,7 +35,7 @@ return new class extends Migration {
             $table->string('to_status')->nullable();
             $table->text('message')->nullable();
             $table->json('context')->nullable();
-            $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('actor_id')->nullable()->index();
             $table->timestamps();
             $table->index(['addon_identifier', 'created_at']);
         });
