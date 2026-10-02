@@ -43,7 +43,7 @@ Route::get('/admin/login', [AuthenticatedSessionController::class, 'createAdmin'
 Route::post('/admin/login', [AuthenticatedSessionController::class, 'storeAdmin'])->middleware('guest')->name('admin.login.store');
 
 Route::middleware(['auth'])->group(function (): void {
-    Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->middleware('verified')->name('dashboard');
+    Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->middleware('verified')->name('dashboard');\n    Route::post('/profile/password', [UpdatePasswordController::class, 'store'])->middleware('throttle:5,1')->name('profile.password.update');
 
     Route::middleware('role:ADMIN,STAFF,SUPPORT')->prefix('admin')->group(function (): void {
         Route::get('/health', SystemHealthController::class)->name('admin.health');
