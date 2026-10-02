@@ -1,10 +1,10 @@
 <?php
 
-namespace App\\Services\\Audit;
+namespace App\Services\Audit;
 
-use App\\Models\\AuditEvent;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Str;
+use App\Models\AuditEvent;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class AuditLogger
 {
