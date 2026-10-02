@@ -1,33 +1,29 @@
 <?php
 
-namespace App\\Services\\Catalogue;
+namespace App\Services\Catalogue;
 
-use App\\Models\\ApiProvider;
-use App\\Models\\ProviderServiceMapping;
-use App\\Models\\Service;
-use App\\Models\\ServiceProduct;
-use App\\Models\\ProviderServiceProduct;
-use Illuminate\\Support\\Arr;
-use Illuminate\\Support\\Facades\\DB;
+use App\Models\ApiProvider;
+use App\Models\ProviderServiceMapping;
+use App\Models\Service;
+use App\Models\ServiceProduct;
+use App\Models\ProviderServiceProduct;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 final class CatalogueImportService
 {
-    /**
-     * Import only provider-supplied catalogue records. No provider is enabled or verified by import.
-     *
-     * Expected product shape:
-     * key, name, provider_product_id?, provider_cost?, currency?, metadata?
-     */
     public function import(ApiProvider $provider, Service $service, array $products): int
     {
         if (!$provider->exists || !$service->exists) {
             throw new InvalidArgumentException('Provider and service must exist before catalogue import.');
         }
 
-        if ($provider->integration_status === 'draft' || $provider->verification_status === 'unverified' || $provider->verification_status === 'test_failed') {
+        if (in_array($provider->integration_status, ['draft', 'test_failed'], true)
+            || in_array($provider->verification_status, ['unverified', 'test_failed'], true)) {
             throw new InvalidArgumentException('Catalogue import requires a verified provider integration.');
         }
+
         if (!in_array('catalogue_retrieval', $provider->capabilities ?? [], true)) {
             throw new InvalidArgumentException('Provider does not declare catalogue retrieval capability.');
         }
@@ -41,34 +37,66 @@ final class CatalogueImportService
             $mapping->forceFill(['service_id' => $service->id])->save();
 
             $count = 0;
+
             foreach ($products as $item) {
                 $key = trim((string) Arr::get($item, 'key', ''));
                 $name = trim((string) Arr::get($item, 'name', ''));
+                $providerProductId = Arr::get($item, 'provider_product_id');
+                $rawCost = Arr::get($item, 'provider_cost');
+                $currency = strtoupper(trim((string) Arr::get($item, 'currency', 'NGN')));
+
                 if ($key === '' || $name === '') {
                     continue;
                 }
 
+                if (!preg_match('/^[A-Z]{3}$/', $currency)) {
+                    continue;
+                }
+
+                if ($rawCost !== null && (!is_numeric($rawCost) || (float) $rawCost < 0)) {
+                    continue;
+                }
+
+                // A provider product without a provider identifier or exact cost is retained
+                // as catalogue metadata but never made sellable through this provider mapping.
+                $hasSellableProviderData = $providerProductId !== null
+                    && trim((string) $providerProductId) !== ''
+                    && $rawCost !== null
+                    && is_numeric($rawCost)
+                    && (float) $rawCost >= 0;
+
                 $product = ServiceProduct::query()->firstOrCreate(
                     ['service_id' => $service->id, 'key' => $key],
-                    ['name' => $name, 'currency' => strtoupper((string) Arr::get($item, 'currency', 'NGN')), 'enabled' => false]
+                    [
+                        'name' => $name,
+                        'currency' => $currency,
+                        'enabled' => false,
+                    ]
                 );
 
                 $product->fill([
                     'name' => $name,
-                    'currency' => strtoupper((string) Arr::get($item, 'currency', $product->currency ?: 'NGN')),
+                    'currency' => $currency,
                     'metadata' => Arr::get($item, 'metadata'),
                 ])->save();
 
+                $existing = ProviderServiceProduct::query()
+                    ->where('api_provider_id', $provider->id)
+                    ->where('service_product_id', $product->id)
+                    ->first();
+
+                $values = [
+                    'provider_product_id' => $providerProductId !== null ? (string) $providerProductId : ($existing?->provider_product_id),
+                    'provider_cost' => $hasSellableProviderData ? $rawCost : $existing?->provider_cost,
+                    'currency' => $currency,
+                    'raw_catalogue' => $item,
+                    'enabled' => $hasSellableProviderData,
+                    'last_synced_at' => now(),
+                ];
+
                 ProviderServiceProduct::query()->updateOrCreate(
                     ['api_provider_id' => $provider->id, 'service_product_id' => $product->id],
-                    [
-                        'provider_product_id' => Arr::get($item, 'provider_product_id'),
-                        'provider_cost' => Arr::get($item, 'provider_cost'),
-                        'currency' => strtoupper((string) Arr::get($item, 'currency', 'NGN')),
-                        'raw_catalogue' => $item,
-                        'enabled' => true,
-                        'last_synced_at' => now(),
-                    ]
+                    $values
                 );
 
                 $count++;
