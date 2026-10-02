@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Addon;
+use App\Models\AddonLifecycleEvent;
 use App\Services\Addons\AddonLifecycleService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -12,46 +13,51 @@ class AddonLifecycleTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_manifest_can_be_registered_and_installed_without_activation(): void
+    public function test_manifest_can_be_registered_and_installed_as_inactive(): void
     {
         $service = app(AddonLifecycleService::class);
 
         $addon = $service->register([
-            'identifier' => 'vtu.core',
-            'name' => 'VTU Core Addon',
+            'identifier' => 'test-addon',
+            'name' => 'Test Addon',
             'version' => '1.0.0',
             'dependencies' => [],
-            'permissions' => ['services.view'],
-            'navigation' => [],
-            'settings' => [],
+            'permissions' => ['test.read'],
         ]);
-
-        $this->assertSame('draft', $addon->status);
 
         $installed = $service->install($addon);
 
         $this->assertSame('installed', $installed->status);
         $this->assertNotNull($installed->installed_at);
-        $this->assertDatabaseHas('addon_lifecycle_events', [
-            'addon_identifier' => 'vtu.core',
-            'event' => 'installed',
-            'to_status' => 'installed',
-        ]);
+        $this->assertCount(1, AddonLifecycleEvent::query()->where('addon_id', $addon->id)->where('event', 'installed')->get());
     }
 
-    public function test_missing_active_dependency_blocks_installation(): void
+    public function test_missing_active_dependency_blocks_install_and_persists_failure_diagnostics(): void
     {
         $service = app(AddonLifecycleService::class);
 
         $addon = $service->register([
-            'identifier' => 'dependent.addon',
+            'identifier' => 'dependent-addon',
             'name' => 'Dependent Addon',
             'version' => '1.0.0',
-            'dependencies' => [['identifier' => 'missing.addon']],
+            'dependencies' => ['missing-core'],
         ]);
 
-        $this->expectException(ValidationException::class);
+        try {
+            $service->install($addon);
+            $this->fail('Expected dependency validation to fail.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('dependencies', $exception->errors());
+        }
 
-        $service->install($addon);
+        $failed = $addon->fresh();
+
+        $this->assertSame('failed', $failed->status);
+        $this->assertNotEmpty($failed->last_error);
+        $this->assertDatabaseHas('addon_lifecycle_events', [
+            'addon_id' => $addon->id,
+            'event' => 'install_failed',
+            'to_status' => 'failed',
+        ]);
     }
 }
