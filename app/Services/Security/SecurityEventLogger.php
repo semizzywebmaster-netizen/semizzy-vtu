@@ -13,7 +13,7 @@ class SecurityEventLogger
         $request ??= request();
 
         return SecurityEvent::create([
-            'user_id' => $request?->user()?->id,
+            'user_id' => $request?->user()?->id ?? auth()->id(),
             'event' => $event,
             'severity' => $severity,
             'request_id' => $request?->header('X-Request-ID') ?: (string) Str::uuid(),
