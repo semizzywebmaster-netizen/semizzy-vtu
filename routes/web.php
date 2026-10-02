@@ -4,7 +4,8 @@ use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\CatalogueController;
 use App\Http\Controllers\Admin\ProviderController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\RegisteredUserController;use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -18,12 +19,16 @@ Route::middleware('guest')->group(function (): void {
     Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('/register', [RegisteredUserController::class, 'store'])->name('register.store');
 });
+
 Route::get('/email/verify', fn () => Inertia::render('Auth/VerifyEmail'))->middleware('auth')->name('verification.notice');
-Route::get('/email/verify/{id}/{hash}', VerifyEmailController::class)->middleware(['auth','signed','throttle:6,1'])->name('verification.verify');
+Route::get('/email/verify/{id}/{hash}', VerifyEmailController::class)->middleware(['auth', 'signed', 'throttle:6,1'])->name('verification.verify');
+
 Route::post('/email/verification-notification', function (\Illuminate\Http\Request $request) {
     $request->user()->sendEmailVerificationNotification();
-    return back()->with('success','Verification email sent.');
-})->middleware(['auth','throttle:6,1'])->name('verification.send');
+
+    return back()->with('success', 'Verification email sent.');
+})->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->middleware('auth')->name('logout');
 
 Route::get('/admin/login', [AuthenticatedSessionController::class, 'createAdmin'])->middleware('guest')->name('admin.login');
@@ -48,7 +53,10 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/catalogue/mappings/{mapping}/toggle', [CatalogueController::class, 'toggleMapping'])->name('admin.catalogue.mappings.toggle');
 
         Route::get('/addons', [AddonController::class, 'index'])->name('admin.addons.index');
+        Route::post('/addons/register', [AddonController::class, 'register'])->name('admin.addons.register');
+        Route::post('/addons/{addon}/install', [AddonController::class, 'install'])->name('admin.addons.install');
         Route::post('/addons/{addon}/activate', [AddonController::class, 'activate'])->name('admin.addons.activate');
         Route::post('/addons/{addon}/disable', [AddonController::class, 'disable'])->name('admin.addons.disable');
+        Route::post('/addons/{addon}/archive', [AddonController::class, 'archive'])->name('admin.addons.archive');
     });
 });
