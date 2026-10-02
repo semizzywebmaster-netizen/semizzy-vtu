@@ -3,10 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Tests\TestCase;
 
 class PasswordResetTest extends TestCase
@@ -26,12 +26,24 @@ class PasswordResetTest extends TestCase
         ]);
 
         $this->post('/forgot-password', ['email' => 'reset@example.test'])
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', 'If an account exists for that email, a password reset link has been sent.');
 
         Notification::assertSentTo(
             User::where('email', 'reset@example.test')->firstOrFail(),
             ResetPassword::class
         );
+    }
+
+    public function test_forgot_password_does_not_disclose_unknown_email(): void
+    {
+        Notification::fake();
+
+        $this->post('/forgot-password', ['email' => 'unknown@example.test'])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', 'If an account exists for that email, a password reset link has been sent.');
+
+        Notification::assertNothingSent();
     }
 
     public function test_password_can_be_reset_with_a_valid_token(): void
