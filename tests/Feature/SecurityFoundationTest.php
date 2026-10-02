@@ -112,6 +112,8 @@ class SecurityFoundationTest extends TestCase
             'status' => 'active',
         ]);
 
+        $this->actingAs($user);
+
         app(SecurityEventLogger::class)->record('security.sanitization_test', 'warning', [
             'safe' => 'kept',
             'secret' => 'top-level-secret',
