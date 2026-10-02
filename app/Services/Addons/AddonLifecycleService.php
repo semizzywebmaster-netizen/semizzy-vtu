@@ -66,22 +66,23 @@ class AddonLifecycleService
 
     public function install(Addon $addon, ?int $actorId = null): Addon
     {
-        return DB::transaction(function () use ($addon, $actorId): Addon {
-            $addon = Addon::query()->lockForUpdate()->findOrFail($addon->id);
+        $addonId = $addon->id;
 
-            if (!in_array($addon->status, ['draft', 'failed', 'inactive'], true)) {
-                throw ValidationException::withMessages([
-                    'addon' => 'Only a draft, failed, or inactive addon can begin installation.',
-                ]);
-            }
+        try {
+            $result = DB::transaction(function () use ($addonId, $actorId): Addon {
+                $addon = Addon::query()->lockForUpdate()->findOrFail($addonId);
 
-            $this->transition($addon, 'validating', 'install_started', 'Addon validation started.', $actorId);
-            $this->assertManifest($addon);
-            $this->assertDependencies($addon);
+                if (!in_array($addon->status, ['draft', 'failed', 'inactive'], true)) {
+                    throw ValidationException::withMessages([
+                        'addon' => 'Only a draft, failed, or inactive addon can begin installation.',
+                    ]);
+                }
 
-            $this->transition($addon, 'installing', 'installing', 'Addon installation started.', $actorId);
+                $this->transition($addon, 'validating', 'install_started', 'Addon validation started.', $actorId);
+                $this->assertManifest($addon);
+                $this->assertDependencies($addon);
+                $this->transition($addon, 'installing', 'installing', 'Addon installation started.', $actorId);
 
-            try {
                 $this->recordStep($addon, 'register', 'Addon registration validated.');
                 $this->recordStep($addon, 'migrate', 'Addon migration contract validated; no addon code is executed by Core.');
                 $this->recordStep($addon, 'initialize', 'Addon initialization contract validated; no addon code is executed by Core.');
@@ -102,25 +103,15 @@ class AddonLifecycleService
                     'message' => 'Addon installed successfully.',
                     'actor_id' => $actorId,
                 ]);
-            } catch (Throwable $e) {
-                $from = $addon->status;
-                $addon->update(['status' => 'failed', 'last_error' => $e->getMessage()]);
 
-                $addon->lifecycleEvents()->create([
-                    'addon_identifier' => $addon->identifier,
-                    'event' => 'install_failed',
-                    'from_status' => $from,
-                    'to_status' => 'failed',
-                    'message' => 'Addon installation failed and was rolled back to failed state.',
-                    'context' => ['error' => $e->getMessage()],
-                    'actor_id' => $actorId,
-                ]);
+                return $addon->fresh();
+            });
 
-                throw $e;
-            }
-
-            return $addon->fresh();
-        });
+            return $result;
+        } catch (Throwable $e) {
+            $this->persistInstallFailure($addonId, $actorId, $e);
+            throw $e;
+        }
     }
 
     public function activate(Addon $addon, ?int $actorId = null): Addon
@@ -148,6 +139,33 @@ class AddonLifecycleService
             'inactive',
             'failed',
         ]);
+    }
+
+    private function persistInstallFailure(int $addonId, ?int $actorId, Throwable $exception): void
+    {
+        DB::transaction(function () use ($addonId, $actorId, $exception): void {
+            $addon = Addon::query()->lockForUpdate()->find($addonId);
+
+            if (!$addon || $addon->status === 'archived') {
+                return;
+            }
+
+            $from = $addon->status;
+            $addon->update([
+                'status' => 'failed',
+                'last_error' => $exception->getMessage(),
+            ]);
+
+            $addon->lifecycleEvents()->create([
+                'addon_identifier' => $addon->identifier,
+                'event' => 'install_failed',
+                'from_status' => $from,
+                'to_status' => 'failed',
+                'message' => 'Addon installation failed; transaction changes were rolled back and diagnostics were persisted.',
+                'context' => ['error' => $exception->getMessage()],
+                'actor_id' => $actorId,
+            ]);
+        });
     }
 
     private function transitionAndAudit(
@@ -273,7 +291,7 @@ class AddonLifecycleService
             ]);
         }
 
-        if (!preg_match('/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/', $manifest['version'])) {
+        if (!preg_match('/^d+.d+.d+(?:[-+][0-9A-Za-z.-]+)?$/', $manifest['version'])) {
             throw ValidationException::withMessages([
                 'version' => 'Addon version must use semantic-version format.',
             ]);
