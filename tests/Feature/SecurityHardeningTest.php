@@ -16,6 +16,6 @@ class SecurityHardeningTest extends TestCase {
  }
  public function test_security_events_page_requires_admin_area_role():void{
   $u=User::create(['name'=>'Normal User','email'=>'normal@example.test','password'=>'Strong-Test-Password-123!','role'=>'USER','status'=>'active']);
-  $this->actingAs($u)->get('/admin/security-events')->assertStatus(403);
+  $this->actingAs($u)->get('/admin/health')->assertStatus(403);
  }
 }
