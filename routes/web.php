@@ -1,6 +1,7 @@
 <?php
 
 use App\\Http\\Controllers\\Admin\\AddonController;
+use App\\Http\\Controllers\\Admin\\CatalogueController;
 use App\\Http\\Controllers\\Admin\\ProviderController;
 use App\\Http\\Controllers\\Auth\\AuthenticatedSessionController;
 use App\\Http\\Controllers\\Auth\\RegisteredUserController;use App\\Http\\Controllers\\Auth\\VerifyEmailController;
@@ -37,6 +38,12 @@ Route::middleware(['auth'])->group(function (): void {
         Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->name('admin.providers.update');
         Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->name('admin.providers.test');
         Route::post('/providers/{provider}/toggle', [ProviderController::class, 'toggle'])->name('admin.providers.toggle');
+
+        Route::get('/catalogue', [CatalogueController::class, 'index'])->name('admin.catalogue.index');
+        Route::post('/catalogue/categories', [CatalogueController::class, 'storeCategory'])->name('admin.catalogue.categories.store');
+        Route::post('/catalogue/services', [CatalogueController::class, 'storeService'])->name('admin.catalogue.services.store');
+        Route::post('/catalogue/products', [CatalogueController::class, 'storeProduct'])->name('admin.catalogue.products.store');
+        Route::post('/catalogue/products/{product}/disable', [CatalogueController::class, 'disableProduct'])->name('admin.catalogue.products.disable');
 
         Route::get('/addons', [AddonController::class, 'index'])->name('admin.addons.index');
         Route::post('/addons/{addon}/activate', [AddonController::class, 'activate'])->name('admin.addons.activate');
