@@ -20,6 +20,9 @@ class HandleInertiaRequests extends Middleware
                     'role' => $request->user()->role,
                 ] : null,
             ],
+            'navigation' => [
+                'unreadNotifications' => fn () => $request->user()?->unreadNotifications()->count() ?? 0,
+            ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

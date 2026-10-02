@@ -63,7 +63,7 @@ export default function Profile({ user }: Props) {
             <a href="/dashboard" className="p-2">Home</a>
             <a href="/dashboard" className="p-2">Services</a>
             <a href="/dashboard" className="p-2">Transactions</a>
-            <a href="/dashboard" className="p-2">Notifications</a>
+            <a href="/notifications" className="p-2">Notifications</a>
             <a href="/profile" className="p-2 text-slate-900">Profile</a>
           </div>
         </nav>

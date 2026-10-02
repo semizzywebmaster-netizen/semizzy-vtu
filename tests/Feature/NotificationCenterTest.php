@@ -30,6 +30,7 @@ class NotificationCenterTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Notifications')
                 ->where('unreadCount', 1)
+                ->where('navigation.unreadNotifications', 1)
                 ->has('notifications', 1)
                 ->where('notifications.0.title', 'Account update')
                 ->missing('notifications.0.data')
