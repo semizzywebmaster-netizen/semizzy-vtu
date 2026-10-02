@@ -2,7 +2,7 @@
 
 namespace Tests\\Feature;
 
-use Tests\\TestCase;
+use Tests\TestCase;
 
 class ApiHealthTest extends TestCase
 {
