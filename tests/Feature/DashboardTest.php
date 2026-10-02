@@ -65,7 +65,7 @@ class DashboardTest extends TestCase
                 ->where('metrics.1.label', 'Unread notifications')
                 ->where('metrics.1.value', 1)
                 ->has('quickLinks', 3)
-                ->missing('quickLinks.0.url', '/admin/users')
+                ->where('quickLinks.0.url', '/notifications')
             );
     }
 
