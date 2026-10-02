@@ -25,12 +25,33 @@ class SecurityEventLogger
 
     private function sanitizeContext(array $context): array
     {
-        $sensitive = ['token', 'access_token', 'api_key', 'secret', 'password', 'authorization', 'credentials'];
+        $sensitive = [
+            'token',
+            'access_token',
+            'api_key',
+            'secret',
+            'password',
+            'authorization',
+            'credentials',
+            'client_secret',
+            'private_key',
+            'refresh_token',
+        ];
 
-        foreach ($sensitive as $key) {
-            unset($context[$key]);
+        $sanitized = [];
+
+        foreach ($context as $key => $value) {
+            $normalizedKey = strtolower((string) $key);
+
+            if (in_array($normalizedKey, $sensitive, true)) {
+                continue;
+            }
+
+            $sanitized[$key] = is_array($value)
+                ? $this->sanitizeContext($value)
+                : $value;
         }
 
-        return $context;
+        return $sanitized;
     }
 }
