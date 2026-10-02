@@ -64,7 +64,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
             return new ProviderResult(
                 false,
                 'UNKNOWN',
-                message: $e->getMessage(),
+                message: 'Provider request failed. Check the provider configuration and server logs.',
                 retryable: true,
                 duplicateRisk: $operation === 'transaction_initiation'
             );

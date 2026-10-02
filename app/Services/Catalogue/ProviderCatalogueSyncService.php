@@ -49,7 +49,7 @@ final class ProviderCatalogueSyncService
 
         if (!$result->accepted) {
             throw new InvalidArgumentException(
-                'Catalogue retrieval failed: '.($result->message ?: $result->status)
+                'Catalogue retrieval failed with status: '.$result->status.'.'
             );
         }
 
