@@ -59,6 +59,7 @@ class DashboardController extends Controller
                 ['label' => 'Service catalogue', 'url' => '/admin/catalogue'],
                 ['label' => 'Addon manager', 'url' => '/admin/addons'],
                 ['label' => 'System health', 'url' => '/admin/health'],
+                ['label' => 'System settings', 'url' => '/admin/settings'],
                 ['label' => 'Audit events', 'url' => '/admin/audit-events'],
                 ['label' => 'Security events', 'url' => '/admin/security-events'],
                 ['label' => 'Support desk', 'url' => '/support'],

@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AuditEventController;
 use App\Http\Controllers\Admin\CatalogueController;
 use App\Http\Controllers\Admin\ProviderController;
 use App\Http\Controllers\Admin\SystemHealthController;
+use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SecurityEventController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -67,6 +68,8 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view')->name('admin.users.index');
         Route::patch('/users/{user}', [UserController::class, 'update'])->middleware('permission:users.manage')->name('admin.users.update');
         Route::get('/health', SystemHealthController::class)->middleware('permission:system.view')->name('admin.health');
+        Route::get('/settings', [SystemSettingsController::class, 'index'])->middleware('permission:system.manage')->name('admin.settings.index');
+        Route::put('/settings', [SystemSettingsController::class, 'update'])->middleware(['permission:system.manage', 'throttle:20,1'])->name('admin.settings.update');
         Route::get('/security-events', [SecurityEventController::class, 'index'])->middleware('permission:security.view')->name('admin.security-events.index');
 
         Route::get('/providers', [ProviderController::class, 'index'])->middleware('permission:providers.view')->name('admin.providers.index');
