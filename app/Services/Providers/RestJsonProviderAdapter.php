@@ -11,15 +11,16 @@ class RestJsonProviderAdapter implements ProviderAdapter
 {
     public function supports(string $operation): bool { return in_array($operation,['health_check','balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status','refund','reversal'],true); }
 
-    public function execute(ApiProvider $provider,string $operation,array $payload=[]): ProviderResult
+    public function execute(ApiProvider $provider,string $operation,array $payload=[],?string $idempotencyKey=null): ProviderResult
     {
         if(!$this->supports($operation)) throw new RuntimeException("Unsupported REST operation: {$operation}");
         $url=$this->endpoint($provider,$operation);
         if($url===null) return new ProviderResult(false,'UNSUPPORTED',message:'No endpoint is configured for this operation.');
         try {
             $request=$this->request($provider)->timeout(max(1,(int)$provider->timeout_seconds));
+            if ($idempotencyKey !== null && $idempotencyKey !== '') $request=$request->withHeaders(['Idempotency-Key'=>$idempotencyKey]);
             $response=in_array($operation,['health_check','balance_inquiry','catalogue_retrieval'],true)?$request->get($url,$payload):$request->post($url,$payload);
-            if($response->successful()){ $body=$response->json(); return new ProviderResult(true,$this->normalizeStatus($body),$this->providerReference($body),$body,'Provider request accepted.'); }
+            if($response->successful()){ $body=$response->json(); $normalized=$this->normalizeStatus($body); $accepted=$normalized==='ACCEPTED'; return new ProviderResult($accepted,$normalized,$this->providerReference($body),$body,$accepted?'Provider request accepted.':'Provider returned a non-success status.',retryable:false,duplicateRisk:$operation==='transaction_initiation'&&!$accepted); }
             $status=$response->status();
             return new ProviderResult(false,$status>=500?'UNKNOWN':'FAILED',message:'Provider HTTP '.$status,retryable:$status>=500,duplicateRisk:$operation==='transaction_initiation');
         } catch(\\Throwable $e){ return new ProviderResult(false,'UNKNOWN',message:$e->getMessage(),retryable:true,duplicateRisk:$operation==='transaction_initiation'); }
