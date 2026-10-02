@@ -20,7 +20,7 @@ class AdminSystemSettingsTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/Settings')
                 ->where('settings.platform_name', 'SEMIZZY ONE')
-                ->where('settings.default_timezone', 'UTC'));
+                ->where('settings.default_timezone', config('app.timezone')));
     }
 
     public function test_admin_can_save_allowlisted_settings_and_audit_keys_only(): void
