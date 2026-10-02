@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Security\SecurityEventLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class ApiTokenController extends Controller
 {
@@ -18,10 +19,19 @@ class ApiTokenController extends Controller
             'expires_at' => ['nullable', 'date', 'after:now'],
         ]);
 
+        $expiresAt = isset($data['expires_at']) ? now()->parse($data['expires_at']) : null;
+        $maxLifetimeDays = max(1, (int) config('sanctum.token_max_lifetime_days', 365));
+
+        if ($expiresAt && $expiresAt->gt(now()->addDays($maxLifetimeDays))) {
+            throw ValidationException::withMessages([
+                'expires_at' => ["Token expiry cannot be more than {$maxLifetimeDays} days from now."],
+            ]);
+        }
+
         $token = $request->user()->createToken(
             $data['name'],
             $data['abilities'] ?? ['*'],
-            isset($data['expires_at']) ? now()->parse($data['expires_at']) : null
+            $expiresAt
         );
 
         $security->record('api_token.created', 'info', [
