@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateApiToken;
+use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequestId;
 use App\Http\Middleware\RequirePermission;
@@ -25,7 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'security.throttle' => SecurityThrottle::class,
         ]);
         $middleware->append(RequestId::class);
-        $middleware->web(append: [HandleInertiaRequests::class]);
+        $middleware->web(append: [EnsureActiveAccount::class, HandleInertiaRequests::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

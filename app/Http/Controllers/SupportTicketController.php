@@ -114,7 +114,15 @@ class SupportTicketController extends Controller
     {
         abort_unless($request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']), 403);
         $data = $request->validate(['status' => ['required', 'in:open,pending,resolved,closed']]);
-        $ticket->update(['status' => $data['status']]);
+        $previousStatus = $ticket->status;
+
+        if ($previousStatus !== $data['status']) {
+            $ticket->update(['status' => $data['status']]);
+            $audit->record('support.ticket.status_changed', $ticket, [
+                'from' => $previousStatus,
+                'to' => $data['status'],
+            ], $request);
+        }
 
         return back()->with('success', 'Ticket status updated.');
     }
