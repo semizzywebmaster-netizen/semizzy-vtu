@@ -44,19 +44,7 @@ class AddonController extends Controller
 
     public function register(Request $request, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        $manifest = $request->validate([
-            'identifier' => ['required', 'string', 'max:100'],
-            'name' => ['required', 'string', 'max:150'],
-            'version' => ['required', 'string', 'max:50'],
-            'compatibility' => ['nullable', 'string', 'max:100'],
-            'dependencies' => ['nullable', 'array'],
-            'permissions' => ['nullable', 'array'],
-            'navigation' => ['nullable', 'array'],
-            'settings' => ['nullable', 'array'],
-            'checksum' => ['nullable', 'string', 'max:128'],
-        ]);
-
-        $lifecycle->register($manifest, $request->user()?->id);
+        $lifecycle->register($this->validatedManifest($request), $request->user()?->id);
 
         return back()->with('success', 'Addon manifest registered.');
     }
@@ -66,6 +54,13 @@ class AddonController extends Controller
         $lifecycle->install($addon, auth()->id());
 
         return back()->with('success', 'Addon installed and left inactive until explicitly enabled.');
+    }
+
+    public function update(Request $request, Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
+    {
+        $lifecycle->update($addon, $this->validatedManifest($request), auth()->id());
+
+        return back()->with('success', "Addon updated successfully to the requested version.");
     }
 
     public function activate(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
@@ -87,5 +82,22 @@ class AddonController extends Controller
         $lifecycle->archive($addon, auth()->id());
 
         return back()->with('success', 'Addon archived.');
+    }
+
+    private function validatedManifest(Request $request): array
+    {
+        return $request->validate([
+            'identifier' => ['required', 'string', 'max:100'],
+            'name' => ['required', 'string', 'max:150'],
+            'version' => ['required', 'string', 'max:50'],
+            'compatibility' => ['nullable', 'string', 'max:100'],
+            'dependencies' => ['nullable', 'array'],
+            'permissions' => ['nullable', 'array'],
+            'navigation' => ['nullable', 'array'],
+            'settings' => ['nullable', 'array'],
+            'migrations' => ['nullable', 'array'],
+            'migrations.*' => ['string', 'max:255'],
+            'checksum' => ['nullable', 'string', 'max:128'],
+        ]);
     }
 }
