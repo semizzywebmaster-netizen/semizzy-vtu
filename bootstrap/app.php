@@ -18,7 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'role' => RequireRole::class,
+            'role' => RequireRole::class,\n            'permission' => RequirePermission::class,
             'api.token' => AuthenticateApiToken::class,
             'security.throttle' => SecurityThrottle::class,
         ]);

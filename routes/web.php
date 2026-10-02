@@ -59,30 +59,30 @@ Route::middleware(['auth'])->group(function (): void {
     Route::post('/support/{ticket}/reply', [SupportTicketController::class, 'reply'])->whereNumber('ticket')->middleware('throttle:20,1')->name('support.reply');
     Route::patch('/support/{ticket}/status', [SupportTicketController::class, 'updateStatus'])->whereNumber('ticket')->middleware('throttle:30,1')->name('support.status');
 
-    Route::middleware('role:ADMIN,STAFF,SUPPORT')->prefix('admin')->group(function (): void {
-        Route::get('/health', SystemHealthController::class)->name('admin.health');
-        Route::get('/security-events', [SecurityEventController::class, 'index'])->name('admin.security-events.index');
+    Route::prefix('admin')->group(function (): void {
+        Route::get('/health', SystemHealthController::class)->middleware('permission:system.view')->name('admin.health');
+        Route::get('/security-events', [SecurityEventController::class, 'index'])->middleware('permission:security.view')->name('admin.security-events.index');
 
-        Route::get('/providers', [ProviderController::class, 'index'])->name('admin.providers.index');
-        Route::post('/providers', [ProviderController::class, 'store'])->name('admin.providers.store');
-        Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->name('admin.providers.update');
-        Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->name('admin.providers.test');
-        Route::post('/providers/{provider}/toggle', [ProviderController::class, 'toggle'])->name('admin.providers.toggle');
+        Route::get('/providers', [ProviderController::class, 'index'])->middleware('permission:providers.view')->name('admin.providers.index');
+        Route::post('/providers', [ProviderController::class, 'store'])->middleware('permission:providers.manage')->name('admin.providers.store');
+        Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->middleware('permission:providers.manage')->name('admin.providers.update');
+        Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->middleware('permission:providers.manage')->name('admin.providers.test');
+        Route::post('/providers/{provider}/toggle', [ProviderController::class, 'toggle'])->middleware('permission:providers.manage')->name('admin.providers.toggle');
 
-        Route::get('/catalogue', [CatalogueController::class, 'index'])->name('admin.catalogue.index');
-        Route::post('/catalogue/categories', [CatalogueController::class, 'storeCategory'])->name('admin.catalogue.categories.store');
-        Route::post('/catalogue/services', [CatalogueController::class, 'storeService'])->name('admin.catalogue.services.store');
-        Route::post('/catalogue/products', [CatalogueController::class, 'storeProduct'])->name('admin.catalogue.products.store');
-        Route::post('/catalogue/products/{product}/disable', [CatalogueController::class, 'disableProduct'])->name('admin.catalogue.products.disable');
-        Route::post('/catalogue/sync', [CatalogueController::class, 'syncProvider'])->name('admin.catalogue.sync');
-        Route::post('/catalogue/mappings/{mapping}/toggle', [CatalogueController::class, 'toggleMapping'])->name('admin.catalogue.mappings.toggle');
+        Route::get('/catalogue', [CatalogueController::class, 'index'])->middleware('permission:catalogue.view')->name('admin.catalogue.index');
+        Route::post('/catalogue/categories', [CatalogueController::class, 'storeCategory'])->middleware('permission:catalogue.manage')->name('admin.catalogue.categories.store');
+        Route::post('/catalogue/services', [CatalogueController::class, 'storeService'])->middleware('permission:catalogue.manage')->name('admin.catalogue.services.store');
+        Route::post('/catalogue/products', [CatalogueController::class, 'storeProduct'])->middleware('permission:catalogue.manage')->name('admin.catalogue.products.store');
+        Route::post('/catalogue/products/{product}/disable', [CatalogueController::class, 'disableProduct'])->middleware('permission:catalogue.manage')->name('admin.catalogue.products.disable');
+        Route::post('/catalogue/sync', [CatalogueController::class, 'syncProvider'])->middleware('permission:catalogue.manage')->name('admin.catalogue.sync');
+        Route::post('/catalogue/mappings/{mapping}/toggle', [CatalogueController::class, 'toggleMapping'])->middleware('permission:catalogue.manage')->name('admin.catalogue.mappings.toggle');
 
-        Route::get('/addons', [AddonController::class, 'index'])->name('admin.addons.index');
-        Route::post('/addons/register', [AddonController::class, 'register'])->name('admin.addons.register');
-        Route::post('/addons/{addon}/install', [AddonController::class, 'install'])->name('admin.addons.install');
-        Route::post('/addons/{addon}/update', [AddonController::class, 'update'])->name('admin.addons.update');
-        Route::post('/addons/{addon}/activate', [AddonController::class, 'activate'])->name('admin.addons.activate');
-        Route::post('/addons/{addon}/disable', [AddonController::class, 'disable'])->name('admin.addons.disable');
-        Route::post('/addons/{addon}/archive', [AddonController::class, 'archive'])->name('admin.addons.archive');
-    });
+        Route::get('/addons', [AddonController::class, 'index'])->middleware('permission:addons.view')->name('admin.addons.index');
+        Route::post('/addons/register', [AddonController::class, 'register'])->middleware('permission:addons.manage')->name('admin.addons.register');
+        Route::post('/addons/{addon}/install', [AddonController::class, 'install'])->middleware('permission:addons.manage')->name('admin.addons.install');
+        Route::post('/addons/{addon}/update', [AddonController::class, 'update'])->middleware('permission:addons.manage')->name('admin.addons.update');
+        Route::post('/addons/{addon}/activate', [AddonController::class, 'activate'])->middleware('permission:addons.manage')->name('admin.addons.activate');
+        Route::post('/addons/{addon}/disable', [AddonController::class, 'disable'])->middleware('permission:addons.manage')->name('admin.addons.disable');
+        Route::post('/addons/{addon}/archive', [AddonController::class, 'archive'])->middleware('permission:addons.manage')->name('admin.addons.archive');
+    });;
 });
