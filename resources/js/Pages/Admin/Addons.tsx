@@ -38,7 +38,8 @@ const statusClass: Record<string, string> = {
 };
 
 export default function Addons({ addons }: Props) {
-  const [showRegister, setShowRegister] = useState(false);\n  const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [showRegister, setShowRegister] = useState(false);
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   const submitRegister = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
