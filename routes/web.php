@@ -55,6 +55,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/addons', [AddonController::class, 'index'])->name('admin.addons.index');
         Route::post('/addons/register', [AddonController::class, 'register'])->name('admin.addons.register');
         Route::post('/addons/{addon}/install', [AddonController::class, 'install'])->name('admin.addons.install');
+        Route::post('/addons/{addon}/update', [AddonController::class, 'update'])->name('admin.addons.update');
         Route::post('/addons/{addon}/activate', [AddonController::class, 'activate'])->name('admin.addons.activate');
         Route::post('/addons/{addon}/disable', [AddonController::class, 'disable'])->name('admin.addons.disable');
         Route::post('/addons/{addon}/archive', [AddonController::class, 'archive'])->name('admin.addons.archive');
