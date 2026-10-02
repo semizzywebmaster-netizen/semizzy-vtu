@@ -1,12 +1,12 @@
 <?php
 
-use App\\Http\\Controllers\\Admin\\AddonController;
-use App\\Http\\Controllers\\Admin\\CatalogueController;
-use App\\Http\\Controllers\\Admin\\ProviderController;
-use App\\Http\\Controllers\\Auth\\AuthenticatedSessionController;
-use App\\Http\\Controllers\\Auth\\RegisteredUserController;use App\\Http\\Controllers\\Auth\\VerifyEmailController;
-use Illuminate\\Support\\Facades\\Route;
-use Inertia\\Inertia;
+use App\Http\Controllers\Admin\AddonController;
+use App\Http\Controllers\Admin\CatalogueController;
+use App\Http\Controllers\Admin\ProviderController;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\RegisteredUserController;use App\Http\Controllers\Auth\VerifyEmailController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', fn () => Inertia::render('Welcome', [
     'appName' => config('app.name', 'SEMIZZY ONE'),
