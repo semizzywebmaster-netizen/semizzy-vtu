@@ -121,6 +121,12 @@ class AddonLifecycleService
                     ]);
                 }
 
+                if (version_compare($manifest['version'], $addon->version, '<=')) {
+                    throw ValidationException::withMessages([
+                        'version' => "Update version {$manifest['version']} must be newer than {$addon->version}.",
+                    ]);
+                }
+
                 $wasActive = $addon->status === 'active';
 
                 $this->assertCoreCompatibility($manifest['compatibility'] ?? null);
