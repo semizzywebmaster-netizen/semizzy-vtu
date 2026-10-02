@@ -17,7 +17,7 @@ class Addon extends Model
 
     protected $fillable = [
         'identifier', 'name', 'version', 'status', 'compatibility_constraint',
-        'dependencies', 'permissions', 'navigation', 'settings_schema',
+        'dependencies', 'permissions', 'navigation', 'settings_schema', 'manifest',
         'package_checksum', 'last_error', 'installed_at', 'activated_at',
     ];
 
@@ -28,6 +28,7 @@ class Addon extends Model
             'permissions' => 'array',
             'navigation' => 'array',
             'settings_schema' => 'array',
+            'manifest' => 'array',
             'installed_at' => 'datetime',
             'activated_at' => 'datetime',
         ];
