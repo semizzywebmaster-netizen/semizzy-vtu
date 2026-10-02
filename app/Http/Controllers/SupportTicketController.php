@@ -36,7 +36,7 @@ class SupportTicketController extends Controller
         return Inertia::render('Support', ['tickets' => $tickets]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AuditLogger $audit): RedirectResponse
     {
         $data = $request->validate([
             'subject' => ['required', 'string', 'max:160'],
@@ -59,7 +59,7 @@ class SupportTicketController extends Controller
             return $ticket;
         });
 
-        return redirect()->route('support.show', $ticket)->with('success', 'Support ticket created.');
+        $audit->record('support.ticket.created', $ticket, ['category' => $ticket->category], $request);\n\n        return redirect()->route('support.show', $ticket)->with('success', 'Support ticket created.');
     }
 
     public function show(Request $request, SupportTicket $ticket): Response
@@ -88,7 +88,7 @@ class SupportTicketController extends Controller
         ]);
     }
 
-    public function reply(Request $request, SupportTicket $ticket): RedirectResponse
+    public function reply(Request $request, SupportTicket $ticket, AuditLogger $audit): RedirectResponse
     {
         $this->authorizeTicket($request, $ticket);
         abort_if(in_array($ticket->status, ['closed', 'resolved'], true) && ! $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']), 409, 'This ticket is closed.');
@@ -102,10 +102,10 @@ class SupportTicketController extends Controller
             ])->save();
         });
 
-        return back()->with('success', 'Reply added.');
+        $audit->record('support.ticket.replied', $ticket, ['staff_reply' => $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT'])], $request);\n\n        return back()->with('success', 'Reply added.');
     }
 
-    public function updateStatus(Request $request, SupportTicket $ticket): RedirectResponse
+    public function updateStatus(Request $request, SupportTicket $ticket, AuditLogger $audit): RedirectResponse
     {
         abort_unless($request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']), 403);
         $data = $request->validate(['status' => ['required', 'in:open,pending,resolved,closed']]);
