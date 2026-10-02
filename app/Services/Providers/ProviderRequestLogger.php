@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Services\\Providers;
+namespace App\Services\Providers;
 
-use App\\Models\\ApiProvider;
-use App\\Models\\ProviderRequestLog;
+use App\Models\ApiProvider;
+use App\Models\ProviderRequestLog;
 
 class ProviderRequestLogger
 {
