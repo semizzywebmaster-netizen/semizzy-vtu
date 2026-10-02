@@ -1,13 +1,13 @@
 <?php
 
-namespace App\\Services\\Pricing;
+namespace App\Services\Pricing;
 
-use App\\Models\\PriceRule;
-use App\\Models\\ServiceProduct;
-use App\\Models\\ApiProvider;
-use Brick\\Math\\BigDecimal;
-use Brick\\Math\\RoundingMode;
-use Illuminate\\Support\\Carbon;
+use App\Models\PriceRule;
+use App\Models\ServiceProduct;
+use App\Models\ApiProvider;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
+use Illuminate\Support\Carbon;
 
 class PriceEngine
 {
