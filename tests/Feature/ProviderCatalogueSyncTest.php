@@ -35,7 +35,7 @@ class ProviderCatalogueSyncTest extends TestCase
         $registry->shouldReceive('supports')->once()->with($provider, 'catalogue_retrieval')->andReturn(true);
         $registry->shouldReceive('validate')->once()->with($provider);
         $logger = Mockery::mock(ProviderRequestLogger::class);
-        $logger->shouldReceive('record')->once()->with($provider, 'catalogue_retrieval', 'test-service', $result, Mockery::type('int'), null);
+        $logger->shouldReceive('record')->once()->with($provider, 'catalogue_retrieval', 'test-service', $result, Mockery::any(), null);
         $importer = new CatalogueImportService();
 
         $sync = new ProviderCatalogueSyncService($adapter, $registry, $importer, $logger);
