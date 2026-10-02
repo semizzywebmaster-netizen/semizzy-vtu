@@ -69,7 +69,7 @@ class AddonLifecycleService
         $addonId = $addon->id;
 
         try {
-            $result = DB::transaction(function () use ($addonId, $actorId): Addon {
+            return DB::transaction(function () use ($addonId, $actorId): Addon {
                 $addon = Addon::query()->lockForUpdate()->findOrFail($addonId);
 
                 if (!in_array($addon->status, ['draft', 'failed', 'inactive'], true)) {
@@ -106,8 +106,6 @@ class AddonLifecycleService
 
                 return $addon->fresh();
             });
-
-            return $result;
         } catch (Throwable $e) {
             $this->persistInstallFailure($addonId, $actorId, $e);
             throw $e;
@@ -291,7 +289,7 @@ class AddonLifecycleService
             ]);
         }
 
-        if (!preg_match('/^d+.d+.d+(?:[-+][0-9A-Za-z.-]+)?$/', $manifest['version'])) {
+        if (!preg_match('/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/', $manifest['version'])) {
             throw ValidationException::withMessages([
                 'version' => 'Addon version must use semantic-version format.',
             ]);
