@@ -44,6 +44,8 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/catalogue/services', [CatalogueController::class, 'storeService'])->name('admin.catalogue.services.store');
         Route::post('/catalogue/products', [CatalogueController::class, 'storeProduct'])->name('admin.catalogue.products.store');
         Route::post('/catalogue/products/{product}/disable', [CatalogueController::class, 'disableProduct'])->name('admin.catalogue.products.disable');
+        Route::post('/catalogue/sync', [CatalogueController::class, 'syncProvider'])->name('admin.catalogue.sync');
+        Route::post('/catalogue/mappings/{mapping}/toggle', [CatalogueController::class, 'toggleMapping'])->name('admin.catalogue.mappings.toggle');
 
         Route::get('/addons', [AddonController::class, 'index'])->name('admin.addons.index');
         Route::post('/addons/{addon}/activate', [AddonController::class, 'activate'])->name('admin.addons.activate');
