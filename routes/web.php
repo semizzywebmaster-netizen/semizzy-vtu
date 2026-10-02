@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\CatalogueController;
 use App\Http\Controllers\Admin\ProviderController;
 use App\Http\Controllers\Admin\SystemHealthController;
+use App\Http\Controllers\Admin\SecurityEventController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
@@ -40,6 +41,7 @@ Route::middleware(['auth'])->group(function (): void {
 
     Route::middleware('role:ADMIN,STAFF,SUPPORT')->prefix('admin')->group(function (): void {
         Route::get('/health', SystemHealthController::class)->name('admin.health');
+        Route::get('/security-events', [SecurityEventController::class, 'index'])->name('admin.security-events.index');
 
         Route::get('/providers', [ProviderController::class, 'index'])->name('admin.providers.index');
         Route::post('/providers', [ProviderController::class, 'store'])->name('admin.providers.store');
