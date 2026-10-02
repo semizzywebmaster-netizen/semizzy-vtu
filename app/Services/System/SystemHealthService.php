@@ -110,7 +110,17 @@ class SystemHealthService
             base_path('bootstrap/cache'),
         ];
 
-        $pathLabels = [\n            storage_path() => 'storage',\n            storage_path('app') => 'storage/app',\n            storage_path('framework') => 'storage/framework',\n            storage_path('logs') => 'storage/logs',\n            base_path('bootstrap/cache') => 'bootstrap/cache',\n        ];\n        $unwritable = array_values(array_map(\n            fn (string $path): string => $pathLabels[$path] ?? 'required directory',\n            array_filter($paths, fn (string $path): bool => ! is_dir($path) || ! is_writable($path)),\n        ));
+        $pathLabels = [
+            storage_path() => 'storage',
+            storage_path('app') => 'storage/app',
+            storage_path('framework') => 'storage/framework',
+            storage_path('logs') => 'storage/logs',
+            base_path('bootstrap/cache') => 'bootstrap/cache',
+        ];
+        $unwritable = array_values(array_map(
+            fn (string $path): string => $pathLabels[$path] ?? 'required directory',
+            array_filter($paths, fn (string $path): bool => ! is_dir($path) || ! is_writable($path)),
+        ));
         $ok = $unwritable === [];
 
         return $this->result(
