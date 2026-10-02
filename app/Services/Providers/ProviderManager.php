@@ -36,7 +36,11 @@ class ProviderManager
 
         foreach($providers as $provider){
             if(!$this->registry->supports($provider,$operation)) continue;
-            $this->registry->validate($provider);
+            try {
+                $this->registry->validate($provider);
+            } catch (\\Throwable $e) {
+                continue;
+            }
             $started=microtime(true);
             $result=$this->rest->execute($provider,$operation,$payload);
             $this->logger->record($provider,$operation,$serviceKey,$result,(int)round((microtime(true)-$started)*1000),$idempotencyKey);
