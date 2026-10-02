@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SupportTicket;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -59,7 +60,9 @@ class SupportTicketController extends Controller
             return $ticket;
         });
 
-        $audit->record('support.ticket.created', $ticket, ['category' => $ticket->category], $request);\n\n        return redirect()->route('support.show', $ticket)->with('success', 'Support ticket created.');
+        $audit->record('support.ticket.created', $ticket, ['category' => $ticket->category], $request);
+
+        return redirect()->route('support.show', $ticket)->with('success', 'Support ticket created.');
     }
 
     public function show(Request $request, SupportTicket $ticket): Response
@@ -102,7 +105,9 @@ class SupportTicketController extends Controller
             ])->save();
         });
 
-        $audit->record('support.ticket.replied', $ticket, ['staff_reply' => $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT'])], $request);\n\n        return back()->with('success', 'Reply added.');
+        $audit->record('support.ticket.replied', $ticket, ['staff_reply' => $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT'])], $request);
+
+        return back()->with('success', 'Reply added.');
     }
 
     public function updateStatus(Request $request, SupportTicket $ticket, AuditLogger $audit): RedirectResponse
