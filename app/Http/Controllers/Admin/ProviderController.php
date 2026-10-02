@@ -4,6 +4,7 @@ namespace App\\Http\\Controllers\\Admin;
 
 use App\\Http\\Controllers\\Controller;
 use App\\Models\\ApiProvider;
+use App\\Services\\Providers\\ProviderTestService;
 use Illuminate\\Http\\RedirectResponse;
 use Illuminate\\Http\\Request;
 use Inertia\\Inertia;
@@ -18,7 +19,7 @@ class ProviderController extends Controller
                 'id'=>$p->id,'identifier'=>$p->identifier,'display_name'=>$p->display_name,
                 'environment'=>$p->environment,'verification_status'=>$p->verification_status,
                 'integration_status'=>$p->integration_status,'enabled'=>$p->enabled,'paused'=>$p->paused,
-                'priority'=>$p->priority,'credentials'=>$p->maskedCredentials(),
+                'priority'=>$p->priority,'credentials'=>$p->maskedCredentials(),'capabilities'=>$p->capabilities??[],'endpoints'=>$p->endpoints??[],
             ]),
         ]);
     }
@@ -57,6 +58,36 @@ class ProviderController extends Controller
         ]);
         $provider->fill($data)->save();
         return back()->with('success','Provider updated.');
+    }
+
+    public function test(ApiProvider $provider, ProviderTestService $tester): RedirectResponse
+    {
+        try {
+            $result=$tester->test($provider);
+        } catch (\\Throwable $e) {
+            $provider->forceFill([
+                'last_tested_at'=>now(),
+                'last_test_status'=>'FAILED',
+                'last_test_summary'=>'Provider test failed safely: '.mb_substr($e->getMessage(),0,500),
+                'enabled'=>false,
+                'paused'=>true,
+            ])->save();
+            return back()->with('error','Provider test failed safely.');
+        }
+
+        if ($result['result']->accepted) {
+            $verified=$provider->environment==='production';
+            $provider->update([
+                'verification_status'=>$verified?'live_verified':'sandbox_verified',
+                'integration_status'=>$verified?'live_verified':'sandbox_verified',
+                'enabled'=>false,
+                'paused'=>true,
+            ]);
+            return back()->with('success','Provider health check succeeded. Provider remains disabled until explicitly enabled.');
+        }
+
+        $provider->update(['enabled'=>false,'paused'=>true,'verification_status'=>'test_failed']);
+        return back()->with('error','Provider test did not succeed: '.($result['result']->message??$result['result']->status));
     }
 
     public function toggle(ApiProvider $provider): RedirectResponse
