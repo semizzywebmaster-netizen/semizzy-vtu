@@ -42,7 +42,7 @@ class ProviderManager
                 continue;
             }
             $started=microtime(true);
-            $result=$this->rest->execute($provider,$operation,$payload);
+            $result=$this->rest->execute($provider,$operation,$payload,$idempotencyKey);
             $this->logger->record($provider,$operation,$serviceKey,$result,(int)round((microtime(true)-$started)*1000),$idempotencyKey);
             if($result->accepted) return $result;
             if($result->duplicateRisk || $result->status==='UNKNOWN') return $result;
