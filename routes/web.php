@@ -35,6 +35,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/providers', [ProviderController::class, 'index'])->name('admin.providers.index');
         Route::post('/providers', [ProviderController::class, 'store'])->name('admin.providers.store');
         Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->name('admin.providers.update');
+        Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->name('admin.providers.test');
         Route::post('/providers/{provider}/toggle', [ProviderController::class, 'toggle'])->name('admin.providers.toggle');
 
         Route::get('/addons', [AddonController::class, 'index'])->name('admin.addons.index');
