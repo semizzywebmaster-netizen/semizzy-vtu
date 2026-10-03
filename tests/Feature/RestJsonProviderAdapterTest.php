@@ -6,6 +6,7 @@ use App\Models\ApiProvider;
 use App\Services\Providers\RestJsonProviderAdapter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use InvalidArgumentException;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -41,8 +42,8 @@ class RestJsonProviderAdapterTest extends TestCase
             'credentials' => ['token' => 'provider-token-secret'],
         ]);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('query string');
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('queries');
 
         app(RestJsonProviderAdapter::class)->execute($provider, 'transaction_status', ['reference' => 'ref-1']);
     }
