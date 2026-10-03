@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('wallet_accounts', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->unique()->constrained()->restrictOnDelete();
             $table->char('currency', 3)->default('NGN');
             $table->decimal('available_minor', 20, 0)->default(0);
             $table->decimal('held_minor', 20, 0)->default(0);
@@ -41,7 +41,7 @@ return new class extends Migration {
 
         Schema::create('ledger_entries', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('ledger_transaction_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('ledger_transaction_id')->constrained()->restrictOnDelete();
             $table->foreignId('ledger_account_id')->constrained()->restrictOnDelete();
             $table->decimal('debit_minor', 20, 0)->default(0);
             $table->decimal('credit_minor', 20, 0)->default(0);
