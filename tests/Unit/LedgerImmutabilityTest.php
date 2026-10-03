@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use LogicException;
 use Tests\TestCase;
 
@@ -54,12 +55,15 @@ class LedgerImmutabilityTest extends TestCase
 
     private function createLedgerAccount(): int
     {
-        return \App\Models\LedgerAccount::create([
+        $now = now();
+        return (int) DB::table('ledger_accounts')->insertGetId([
             'code' => 'TEST-'.uniqid(),
             'name' => 'Test Ledger',
             'type' => 'asset',
             'currency' => 'NGN',
             'status' => 'active',
-        ])->id;
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
     }
 }
