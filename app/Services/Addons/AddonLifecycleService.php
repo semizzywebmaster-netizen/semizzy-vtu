@@ -223,6 +223,28 @@ class AddonLifecycleService
                 ]);
             }
 
+            $dependents = Addon::query()
+                ->whereIn('status', ['installed', 'enabling', 'active', 'disabling', 'updating', 'inactive'])
+                ->whereJsonContains('dependencies', $addon->identifier)
+                ->pluck('identifier');
+
+            if ($dependents->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'addon' => 'Addon cannot be uninstalled while active or installed addons depend on it: '.$dependents->implode(', ').'.',
+                ]);
+            }
+
+            $dependents = Addon::query()
+                ->whereIn('status', ['installed', 'enabling', 'active', 'disabling', 'updating', 'inactive'])
+                ->whereJsonContains('dependencies', [['identifier' => $addon->identifier]])
+                ->pluck('identifier');
+
+            if ($dependents->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'addon' => 'Addon cannot be uninstalled while active or installed addons depend on it: '.$dependents->implode(', ').'.',
+                ]);
+            }
+
             $this->transition($addon, 'uninstalling', 'uninstall_started', 'Addon uninstall started.', $actorId);
             $this->recordStep($addon, 'uninstall', 'Addon uninstall contract validated; Core does not execute arbitrary addon code.');
 
