@@ -91,20 +91,30 @@ class CatalogueController extends Controller
 
     public function toggleMapping(ProviderServiceMapping $mapping, AuditLogger $audit, Request $request): RedirectResponse
     {
-        $provider=$mapping->provider;
-        if (!$mapping->enabled && ($provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
-            return back()->with('error','A provider service mapping can only be enabled for a live-verified provider.');
-        }
-        $enabled = ! $mapping->enabled;
-        $mapping->update(['enabled' => $enabled]);
-        $audit->record($enabled ? 'catalogue.mapping.enabled' : 'catalogue.mapping.disabled', $mapping, ['provider_id' => $mapping->api_provider_id, 'service_id' => $mapping->service_id], $request);
-        return back()->with('success','Provider service mapping status updated.');
+        return DB::transaction(function () use ($mapping, $audit, $request): RedirectResponse {
+            $mapping = ProviderServiceMapping::query()->lockForUpdate()->findOrFail($mapping->id);
+            $provider = ApiProvider::query()->lockForUpdate()->findOrFail($mapping->api_provider_id);
+
+            if (!$mapping->enabled && ($provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
+                return back()->with('error','A provider service mapping can only be enabled for a live-verified provider.');
+            }
+
+            $enabled = ! $mapping->enabled;
+            $mapping->update(['enabled' => $enabled]);
+            $audit->record($enabled ? 'catalogue.mapping.enabled' : 'catalogue.mapping.disabled', $mapping, [
+                'provider_id' => $mapping->api_provider_id,
+                'service_id' => $mapping->service_id,
+            ], $request);
+
+            return back()->with('success','Provider service mapping status updated.');
+        });
     }
 
     public function disableProduct(ServiceProduct $product, AuditLogger $audit, Request $request): RedirectResponse
     {
         DB::transaction(function () use ($product): void {
-            ProviderServiceProduct::query()->where('service_product_id', $product->id)->update(['enabled' => false]);
+            $product = ServiceProduct::query()->lockForUpdate()->findOrFail($product->id);
+            ProviderServiceProduct::query()->where('service_product_id', $product->id)->lockForUpdate()->get()->each->update(['enabled' => false]);
             $product->update(['enabled' => false]);
         });
         $audit->record('catalogue.product.disabled', $product, ['service_id' => $product->service_id], $request);
