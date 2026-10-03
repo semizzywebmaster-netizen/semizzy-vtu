@@ -230,6 +230,21 @@ class AddonLifecycleTest extends TestCase
             'checksum' => 'not-a-sha256',
         ]);
     }
+    public function test_direct_archive_is_rejected_after_installation(): void
+    {
+        $service = app(AddonLifecycleService::class);
+
+        $addon = $service->register([
+            'identifier' => 'archive-guard-addon',
+            'name' => 'Archive Guard Addon',
+            'version' => '1.0.0',
+        ]);
+        $service->install($addon);
+
+        $this->expectException(ValidationException::class);
+        $service->archive($addon);
+    }
+
     public function test_uninstall_blocks_scalar_and_object_dependents(): void
     {
         $service = app(AddonLifecycleService::class);
