@@ -297,6 +297,7 @@ class AddonLifecycleService
 
     private function persistFailure(int $addonId, ?int $actorId, Throwable $exception, string $event): void
     {
+        report($exception);
         DB::transaction(function () use ($addonId, $actorId, $exception, $event): void {
             $addon = Addon::query()->lockForUpdate()->find($addonId);
 
@@ -307,7 +308,7 @@ class AddonLifecycleService
             $from = $addon->status;
             $addon->update([
                 'status' => 'failed',
-                'last_error' => $exception->getMessage(),
+                'last_error' => 'Addon lifecycle operation failed. Check server logs for diagnostic details.',
             ]);
 
             $addon->lifecycleEvents()->create([
@@ -316,7 +317,7 @@ class AddonLifecycleService
                 'from_status' => $from,
                 'to_status' => 'failed',
                 'message' => 'Addon lifecycle operation failed; transactional changes were rolled back and diagnostics were persisted.',
-                'context' => ['error' => $exception->getMessage()],
+                'context' => ['error_type' => get_class($exception)],
                 'actor_id' => $actorId,
             ]);
         });
