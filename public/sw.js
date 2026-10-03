@@ -1,12 +1,9 @@
-const CACHE_NAME = 'semizzy-one-static-v1';
-const STATIC_ASSETS = ['/offline.html', '/manifest.webmanifest', '/icons/semizzy-one.svg'];
+const CACHE_NAME = 'semizzy-one-offline-v1';
+const OFFLINE_URL = '/offline.html';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.add(OFFLINE_URL)));
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -19,18 +16,16 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
+  if (request.method !== 'GET') return;
+
   const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
 
-  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  // Never cache private application/API responses.
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin/')) return;
 
+  // Network-first navigation avoids serving stale authenticated pages.
   if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).catch(() => caches.match('/offline.html')));
-    return;
-  }
-
-  if (url.pathname === '/offline.html' || url.pathname === '/manifest.webmanifest' || url.pathname === '/icons/semizzy-one.svg') {
-    event.respondWith(
-      caches.match(request).then((cached) => cached || fetch(request))
-    );
+    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
   }
 });
