@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiProvider;
+use App\Models\ProviderServiceProduct;
 use App\Services\Audit\AuditLogger;
 use App\Services\Providers\ProviderTestService;
 use App\Services\Providers\ProviderUrlGuard;
@@ -175,11 +176,20 @@ class ProviderController extends Controller
                 $mapping->forceFill(['enabled' => false])->save();
             });
 
+            $providerProductMappings = ProviderServiceProduct::query()
+                ->where('api_provider_id', $provider->id)
+                ->lockForUpdate()
+                ->get();
+            $providerProductMappings->each(function (ProviderServiceProduct $mapping): void {
+                $mapping->forceFill(['enabled' => false])->save();
+            });
+
             $provider->forceFill(['enabled' => false, 'paused' => true])->save();
             $audit->record('provider.removed', $provider, [
                 'identifier' => $provider->identifier,
                 'history_preserved' => true,
                 'mappings_disabled' => true,
+                'provider_product_mappings_disabled' => $providerProductMappings->count(),
             ], $request);
             $provider->delete();
         });
