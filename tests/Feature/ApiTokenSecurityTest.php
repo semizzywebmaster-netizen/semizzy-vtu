@@ -72,7 +72,8 @@ class ApiTokenSecurityTest extends TestCase
             'password' => 'Strong-Password-123!',
             'role' => 'USER',
             'status' => 'active',
-            'email_verified_at' => now(),
         ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+        return $user;
     }
 }
