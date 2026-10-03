@@ -79,7 +79,7 @@ class CatalogueController extends Controller
         try {
             $count=$sync->sync($provider,$service);
         } catch (\Throwable $e) {
-            return back()->with('error','Catalogue sync failed safely: '.mb_substr($e->getMessage(),0,500));
+            report($e);\n            return back()->with('error','Catalogue sync failed safely. Review the server-side diagnostics.');
         }
         return back()->with('success',"Catalogue sync completed. {$count} product record(s) processed.");
     }
