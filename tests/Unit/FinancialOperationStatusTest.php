@@ -25,7 +25,6 @@ class FinancialOperationStatusTest extends TestCase
             ]);
 
             $this->assertSame($status, $operation->status);
-            $operation->delete = null;
         }
     }
 
