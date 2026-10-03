@@ -11,7 +11,7 @@ Route::get('/v1/health', fn () => response()->json([
 ]))->name('api.v1.health');
 
 Route::middleware(['auth:sanctum', 'ensure.active.api', 'api.token:core.read'])->get('/v1/me', fn (Request $request) => response()->json([
-    'data' => $request->user(),
+    'data' => $request->user()->only(['id', 'name', 'email', 'role', 'status', 'email_verified_at', 'created_at', 'updated_at']),
 ]))->name('api.v1.me');
 
 
