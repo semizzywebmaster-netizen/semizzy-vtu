@@ -98,8 +98,7 @@ final class CatalogueImportService
                         'enabled' => false,
                     ]
                 );
-                $product->lockForUpdate()->first();
-                $product->refresh();
+                $product = ServiceProduct::query()->lockForUpdate()->findOrFail($product->id);
 
                 $currencyCompatible = strtoupper((string) $product->currency) === $currency;
                 if (!$currencyCompatible) {
