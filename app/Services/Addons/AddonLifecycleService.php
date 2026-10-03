@@ -550,7 +550,7 @@ class AddonLifecycleService
             }
         }
 
-        if (!preg_match('/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/', $manifest['identifier'])) {
+        if (!preg_match('/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/i', $manifest['identifier'])) {
             throw ValidationException::withMessages([
                 'identifier' => 'Addon identifier may contain only letters, numbers, dots, underscores, and hyphens.',
             ]);
