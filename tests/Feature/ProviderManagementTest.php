@@ -59,6 +59,32 @@ class ProviderManagementTest extends TestCase
         $this->assertSame(1, ApiProvider::withTrashed()->whereKey($provider->id)->count());
     }
 
+    public function test_provider_configuration_change_forces_reverification(): void
+    {
+        $admin = $this->makeAdmin();
+        $provider = ApiProvider::create([
+            'identifier' => 'reverify-provider',
+            'display_name' => 'Reverify Provider',
+            'base_url' => 'https://8.8.8.8',
+            'environment' => 'production',
+            'auth_type' => 'bearer',
+            'verification_status' => 'live_verified',
+            'integration_status' => 'live_verified',
+            'enabled' => true,
+            'paused' => false,
+        ]);
+
+        $this->actingAs($admin)->patch('/admin/providers/'.$provider->id, [
+            'base_url' => 'https://1.1.1.1',
+        ])->assertRedirect();
+
+        $provider->refresh();
+        $this->assertFalse($provider->enabled);
+        $this->assertTrue($provider->paused);
+        $this->assertSame('unverified', $provider->verification_status);
+        $this->assertSame('draft', $provider->integration_status);
+    }
+
     public function test_non_admin_cannot_remove_provider(): void
     {
         $user = User::create([
@@ -76,12 +102,15 @@ class ProviderManagementTest extends TestCase
 
     private function makeAdmin(): User
     {
-        return User::create([
+        $admin = User::create([
             'name' => 'Provider Admin',
             'email' => 'provider-admin@example.test',
             'password' => 'Strong-Password-123!',
             'role' => 'ADMIN',
             'status' => 'active',
         ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+
+        return $admin;
     }
 }
