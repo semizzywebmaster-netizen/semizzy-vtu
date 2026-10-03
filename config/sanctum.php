@@ -3,7 +3,8 @@
 return [
     'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', 'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000')),
     'guard' => ['web'],
-    'expiration' => null,
+    // Core policy: API tokens must expire even when callers omit expires_at.
+    'expiration' => (int) env('SANCTUM_EXPIRATION_MINUTES', 525600),
     'token_max_lifetime_days' => (int) env('SANCTUM_TOKEN_MAX_LIFETIME_DAYS', 365),
     'token_prefix' => env('SANCTUM_TOKEN_PREFIX', ''),
     'middleware' => [
