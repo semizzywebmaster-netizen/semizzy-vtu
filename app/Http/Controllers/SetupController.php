@@ -12,14 +12,32 @@ use Inertia\Inertia;
 
 class SetupController extends Controller
 {
+    private function databaseAvailable(): bool
+    {
+        try {
+            DB::connection()->getPdo();
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     private function locked(): bool
     {
-        if (! Schema::hasTable('system_settings')) {
-            return Schema::hasTable('users') && User::query()->exists();
+        if (! $this->databaseAvailable()) {
+            return false;
         }
 
-        return DB::table('system_settings')->where('key', 'core.initial_admin_created')->value('value') === '1'
-            || User::query()->where('role', 'ADMIN')->exists();
+        try {
+            if (! Schema::hasTable('system_settings')) {
+                return Schema::hasTable('users') && User::query()->exists();
+            }
+
+            return DB::table('system_settings')->where('key', 'core.initial_admin_created')->value('value') === '1'
+                || User::query()->where('role', 'ADMIN')->exists();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function index()
@@ -34,6 +52,9 @@ class SetupController extends Controller
             'mbstring' => extension_loaded('mbstring'),
             'openssl' => extension_loaded('openssl'),
             'json' => extension_loaded('json'),
+            'pdo_mysql' => DB::getDriverName() !== 'mysql' || extension_loaded('pdo_mysql'),
+            'app_key' => filled(config('app.key')),
+            'app_url' => filter_var(config('app.url'), FILTER_VALIDATE_URL) !== false,
             'storage' => is_writable(storage_path()),
             'bootstrap_cache' => is_writable(base_path('bootstrap/cache')),
             'database' => false,
@@ -60,7 +81,9 @@ class SetupController extends Controller
         $request->validate(['confirm' => ['required', 'accepted']]);
 
         try {
-            DB::connection()->getPdo();
+            if (! $this->databaseAvailable()) {
+                throw new \RuntimeException('Database is unavailable.');
+            }
             Artisan::call('migrate', ['--force' => true]);
         } catch (\Throwable $e) {
             report($e);
@@ -74,8 +97,12 @@ class SetupController extends Controller
     {
         abort_if($this->locked(), 404);
 
-        if (! Schema::hasTable('users') || ! Schema::hasTable('system_settings')) {
-            return back()->withErrors(['setup' => 'Run the database migrations before creating the administrator.']);
+        if (! $this->databaseAvailable() || ! Schema::hasTable('users') || ! Schema::hasTable('system_settings')) {
+            return back()->withErrors(['setup' => 'Complete the database migration step before creating the administrator.']);
+        }
+
+        if (! filled(config('app.key'))) {
+            return back()->withErrors(['setup' => 'APP_KEY is missing. Configure it before creating the administrator.']);
         }
 
         $data = $request->validate([
