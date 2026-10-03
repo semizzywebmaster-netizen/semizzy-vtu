@@ -15,7 +15,7 @@ class SetupController extends Controller
     private function locked(): bool
     {
         if (! Schema::hasTable('system_settings')) {
-            return User::query()->exists();
+            return Schema::hasTable('users') && User::query()->exists();
         }
 
         return DB::table('system_settings')->where('key', 'core.initial_admin_created')->value('value') === '1'
