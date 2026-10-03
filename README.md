@@ -38,7 +38,19 @@ After configuring the environment and running migrations, create the first admin
 
     php artisan semizzy:admin:create
 
-The command prompts for the name, email and password, requires a strong confirmed password, marks the bootstrap account email-verified, and prevents creating a second initial administrator. Do not expose this command through a public web route.
+The command is available only from the server CLI, is registered from `app/Console/Commands`, and refuses to create a second administrator. It prompts for the name, email and password, requires a strong confirmed password, marks the bootstrap account email-verified, and prevents creating a second initial administrator. Do not expose this command through a public web route.
+
+## Production preflight
+
+Before enabling live traffic, run the following from the application directory after configuring the production `.env`:
+
+    php artisan migrate:status
+    php artisan schedule:list
+    php artisan semizzy:admin:create
+
+Run the administrator command only once and only when no administrator exists. Do not place its invocation in a cron job or public route.
+
+CI also validates PHP syntax, application tests, frontend type checking and the production frontend build. A green CI run is necessary but does not replace a real cPanel smoke test.
 
 ## cPanel deployment
 
