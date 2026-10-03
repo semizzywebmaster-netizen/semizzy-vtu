@@ -63,14 +63,20 @@ class UserController extends Controller
             $deactivatingAdmin = $lockedUser->role === 'ADMIN' && $data['status'] !== 'active';
 
             if ($demotingAdmin || $deactivatingAdmin) {
-                $otherActiveAdmins = User::query()
+                // Lock the complete active-admin set before checking the invariant.
+                // This serializes competing demotions/deactivations and prevents two
+                // concurrent requests from both removing the final two administrators.
+                $activeAdminIds = User::query()
                     ->where('role', 'ADMIN')
                     ->where('status', 'active')
-                    ->whereKeyNot($lockedUser->id)
                     ->lockForUpdate()
-                    ->count();
+                    ->pluck('id');
 
-                abort_if($otherActiveAdmins < 1, 422, 'You cannot remove or deactivate the last active administrator.');
+                abort_if(
+                    $activeAdminIds->count() < 2 || ! $activeAdminIds->contains(fn ($id): bool => (int) $id !== (int) $lockedUser->id),
+                    422,
+                    'You cannot remove or deactivate the last active administrator.'
+                );
             }
 
             $lockedUser->update($data);
