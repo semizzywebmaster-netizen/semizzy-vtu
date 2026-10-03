@@ -10,7 +10,7 @@ Route::get('/v1/health', fn () => response()->json([
     'timestamp' => now()->toIso8601String(),
 ]))->name('api.v1.health');
 
-Route::middleware('auth:sanctum')->get('/v1/me', fn (Request $request) => response()->json([
+Route::middleware(['auth:sanctum', 'ensure.active.api'])->get('/v1/me', fn (Request $request) => response()->json([
     'data' => $request->user(),
 ]))->name('api.v1.me');
 
@@ -22,4 +22,4 @@ Route::middleware(['auth', 'security.throttle:api.tokens,10,60'])->group(functio
     Route::delete('/v1/tokens', [ApiTokenController::class, 'revokeAll'])->name('api.v1.tokens.revoke-all');
 });
 
-Route::middleware(['auth:sanctum', 'api.token:core.read'])->get('/v1/core-check', fn () => response()->json(['status' => 'ok']))->name('api.v1.core-check');
+Route::middleware(['auth:sanctum', 'ensure.active.api', 'api.token:core.read'])->get('/v1/core-check', fn () => response()->json(['status' => 'ok']))->name('api.v1.core-check');
