@@ -88,6 +88,55 @@ class ApiTokenSecurityTest extends TestCase
             ->assertJsonPath('status', 'ok');
     }
 
+    public function test_user_cannot_revoke_another_users_token(): void
+    {
+        $owner = $this->makeUser();
+        $otherUser = $this->makeUser();
+        $token = $otherUser->createToken('Other user token', ['core.read']);
+
+        $this->actingAs($owner)
+            ->deleteJson('/api/v1/tokens/'.$token->accessToken->getKey())
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('personal_access_tokens', [
+            'id' => $token->accessToken->getKey(),
+            'tokenable_id' => $otherUser->id,
+        ]);
+    }
+
+    public function test_user_can_revoke_only_their_own_token(): void
+    {
+        $user = $this->makeUser();
+        $token = $user->createToken('Revocable token', ['core.read']);
+
+        $this->actingAs($user)
+            ->deleteJson('/api/v1/tokens/'.$token->accessToken->getKey())
+            ->assertOk()
+            ->assertJsonPath('message', 'Token revoked.');
+
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'id' => $token->accessToken->getKey(),
+        ]);
+    }
+
+    public function test_revoke_all_removes_only_the_current_users_tokens(): void
+    {
+        $user = $this->makeUser();
+        $otherUser = $this->makeUser();
+        $first = $user->createToken('First token', ['core.read']);
+        $second = $user->createToken('Second token', ['core.read']);
+        $other = $otherUser->createToken('Other token', ['core.read']);
+
+        $this->actingAs($user)
+            ->deleteJson('/api/v1/tokens')
+            ->assertOk()
+            ->assertJsonPath('count', 2);
+
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $first->accessToken->getKey()]);
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $second->accessToken->getKey()]);
+        $this->assertDatabaseHas('personal_access_tokens', ['id' => $other->accessToken->getKey()]);
+    }
+
     private function makeUser(): User
     {
         $user = User::create([
