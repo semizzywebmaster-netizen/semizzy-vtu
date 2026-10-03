@@ -4,7 +4,7 @@ This document records committed foundations and the limits of what CI or reposit
 
 ## Implemented foundations in main
 
-- Integrated Laravel 12, Inertia, React, TypeScript and Vite application; PHP 8.3+ and MySQL/MariaDB target.
+- Integrated Laravel 12, Inertia, React, TypeScript and Vite application; PHP 8.4+ and MySQL/MariaDB target.
 - Authentication flows for registration, login, admin login, email verification, password reset and password change, with request IDs and security-event auditing.
 - Four core roles: ADMIN, STAFF, SUPPORT, USER; permission middleware and permission-gated administration routes.
 - Provider registry, encrypted credentials, endpoint/capability configuration, REST adapter, safe URL validation, provider request logs, verification/testing controls, service mappings and catalogue synchronization foundations.
@@ -39,7 +39,7 @@ Run the full workflow again after every change. Never point automated tests at p
 
 ## cPanel deployment checklist
 
-1. Use PHP 8.3+ with the required Laravel extensions and Composer 2.
+1. Use PHP 8.4+ with the required Laravel extensions and Composer 2.
 2. Configure the domain document root to the application's public/ directory whenever the host permits.
 3. Configure a dedicated MySQL/MariaDB database and environment variables; keep .env outside public access.
 4. Set a unique APP_KEY, APP_DEBUG=false, HTTPS APP_URL, secure session settings and an appropriate mail transport.
