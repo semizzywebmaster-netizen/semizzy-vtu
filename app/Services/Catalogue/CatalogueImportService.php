@@ -90,7 +90,7 @@ final class CatalogueImportService
                 if ($rawCost !== null && (is_string($rawCost) || is_int($rawCost))) {
                     try {
                         $normalizedCost = BigDecimal::of(trim((string) $rawCost))->toScale(6, RoundingMode::UNNECESSARY);
-                    } catch (\\Throwable) {
+                    } catch (\Throwable) {
                         continue;
                     }
                     if ($normalizedCost->isNegative()) {
