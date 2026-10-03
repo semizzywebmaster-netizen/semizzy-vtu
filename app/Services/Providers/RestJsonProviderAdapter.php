@@ -30,7 +30,13 @@ class RestJsonProviderAdapter implements ProviderAdapter
         }
 
         try {
-            $request = $this->request($provider)->timeout(max(1, (int) $provider->timeout_seconds));
+            // Provider hosts are SSRF-sensitive. Do not follow redirects automatically:
+            // a validated public hostname could otherwise redirect the server into a
+            // private/reserved address after the initial URL validation.
+            $request = $this->request($provider)
+                ->withOptions(['allow_redirects' => false])
+                ->timeout(max(1, (int) $provider->timeout_seconds));
+
             if ($idempotencyKey !== null && $idempotencyKey !== '') {
                 $request = $request->withHeaders(['Idempotency-Key' => $idempotencyKey]);
             }
