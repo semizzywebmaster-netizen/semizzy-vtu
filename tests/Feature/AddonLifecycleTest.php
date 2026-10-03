@@ -8,6 +8,7 @@ use App\Services\Addons\AddonLifecycleService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
+use ReflectionMethod;
 
 class AddonLifecycleTest extends TestCase
 {
@@ -222,12 +223,14 @@ class AddonLifecycleTest extends TestCase
     {
         $service = app(AddonLifecycleService::class);
 
-        $manifest = $this->manifest([
+        $manifest = [
             'identifier' => 'Core.Test',
+            'name' => 'Core Test',
+            'version' => '1.0.0',
             'dependencies' => [
                 ['identifier' => 'Required.Addon', 'constraint' => '^1.0.0'],
             ],
-        ]);
+        ];
 
         $method = new ReflectionMethod(AddonLifecycleService::class, 'validateManifest');
         $method->setAccessible(true);
