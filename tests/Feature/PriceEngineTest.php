@@ -88,6 +88,15 @@ class PriceEngineTest extends TestCase
         app(PriceEngine::class)->quote($product);
     }
 
+    public function test_invalid_pricing_evaluation_timestamp_is_rejected(): void
+    {
+        $product = ServiceProduct::factory()->create();
+
+        $this->expectException(InvalidArgumentException::class);
+
+        app(\App\Services\Pricing\PriceEngine::class)->quote($product, 'USER', 'not-a-date');
+    }
+
     public function test_price_rule_rejects_negative_amounts_and_invalid_effective_window(): void
     {
         $this->expectException(InvalidArgumentException::class);
