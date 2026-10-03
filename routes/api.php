@@ -14,8 +14,7 @@ Route::middleware(['auth:sanctum', 'ensure.active.api', 'api.token:core.read'])-
     'data' => $request->user()->only(['id', 'name', 'email', 'role', 'status', 'email_verified_at', 'created_at', 'updated_at']),
 ]))->name('api.v1.me');
 
-
-Route::middleware(['auth', 'security.throttle:api.tokens,10,60'])->group(function (): void {
+Route::middleware(['auth', 'verified', 'security.throttle:api.tokens,10,60'])->group(function (): void {
     Route::post('/v1/tokens', [ApiTokenController::class, 'store'])->name('api.v1.tokens.store');
     Route::get('/v1/tokens', [ApiTokenController::class, 'index'])->name('api.v1.tokens.index');
     Route::delete('/v1/tokens/{token}', [ApiTokenController::class, 'destroy'])->whereNumber('token')->name('api.v1.tokens.destroy');
