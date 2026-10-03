@@ -31,6 +31,23 @@ final class CatalogueImportService
         }
 
         return DB::transaction(function () use ($provider, $service, $products): int {
+            $provider = ApiProvider::query()->lockForUpdate()->findOrFail($provider->id);
+            $service = Service::query()->lockForUpdate()->findOrFail($service->id);
+
+            if (!$provider->enabled || $provider->paused
+                || !in_array($provider->integration_status, ['sandbox_verified', 'live_verified'], true)
+                || !in_array($provider->verification_status, ['sandbox_verified', 'live_verified'], true)) {
+                throw new InvalidArgumentException('Catalogue import requires an enabled, unpaused, verified provider.');
+            }
+
+            if (!$service->enabled) {
+                throw new InvalidArgumentException('Catalogue import requires an enabled service.');
+            }
+
+            if (!in_array('catalogue_retrieval', $provider->capabilities ?? [], true)) {
+                throw new InvalidArgumentException('Provider does not declare catalogue retrieval capability.');
+            }
+
             $mapping = ProviderServiceMapping::query()->firstOrCreate(
                 ['api_provider_id' => $provider->id, 'service_key' => $service->key],
                 ['service_id' => $service->id, 'enabled' => false]
@@ -81,16 +98,23 @@ final class CatalogueImportService
                         'enabled' => false,
                     ]
                 );
+                $product->lockForUpdate()->first();
+                $product->refresh();
+
+                $currencyCompatible = strtoupper((string) $product->currency) === $currency;
+                if (!$currencyCompatible) {
+                    $hasSellableProviderData = false;
+                }
 
                 $product->fill([
                     'name' => $name,
-                    'currency' => $currency,
                     'metadata' => Arr::get($item, 'metadata'),
                 ])->save();
 
                 $existing = ProviderServiceProduct::query()
                     ->where('api_provider_id', $provider->id)
                     ->where('service_product_id', $product->id)
+                    ->lockForUpdate()
                     ->first();
 
                 $values = [
