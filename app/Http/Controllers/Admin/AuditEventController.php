@@ -10,7 +10,7 @@ use Inertia\Response;
 
 class AuditEventController extends Controller
 {
-    private const SENSITIVE_KEYS = ['token', 'api_key', 'secret', 'password', 'authorization', 'credentials', 'private_key', 'refresh_token', 'otp'];
+    private const SENSITIVE_KEYS = ['token', 'api_key', 'secret', 'password', 'authorization', 'credentials', 'private_key', 'refresh_token', 'otp', 'client_secret', 'one_time_code', 'webhook_secret'];
 
     public function index(Request $request): Response
     {
@@ -27,8 +27,8 @@ class AuditEventController extends Controller
             ->when($filters['event'] ?? null, fn ($query, string $event) => $query->where('event', 'like', '%'.$event.'%'))
             ->when($filters['actor_id'] ?? null, fn ($query, int $actorId) => $query->where('actor_id', $actorId))
             ->when($filters['request_id'] ?? null, fn ($query, string $requestId) => $query->where('request_id', $requestId))
-            ->when($filters['from'] ?? null, fn ($query, string $from) => $query->where('created_at', '>=', $from))
-            ->when($filters['to'] ?? null, fn ($query, string $to) => $query->where('created_at', '<=', $to))
+            ->when($filters['from'] ?? null, fn ($query, string $from) => $query->where('created_at', '>=', Carbon::parse($from)->startOfDay()))
+            ->when($filters['to'] ?? null, fn ($query, string $to) => $query->where('created_at', '<=', Carbon::parse($to)->endOfDay()))
             ->latest('id')
             ->paginate(50)
             ->withQueryString()
