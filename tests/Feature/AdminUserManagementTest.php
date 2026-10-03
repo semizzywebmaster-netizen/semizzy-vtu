@@ -40,6 +40,19 @@ class AdminUserManagementTest extends TestCase
         $this->assertSame('active', $admin->fresh()->status);
     }
 
+    public function test_admin_cannot_demote_themselves_when_another_admin_exists(): void
+    {
+        $admin = $this->makeUser('self-demote-admin@example.test', 'ADMIN');
+        $this->makeUser('other-self-demote-admin@example.test', 'ADMIN');
+
+        $this->actingAs($admin)->patch('/admin/users/'.$admin->id, [
+            'role' => 'USER',
+            'status' => 'active',
+        ])->assertUnprocessable();
+
+        $this->assertSame('ADMIN', $admin->fresh()->role);
+    }
+
     public function test_last_active_admin_cannot_be_demoted_or_deactivated(): void
     {
         $admin = $this->makeUser('last-admin@example.test', 'ADMIN');
