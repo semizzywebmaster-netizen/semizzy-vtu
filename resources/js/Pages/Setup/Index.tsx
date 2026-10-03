@@ -11,6 +11,19 @@ export default function Setup({ checks, migrations_table, app_url }: Props) {
   const migrate = useForm({ confirm: false });
   const admin = useForm({ name: '', email: '', password: '', password_confirmation: '' });
   const ready = Object.values(checks).every(Boolean);
+  const checkLabels: Record<string, string> = {
+    php: 'PHP 8.4+',
+    pdo: 'PDO',
+    pdo_mysql: 'PDO MySQL',
+    mbstring: 'mbstring',
+    openssl: 'OpenSSL',
+    json: 'JSON',
+    app_key: 'Application key',
+    app_url: 'Application URL',
+    storage: 'Storage writable',
+    bootstrap_cache: 'Bootstrap cache writable',
+    database: 'Database connection',
+  };
 
   const runMigrations = (e: FormEvent) => {
     e.preventDefault();
@@ -38,11 +51,12 @@ export default function Setup({ checks, migrations_table, app_url }: Props) {
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {Object.entries(checks).map(([key, ok]) => (
                 <div key={key} className="flex items-center justify-between rounded-xl border border-slate-800 p-3">
-                  <span>{key.replaceAll('_', ' ')}</span><strong>{ok ? 'OK' : 'Fix'}</strong>
+                  <span>{checkLabels[key] ?? key.replaceAll('_', ' ')}</span><strong className={ok ? 'text-emerald-400' : 'text-amber-400'}>{ok ? 'OK' : 'Fix'}</strong>
                 </div>
               ))}
             </div>
             <p className="mt-4 text-sm text-slate-400">APP_URL: {app_url || 'not configured'}</p>
+            {!ready && <p className="mt-3 rounded-xl bg-amber-950/40 p-3 text-sm text-amber-200">Fix every item marked “Fix”, then refresh this page. The wizard will only run migrations when the server checks are healthy.</p>}
           </section>
           <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
             <h2 className="text-lg font-semibold">Database</h2>
@@ -55,7 +69,7 @@ export default function Setup({ checks, migrations_table, app_url }: Props) {
               </form>
             )}
           </section>
-          {migrations_table && (
+          {migrations_table && ready && (
             <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
               <h2 className="text-lg font-semibold">Create initial administrator</h2>
               <form onSubmit={createAdmin} className="mt-4 grid gap-3">
