@@ -61,13 +61,14 @@ class CatalogueController extends Controller
             'service_id'=>'required|integer|exists:services,id',
             'key'=>'required|string|max:120',
             'name'=>'required|string|max:200',
-            'currency'=>'required|string|size:3',
+            'currency'=>'required|string|size:3|regex:/^[A-Za-z]{3}$/',
             'metadata'=>'nullable|array',
             'enabled'=>'nullable|boolean',
         ]);
         if(ServiceProduct::query()->where('service_id',$data['service_id'])->where('key',$data['key'])->exists())
             return back()->with('error','A product with this key already exists under this service.');
-        $product = ServiceProduct::create($data+['currency'=>strtoupper($data['currency']),'enabled'=>$data['enabled']??false]);
+        $data['currency'] = strtoupper($data['currency']);
+        $product = ServiceProduct::create($data+['enabled'=>$data['enabled']??false]);
         $audit->record('catalogue.product.created', $product, ['service_id' => $product->service_id, 'key' => $product->key], $request);
         return back()->with('success','Service product created.');
     }
