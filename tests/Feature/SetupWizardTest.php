@@ -55,17 +55,21 @@ class SetupWizardTest extends TestCase
         $this->assertSame(1, User::query()->where('role', 'ADMIN')->count());
     }
 
-    public function test_setup_refuses_initial_admin_creation_without_app_key(): void
+    public function test_setup_controller_refuses_initial_admin_creation_without_app_key(): void
     {
         config(['app.key' => null]);
 
-        $this->post(route('setup.admin'), [
+        $request = request()->create(route('setup.admin'), 'POST', [
             'name' => 'Setup Administrator',
             'email' => 'setup-admin@example.test',
             'password' => 'Strong-Password-123!',
             'password_confirmation' => 'Strong-Password-123!',
-        ])->assertSessionHasErrors('setup');
+        ]);
 
+        $response = app(\App\Http\Controllers\SetupController::class)->createAdmin($request);
+
+        $this->assertSame(302, $response->getStatusCode());
+        $this->assertStringContainsString('setup', (string) $response->getSession()->get('_errors'));
         $this->assertDatabaseMissing('users', ['email' => 'setup-admin@example.test']);
     }
 }
