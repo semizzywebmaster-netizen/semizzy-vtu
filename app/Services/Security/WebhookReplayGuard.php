@@ -90,7 +90,7 @@ class WebhookReplayGuard
         // credentials, authorization headers, or other sensitive request data.
         $safeError = trim($error);
         $safeError = $safeError === '' ? 'Webhook processing failed.' : $safeError;
-        $safeError = preg_replace('/(?:authorization|x-api-key|api[_-]?key|token|secret|password)\\s*[:=]\\s*[^\\s,;]+/i', '$1: [REDACTED]', $safeError) ?? 'Webhook processing failed.';
+        $safeError = preg_replace('/(?:authorization|x-api-key|api[_-]?key|token|secret|password)\\s*[:=]\\s*[^,;]+/i', '$1: [REDACTED]', $safeError) ?? 'Webhook processing failed.';
 
         $receipt->forceFill([
             'status' => 'failed',
