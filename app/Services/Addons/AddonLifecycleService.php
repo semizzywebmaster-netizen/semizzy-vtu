@@ -574,7 +574,7 @@ class AddonLifecycleService
 
         $dependencyIds = [];
 
-        foreach ($manifest['dependencies'] ?? [] as $dependency) {
+        foreach ($manifest['dependencies'] ?? [] as $index => $dependency) {
             if (is_string($dependency)) {
                 $dependencyIdentifier = strtolower(trim($dependency));
                 if ($dependencyIdentifier === '') {
@@ -586,6 +586,7 @@ class AddonLifecycleService
                 if (in_array(strtolower($dependencyIdentifier), array_map('strtolower', $dependencyIds), true)) {
                     throw ValidationException::withMessages(['dependencies' => "Duplicate addon dependency [{$dependencyIdentifier}]."]);
                 }
+                $manifest['dependencies'][$index] = $dependencyIdentifier;
                 $dependencyIds[] = $dependencyIdentifier;
                 continue;
             }
@@ -606,7 +607,7 @@ class AddonLifecycleService
             if (in_array(strtolower($dependencyIdentifier), array_map('strtolower', $dependencyIds), true)) {
                 throw ValidationException::withMessages(['dependencies' => "Duplicate addon dependency [{$dependencyIdentifier}]."]);
             }
-            $dependency['identifier'] = $dependencyIdentifier;
+            $manifest['dependencies'][$index]['identifier'] = $dependencyIdentifier;
             $dependencyIds[] = $dependencyIdentifier;
 
             if (isset($dependency['constraint']) && !is_string($dependency['constraint'])) {
