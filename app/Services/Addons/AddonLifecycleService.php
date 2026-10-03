@@ -550,7 +550,7 @@ class AddonLifecycleService
             }
         }
 
-        if (!preg_match('/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/i', $manifest['identifier'])) {
+        if (!preg_match('/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/', $manifest['identifier'])) {
             throw ValidationException::withMessages([
                 'identifier' => 'Addon identifier may contain only letters, numbers, dots, underscores, and hyphens.',
             ]);
@@ -561,6 +561,8 @@ class AddonLifecycleService
                 'version' => 'Addon version must use semantic-version format.',
             ]);
         }
+
+        $manifest['identifier'] = strtolower(trim($manifest['identifier']));
 
         foreach (['dependencies', 'permissions', 'navigation', 'settings', 'migrations'] as $key) {
             if (isset($manifest[$key]) && !is_array($manifest[$key])) {
@@ -574,7 +576,7 @@ class AddonLifecycleService
 
         foreach ($manifest['dependencies'] ?? [] as $dependency) {
             if (is_string($dependency)) {
-                $dependencyIdentifier = trim($dependency);
+                $dependencyIdentifier = strtolower(trim($dependency));
                 if ($dependencyIdentifier === '') {
                     throw ValidationException::withMessages(['dependencies' => 'Dependency identifiers must not be empty.']);
                 }
@@ -594,7 +596,7 @@ class AddonLifecycleService
                 ]);
             }
 
-            $dependencyIdentifier = trim($dependency['identifier']);
+            $dependencyIdentifier = strtolower(trim($dependency['identifier']));
             if ($dependencyIdentifier === '') {
                 throw ValidationException::withMessages(['dependencies' => 'Dependency identifiers must not be empty.']);
             }
@@ -604,6 +606,7 @@ class AddonLifecycleService
             if (in_array(strtolower($dependencyIdentifier), array_map('strtolower', $dependencyIds), true)) {
                 throw ValidationException::withMessages(['dependencies' => "Duplicate addon dependency [{$dependencyIdentifier}]."]);
             }
+            $dependency['identifier'] = $dependencyIdentifier;
             $dependencyIds[] = $dependencyIdentifier;
 
             if (isset($dependency['constraint']) && !is_string($dependency['constraint'])) {
