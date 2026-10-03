@@ -165,7 +165,7 @@ export default function Addons({ addons }: Props) {
                     {['installed', 'inactive', 'failed'].includes(addon.status) && (
                       <button onClick={() => action('/admin/addons/' + addon.id + '/uninstall', 'Uninstall this addon? The addon will be archived after the uninstall contract is recorded.')} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700">Uninstall</button>
                     )}
-                    {['draft', 'installed', 'inactive', 'failed'].includes(addon.status) && (
+                    {addon.status === 'draft' && (
                       <button onClick={() => action('/admin/addons/' + addon.id + '/archive', 'Archive this addon?')} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700">Archive</button>
                     )}
                   </div>
