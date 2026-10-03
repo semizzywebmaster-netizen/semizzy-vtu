@@ -310,6 +310,74 @@ class AddonLifecycleTest extends TestCase
         $service->uninstall($base);
     }
 
+    public function test_activation_rechecks_that_required_dependencies_remain_active(): void
+    {
+        $service = app(AddonLifecycleService::class);
+
+        $dependency = $service->register([
+            'identifier' => 'activation-dependency',
+            'name' => 'Activation Dependency',
+            'version' => '1.0.0',
+        ]);
+        $service->install($dependency);
+        $service->activate($dependency);
+
+        $dependent = $service->register([
+            'identifier' => 'activation-dependent',
+            'name' => 'Activation Dependent',
+            'version' => '1.0.0',
+            'dependencies' => ['activation-dependency'],
+        ]);
+        $service->install($dependent);
+
+        $dependency->fresh()->forceFill(['status' => 'inactive'])->save();
+
+        try {
+            $service->activate($dependent);
+            $this->fail('Activation must fail when a required dependency is no longer active.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('dependencies', $exception->errors());
+        }
+
+        $this->assertSame('installed', $dependent->fresh()->status);
+    }
+
+    public function test_dependency_cannot_be_disabled_while_installed_or_active_addons_depend_on_it(): void
+    {
+        $service = app(AddonLifecycleService::class);
+
+        $base = $service->register([
+            'identifier' => 'disable-guard-base',
+            'name' => 'Disable Guard Base',
+            'version' => '1.0.0',
+        ]);
+        $service->install($base);
+        $service->activate($base);
+
+        foreach ([
+            ['identifier' => 'disable-guard-scalar-dependent', 'dependencies' => ['disable-guard-base']],
+            ['identifier' => 'disable-guard-object-dependent', 'dependencies' => [['identifier' => 'disable-guard-base']]],
+        ] as $manifest) {
+            $dependent = $service->register([
+                'identifier' => $manifest['identifier'],
+                'name' => $manifest['identifier'],
+                'version' => '1.0.0',
+                'dependencies' => $manifest['dependencies'],
+            ]);
+            $service->install($dependent);
+            $service->activate($dependent);
+        }
+
+        try {
+            $service->disable($base);
+            $this->fail('A dependency must not be disabled while dependents remain installed or active.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('addon', $exception->errors());
+        }
+
+        $this->assertSame('active', $base->fresh()->status);
+    }
+
     public function test_update_rejects_dependency_cycle_back_to_the_updating_addon(): void
     {
         $service = app(AddonLifecycleService::class);
