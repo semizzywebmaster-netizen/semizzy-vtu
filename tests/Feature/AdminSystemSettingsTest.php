@@ -89,12 +89,15 @@ class AdminSystemSettingsTest extends TestCase
 
     private function makeUser(string $email, string $role): User
     {
-        return User::create([
+        $user = User::create([
             'name' => 'Settings Test User',
             'email' => $email,
             'password' => 'Strong-Password-123!',
             'role' => $role,
             'status' => 'active',
         ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        return $user;
     }
 }
