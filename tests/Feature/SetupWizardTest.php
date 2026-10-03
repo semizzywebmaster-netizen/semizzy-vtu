@@ -69,7 +69,7 @@ class SetupWizardTest extends TestCase
         $response = app(\App\Http\Controllers\SetupController::class)->createAdmin($request);
 
         $this->assertSame(302, $response->getStatusCode());
-        $this->assertStringContainsString('setup', (string) $response->getSession()->get('_errors'));
+        $this->assertTrue($response->getSession()->getErrors()->has('setup'));
         $this->assertDatabaseMissing('users', ['email' => 'setup-admin@example.test']);
     }
 }
