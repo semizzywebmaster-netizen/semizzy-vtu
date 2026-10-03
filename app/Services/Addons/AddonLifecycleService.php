@@ -449,8 +449,21 @@ class AddonLifecycleService
             }
         }
 
+        $dependencyIds = [];
+
         foreach ($manifest['dependencies'] ?? [] as $dependency) {
             if (is_string($dependency)) {
+                $dependencyIdentifier = trim($dependency);
+                if ($dependencyIdentifier === '') {
+                    throw ValidationException::withMessages(['dependencies' => 'Dependency identifiers must not be empty.']);
+                }
+                if (strcasecmp($dependencyIdentifier, $manifest['identifier']) === 0) {
+                    throw ValidationException::withMessages(['dependencies' => 'An addon cannot depend on itself.']);
+                }
+                if (in_array($dependencyIdentifier, $dependencyIds, true)) {
+                    throw ValidationException::withMessages(['dependencies' => "Duplicate addon dependency [{$dependencyIdentifier}]."]);
+                }
+                $dependencyIds[] = $dependencyIdentifier;
                 continue;
             }
 
@@ -460,11 +473,41 @@ class AddonLifecycleService
                 ]);
             }
 
+            $dependencyIdentifier = trim($dependency['identifier']);
+            if ($dependencyIdentifier === '') {
+                throw ValidationException::withMessages(['dependencies' => 'Dependency identifiers must not be empty.']);
+            }
+            if (strcasecmp($dependencyIdentifier, $manifest['identifier']) === 0) {
+                throw ValidationException::withMessages(['dependencies' => 'An addon cannot depend on itself.']);
+            }
+            if (in_array($dependencyIdentifier, $dependencyIds, true)) {
+                throw ValidationException::withMessages(['dependencies' => "Duplicate addon dependency [{$dependencyIdentifier}]."]);
+            }
+            $dependencyIds[] = $dependencyIdentifier;
+
             if (isset($dependency['constraint']) && !is_string($dependency['constraint'])) {
                 throw ValidationException::withMessages([
                     'dependencies' => 'Dependency constraints must be strings.',
                 ]);
             }
+        }
+
+        foreach (['routes', 'api_routes', 'menus', 'widgets', 'services', 'provider_integrations', 'scheduled_tasks', 'events'] as $key) {
+            if (isset($manifest[$key]) && !is_array($manifest[$key])) {
+                throw ValidationException::withMessages([
+                    $key => "Addon manifest field [{$key}] must be an array.",
+                ]);
+            }
+        }
+
+        if (isset($manifest['checksum']) && (!is_string($manifest['checksum']) || !preg_match('/^[A-Fa-f0-9]{64}$/', $manifest['checksum']))) {
+            throw ValidationException::withMessages([
+                'checksum' => 'Addon package checksum must be a SHA-256 hexadecimal string.',
+            ]);
+        }
+
+        if (isset($manifest['compatibility']) && is_string($manifest['compatibility']) && trim($manifest['compatibility']) !== '') {
+            $this->satisfiesConstraint((string) config('app.core_version', '2.0.0'), $manifest['compatibility']);
         }
 
         return $manifest;
