@@ -151,8 +151,8 @@ class SecurityFoundationTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'ADMIN',
             'status' => 'active',
-            'email_verified_at' => now(),
         ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
 
         $event = SecurityEvent::create([
             'user_id' => $admin->id,
