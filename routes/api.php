@@ -10,7 +10,7 @@ Route::get('/v1/health', fn () => response()->json([
     'timestamp' => now()->toIso8601String(),
 ]))->name('api.v1.health');
 
-Route::middleware(['auth:sanctum', 'ensure.active.api'])->get('/v1/me', fn (Request $request) => response()->json([
+Route::middleware(['auth:sanctum', 'ensure.active.api', 'api.token:core.read'])->get('/v1/me', fn (Request $request) => response()->json([
     'data' => $request->user(),
 ]))->name('api.v1.me');
 
