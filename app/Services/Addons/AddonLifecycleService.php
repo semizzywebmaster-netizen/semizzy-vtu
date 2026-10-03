@@ -412,21 +412,38 @@ class AddonLifecycleService
         }
     }
 
-    private function assertDependencies(array $dependencies): void
+    private function assertDependencies(array $dependencies, ?string $rootIdentifier = null, array $path = []): void
     {
-        foreach ($dependencies as $dependency) {
-            $identifier = is_string($dependency) ? $dependency : ($dependency['identifier'] ?? null);
-            $constraint = is_string($dependency) ? null : ($dependency['constraint'] ?? null);
+        $normalized = [];
 
-            if (!$identifier) {
+        foreach ($dependencies as $dependency) {
+            $identifier = is_string($dependency) ? trim($dependency) : trim((string) ($dependency['identifier'] ?? ''));
+            if ($identifier === '') {
                 throw ValidationException::withMessages([
                     'dependencies' => 'Every addon dependency must contain an identifier.',
+                ]);
+            }
+
+            $normalized[strtolower($identifier)] = $dependency;
+        }
+
+        ksort($normalized);
+
+        foreach ($normalized as $dependency) {
+            $identifier = is_string($dependency) ? trim($dependency) : trim((string) $dependency['identifier']);
+            $constraint = is_string($dependency) ? null : ($dependency['constraint'] ?? null);
+
+            if ($rootIdentifier !== null && strcasecmp($identifier, $rootIdentifier) === 0) {
+                $cycle = [...$path, $rootIdentifier];
+                throw ValidationException::withMessages([
+                    'dependencies' => 'Addon dependency cycle detected: '.implode(' -> ', $cycle).'.',
                 ]);
             }
 
             $required = Addon::query()
                 ->where('identifier', $identifier)
                 ->where('status', 'active')
+                ->lockForUpdate()
                 ->first();
 
             if (!$required) {
@@ -439,6 +456,15 @@ class AddonLifecycleService
                 throw ValidationException::withMessages([
                     'dependencies' => "Addon dependency [{$identifier}] version {$required->version} does not satisfy [{$constraint}].",
                 ]);
+            }
+
+            $requiredDependencies = $required->dependencies ?? [];
+            if ($requiredDependencies !== []) {
+                $this->assertDependencies(
+                    $requiredDependencies,
+                    $rootIdentifier ?? $identifier,
+                    [...$path, $identifier]
+                );
             }
         }
     }
