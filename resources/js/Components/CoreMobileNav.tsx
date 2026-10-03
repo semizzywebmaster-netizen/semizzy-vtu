@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 
 type Props = {
-  active?: 'home' | 'notifications' | 'profile';
+  active?: 'home' | 'notifications' | 'support' | 'profile';
   unreadCount?: number;
 };
 
@@ -23,6 +23,9 @@ export default function CoreMobileNav({ active, unreadCount = 0 }: Props) {
         <button type="button" disabled aria-disabled="true" title="Available when a transaction addon is installed" className={`${base} ${disabledClass}`}>
           <span aria-hidden="true" className="text-lg leading-5">↔</span><span>Transactions</span>
         </button>
+        <Link href="/support" aria-current={active === 'support' ? 'page' : undefined} className={`${base} ${active === 'support' ? activeClass : idleClass}`}>
+          <span aria-hidden="true" className="text-lg leading-5">?</span><span>Support</span>
+        </Link>
         <Link href="/notifications" aria-current={active === 'notifications' ? 'page' : undefined} className={`${base} ${active === 'notifications' ? activeClass : idleClass}`}>
           <span className="relative text-lg leading-5" aria-hidden="true">♧{unreadCount > 0 && <span className="absolute -right-3 -top-1 rounded-full bg-indigo-600 px-1 text-[9px] leading-4 text-white">{unreadCount > 99 ? '99+' : unreadCount}</span>}</span><span>Notifications</span>
         </Link>
