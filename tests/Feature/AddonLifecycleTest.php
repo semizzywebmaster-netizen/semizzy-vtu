@@ -230,4 +230,65 @@ class AddonLifecycleTest extends TestCase
             'checksum' => 'not-a-sha256',
         ]);
     }
+    public function test_uninstall_blocks_scalar_and_object_dependents(): void
+    {
+        $service = app(AddonLifecycleService::class);
+
+        $base = $service->register([
+            'identifier' => 'base-uninstall-guard',
+            'name' => 'Base Uninstall Guard',
+            'version' => '1.0.0',
+        ]);
+        $service->install($base);
+        $service->activate($base);
+
+        foreach ([
+            ['identifier' => 'scalar-dependent', 'dependencies' => ['base-uninstall-guard']],
+            ['identifier' => 'object-dependent', 'dependencies' => [['identifier' => 'base-uninstall-guard']]],
+        ] as $manifest) {
+            $dependent = $service->register([
+                'identifier' => $manifest['identifier'],
+                'name' => $manifest['identifier'],
+                'version' => '1.0.0',
+                'dependencies' => $manifest['dependencies'],
+            ]);
+            $service->install($dependent);
+            $service->activate($dependent);
+        }
+
+        $this->expectException(ValidationException::class);
+        $service->uninstall($base);
+    }
+
+    public function test_update_rejects_dependency_cycle_back_to_the_updating_addon(): void
+    {
+        $service = app(AddonLifecycleService::class);
+
+        $dependency = $service->register([
+            'identifier' => 'cycle-dependency',
+            'name' => 'Cycle Dependency',
+            'version' => '1.0.0',
+        ]);
+        $service->install($dependency);
+        $service->activate($dependency);
+
+        $addon = $service->register([
+            'identifier' => 'cycle-root',
+            'name' => 'Cycle Root',
+            'version' => '1.0.0',
+            'dependencies' => ['cycle-dependency'],
+        ]);
+        $service->install($addon);
+        $service->activate($addon);
+
+        $this->expectException(ValidationException::class);
+
+        $service->update($addon, [
+            'identifier' => 'cycle-root',
+            'name' => 'Cycle Root',
+            'version' => '1.1.0',
+            'dependencies' => [['identifier' => 'cycle-dependency']],
+        ]);
+    }
+
 }
