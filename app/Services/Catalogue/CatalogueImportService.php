@@ -53,17 +53,23 @@ final class CatalogueImportService
                     continue;
                 }
 
-                if ($rawCost !== null && (!is_numeric($rawCost) || (float) $rawCost < 0)) {
-                    continue;
+                $normalizedCost = null;
+                if ($rawCost !== null) {
+                    try {
+                        $normalizedCost = BigDecimal::of(trim((string) $rawCost))->toScale(6, RoundingMode::UNNECESSARY);
+                    } catch (\\Throwable) {
+                        continue;
+                    }
+                    if ($normalizedCost->isNegative()) {
+                        continue;
+                    }
                 }
 
                 // A provider product without a provider identifier or exact cost is retained
                 // as catalogue metadata but never made sellable through this provider mapping.
                 $hasSellableProviderData = $providerProductId !== null
                     && trim((string) $providerProductId) !== ''
-                    && $rawCost !== null
-                    && is_numeric($rawCost)
-                    && (float) $rawCost >= 0;
+                    && $normalizedCost !== null;
 
                 $product = ServiceProduct::query()->firstOrCreate(
                     ['service_id' => $service->id, 'key' => $key],
@@ -87,7 +93,7 @@ final class CatalogueImportService
 
                 $values = [
                     'provider_product_id' => $providerProductId !== null ? (string) $providerProductId : ($existing?->provider_product_id),
-                    'provider_cost' => $hasSellableProviderData ? $rawCost : $existing?->provider_cost,
+                    'provider_cost' => $hasSellableProviderData ? $normalizedCost->toScale(6, RoundingMode::UNNECESSARY)->__toString() : $existing?->provider_cost,
                     'currency' => $currency,
                     'raw_catalogue' => $item,
                     'enabled' => $hasSellableProviderData,
