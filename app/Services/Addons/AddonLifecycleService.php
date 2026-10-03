@@ -171,10 +171,36 @@ class AddonLifecycleService
 
     public function activate(Addon $addon, ?int $actorId = null): Addon
     {
-        return $this->transitionAndAudit($addon, 'active', 'activated', 'Addon activated.', $actorId, [
-            'installed',
-            'inactive',
-        ]);
+        return DB::transaction(function () use ($addon, $actorId): Addon {
+            $addon = Addon::query()->lockForUpdate()->findOrFail($addon->id);
+
+            if (! in_array($addon->status, ['installed', 'inactive'], true)) {
+                throw ValidationException::withMessages([
+                    'addon' => 'Only an installed or inactive addon can be activated.',
+                ]);
+            }
+
+            $this->transition($addon, 'enabling', 'enable_started', 'Addon enable operation started.', $actorId);
+            $this->recordStep($addon, 'enable', 'Addon enable contract validated; no addon code is executed by Core.');
+
+            $from = 'enabling';
+            $addon->update([
+                'status' => 'active',
+                'activated_at' => now(),
+                'last_error' => null,
+            ]);
+
+            $addon->lifecycleEvents()->create([
+                'addon_identifier' => $addon->identifier,
+                'event' => 'activated',
+                'from_status' => $from,
+                'to_status' => 'active',
+                'message' => 'Addon activated successfully.',
+                'actor_id' => $actorId,
+            ]);
+
+            return $addon->fresh();
+        });
     }
 
     public function disable(Addon $addon, ?int $actorId = null): Addon
