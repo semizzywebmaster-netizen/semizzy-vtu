@@ -11,7 +11,7 @@ class WalletAccount extends Model
 
     protected function casts(): array
     {
-        return ['available_minor' => 'integer', 'held_minor' => 'integer'];
+        return ['available_minor' => 'string', 'held_minor' => 'string'];
     }
 
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
