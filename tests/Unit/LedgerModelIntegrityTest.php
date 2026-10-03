@@ -2,12 +2,12 @@
 
 namespace Tests\Unit;
 
-use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use LogicException;
+use RuntimeException;
 use Tests\TestCase;
 
 class LedgerModelIntegrityTest extends TestCase
@@ -58,7 +58,7 @@ class LedgerModelIntegrityTest extends TestCase
         $entry->save();
     }
 
-    public function test_posted_transaction_entries_cannot_be_updated(): void
+    public function test_posted_transaction_entries_cannot_be_created(): void
     {
         $tx = LedgerTransaction::create([
             'uuid' => (string) Str::uuid(),
