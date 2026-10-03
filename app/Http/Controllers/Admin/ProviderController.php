@@ -9,6 +9,7 @@ use App\Services\Providers\ProviderTestService;
 use App\Services\Providers\ProviderUrlGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -123,17 +124,21 @@ class ProviderController extends Controller
 
     public function toggle(ApiProvider $provider, AuditLogger $audit, Request $request): RedirectResponse
     {
-        if (! $provider->enabled && ($provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
-            return back()->with('error', 'Provider must be live-verified before it can be enabled.');
-        }
+        return DB::transaction(function () use ($provider, $audit, $request): RedirectResponse {
+            $provider = ApiProvider::query()->lockForUpdate()->findOrFail($provider->id);
 
-        $enabled = ! $provider->enabled;
-        $provider->update(['enabled' => $enabled, 'paused' => ! $enabled]);
-        $audit->record($enabled ? 'provider.enabled' : 'provider.disabled', $provider, [
-            'identifier' => $provider->identifier,
-        ], $request);
+            if (! $provider->enabled && ($provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
+                return back()->with('error', 'Provider must be live-verified before it can be enabled.');
+            }
 
-        return back()->with('success', 'Provider status updated.');
+            $enabled = ! $provider->enabled;
+            $provider->update(['enabled' => $enabled, 'paused' => ! $enabled]);
+            $audit->record($enabled ? 'provider.enabled' : 'provider.disabled', $provider, [
+                'identifier' => $provider->identifier,
+            ], $request);
+
+            return back()->with('success', 'Provider status updated.');
+        });
     }
 
     public function destroy(ApiProvider $provider, AuditLogger $audit, Request $request): RedirectResponse
