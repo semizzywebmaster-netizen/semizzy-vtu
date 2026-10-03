@@ -272,9 +272,6 @@ class AddonLifecycleService
     {
         return $this->transitionAndAudit($addon, 'archived', 'archived', 'Addon archived.', $actorId, [
             'draft',
-            'installed',
-            'inactive',
-            'failed',
         ]);
     }
 
