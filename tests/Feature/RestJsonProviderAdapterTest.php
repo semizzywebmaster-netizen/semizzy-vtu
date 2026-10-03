@@ -13,6 +13,40 @@ class RestJsonProviderAdapterTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_absolute_endpoint_urls_are_rejected(): void
+    {
+        $provider = ApiProvider::create([
+            'identifier' => 'adapter-endpoint-guard',
+            'display_name' => 'Adapter Endpoint Guard',
+            'base_url' => 'https://8.8.8.8',
+            'endpoints' => ['transaction_status' => 'http://127.0.0.1/private'],
+            'auth_type' => 'bearer',
+            'credentials' => ['token' => 'provider-token-secret'],
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('relative path');
+
+        app(RestJsonProviderAdapter::class)->execute($provider, 'transaction_status', ['reference' => 'ref-1']);
+    }
+
+    public function test_endpoint_query_strings_are_rejected(): void
+    {
+        $provider = ApiProvider::create([
+            'identifier' => 'adapter-endpoint-query-guard',
+            'display_name' => 'Adapter Endpoint Query Guard',
+            'base_url' => 'https://8.8.8.8',
+            'endpoints' => ['transaction_status' => '/status?token=secret'],
+            'auth_type' => 'bearer',
+            'credentials' => ['token' => 'provider-token-secret'],
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('query string');
+
+        app(RestJsonProviderAdapter::class)->execute($provider, 'transaction_status', ['reference' => 'ref-1']);
+    }
+
     public function test_transport_exception_details_are_not_returned_to_callers(): void
     {
         $provider = ApiProvider::create([
