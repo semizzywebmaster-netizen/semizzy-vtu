@@ -88,6 +88,30 @@ class PriceEngineTest extends TestCase
         app(PriceEngine::class)->quote($product);
     }
 
+    public function test_price_rule_rejects_negative_amounts_and_invalid_effective_window(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        PriceRule::create([
+            'scope_type' => 'GLOBAL',
+            'rule_type' => 'percentage',
+            'percentage' => '-1.000000',
+            'enabled' => true,
+        ]);
+    }
+
+    public function test_price_rule_rejects_effective_window_with_start_after_end(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        PriceRule::create([
+            'scope_type' => 'GLOBAL',
+            'rule_type' => 'fixed',
+            'fixed_fee' => '10.000000',
+            'effective_from' => now()->addDay(),
+            'effective_to' => now(),
+            'enabled' => true,
+        ]);
+    }
+
     public function test_provider_cost_currency_must_match_product_currency(): void
     {
         [, $service, $product] = $this->makeProduct();
