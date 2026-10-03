@@ -74,6 +74,28 @@ class SetupController extends Controller
         ]);
     }
 
+    public function generateKey()
+    {
+        abort_if($this->locked(), 404);
+
+        if (filled(config('app.key'))) {
+            return back()->with('success', 'Application key is already configured.');
+        }
+
+        if (! is_file(base_path('.env')) || ! is_writable(base_path('.env'))) {
+            return back()->withErrors(['setup' => 'The .env file is missing or not writable. Generate APP_KEY from the server environment, then refresh this page.']);
+        }
+
+        try {
+            Artisan::call('key:generate', ['--force' => true]);
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->withErrors(['setup' => 'The application key could not be generated. Check the server environment and application logs.']);
+        }
+
+        return back()->with('success', 'Application key generated successfully. Refreshing the setup checks is safe.');
+    }
+
     public function migrate(Request $request)
     {
         abort_if($this->locked(), 404);
