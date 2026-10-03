@@ -11,6 +11,16 @@ class SecurityHardeningTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_admin_login_route_uses_configured_path(): void
+    {
+        $expectedPath = trim((string) config('semizzy.admin_login_path', 'admin/login'), '/') ?: 'admin/login';
+        $route = app('router')->getRoutes()->getByName('admin.login');
+
+        $this->assertNotNull($route);
+        $this->assertSame($expectedPath, $route->uri());
+        $this->assertSame($expectedPath, app('router')->getRoutes()->getByName('admin.login.store')->uri());
+    }
+
     public function test_api_token_routes_are_rate_limited_and_log_throttling(): void
     {
         $u = User::create([

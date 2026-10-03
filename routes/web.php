@@ -47,8 +47,9 @@ Route::post('/email/verification-notification', function (\Illuminate\Http\Reque
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->middleware('auth')->name('logout');
 
-Route::get('/admin/login', [AuthenticatedSessionController::class, 'createAdmin'])->middleware('guest')->name('admin.login');
-Route::post('/admin/login', [AuthenticatedSessionController::class, 'storeAdmin'])->middleware('guest')->name('admin.login.store');
+$adminLoginPath = trim((string) config('semizzy.admin_login_path', 'admin/login'), '/') ?: 'admin/login';
+Route::get('/'.$adminLoginPath, [AuthenticatedSessionController::class, 'createAdmin'])->middleware('guest')->name('admin.login');
+Route::post('/'.$adminLoginPath, [AuthenticatedSessionController::class, 'storeAdmin'])->middleware('guest')->name('admin.login.store');
 
 Route::middleware(['auth'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->middleware('verified')->name('dashboard');
