@@ -25,6 +25,21 @@ class AddonLifecycleStateTest extends TestCase
         ], Addon::LIFECYCLE_STATES);
     }
 
+    public function test_archive_is_not_available_from_installed_inactive_or_failed_states(): void
+    {
+        $addon = new Addon(['status' => 'installed']);
+        $this->assertFalse($addon->canTransitionTo('archived'));
+
+        $addon->status = 'inactive';
+        $this->assertFalse($addon->canTransitionTo('archived'));
+
+        $addon->status = 'failed';
+        $this->assertFalse($addon->canTransitionTo('archived'));
+
+        $addon->status = 'draft';
+        $this->assertTrue($addon->canTransitionTo('archived'));
+    }
+
     public function test_transitional_states_have_safe_terminal_paths(): void
     {
         $addon = new Addon(['status' => 'installed']);
