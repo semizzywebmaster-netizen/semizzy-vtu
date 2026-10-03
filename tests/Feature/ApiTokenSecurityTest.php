@@ -137,6 +137,37 @@ class ApiTokenSecurityTest extends TestCase
         $this->assertDatabaseHas('personal_access_tokens', ['id' => $other->accessToken->getKey()]);
     }
 
+
+    public function test_expired_token_cannot_access_protected_api_endpoint(): void
+    {
+        $user = $this->makeUser();
+        $token = $user->createToken('Expired token', ['core.read'], now()->subMinute());
+
+        $this->withHeader('Authorization', 'Bearer '.$token->plainTextToken)
+            ->getJson('/api/v1/core-check')
+            ->assertUnauthorized();
+    }
+
+    public function test_token_listing_exposes_only_the_current_users_tokens(): void
+    {
+        $user = $this->makeUser();
+        $otherUser = $this->makeUser();
+        $ownToken = $user->createToken('My token', ['core.read']);
+        $otherToken = $otherUser->createToken('Private other token', ['core.read']);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/tokens')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $ownToken->accessToken->getKey())
+            ->assertJsonPath('data.0.name', 'My token');
+
+        $this->assertStringNotContainsString('Private other token', $response->getContent());
+        $this->assertDatabaseHas('personal_access_tokens', [
+            'id' => $otherToken->accessToken->getKey(),
+            'tokenable_id' => $otherUser->id,
+        ]);
+    }
+
     private function makeUser(): User
     {
         $user = User::create([
