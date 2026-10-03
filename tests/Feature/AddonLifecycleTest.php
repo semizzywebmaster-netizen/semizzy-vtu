@@ -160,4 +160,43 @@ class AddonLifecycleTest extends TestCase
             'version' => '2.0.0',
         ]);
     }
+
+    public function test_manifest_rejects_self_dependency(): void
+    {
+        $service = app(AddonLifecycleService::class);
+
+        $this->expectException(ValidationException::class);
+        $service->register([
+            'identifier' => 'demo-addon',
+            'name' => 'Demo Addon',
+            'version' => '1.0.0',
+            'dependencies' => ['demo-addon'],
+        ]);
+    }
+
+    public function test_manifest_rejects_duplicate_dependencies(): void
+    {
+        $service = app(AddonLifecycleService::class);
+
+        $this->expectException(ValidationException::class);
+        $service->register([
+            'identifier' => 'demo-addon',
+            'name' => 'Demo Addon',
+            'version' => '1.0.0',
+            'dependencies' => ['other-addon', 'other-addon'],
+        ]);
+    }
+
+    public function test_manifest_rejects_invalid_checksum(): void
+    {
+        $service = app(AddonLifecycleService::class);
+
+        $this->expectException(ValidationException::class);
+        $service->register([
+            'identifier' => 'checksum-addon',
+            'name' => 'Checksum Addon',
+            'version' => '1.0.0',
+            'checksum' => 'not-a-sha256',
+        ]);
+    }
 }
