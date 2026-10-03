@@ -39,13 +39,15 @@ class AdminPermissionTest extends TestCase
 
     private function makeUser(string $email, string $role): User
     {
-        return User::create([
+        $user = User::create([
             'name' => 'Permission Test',
             'email' => $email,
             'password' => 'Strong-Password-123!',
             'role' => $role,
             'status' => 'active',
-            'email_verified_at' => now(),
         ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        return $user;
     }
 }
