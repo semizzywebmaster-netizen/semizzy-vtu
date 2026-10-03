@@ -9,6 +9,8 @@ use RuntimeException;
 
 class RestJsonProviderAdapter implements ProviderAdapter
 {
+    public function __construct(private ProviderUrlGuard $guard) {}
+
     public function supports(string $operation): bool
     {
         return in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status','refund','reversal'], true);
@@ -19,6 +21,8 @@ class RestJsonProviderAdapter implements ProviderAdapter
         if (!$this->supports($operation)) {
             throw new RuntimeException("Unsupported REST operation: {$operation}");
         }
+
+        $this->guard->validate($provider->base_url);
 
         $url = $this->endpoint($provider, $operation);
         if ($url === null) {
