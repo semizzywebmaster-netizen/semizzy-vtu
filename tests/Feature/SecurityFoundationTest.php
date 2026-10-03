@@ -58,6 +58,7 @@ class SecurityFoundationTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'USER',
             'status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         $token = $user->createToken('Limited client', ['profile.read']);
@@ -75,6 +76,7 @@ class SecurityFoundationTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'USER',
             'status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         $token = $user->createToken('Expired client', ['core.read'], now()->subMinute());
@@ -113,6 +115,7 @@ class SecurityFoundationTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'USER',
             'status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         $this->actingAs($user);
@@ -148,6 +151,7 @@ class SecurityFoundationTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'ADMIN',
             'status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         $event = SecurityEvent::create([
