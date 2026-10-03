@@ -12,12 +12,15 @@ class CreateInitialAdminCommandTest extends TestCase
 
     public function test_command_creates_verified_admin_with_hashed_password(): void
     {
+        config(['semizzy.admin_login_path' => 'control/sign-in']);
+
         $this->artisan('semizzy:admin:create')
             ->expectsQuestion('Administrator name', 'Initial Admin')
             ->expectsQuestion('Administrator email', 'initial-admin@example.test')
             ->expectsQuestion('Administrator password', 'Strong-Password-123!')
             ->expectsQuestion('Confirm administrator password', 'Strong-Password-123!')
             ->expectsOutputToContain('Initial administrator created successfully.')
+            ->expectsOutputToContain(url('/control/sign-in'))
             ->assertExitCode(0);
 
         $admin = User::query()->where('email', 'initial-admin@example.test')->firstOrFail();
