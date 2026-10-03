@@ -45,14 +45,14 @@ class Addon extends Model
             'draft' => ['validating', 'archived'],
             'validating' => ['installing', 'failed', 'inactive'],
             'installing' => ['installed', 'failed', 'inactive'],
-            'installed' => ['enabling', 'inactive', 'archived', 'updating', 'uninstalling'],
+            'installed' => ['enabling', 'inactive', 'updating', 'uninstalling'],
             'enabling' => ['active', 'failed', 'inactive'],
             'active' => ['disabling', 'updating', 'failed'],
             'disabling' => ['inactive', 'active', 'failed'],
-            'inactive' => ['validating', 'enabling', 'archived', 'updating', 'uninstalling'],
+            'inactive' => ['validating', 'enabling', 'updating', 'uninstalling'],
             'updating' => ['active', 'installed', 'inactive', 'failed'],
             'uninstalling' => ['archived', 'failed'],
-            'failed' => ['validating', 'inactive', 'archived', 'updating', 'uninstalling'],
+            'failed' => ['validating', 'inactive', 'updating', 'uninstalling', 'archived'],
             'archived' => [],
         ];
 
