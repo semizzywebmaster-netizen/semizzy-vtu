@@ -218,6 +218,19 @@ class AddonLifecycleTest extends TestCase
         ]);
     }
 
+    public function test_manifest_rejects_case_insensitive_duplicate_dependencies(): void
+    {
+        $service = app(AddonLifecycleService::class);
+
+        $this->expectException(ValidationException::class);
+        $service->register([
+            'identifier' => 'case-duplicate-addon',
+            'name' => 'Case Duplicate Addon',
+            'version' => '1.0.0',
+            'dependencies' => ['Provider-Core', 'provider-core'],
+        ]);
+    }
+
     public function test_manifest_rejects_invalid_checksum(): void
     {
         $service = app(AddonLifecycleService::class);
