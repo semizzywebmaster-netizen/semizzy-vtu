@@ -79,7 +79,8 @@ class CatalogueController extends Controller
         try {
             $count=$sync->sync($provider,$service);
         } catch (\Throwable $e) {
-            report($e);\n            return back()->with('error','Catalogue sync failed safely. Review the server-side diagnostics.');
+            report($e);
+            return back()->with('error','Catalogue sync failed safely. Review the server-side diagnostics.');
         }
         return back()->with('success',"Catalogue sync completed. {$count} product record(s) processed.");
     }
@@ -96,8 +97,10 @@ class CatalogueController extends Controller
 
     public function disableProduct(ServiceProduct $product): RedirectResponse
     {
-        DB::transaction(fn()=>ProviderServiceProduct::query()->where('service_product_id',$product->id)->update(['enabled'=>false]));
-        $product->update(['enabled'=>false]);
+        DB::transaction(function () use ($product): void {
+            ProviderServiceProduct::query()->where('service_product_id', $product->id)->update(['enabled' => false]);
+            $product->update(['enabled' => false]);
+        });
         return back()->with('success','Product and provider mappings disabled.');
     }
 }
