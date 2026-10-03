@@ -18,12 +18,17 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SupportTicketController;
+use App\Http\Controllers\SetupController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', fn () => Inertia::render('Welcome', [
     'appName' => config('app.name', 'SEMIZZY ONE'),
 ]))->name('home');
+
+Route::get('/setup', [SetupController::class, 'index'])->name('setup');
+Route::post('/setup/migrate', [SetupController::class, 'migrate'])->name('setup.migrate');
+Route::post('/setup/admin', [SetupController::class, 'createAdmin'])->name('setup.admin');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
