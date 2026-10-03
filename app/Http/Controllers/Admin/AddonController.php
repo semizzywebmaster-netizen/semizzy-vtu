@@ -97,7 +97,15 @@ class AddonController extends Controller
             'settings' => ['nullable', 'array'],
             'migrations' => ['nullable', 'array'],
             'migrations.*' => ['string', 'max:255'],
-            'checksum' => ['nullable', 'string', 'max:128'],
+            'routes' => ['nullable', 'array'],
+            'api_routes' => ['nullable', 'array'],
+            'menus' => ['nullable', 'array'],
+            'widgets' => ['nullable', 'array'],
+            'services' => ['nullable', 'array'],
+            'provider_integrations' => ['nullable', 'array'],
+            'scheduled_tasks' => ['nullable', 'array'],
+            'events' => ['nullable', 'array'],
+            'checksum' => ['nullable', 'regex:/^[A-Fa-f0-9]{64}$/'],
         ]);
     }
 }
