@@ -14,32 +14,36 @@ class ApiTokenController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
-            'abilities' => ['sometimes', 'array', 'max:50'],
-            'abilities.*' => ['string', 'max:100', 'in:core.read'],
+            'abilities' => ['sometimes', 'array', 'min:1', 'max:50'],
+            'abilities.*' => ['string', 'max:100', 'distinct', 'in:core.read'],
             'expires_at' => ['nullable', 'date', 'after:now'],
         ]);
 
         $maxLifetimeDays = max(1, (int) config('sanctum.token_max_lifetime_days', 365));
+        $now = now();
+        $maximumExpiry = $now->copy()->addDays($maxLifetimeDays);
         $expiresAt = isset($data['expires_at'])
-            ? now()->parse($data['expires_at'])
-            : now()->addDays($maxLifetimeDays);
+            ? $now->copy()->parse($data['expires_at'])
+            : $maximumExpiry->copy();
 
-        if ($expiresAt && $expiresAt->gt(now()->addDays($maxLifetimeDays))) {
+        if ($expiresAt->gt($maximumExpiry)) {
             throw ValidationException::withMessages([
                 'expires_at' => ["Token expiry cannot be more than {$maxLifetimeDays} days from now."],
             ]);
         }
 
+        $abilities = $data['abilities'] ?? ['core.read'];
+
         $token = $request->user()->createToken(
             $data['name'],
-            $data['abilities'] ?? ['core.read'],
+            $abilities,
             $expiresAt
         );
 
         $security->record('api_token.created', 'info', [
             'token_id' => $token->accessToken->getKey(),
             'name' => $data['name'],
-            'abilities' => $data['abilities'] ?? ['core.read'],
+            'abilities' => $abilities,
         ], $request);
 
         return response()->json([
