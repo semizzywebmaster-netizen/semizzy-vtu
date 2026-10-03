@@ -27,7 +27,7 @@ class LedgerService
             if (!preg_match('/^[A-Z]{3}$/', $currency)) {
                 throw new RuntimeException('Ledger currency must be a three-letter ISO-style code.');
             }
-            if ($reference === '' || $type === '') {
+            if (trim($reference) === '' || trim($type) === '') {
                 throw new RuntimeException('Ledger reference and type are required.');
             }
 
@@ -44,8 +44,20 @@ class LedgerService
                 if (($d === '0') === ($c === '0')) {
                     throw new RuntimeException('Each ledger entry must contain exactly one side.');
                 }
-                if (empty($entry['ledger_account_id'])) {
-                    throw new RuntimeException('Each ledger entry requires a ledger account.');
+                $ledgerAccountId = $entry['ledger_account_id'] ?? null;
+                if (!is_numeric($ledgerAccountId) || (int) $ledgerAccountId < 1) {
+                    throw new RuntimeException('Each ledger entry requires a valid ledger account.');
+                }
+
+                $account = DB::table('ledger_accounts')
+                    ->where('id', (int) $ledgerAccountId)
+                    ->where('status', 'active')
+                    ->first(['id', 'currency']);
+                if ($account === null) {
+                    throw new RuntimeException('Each ledger entry requires an active ledger account.');
+                }
+                if (strtoupper((string) $account->currency) !== $currency) {
+                    throw new RuntimeException('Ledger entry account currency must match the transaction currency.');
                 }
 
                 $debit = $this->add($debit, $d);
@@ -68,7 +80,7 @@ class LedgerService
 
             foreach ($entries as $entry) {
                 $tx->entries()->create([
-                    'ledger_account_id' => $entry['ledger_account_id'],
+                    'ledger_account_id' => (int) $entry['ledger_account_id'],
                     'debit_minor' => ltrim((string) ($entry['debit_minor'] ?? '0'), '0') ?: '0',
                     'credit_minor' => ltrim((string) ($entry['credit_minor'] ?? '0'), '0') ?: '0',
                 ]);
