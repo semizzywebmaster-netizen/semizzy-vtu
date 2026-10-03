@@ -132,7 +132,7 @@ final class CatalogueImportService
                     ->first();
 
                 $values = [
-                    'provider_product_id' => $providerProductId !== null ? (string) $providerProductId : ($existing?->provider_product_id),
+                    'provider_product_id' => $validProviderProductId ? (string) $providerProductId : ($existing?->provider_product_id),
                     'provider_cost' => $hasSellableProviderData ? $normalizedCost->toScale(6, RoundingMode::UNNECESSARY)->__toString() : $existing?->provider_cost,
                     'currency' => $currency,
                     'raw_catalogue' => $item,
