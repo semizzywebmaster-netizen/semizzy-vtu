@@ -30,6 +30,10 @@ final class ProviderCatalogueSyncService
             throw new InvalidArgumentException('Provider must pass sandbox or live verification before catalogue sync.');
         }
 
+        if (! $service->enabled) {
+            throw new InvalidArgumentException('Service must be enabled before catalogue sync.');
+        }
+
         if (! $this->registry->supports($provider, 'catalogue_retrieval')) {
             throw new InvalidArgumentException('Provider does not support catalogue retrieval.');
         }
