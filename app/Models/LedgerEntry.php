@@ -24,31 +24,13 @@ class LedgerEntry extends Model
     protected static function booted(): void
     {
         static::creating(function (self $entry): void {
-            $status = $entry->transaction()->value('status');
-            if ($status === null) {
-                throw new RuntimeException('Ledger entry requires a valid transaction.');
-            }
-            if ($status === 'posted') {
-                throw new LogicException('Entries belonging to posted ledger transactions are immutable.');
-            }
-
-            $debit = ltrim((string) ($entry->debit_minor ?? '0'), '0') ?: '0';
-            $credit = ltrim((string) ($entry->credit_minor ?? '0'), '0') ?: '0';
-            if (!preg_match('/^\d+$/', $debit) || !preg_match('/^\d+$/', $credit)) {
-                throw new RuntimeException('Ledger amounts must be non-negative integer minor units.');
-            }
-            if (($debit === '0') === ($credit === '0')) {
-                throw new RuntimeException('Each ledger entry must contain exactly one side.');
-            }
-
-            $entry->debit_minor = $debit;
-            $entry->credit_minor = $credit;
+            $entry->ensureMutableTransaction();
+            $entry->validateEntryAmounts();
         });
 
         static::updating(function (self $entry): void {
-            if ($entry->transaction()->value('status') === 'posted') {
-                throw new LogicException('Entries belonging to posted ledger transactions are immutable.');
-            }
+            $entry->ensureMutableTransaction();
+            $entry->validateEntryAmounts();
         });
 
         static::deleting(function (self $entry): void {
@@ -56,5 +38,35 @@ class LedgerEntry extends Model
                 throw new LogicException('Entries belonging to posted ledger transactions cannot be deleted.');
             }
         });
+    }
+
+    private function ensureMutableTransaction(): void
+    {
+        $status = $this->transaction()->value('status');
+
+        if ($status === null) {
+            throw new RuntimeException('Ledger entry requires a valid transaction.');
+        }
+
+        if ($status === 'posted') {
+            throw new LogicException('Entries belonging to posted ledger transactions are immutable.');
+        }
+    }
+
+    private function validateEntryAmounts(): void
+    {
+        $debit = ltrim((string) ($this->debit_minor ?? '0'), '0') ?: '0';
+        $credit = ltrim((string) ($this->credit_minor ?? '0'), '0') ?: '0';
+
+        if (!preg_match('/^\d+$/', $debit) || !preg_match('/^\d+$/', $credit)) {
+            throw new RuntimeException('Ledger amounts must be non-negative integer minor units.');
+        }
+
+        if (($debit === '0') === ($credit === '0')) {
+            throw new RuntimeException('Each ledger entry must contain exactly one side.');
+        }
+
+        $this->debit_minor = $debit;
+        $this->credit_minor = $credit;
     }
 }
