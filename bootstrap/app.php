@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RequireRole::class,
             'permission' => RequirePermission::class,
             'api.token' => AuthenticateApiToken::class,
+            'ensure.active.api' => EnsureActiveApiAccount::class,
             'security.throttle' => SecurityThrottle::class,
         ]);
         $middleware->append(RequestId::class);
