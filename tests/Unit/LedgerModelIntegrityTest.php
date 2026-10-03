@@ -76,6 +76,16 @@ class LedgerModelIntegrityTest extends TestCase
         ]);
     }
 
+    public function test_finance_schema_does_not_cascade_delete_ledger_history(): void
+    {
+        $foreignKeys = \Illuminate\Support\Facades\DB::select(
+            "SELECT DELETE_RULE FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'ledger_entries' AND REFERENCED_TABLE_NAME = 'ledger_transactions'"
+        );
+
+        $this->assertNotEmpty($foreignKeys);
+        $this->assertSame('RESTRICT', strtoupper($foreignKeys[0]->DELETE_RULE));
+    }
+
     private function createLedgerAccount(): int
     {
         return (int) \Illuminate\Support\Facades\DB::table('ledger_accounts')->insertGetId([
