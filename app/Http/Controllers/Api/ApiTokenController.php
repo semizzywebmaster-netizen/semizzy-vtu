@@ -19,8 +19,10 @@ class ApiTokenController extends Controller
             'expires_at' => ['nullable', 'date', 'after:now'],
         ]);
 
-        $expiresAt = isset($data['expires_at']) ? now()->parse($data['expires_at']) : null;
         $maxLifetimeDays = max(1, (int) config('sanctum.token_max_lifetime_days', 365));
+        $expiresAt = isset($data['expires_at'])
+            ? now()->parse($data['expires_at'])
+            : now()->addDays($maxLifetimeDays);
 
         if ($expiresAt && $expiresAt->gt(now()->addDays($maxLifetimeDays))) {
             throw ValidationException::withMessages([
