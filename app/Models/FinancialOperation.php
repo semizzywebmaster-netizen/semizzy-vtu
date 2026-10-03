@@ -32,6 +32,12 @@ class FinancialOperation extends Model
                 throw new LogicException('Terminal financial operations are immutable.');
             }
 
+            foreach (['uuid', 'reference', 'user_id', 'type', 'amount_minor', 'currency', 'idempotency_key'] as $field) {
+                if ($operation->isDirty($field)) {
+                    throw new LogicException("Financial operation {$field} is immutable after creation.");
+                }
+            }
+
             self::validateFinancialFields($operation);
         });
 
