@@ -431,6 +431,21 @@ class AddonLifecycleService
             $identifier = is_string($dependency) ? trim($dependency) : trim((string) $dependency['identifier']);
             $constraint = is_string($dependency) ? null : ($dependency['constraint'] ?? null);
 
+            $cycleIndex = null;
+            foreach ($path as $index => $visited) {
+                if (strcasecmp($visited, $identifier) === 0) {
+                    $cycleIndex = $index;
+                    break;
+                }
+            }
+
+            if ($cycleIndex !== null) {
+                $cycle = array_merge(array_slice($path, $cycleIndex), [$identifier]);
+                throw ValidationException::withMessages([
+                    'dependencies' => 'Addon dependency cycle detected: '.implode(' -> ', $cycle).'.',
+                ]);
+            }
+
             if ($rootIdentifier !== null && strcasecmp($identifier, $rootIdentifier) === 0) {
                 $cycle = [...$path, $rootIdentifier];
                 throw ValidationException::withMessages([
@@ -566,7 +581,7 @@ class AddonLifecycleService
                 if (strcasecmp($dependencyIdentifier, $manifest['identifier']) === 0) {
                     throw ValidationException::withMessages(['dependencies' => 'An addon cannot depend on itself.']);
                 }
-                if (in_array($dependencyIdentifier, $dependencyIds, true)) {
+                if (in_array(strtolower($dependencyIdentifier), array_map('strtolower', $dependencyIds), true)) {
                     throw ValidationException::withMessages(['dependencies' => "Duplicate addon dependency [{$dependencyIdentifier}]."]);
                 }
                 $dependencyIds[] = $dependencyIdentifier;
@@ -586,7 +601,7 @@ class AddonLifecycleService
             if (strcasecmp($dependencyIdentifier, $manifest['identifier']) === 0) {
                 throw ValidationException::withMessages(['dependencies' => 'An addon cannot depend on itself.']);
             }
-            if (in_array($dependencyIdentifier, $dependencyIds, true)) {
+            if (in_array(strtolower($dependencyIdentifier), array_map('strtolower', $dependencyIds), true)) {
                 throw ValidationException::withMessages(['dependencies' => "Duplicate addon dependency [{$dependencyIdentifier}]."]);
             }
             $dependencyIds[] = $dependencyIdentifier;
