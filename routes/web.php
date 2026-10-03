@@ -27,8 +27,8 @@ Route::get('/', fn () => Inertia::render('Welcome', [
 ]))->name('home');
 
 Route::get('/setup', [SetupController::class, 'index'])->name('setup');
-Route::post('/setup/migrate', [SetupController::class, 'migrate'])->name('setup.migrate');
-Route::post('/setup/admin', [SetupController::class, 'createAdmin'])->name('setup.admin');
+Route::post('/setup/migrate', [SetupController::class, 'migrate'])->middleware('throttle:5,1')->name('setup.migrate');
+Route::post('/setup/admin', [SetupController::class, 'createAdmin'])->middleware('throttle:5,1')->name('setup.admin');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
