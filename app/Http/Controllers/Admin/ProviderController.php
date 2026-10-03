@@ -71,7 +71,25 @@ class ProviderController extends Controller
     {
         $data = $this->validatedProvider($request, false);
         app(ProviderUrlGuard::class)->validate($data['base_url'] ?? $provider->base_url);
-        $provider->fill($data)->save();
+
+        $verificationSensitiveFields = ['base_url', 'environment', 'auth_type', 'credentials', 'capabilities', 'endpoints', 'service_categories'];
+        $requiresReverification = collect($verificationSensitiveFields)
+            ->contains(fn (string $field): bool => array_key_exists($field, $data) && $data[$field] !== $provider->getAttribute($field));
+
+        $provider->fill($data);
+
+        if ($requiresReverification) {
+            $provider->forceFill([
+                'enabled' => false,
+                'paused' => true,
+                'verification_status' => 'unverified',
+                'integration_status' => 'draft',
+                'last_test_status' => null,
+                'last_test_summary' => null,
+            ]);
+        }
+
+        $provider->save();
         $audit->record('provider.updated', $provider, [
             'identifier' => $provider->identifier,
             'updated_fields' => array_keys($data),
@@ -91,6 +109,8 @@ class ProviderController extends Controller
                 'last_test_summary' => 'Provider test failed safely.',
                 'enabled' => false,
                 'paused' => true,
+                'verification_status' => 'test_failed',
+                'integration_status' => 'test_failed',
             ])->save();
             $audit->record('provider.test.failed', $provider, ['reason' => 'transport_or_adapter_exception'], $request);
 
@@ -113,7 +133,12 @@ class ProviderController extends Controller
             return back()->with('success', 'Provider health check succeeded. Provider remains disabled until explicitly enabled.');
         }
 
-        $provider->update(['enabled' => false, 'paused' => true, 'verification_status' => 'test_failed']);
+        $provider->update([
+            'enabled' => false,
+            'paused' => true,
+            'verification_status' => 'test_failed',
+            'integration_status' => 'test_failed',
+        ]);
         $audit->record('provider.test.failed', $provider, [
             'environment' => $provider->environment,
             'status' => $result['result']->status,
