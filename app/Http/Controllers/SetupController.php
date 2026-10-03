@@ -46,30 +46,32 @@ class SetupController extends Controller
             abort(404);
         }
 
+        $databaseAvailable = $this->databaseAvailable();
         $checks = [
             'php' => version_compare(PHP_VERSION, '8.4.0', '>='),
             'pdo' => extension_loaded('pdo'),
             'mbstring' => extension_loaded('mbstring'),
             'openssl' => extension_loaded('openssl'),
             'json' => extension_loaded('json'),
-            'pdo_mysql' => DB::getDriverName() !== 'mysql' || extension_loaded('pdo_mysql'),
+            'pdo_mysql' => true,
             'app_key' => filled(config('app.key')),
             'app_url' => filter_var(config('app.url'), FILTER_VALIDATE_URL) !== false,
             'storage' => is_writable(storage_path()),
             'bootstrap_cache' => is_writable(base_path('bootstrap/cache')),
-            'database' => false,
+            'database' => $databaseAvailable,
         ];
 
-        try {
-            DB::connection()->getPdo();
-            $checks['database'] = true;
-        } catch (\Throwable) {
-            // Reported in the wizard without exposing connection details.
+        if ($databaseAvailable) {
+            try {
+                $checks['pdo_mysql'] = DB::getDriverName() !== 'mysql' || extension_loaded('pdo_mysql');
+            } catch (\Throwable) {
+                $checks['pdo_mysql'] = false;
+            }
         }
 
         return Inertia::render('Setup/Index', [
             'checks' => $checks,
-            'migrations_table' => Schema::hasTable('migrations'),
+            'migrations_table' => $databaseAvailable && Schema::hasTable('migrations'),
             'app_url' => config('app.url'),
         ]);
     }
@@ -119,8 +121,17 @@ class SetupController extends Controller
     {
         abort_if($this->locked(), 404);
 
-        if (! $this->databaseAvailable() || ! Schema::hasTable('users') || ! Schema::hasTable('system_settings')) {
-            return back()->withErrors(['setup' => 'Complete the database migration step before creating the administrator.']);
+        if (! $this->databaseAvailable()) {
+            return back()->withErrors(['setup' => 'Complete the database configuration before creating the administrator.']);
+        }
+
+        try {
+            if (! Schema::hasTable('users') || ! Schema::hasTable('system_settings')) {
+                return back()->withErrors(['setup' => 'Complete the database migration step before creating the administrator.']);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->withErrors(['setup' => 'The database schema could not be checked. Run the migrations and refresh the setup page.']);
         }
 
         if (! filled(config('app.key'))) {
