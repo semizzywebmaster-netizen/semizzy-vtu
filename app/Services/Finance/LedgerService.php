@@ -16,12 +16,26 @@ class LedgerService
             $existing=LedgerTransaction::query()->where('reference',$reference)->lockForUpdate()->first();
             if($existing) return $existing;
 
-            if(count($entries)<2) throw new RuntimeException('A ledger transaction requires at least two entries.');
+            if (count($entries) < 2) {
+                throw new RuntimeException('A ledger transaction requires at least two entries.');
+            }
+            if (!preg_match('/^[A-Z]{3}$/', strtoupper($currency))) {
+                throw new RuntimeException('Ledger currency must be a three-letter ISO-style code.');
+            }
+            if ($reference === '' || $type === '') {
+                throw new RuntimeException('Ledger reference and type are required.');
+            }
             $debit='0'; $credit='0';
             foreach($entries as $entry){
                 $d=(string)($entry['debit_minor']??'0'); $c=(string)($entry['credit_minor']??'0');
-                if(($d==='0') === ($c==='0')) throw new RuntimeException('Each ledger entry must contain exactly one side.');
-                if(str_contains($d,'-') || str_contains($c,'-')) throw new RuntimeException('Ledger amounts cannot be negative.');
+                if (!preg_match('/^\\d+$/', $d) || !preg_match('/^\\d+$/', $c)) {
+                    throw new RuntimeException('Ledger amounts must be non-negative integer minor units.');
+                }
+                $d = ltrim($d, '0') ?: '0';
+                $c = ltrim($c, '0') ?: '0';
+                if (($d === '0') === ($c === '0')) {
+                    throw new RuntimeException('Each ledger entry must contain exactly one side.');
+                }
                 $debit=$this->add($debit,$d); $credit=$this->add($credit,$c);
             }
             if($debit !== $credit) throw new RuntimeException('Unbalanced ledger transaction.');
