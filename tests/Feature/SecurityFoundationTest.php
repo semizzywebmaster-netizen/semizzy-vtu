@@ -22,8 +22,8 @@ class SecurityFoundationTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'USER',
             'status' => 'active',
-            'email_verified_at' => now(),
-        ]);
+            ]);.
+        $user->forceFill(['email_verified_at' => now()])->save();
 
         $response = $this->actingAs($user)->postJson('/api/v1/tokens', [
             'name' => 'Test client',
@@ -58,8 +58,8 @@ class SecurityFoundationTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'USER',
             'status' => 'active',
-            'email_verified_at' => now(),
-        ]);
+            ]);.
+        $user->forceFill(['email_verified_at' => now()])->save();
 
         $token = $user->createToken('Limited client', ['profile.read']);
 
@@ -76,8 +76,8 @@ class SecurityFoundationTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'USER',
             'status' => 'active',
-            'email_verified_at' => now(),
-        ]);
+            ]);.
+        $user->forceFill(['email_verified_at' => now()])->save();
 
         $token = $user->createToken('Expired client', ['core.read'], now()->subMinute());
 
@@ -94,8 +94,8 @@ class SecurityFoundationTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'USER',
             'status' => 'active',
-            'email_verified_at' => now(),
-        ]);
+            ]);.
+        $user->forceFill(['email_verified_at' => now()])->save();
 
         $tooFar = Carbon::now()->addDays(366)->toIso8601String();
 
@@ -115,8 +115,8 @@ class SecurityFoundationTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'USER',
             'status' => 'active',
-            'email_verified_at' => now(),
-        ]);
+            ]);.
+        $user->forceFill(['email_verified_at' => now()])->save();
 
         $this->actingAs($user);
 
