@@ -33,6 +33,6 @@ class RegisteredUserController extends Controller
         $user->sendEmailVerificationNotification();
         Auth::login($user);
         $request->session()->regenerate();
-        return redirect()->route('dashboard')->with('success','Account created successfully.');
+        return redirect()->route('verification.notice')->with('success','Account created successfully. Please verify your email before continuing.');
     }
 }
