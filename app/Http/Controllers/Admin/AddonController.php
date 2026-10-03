@@ -77,6 +77,13 @@ class AddonController extends Controller
         return back()->with('success', 'Addon disabled.');
     }
 
+    public function uninstall(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
+    {
+        $lifecycle->uninstall($addon, auth()->id());
+
+        return back()->with('success', 'Addon uninstalled and archived.');
+    }
+
     public function archive(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
         $lifecycle->archive($addon, auth()->id());
