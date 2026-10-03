@@ -7,6 +7,8 @@ use App\Models\ProviderServiceMapping;
 use App\Models\Service;
 use App\Models\ServiceProduct;
 use App\Models\ProviderServiceProduct;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -57,7 +59,7 @@ final class CatalogueImportService
                 if ($rawCost !== null) {
                     try {
                         $normalizedCost = BigDecimal::of(trim((string) $rawCost))->toScale(6, RoundingMode::UNNECESSARY);
-                    } catch (\\Throwable) {
+                    } catch (\Throwable) {
                         continue;
                     }
                     if ($normalizedCost->isNegative()) {
