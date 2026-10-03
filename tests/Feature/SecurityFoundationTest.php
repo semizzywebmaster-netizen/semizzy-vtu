@@ -22,6 +22,7 @@ class SecurityFoundationTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'USER',
             'status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         $response = $this->actingAs($user)->postJson('/api/v1/tokens', [
