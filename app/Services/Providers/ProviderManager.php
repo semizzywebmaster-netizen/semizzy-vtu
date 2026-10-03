@@ -15,7 +15,15 @@ class ProviderManager
         $query=ApiProvider::query()
             ->where('enabled',true)
             ->where('paused',false)
-            ->whereHas('serviceMappings', fn($q)=>$q->where(function($m) use ($serviceKey) { $m->where('service_key',$serviceKey)->orWhereHas('service', fn($s)=>$s->where('key',$serviceKey)); })->where('enabled',true))
+            ->whereHas('serviceMappings', function ($mapping) use ($serviceKey): void {
+                $mapping->where('enabled', true)
+                    ->where(function ($scope) use ($serviceKey): void {
+                        $scope->whereHas('service', fn ($service) => $service->where('key', $serviceKey))
+                            ->orWhere(function ($legacy) use ($serviceKey): void {
+                                $legacy->whereNull('service_id')->where('service_key', $serviceKey);
+                            });
+                    });
+            })
             ->orderBy('priority');
 
         if ($operation === 'transaction_initiation') {
