@@ -66,14 +66,16 @@ class ApiTokenSecurityTest extends TestCase
 
     private function makeUser(): User
     {
-        return User::create([
+        $user = User::create([
             'name' => 'API Token Test',
             'email' => fake()->unique()->safeEmail(),
             'password' => 'Strong-Password-123!',
             'role' => 'USER',
             'status' => 'active',
         ]);
+
         $user->forceFill(['email_verified_at' => now()])->save();
+
         return $user;
     }
 }
