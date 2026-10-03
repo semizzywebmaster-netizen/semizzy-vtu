@@ -67,7 +67,7 @@ return new class extends Migration {
 
         Schema::create('finance_approvals', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('financial_operation_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('financial_operation_id')->constrained()->restrictOnDelete();
             $table->foreignId('requested_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('status')->default('pending')->index();
