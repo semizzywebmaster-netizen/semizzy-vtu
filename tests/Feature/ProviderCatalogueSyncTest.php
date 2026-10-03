@@ -25,7 +25,7 @@ class ProviderCatalogueSyncTest extends TestCase
     {
         $provider = $this->makeProvider();
         $category = ServiceCategory::create(['key' => 'test-category', 'name' => 'Test category']);
-        $service = Service::create(['category_id' => $category->id, 'key' => 'test-service', 'name' => 'Test service']);
+        $service = Service::create(['category_id' => $category->id, 'key' => 'test-service', 'name' => 'Test service', 'enabled' => true]);
 
         $result = new ProviderResult(true, 'ACCEPTED', data: [
             'products' => [['key' => 'bundle-1', 'name' => 'Bundle 1', 'provider_product_id' => 'provider-bundle-1', 'provider_cost' => '10.00', 'currency' => 'NGN']],
