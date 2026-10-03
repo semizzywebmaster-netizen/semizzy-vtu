@@ -17,13 +17,19 @@ class SemizzyCreateAdmin extends Command
 
     public function handle(): int
     {
-        if (! Schema::hasTable('users') || ! Schema::hasTable('system_settings')) {
-            $this->error('The database schema is not ready. Run php artisan migrate first.');
-            return self::FAILURE;
-        }
+        try {
+            if (! Schema::hasTable('users') || ! Schema::hasTable('system_settings')) {
+                $this->error('The database schema is not ready. Run php artisan migrate first.');
+                return self::FAILURE;
+            }
 
-        if (User::query()->where('role', 'ADMIN')->exists()) {
-            $this->error('An administrator already exists. The initial administrator command is one-time only.');
+            if (User::query()->where('role', 'ADMIN')->exists()) {
+                $this->error('An administrator already exists. The initial administrator command is one-time only.');
+                return self::FAILURE;
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            $this->error('The database could not be checked. Verify the database configuration and run the command again.');
             return self::FAILURE;
         }
 
@@ -54,7 +60,8 @@ class SemizzyCreateAdmin extends Command
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($name, $email, $password): void {
+        try {
+            DB::transaction(function () use ($name, $email, $password): void {
             DB::table('system_settings')->insertOrIgnore([
                 'key' => 'core.initial_admin_created',
                 'value' => '0',
@@ -89,7 +96,12 @@ class SemizzyCreateAdmin extends Command
                     'value' => '1',
                     'updated_at' => now(),
                 ]);
-        });
+            });
+        } catch (\Throwable $e) {
+            report($e);
+            $this->error('The administrator could not be created. No partial bootstrap changes were committed. Check the application logs.');
+            return self::FAILURE;
+        }
 
         $this->info('Initial administrator created successfully.');
         $this->line('Email: '.$email);
