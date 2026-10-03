@@ -11,8 +11,8 @@ class Addon extends Model
     use SoftDeletes;
 
     public const LIFECYCLE_STATES = [
-        'draft', 'validating', 'installing', 'installed', 'updating', 'active',
-        'inactive', 'failed', 'archived',
+        'draft', 'validating', 'installing', 'installed', 'enabling', 'active',
+        'disabling', 'inactive', 'updating', 'uninstalling', 'failed', 'archived',
     ];
 
     protected $fillable = [
@@ -45,11 +45,14 @@ class Addon extends Model
             'draft' => ['validating', 'archived'],
             'validating' => ['installing', 'failed', 'inactive'],
             'installing' => ['installed', 'failed', 'inactive'],
-            'installed' => ['active', 'inactive', 'archived', 'updating'],
+            'installed' => ['enabling', 'inactive', 'archived', 'updating', 'uninstalling'],
+            'enabling' => ['active', 'failed', 'inactive'],
+            'active' => ['disabling', 'updating', 'failed'],
+            'disabling' => ['inactive', 'active', 'failed'],
+            'inactive' => ['validating', 'enabling', 'archived', 'updating', 'uninstalling'],
             'updating' => ['active', 'installed', 'inactive', 'failed'],
-            'active' => ['inactive', 'failed', 'updating'],
-            'inactive' => ['validating', 'active', 'archived', 'updating'],
-            'failed' => ['validating', 'inactive', 'archived', 'updating'],
+            'uninstalling' => ['archived', 'failed'],
+            'failed' => ['validating', 'inactive', 'archived', 'updating', 'uninstalling'],
             'archived' => [],
         ];
 
