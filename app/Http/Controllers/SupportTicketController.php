@@ -146,9 +146,15 @@ class SupportTicketController extends Controller
     {
         abort_unless($request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']), 403);
         $data = $request->validate(['status' => ['required', 'in:open,pending,resolved,closed']]);
-        $previousStatus = $ticket->status;
 
-        if ($previousStatus !== $data['status']) {
+        DB::transaction(function () use ($ticket, $data, $request, $audit): void {
+            $ticket = SupportTicket::query()->lockForUpdate()->findOrFail($ticket->id);
+            $previousStatus = $ticket->status;
+
+            if ($previousStatus === $data['status']) {
+                return;
+            }
+
             $ticket->update(['status' => $data['status']]);
             $audit->record('support.ticket.status_changed', $ticket, [
                 'from' => $previousStatus,
@@ -159,7 +165,7 @@ class SupportTicketController extends Controller
                 'Your support ticket '.$ticket->reference.' is now '.$data['status'].'.',
                 '/support/'.$ticket->id,
             ));
-        }
+        });
 
         return back()->with('success', 'Ticket status updated.');
     }
