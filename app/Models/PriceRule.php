@@ -29,7 +29,7 @@ class PriceRule extends Model
    if ($rule->customer_tier !== null && ! in_array($rule->customer_tier, $validTiers, true)) {
     throw new InvalidArgumentException('Invalid customer tier.');
    }
-   if ($rule->minimum_price !== null && $rule->maximum_price !== null && (float) $rule->minimum_price > (float) $rule->maximum_price) {
+   if ($rule->minimum_price !== null && $rule->maximum_price !== null && BigDecimal::of((string) $rule->minimum_price)->isGreaterThan(BigDecimal::of((string) $rule->maximum_price))) {
     throw new InvalidArgumentException('Minimum price cannot exceed maximum price.');
    }
    if ((int) $rule->rounding_increment < 0) {
