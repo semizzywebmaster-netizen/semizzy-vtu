@@ -14,8 +14,8 @@ class SecurityEventController extends Controller {
   if(!empty($v['event'])) $q->where('event','like','%'.$v['event'].'%');
   if(!empty($v['user_id'])) $q->where('user_id',$v['user_id']);
   if(!empty($v['request_id'])) $q->where('request_id',$v['request_id']);
-  if(!empty($v['from'])) $q->where('created_at','>=',$v['from']);
-  if(!empty($v['to'])) $q->where('created_at','<=',$v['to']);
+  if(!empty($v['from'])) $q->where('created_at','>=',Carbon::parse($v['from'])->startOfDay());
+  if(!empty($v['to'])) $q->where('created_at','<=',Carbon::parse($v['to'])->endOfDay());
   $events=$q->paginate(50)->withQueryString()->through(fn(SecurityEvent $e)=>['id'=>$e->id,'event'=>$e->event,'severity'=>$e->severity,'request_id'=>$e->request_id,'ip_address'=>$e->ip_address,'user_agent'=>$e->user_agent,'context'=>$this->sanitize(is_array($e->context) ? $e->context : []),'user'=>$e->user?['id'=>$e->user->id,'name'=>$e->user->name,'email'=>$e->user->email]:null,'created_at'=>$e->created_at?->toIso8601String()]);
   return Inertia::render('Admin/SecurityEvents',['events'=>$events,'filters'=>$v]);
  }
