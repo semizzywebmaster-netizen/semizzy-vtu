@@ -69,6 +69,7 @@ class SecurityHardeningTest extends TestCase
             'role' => 'ADMIN',
             'status' => 'active',
         ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
 
         $this->actingAs($admin)->get('/admin/security-events')->assertOk();
     }
