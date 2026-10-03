@@ -58,25 +58,39 @@ final class CatalogueImportService
             $count = 0;
 
             foreach ($products as $item) {
-                $key = trim((string) Arr::get($item, 'key', ''));
-                $name = trim((string) Arr::get($item, 'name', ''));
-                $providerProductId = Arr::get($item, 'provider_product_id');
-                $rawCost = Arr::get($item, 'provider_cost');
-                $currency = strtoupper(trim((string) Arr::get($item, 'currency', 'NGN')));
-
-                if ($key === '' || $name === '') {
+                if (!is_array($item)) {
                     continue;
                 }
 
-                if (!preg_match('/^[A-Z]{3}$/', $currency)) {
+                $rawKey = Arr::get($item, 'key');
+                $rawName = Arr::get($item, 'name');
+                $providerProductId = Arr::get($item, 'provider_product_id');
+                $rawCost = Arr::get($item, 'provider_cost');
+                $rawCurrency = Arr::get($item, 'currency', 'NGN');
+
+                // Provider responses are untrusted input. Ignore malformed identifiers rather
+                // than casting arrays/objects to strings or emitting conversion warnings.
+                if ((!is_string($rawKey) && !is_int($rawKey))
+                    || (!is_string($rawName) && !is_int($rawName))
+                    || (!is_string($rawCurrency) && !is_int($rawCurrency))) {
+                    continue;
+                }
+
+                $key = trim((string) $rawKey);
+                $name = trim((string) $rawName);
+                $currency = strtoupper(trim((string) $rawCurrency));
+
+                if ($key === '' || $name === '' || !preg_match('/^[A-Z]{3}$/', $currency)) {
                     continue;
                 }
 
                 $normalizedCost = null;
-                if ($rawCost !== null) {
+                // Financial amounts must be exact decimal strings or integers; floats are not
+                // accepted as precise provider costs.
+                if ($rawCost !== null && (is_string($rawCost) || is_int($rawCost))) {
                     try {
                         $normalizedCost = BigDecimal::of(trim((string) $rawCost))->toScale(6, RoundingMode::UNNECESSARY);
-                    } catch (\Throwable) {
+                    } catch (\\Throwable) {
                         continue;
                     }
                     if ($normalizedCost->isNegative()) {
@@ -84,11 +98,12 @@ final class CatalogueImportService
                     }
                 }
 
+                $validProviderProductId = (is_string($providerProductId) || is_int($providerProductId))
+                    && trim((string) $providerProductId) !== '';
+
                 // A provider product without a provider identifier or exact cost is retained
                 // as catalogue metadata but never made sellable through this provider mapping.
-                $hasSellableProviderData = $providerProductId !== null
-                    && trim((string) $providerProductId) !== ''
-                    && $normalizedCost !== null;
+                $hasSellableProviderData = $validProviderProductId && $normalizedCost !== null;
 
                 $product = ServiceProduct::query()->firstOrCreate(
                     ['service_id' => $service->id, 'key' => $key],
