@@ -218,6 +218,25 @@ class AddonLifecycleTest extends TestCase
         ]);
     }
 
+    public function test_manifest_normalizes_addon_and_dependency_identifiers(): void
+    {
+        $service = app(AddonLifecycleService::class);
+
+        $manifest = $this->manifest([
+            'identifier' => 'Core.Test',
+            'dependencies' => [
+                ['identifier' => 'Required.Addon', 'constraint' => '^1.0.0'],
+            ],
+        ]);
+
+        $method = new ReflectionMethod(AddonLifecycleService::class, 'validateManifest');
+        $method->setAccessible(true);
+        $normalized = $method->invoke($service, $manifest);
+
+        $this->assertSame('core.test', $normalized['identifier']);
+        $this->assertSame('required.addon', $normalized['dependencies'][0]['identifier']);
+    }
+
     public function test_manifest_rejects_case_insensitive_duplicate_dependencies(): void
     {
         $service = app(AddonLifecycleService::class);
