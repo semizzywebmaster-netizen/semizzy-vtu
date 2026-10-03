@@ -145,10 +145,17 @@ class ProviderCatalogueSyncTest extends TestCase
                 'provider_cost' => 10.25,
                 'currency' => 'NGN',
             ],
+            [
+                'key' => 'array-id-product',
+                'name' => 'Array ID Product',
+                'provider_product_id' => ['unexpected', 'array'],
+                'provider_cost' => '10.00',
+                'currency' => 'NGN',
+            ],
             'not-an-object-row',
         ]);
 
-        $this->assertSame(1, $count);
+        $this->assertSame(2, $count);
         $this->assertDatabaseMissing('service_products', [
             'service_id' => $service->id,
             'key' => 'malformed-key',
@@ -162,6 +169,15 @@ class ProviderCatalogueSyncTest extends TestCase
 
         $this->assertFalse($mapping->enabled);
         $this->assertNull($mapping->provider_cost);
+
+        $arrayIdProduct = $service->products()->where('key', 'array-id-product')->firstOrFail();
+        $arrayIdMapping = ProviderServiceProduct::query()
+            ->where('api_provider_id', $provider->id)
+            ->where('service_product_id', $arrayIdProduct->id)
+            ->firstOrFail();
+
+        $this->assertFalse($arrayIdMapping->enabled);
+        $this->assertNull($arrayIdMapping->provider_product_id);
     }
 
     public function test_disabled_provider_cannot_trigger_catalogue_requests(): void
