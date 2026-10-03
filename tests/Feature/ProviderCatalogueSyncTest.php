@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ApiProvider;
 use App\Models\Service;
 use App\Models\ServiceCategory;
+use App\Models\ProviderServiceProduct;
 use App\Services\Catalogue\CatalogueImportService;
 use App\Services\Catalogue\ProviderCatalogueSyncService;
 use App\Services\Providers\ProviderCapabilityRegistry;
@@ -41,6 +42,86 @@ class ProviderCatalogueSyncTest extends TestCase
         $sync = new ProviderCatalogueSyncService($adapter, $registry, $importer, $logger);
 
         $this->assertSame(1, $sync->sync($provider, $service));
+    }
+
+
+
+    public function test_disabled_service_cannot_trigger_catalogue_requests(): void
+    {
+        $provider = $this->makeProvider();
+        $category = ServiceCategory::create(['key' => 'disabled-service-category', 'name' => 'Disabled service category']);
+        $service = Service::create([
+            'category_id' => $category->id,
+            'key' => 'disabled-service',
+            'name' => 'Disabled service',
+            'enabled' => false,
+        ]);
+
+        $adapter = Mockery::mock(RestJsonProviderAdapter::class);
+        $adapter->shouldNotReceive('execute');
+        $registry = Mockery::mock(ProviderCapabilityRegistry::class);
+        $registry->shouldNotReceive('validate');
+        $registry->shouldNotReceive('supports');
+
+        $this->expectException(InvalidArgumentException::class);
+        (new ProviderCatalogueSyncService(
+            $adapter,
+            $registry,
+            new CatalogueImportService(),
+            Mockery::mock(ProviderRequestLogger::class),
+        ))->sync($provider, $service);
+    }
+
+    public function test_import_rechecks_provider_state_before_publishing(): void
+    {
+        $provider = $this->makeProvider();
+        $category = ServiceCategory::create(['key' => 'recheck-category', 'name' => 'Recheck category']);
+        $service = Service::create(['category_id' => $category->id, 'key' => 'recheck-service', 'name' => 'Recheck service']);
+        $provider->forceFill(['enabled' => false, 'paused' => true])->save();
+
+        $this->expectException(InvalidArgumentException::class);
+        app(CatalogueImportService::class)->import($provider, $service, [[
+            'key' => 'bundle-recheck',
+            'name' => 'Bundle recheck',
+            'provider_product_id' => 'provider-recheck',
+            'provider_cost' => '10.00',
+            'currency' => 'NGN',
+        ]]);
+
+        $this->assertDatabaseMissing('provider_service_products', ['provider_product_id' => 'provider-recheck']);
+    }
+
+    public function test_provider_currency_mismatch_is_not_made_sellable(): void
+    {
+        $provider = $this->makeProvider();
+        $category = ServiceCategory::create(['key' => 'currency-category', 'name' => 'Currency category']);
+        $service = Service::create(['category_id' => $category->id, 'key' => 'currency-service', 'name' => 'Currency service']);
+
+        app(CatalogueImportService::class)->import($provider, $service, [[
+            'key' => 'bundle-currency',
+            'name' => 'Bundle currency',
+            'provider_product_id' => 'ngn-provider',
+            'provider_cost' => '10.00',
+            'currency' => 'NGN',
+        ]]);
+
+        app(CatalogueImportService::class)->import($provider, $service, [[
+            'key' => 'bundle-currency',
+            'name' => 'Bundle currency',
+            'provider_product_id' => 'usd-provider',
+            'provider_cost' => '10.00',
+            'currency' => 'USD',
+        ]]);
+
+        $product = $service->products()->where('key', 'bundle-currency')->firstOrFail();
+        $mapping = ProviderServiceProduct::query()
+            ->where('api_provider_id', $provider->id)
+            ->where('service_product_id', $product->id)
+            ->firstOrFail();
+
+        $this->assertSame('NGN', $product->currency);
+        $this->assertFalse($mapping->enabled);
+        $this->assertSame('USD', $mapping->currency);
     }
 
     public function test_disabled_provider_cannot_trigger_catalogue_requests(): void
