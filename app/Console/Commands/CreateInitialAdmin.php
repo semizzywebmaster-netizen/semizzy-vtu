@@ -84,7 +84,8 @@ class CreateInitialAdmin extends Command
 
         $this->info('Initial administrator created successfully.');
         $this->line('Email: '.$admin->email);
-        $this->line('Sign in at: '.url('/admin/login'));
+        $adminLoginPath = trim((string) config('semizzy.admin_login_path', 'admin/login'), '/') ?: 'admin/login';
+        $this->line('Sign in at: '.url('/'.$adminLoginPath));
 
         return self::SUCCESS;
     }
