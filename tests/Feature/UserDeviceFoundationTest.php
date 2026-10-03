@@ -14,8 +14,13 @@ class UserDeviceFoundationTest extends TestCase
 
     public function test_users_have_phone_verification_fields_and_device_records_are_user_scoped(): void
     {
-        $user = User::factory()->create([
+        $user = User::create([
+            'name' => 'Device Test User',
+            'email' => 'device-test@example.com',
             'phone' => '+2348012345678',
+            'password' => 'password',
+            'role' => 'USER',
+            'status' => 'active',
         ]);
 
         $device = UserDevice::create([
