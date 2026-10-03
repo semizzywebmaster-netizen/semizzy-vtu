@@ -186,6 +186,40 @@ class AddonLifecycleService
         ]);
     }
 
+    public function uninstall(Addon $addon, ?int $actorId = null): Addon
+    {
+        return DB::transaction(function () use ($addon, $actorId): Addon {
+            $addon = Addon::query()->lockForUpdate()->findOrFail($addon->id);
+
+            if (!in_array($addon->status, ['installed', 'inactive', 'failed'], true) || !$addon->canTransitionTo('uninstalling')) {
+                throw ValidationException::withMessages([
+                    'addon' => 'Only an installed, inactive, or failed addon can be uninstalled.',
+                ]);
+            }
+
+            $this->transition($addon, 'uninstalling', 'uninstall_started', 'Addon uninstall started.', $actorId);
+            $this->recordStep($addon, 'uninstall', 'Addon uninstall contract validated; Core does not execute arbitrary addon code.');
+
+            $from = $addon->status;
+            $addon->update([
+                'status' => 'archived',
+                'activated_at' => null,
+                'last_error' => null,
+            ]);
+
+            $addon->lifecycleEvents()->create([
+                'addon_identifier' => $addon->identifier,
+                'event' => 'uninstalled',
+                'from_status' => $from,
+                'to_status' => 'archived',
+                'message' => 'Addon uninstalled and archived successfully.',
+                'actor_id' => $actorId,
+            ]);
+
+            return $addon->fresh();
+        });
+    }
+
     public function archive(Addon $addon, ?int $actorId = null): Addon
     {
         return $this->transitionAndAudit($addon, 'archived', 'archived', 'Addon archived.', $actorId, [
