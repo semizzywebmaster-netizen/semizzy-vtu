@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers\Admin;
+
 use App\Http\Controllers\Controller;
 use App\Models\SecurityEvent;
 use Illuminate\Http\Request;
@@ -15,7 +16,21 @@ class SecurityEventController extends Controller {
   if(!empty($v['request_id'])) $q->where('request_id',$v['request_id']);
   if(!empty($v['from'])) $q->where('created_at','>=',$v['from']);
   if(!empty($v['to'])) $q->where('created_at','<=',$v['to']);
-  $events=$q->paginate(50)->withQueryString()->through(fn(SecurityEvent $e)=>['id'=>$e->id,'event'=>$e->event,'severity'=>$e->severity,'request_id'=>$e->request_id,'ip_address'=>$e->ip_address,'user_agent'=>$e->user_agent,'context'=>$e->context,'user'=>$e->user?['id'=>$e->user->id,'name'=>$e->user->name,'email'=>$e->user->email]:null,'created_at'=>$e->created_at?->toIso8601String()]);
+  $events=$q->paginate(50)->withQueryString()->through(fn(SecurityEvent $e)=>['id'=>$e->id,'event'=>$e->event,'severity'=>$e->severity,'request_id'=>$e->request_id,'ip_address'=>$e->ip_address,'user_agent'=>$e->user_agent,'context'=>$this->sanitize(is_array($e->context) ? $e->context : []),'user'=>$e->user?['id'=>$e->user->id,'name'=>$e->user->name,'email'=>$e->user->email]:null,'created_at'=>$e->created_at?->toIso8601String()]);
   return Inertia::render('Admin/SecurityEvents',['events'=>$events,'filters'=>$v]);
+ }
+
+ private function sanitize(array $context): array {
+  $sensitiveKeys=['token','access_token','api_key','secret','password','authorization','credentials','client_secret','private_key','refresh_token','otp','one_time_code','webhook_secret'];
+  $safe=[];
+  foreach($context as $key=>$value) {
+   $normalized=strtolower((string) $key);
+   $sensitive=false;
+   foreach($sensitiveKeys as $needle) {
+    if(str_contains($normalized,$needle)) { $sensitive=true; break; }
+   }
+   $safe[$key]=$sensitive ? '[REDACTED]' : (is_array($value) ? $this->sanitize($value) : $value);
+  }
+  return $safe;
  }
 }
