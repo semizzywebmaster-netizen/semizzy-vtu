@@ -50,6 +50,7 @@ class FinancialOperation extends Model
     {
         $amount = ltrim((string) ($operation->amount_minor ?? ''), '0') ?: '0';
         $currency = strtoupper(trim((string) ($operation->currency ?? '')));
+        $status = strtolower(trim((string) ($operation->status ?? '')));
 
         if (!preg_match('/^\d+$/', $amount)) {
             throw new InvalidArgumentException('Financial operation amount must be a non-negative integer minor-unit value.');
@@ -63,12 +64,17 @@ class FinancialOperation extends Model
             throw new InvalidArgumentException('Financial operation reference and type are required.');
         }
 
+        if (!in_array($status, ['pending', 'processing', 'completed', 'failed', 'cancelled', 'reversed'], true)) {
+            throw new InvalidArgumentException('Financial operation status is invalid.');
+        }
+
         if ($operation->idempotency_key !== null && trim((string) $operation->idempotency_key) === '') {
             throw new InvalidArgumentException('Idempotency key cannot be empty.');
         }
 
         $operation->amount_minor = $amount;
         $operation->currency = $currency;
+        $operation->status = $status;
     }
 
     private static function isTerminal(?string $status): bool
