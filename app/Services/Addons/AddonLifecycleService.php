@@ -180,6 +180,8 @@ class AddonLifecycleService
                 ]);
             }
 
+            $this->assertCoreCompatibility($addon->compatibility_constraint);
+            $this->assertDependencies($addon->dependencies ?? [], $addon->identifier);
             $this->transition($addon, 'enabling', 'enable_started', 'Addon enable operation started.', $actorId);
             $this->recordStep($addon, 'enable', 'Addon enable contract validated; no addon code is executed by Core.');
 
@@ -205,11 +207,35 @@ class AddonLifecycleService
 
     public function disable(Addon $addon, ?int $actorId = null): Addon
     {
-        return $this->transitionAndAudit($addon, 'inactive', 'disabled', 'Addon disabled.', $actorId, [
-            'active',
-            'installed',
-            'failed',
-        ]);
+        return DB::transaction(function () use ($addon, $actorId): Addon {
+            $addon = Addon::query()->lockForUpdate()->findOrFail($addon->id);
+
+            if (!in_array($addon->status, ['active', 'installed', 'failed'], true) || !$addon->canTransitionTo('inactive')) {
+                throw ValidationException::withMessages([
+                    'addon' => 'Addon cannot transition from its current lifecycle state.',
+                ]);
+            }
+
+            $dependents = $this->findInstalledDependents($addon->identifier);
+            if ($dependents !== []) {
+                throw ValidationException::withMessages([
+                    'addon' => 'Addon cannot be disabled while installed or active addons depend on it: '.implode(', ', $dependents).'.',
+                ]);
+            }
+
+            $from = $addon->status;
+            $addon->update(['status' => 'inactive']);
+            $addon->lifecycleEvents()->create([
+                'addon_identifier' => $addon->identifier,
+                'event' => 'disabled',
+                'from_status' => $from,
+                'to_status' => 'inactive',
+                'message' => 'Addon disabled.',
+                'actor_id' => $actorId,
+            ]);
+
+            return $addon->fresh();
+        });
     }
 
     public function uninstall(Addon $addon, ?int $actorId = null): Addon
@@ -223,25 +249,10 @@ class AddonLifecycleService
                 ]);
             }
 
-            $dependents = Addon::query()
-                ->whereIn('status', ['installed', 'enabling', 'active', 'disabling', 'updating', 'inactive'])
-                ->whereJsonContains('dependencies', $addon->identifier)
-                ->pluck('identifier');
-
-            if ($dependents->isNotEmpty()) {
+            $dependents = $this->findInstalledDependents($addon->identifier);
+            if ($dependents !== []) {
                 throw ValidationException::withMessages([
-                    'addon' => 'Addon cannot be uninstalled while active or installed addons depend on it: '.$dependents->implode(', ').'.',
-                ]);
-            }
-
-            $dependents = Addon::query()
-                ->whereIn('status', ['installed', 'enabling', 'active', 'disabling', 'updating', 'inactive'])
-                ->whereJsonContains('dependencies', [['identifier' => $addon->identifier]])
-                ->pluck('identifier');
-
-            if ($dependents->isNotEmpty()) {
-                throw ValidationException::withMessages([
-                    'addon' => 'Addon cannot be uninstalled while active or installed addons depend on it: '.$dependents->implode(', ').'.',
+                    'addon' => 'Addon cannot be uninstalled while active or installed addons depend on it: '.implode(', ', $dependents).'.',
                 ]);
             }
 
@@ -273,6 +284,37 @@ class AddonLifecycleService
         return $this->transitionAndAudit($addon, 'archived', 'archived', 'Addon archived.', $actorId, [
             'draft',
         ]);
+    }
+
+    /**
+     * Return dependents in lifecycle states that rely on this addon being available.
+     * Supports both legacy scalar identifiers and structured dependency objects.
+     */
+    private function findInstalledDependents(string $identifier): array
+    {
+        $candidates = Addon::query()
+            ->whereIn('status', ['installed', 'enabling', 'active', 'disabling', 'updating', 'inactive'])
+            ->where('identifier', '!=', $identifier)
+            ->get(['identifier', 'dependencies']);
+
+        return $candidates
+            ->filter(function (Addon $candidate) use ($identifier): bool {
+                foreach ($candidate->dependencies ?? [] as $dependency) {
+                    $dependencyIdentifier = is_string($dependency)
+                        ? $dependency
+                        : (is_array($dependency) ? ($dependency['identifier'] ?? null) : null);
+
+                    if (is_string($dependencyIdentifier) && strcasecmp($dependencyIdentifier, $identifier) === 0) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })
+            ->pluck('identifier')
+            ->sort()
+            ->values()
+            ->all();
     }
 
     private function manifestAttributes(array $manifest): array
