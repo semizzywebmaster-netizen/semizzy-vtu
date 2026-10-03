@@ -9,6 +9,7 @@ use App\Http\Middleware\RequestId;
 use App\Http\Middleware\RequirePermission;
 use App\Http\Middleware\RequireRole;
 use App\Http\Middleware\SecurityThrottle;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -31,7 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'ensure.active.api' => EnsureActiveApiAccount::class,
             'security.throttle' => SecurityThrottle::class,
         ]);
-        $middleware->append(RequestId::class);
+        $middleware->append([RequestId::class, SecurityHeaders::class]);
         $middleware->web(append: [ApplySystemSettings::class, EnsureActiveAccount::class, HandleInertiaRequests::class]);
         $middleware->api(append: [EnsureActiveApiAccount::class]);
     })
