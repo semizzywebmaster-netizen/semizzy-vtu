@@ -43,9 +43,12 @@ class SecurityEventLogger
         $sanitized = [];
 
         foreach ($context as $key => $value) {
-            $normalizedKey = strtolower((string) $key);
+            $normalizedKey = strtolower(str_replace(['-', ' '], '_', (string) $key));
 
-            if (in_array($normalizedKey, $sensitive, true)) {
+            if (in_array($normalizedKey, $sensitive, true)
+                || preg_match('/(?:^|_)(?:token|secret|password|authorization|credential|private_key)(?:_|$)/', $normalizedKey)
+                || str_contains($normalizedKey, 'api_key')
+            ) {
                 continue;
             }
 
