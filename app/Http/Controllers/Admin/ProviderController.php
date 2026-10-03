@@ -143,12 +143,21 @@ class ProviderController extends Controller
 
     public function destroy(ApiProvider $provider, AuditLogger $audit, Request $request): RedirectResponse
     {
-        $provider->forceFill(['enabled' => false, 'paused' => true])->save();
-        $audit->record('provider.removed', $provider, [
-            'identifier' => $provider->identifier,
-            'history_preserved' => true,
-        ], $request);
-        $provider->delete();
+        DB::transaction(function () use ($provider, $audit, $request): void {
+            $provider = ApiProvider::query()->lockForUpdate()->findOrFail($provider->id);
+
+            $provider->serviceMappings()->lockForUpdate()->get()->each(function ($mapping): void {
+                $mapping->forceFill(['enabled' => false])->save();
+            });
+
+            $provider->forceFill(['enabled' => false, 'paused' => true])->save();
+            $audit->record('provider.removed', $provider, [
+                'identifier' => $provider->identifier,
+                'history_preserved' => true,
+                'mappings_disabled' => true,
+            ], $request);
+            $provider->delete();
+        });
 
         return back()->with('success', 'Provider removed from the active registry. Historical records are retained.');
     }
