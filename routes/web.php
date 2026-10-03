@@ -27,6 +27,7 @@ Route::get('/', fn () => Inertia::render('Welcome', [
 ]))->name('home');
 
 Route::get('/setup', [SetupController::class, 'index'])->name('setup');
+Route::post('/setup/key', [SetupController::class, 'generateKey'])->middleware('throttle:3,1')->name('setup.key');
 Route::post('/setup/migrate', [SetupController::class, 'migrate'])->middleware('throttle:5,1')->name('setup.migrate');
 Route::post('/setup/admin', [SetupController::class, 'createAdmin'])->middleware('throttle:5,1')->name('setup.admin');
 
