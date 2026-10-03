@@ -43,6 +43,25 @@ class FinancialOperationIntegrityTest extends TestCase
         $operation->save();
     }
 
+    public function test_pending_operations_cannot_mutate_immutable_identity_fields(): void
+    {
+        $operation = FinancialOperation::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'reference' => 'finance-integrity-immutable',
+            'type' => 'funding',
+            'status' => 'pending',
+            'amount_minor' => '1000',
+            'currency' => 'NGN',
+            'idempotency_key' => 'idem-immutable',
+        ]);
+
+        $operation->amount_minor = '2000';
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Financial operation amount_minor is immutable after creation.');
+        $operation->save();
+    }
+
     public function test_financial_operations_cannot_be_deleted(): void
     {
         $operation = FinancialOperation::create([
