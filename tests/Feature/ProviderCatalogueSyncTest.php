@@ -124,6 +124,46 @@ class ProviderCatalogueSyncTest extends TestCase
         $this->assertSame('USD', $mapping->currency);
     }
 
+    public function test_malformed_provider_rows_are_skipped_and_float_costs_never_become_sellable(): void
+    {
+        $provider = $this->makeProvider();
+        $category = ServiceCategory::create(['key' => 'malformed-row-category', 'name' => 'Malformed row category']);
+        $service = Service::create(['category_id' => $category->id, 'key' => 'malformed-row-service', 'name' => 'Malformed row service']);
+
+        $count = app(CatalogueImportService::class)->import($provider, $service, [
+            [
+                'key' => ['unexpected', 'array'],
+                'name' => 'Malformed key row',
+                'provider_product_id' => 'malformed-key',
+                'provider_cost' => '10.00',
+                'currency' => 'NGN',
+            ],
+            [
+                'key' => 'float-cost-product',
+                'name' => 'Float Cost Product',
+                'provider_product_id' => 'float-cost-provider-product',
+                'provider_cost' => 10.25,
+                'currency' => 'NGN',
+            ],
+            'not-an-object-row',
+        ]);
+
+        $this->assertSame(1, $count);
+        $this->assertDatabaseMissing('service_products', [
+            'service_id' => $service->id,
+            'key' => 'malformed-key',
+        ]);
+
+        $product = $service->products()->where('key', 'float-cost-product')->firstOrFail();
+        $mapping = ProviderServiceProduct::query()
+            ->where('api_provider_id', $provider->id)
+            ->where('service_product_id', $product->id)
+            ->firstOrFail();
+
+        $this->assertFalse($mapping->enabled);
+        $this->assertNull($mapping->provider_cost);
+    }
+
     public function test_disabled_provider_cannot_trigger_catalogue_requests(): void
     {
         $provider = $this->makeProvider(['enabled' => false]);
