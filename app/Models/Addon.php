@@ -52,7 +52,7 @@ class Addon extends Model
             'inactive' => ['validating', 'enabling', 'updating', 'uninstalling'],
             'updating' => ['active', 'installed', 'inactive', 'failed'],
             'uninstalling' => ['archived', 'failed'],
-            'failed' => ['validating', 'inactive', 'updating', 'uninstalling', 'archived'],
+            'failed' => ['validating', 'inactive', 'updating', 'uninstalling'],
             'archived' => [],
         ];
 
