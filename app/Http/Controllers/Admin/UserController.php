@@ -55,7 +55,11 @@ class UserController extends Controller
             'status' => ['required', 'in:active,suspended,disabled'],
         ]);
 
-        abort_if($user->is($request->user()) && $data['status'] !== 'active', 422, 'You cannot deactivate your own account.');
+        abort_if(
+            $user->is($request->user()) && ($data['status'] !== 'active' || $data['role'] !== $request->user()->role),
+            422,
+            'You cannot deactivate or change your own role.'
+        );
 
         DB::transaction(function () use ($user, $data): void {
             $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
