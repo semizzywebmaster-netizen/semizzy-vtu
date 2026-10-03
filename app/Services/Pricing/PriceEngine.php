@@ -110,6 +110,7 @@ class PriceEngine
         $query = $product->providerProducts()
             ->where('enabled', true)
             ->whereNotNull('provider_cost')
+            ->where('currency', $product->currency)
             ->whereHas('provider', function ($providerQuery): void {
                 $providerQuery->where('enabled', true)
                     ->where('paused', false)
