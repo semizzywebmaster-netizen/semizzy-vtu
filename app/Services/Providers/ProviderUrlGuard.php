@@ -20,8 +20,10 @@ final class ProviderUrlGuard
             || empty($parts['host'])
             || array_key_exists('user', $parts)
             || array_key_exists('pass', $parts)
+            || array_key_exists('query', $parts)
+            || array_key_exists('fragment', $parts)
         ) {
-            throw new InvalidArgumentException('Provider URL must use HTTP or HTTPS, contain a valid host, and not embed credentials.');
+            throw new InvalidArgumentException('Provider URL must use HTTP or HTTPS, contain a valid host, and not embed credentials, queries, or fragments.');
         }
 
         $host = strtolower((string) $parts['host']);
