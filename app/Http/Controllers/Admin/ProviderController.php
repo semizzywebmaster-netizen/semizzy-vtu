@@ -33,7 +33,11 @@ class ProviderController extends Controller
                 'priority' => $p->priority,
                 'last_tested_at' => $p->last_tested_at?->toISOString(),
                 'last_test_status' => $p->last_test_status,
-                'last_test_summary' => $p->last_test_summary,
+                'last_test_summary' => match ($p->last_test_status) {
+                    'ACCEPTED', 'SUCCESS', 'OK' => 'Connection test completed successfully.',
+                    'FAILED', 'ERROR', 'REJECTED' => 'Connection test failed. Review server-side diagnostics.',
+                    default => null,
+                },
                 'credentials' => $p->maskedCredentials(),
                 'capabilities' => $p->capabilities ?? [],
                 'endpoints' => $p->endpoints ?? [],
@@ -114,7 +118,7 @@ class ProviderController extends Controller
             'status' => $result['result']->status,
         ], $request);
 
-        return back()->with('error', 'Provider test did not succeed: '.($result['result']->message ?? $result['result']->status));
+        return back()->with('error', 'Provider test did not succeed. Review server-side diagnostics.');
     }
 
     public function toggle(ApiProvider $provider, AuditLogger $audit, Request $request): RedirectResponse
