@@ -71,12 +71,16 @@ class WebhookReplayGuardTest extends TestCase
         ]);
 
         $failed = $guard->claim($provider, 'evt_failed', '{"ok":false}');
-        $guard->markFailed($failed, 'Provider response contained a sensitive-looking value.');
+        $guard->markFailed($failed, 'Authorization: Bearer provider-secret-123; api_key=provider-secret-123');
 
         $this->assertDatabaseHas('webhook_receipts', [
             'id' => $failed->id,
             'status' => 'failed',
         ]);
+
+        $stored = $failed->fresh()->processing_error;
+        $this->assertStringNotContainsString('provider-secret-123', $stored);
+        $this->assertStringContainsString('[REDACTED]', $stored);
     }
 
     public function test_event_id_is_required_and_bounded(): void
