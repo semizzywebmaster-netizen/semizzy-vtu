@@ -61,7 +61,7 @@ class AddonLifecycleService
                 $this->transition($addon, 'validating', 'install_started', 'Addon validation started.', $actorId);
                 $this->assertManifest($addon);
                 $this->assertCoreCompatibility($addon->compatibility_constraint);
-                $this->assertDependencies($addon->dependencies);
+                $this->assertDependencies($addon->dependencies, $addon->identifier);
                 $this->transition($addon, 'installing', 'installing', 'Addon installation started.', $actorId);
 
                 $this->recordStep($addon, 'register', 'Addon registration validated.');
@@ -130,7 +130,7 @@ class AddonLifecycleService
                 $wasActive = $addon->status === 'active';
 
                 $this->assertCoreCompatibility($manifest['compatibility'] ?? null);
-                $this->assertDependencies($manifest['dependencies'] ?? []);
+                $this->assertDependencies($manifest['dependencies'] ?? [], $manifest['identifier']);
                 $this->transition($addon, 'updating', 'update_started', 'Addon update started.', $actorId);
                 $this->recordStep($addon, 'register', 'Update manifest validated.');
                 $this->recordMigrationContract($addon, $manifest);
