@@ -22,6 +22,7 @@ class PriceEngine
 
         $resolvedProvider = $this->resolveProviderCost($product, $provider);
         $cost = BigDecimal::of($resolvedProvider['cost']);
+        $this->validateCustomerTier($customerTier);
         $rule = $this->rules($product, $customerTier, $at)->first();
 
         if (! $rule) {
@@ -65,6 +66,14 @@ class PriceEngine
             'rule_id' => $rule?->id,
             'currency' => $product->currency,
         ];
+    }
+
+    private function validateCustomerTier(string $tier): void
+    {
+        $allowed = ['USER', 'AGENT', 'RESELLER', 'MERCHANT', 'CUSTOM'];
+        if (! in_array(strtoupper($tier), $allowed, true)) {
+            throw new InvalidArgumentException('Unsupported customer tier.');
+        }
     }
 
     private function rules(ServiceProduct $product, string $tier, ?string $at): \Illuminate\Database\Eloquent\Collection
