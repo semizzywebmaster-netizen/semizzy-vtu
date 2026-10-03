@@ -109,18 +109,31 @@ class SupportTicketController extends Controller
     public function reply(Request $request, SupportTicket $ticket, AuditLogger $audit): RedirectResponse
     {
         $this->authorizeTicket($request, $ticket);
-        abort_if(in_array($ticket->status, ['closed', 'resolved'], true) && ! $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']), 409, 'This ticket is closed.');
 
         $data = $request->validate(['message' => ['required', 'string', 'min:2', 'max:10000']]);
-        DB::transaction(function () use ($request, $ticket, $data): void {
-            $ticket->messages()->create(['user_id' => $request->user()->id, 'message' => $data['message']]);
-            $ticket->forceFill([
+        [$ticket, $isStaffReply] = DB::transaction(function () use ($request, $ticket, $data): array {
+            $lockedTicket = SupportTicket::query()->lockForUpdate()->findOrFail($ticket->id);
+
+            abort_if(
+                in_array($lockedTicket->status, ['closed', 'resolved'], true)
+                && ! $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']),
+                409,
+                'This ticket is closed.'
+            );
+
+            $isStaffReply = $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']);
+            $lockedTicket->messages()->create([
+                'user_id' => $request->user()->id,
+                'message' => $data['message'],
+            ]);
+            $lockedTicket->forceFill([
                 'last_reply_at' => now(),
-                'status' => $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']) ? 'pending' : 'open',
+                'status' => $isStaffReply ? 'pending' : 'open',
             ])->save();
+
+            return [$lockedTicket->fresh(), $isStaffReply];
         });
 
-        $isStaffReply = $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']);
         $audit->record('support.ticket.replied', $ticket, ['staff_reply' => $isStaffReply], $request);
 
         if ($isStaffReply) {
