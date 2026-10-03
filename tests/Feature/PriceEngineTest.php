@@ -88,6 +88,31 @@ class PriceEngineTest extends TestCase
         app(PriceEngine::class)->quote($product);
     }
 
+    public function test_provider_cost_currency_must_match_product_currency(): void
+    {
+        [, $service, $product] = $this->makeProduct();
+        $provider = $this->makeLiveProvider('price-currency-provider');
+
+        ProviderServiceMapping::create([
+            'api_provider_id' => $provider->id,
+            'service_id' => $service->id,
+            'service_key' => $service->key,
+            'enabled' => true,
+        ]);
+
+        ProviderServiceProduct::create([
+            'api_provider_id' => $provider->id,
+            'service_product_id' => $product->id,
+            'provider_product_id' => 'usd-bundle',
+            'provider_cost' => '40.000000',
+            'currency' => 'USD',
+            'enabled' => true,
+        ]);
+
+        $this->expectException(InvalidArgumentException::class);
+        app(PriceEngine::class)->quote($product);
+    }
+
     public function test_explicit_provider_cannot_fall_back_to_another_provider_cost(): void
     {
         [, $service, $product] = $this->makeProduct();
