@@ -106,7 +106,22 @@ class RestJsonProviderAdapter implements ProviderAdapter
             return null;
         }
 
-        return rtrim($provider->base_url, '/').'/'.ltrim($path, '/');
+        if (!is_string($path) || preg_match('/^[a-z][a-z0-9+.-]*:/i', $path) || str_starts_with($path, '//')) {
+            throw new RuntimeException('Provider endpoint must be a relative path.');
+        }
+
+        $parts = parse_url($path);
+        if (
+            $parts === false
+            || isset($parts['scheme'], $parts['host'], $parts['user'], $parts['pass'], $parts['query'], $parts['fragment'])
+        ) {
+            throw new RuntimeException('Provider endpoint must not contain a host, credentials, query string, or fragment.');
+        }
+
+        $url = rtrim($provider->base_url, '/').'/'.ltrim($path, '/');
+        $this->guard->validate($url);
+
+        return $url;
     }
 
     private function normalizeStatus(mixed $body, string $operation): string
