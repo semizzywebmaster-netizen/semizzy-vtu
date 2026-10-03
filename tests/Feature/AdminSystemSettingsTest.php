@@ -40,6 +40,25 @@ class AdminSystemSettingsTest extends TestCase
         $this->assertSame(['setting_keys' => ['platform_name', 'support_email', 'support_notice', 'default_timezone']], $event->context);
     }
 
+    public function test_saved_public_settings_are_shared_and_timezone_is_applied(): void
+    {
+        $admin = $this->makeUser('settings-public@example.test', 'ADMIN');
+        SystemSetting::query()->create(['key' => 'platform_name', 'value' => 'Semizzy Platform', 'type' => 'string', 'is_secret' => false]);
+        SystemSetting::query()->create(['key' => 'support_email', 'value' => 'help@example.test', 'type' => 'string', 'is_secret' => false]);
+        SystemSetting::query()->create(['key' => 'support_notice', 'value' => 'Scheduled maintenance tonight.', 'type' => 'string', 'is_secret' => false]);
+        SystemSetting::query()->create(['key' => 'default_timezone', 'value' => 'Africa/Lagos', 'type' => 'string', 'is_secret' => false]);
+
+        $this->actingAs($admin)->get('/')->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Welcome')
+                ->where('platform.platform_name', 'Semizzy Platform')
+                ->where('platform.support_email', 'help@example.test')
+                ->where('platform.support_notice', 'Scheduled maintenance tonight.'));
+
+        $this->assertSame('Africa/Lagos', config('app.timezone'));
+        $this->assertSame('Africa/Lagos', date_default_timezone_get());
+    }
+
     public function test_invalid_timezone_is_rejected_without_writing_settings(): void
     {
         $admin = $this->makeUser('settings-invalid@example.test', 'ADMIN');

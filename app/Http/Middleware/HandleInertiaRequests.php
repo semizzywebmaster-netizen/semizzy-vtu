@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\System\SystemSettingsService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -20,6 +21,7 @@ class HandleInertiaRequests extends Middleware
                     'role' => $request->user()->role,
                 ] : null,
             ],
+            'platform' => fn () => app(SystemSettingsService::class)->all(),
             'navigation' => [
                 'unreadNotifications' => fn () => $request->user()?->unreadNotifications()->count() ?? 0,
             ],
