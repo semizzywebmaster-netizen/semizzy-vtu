@@ -21,7 +21,7 @@ class ProviderManagementTest extends TestCase
             'display_name' => 'Future Provider',
             'environment' => 'sandbox',
             'auth_type' => 'bearer',
-            'base_url' => 'https://api.example.test',
+            'base_url' => 'https://8.8.8.8',
             'capabilities' => ['health'],
             'endpoints' => [],
             'service_categories' => [],
