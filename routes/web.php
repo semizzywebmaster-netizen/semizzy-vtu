@@ -69,7 +69,7 @@ Route::middleware(['auth'])->group(function (): void {
     Route::post('/support/{ticket}/reply', [SupportTicketController::class, 'reply'])->whereNumber('ticket')->middleware('throttle:20,1')->name('support.reply');
     Route::patch('/support/{ticket}/status', [SupportTicketController::class, 'updateStatus'])->whereNumber('ticket')->middleware('throttle:30,1')->name('support.status');
 
-    Route::prefix('admin')->middleware('role:ADMIN,STAFF,SUPPORT')->group(function (): void {
+    Route::prefix('admin')->middleware(['role:ADMIN,STAFF,SUPPORT', 'verified'])->group(function (): void {
         Route::get('/audit-events', [AuditEventController::class, 'index'])->middleware('permission:audit.view')->name('admin.audit-events.index');
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view')->name('admin.users.index');
         Route::patch('/users/{user}', [UserController::class, 'update'])->middleware('permission:users.manage')->name('admin.users.update');
