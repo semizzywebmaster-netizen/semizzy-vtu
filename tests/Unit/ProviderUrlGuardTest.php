@@ -36,6 +36,20 @@ class ProviderUrlGuardTest extends TestCase
         (new ProviderUrlGuard())->validate('https://:password@example.com');
     }
 
+    public function test_query_string_is_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        (new ProviderUrlGuard())->validate('https://example.com/api?token=secret');
+    }
+
+    public function test_fragment_is_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        (new ProviderUrlGuard())->validate('https://example.com/api#private');
+    }
+
     public function test_public_ip_is_allowed(): void
     {
         (new ProviderUrlGuard())->validate('https://8.8.8.8');
