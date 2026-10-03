@@ -62,40 +62,40 @@ class SemizzyCreateAdmin extends Command
 
         try {
             DB::transaction(function () use ($name, $email, $password): void {
-            DB::table('system_settings')->insertOrIgnore([
+                DB::table('system_settings')->insertOrIgnore([
                 'key' => 'core.initial_admin_created',
                 'value' => '0',
                 'type' => 'boolean',
                 'is_secret' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+                ]);
 
-            $marker = DB::table('system_settings')
+                $marker = DB::table('system_settings')
                 ->where('key', 'core.initial_admin_created')
-                ->lockForUpdate()
-                ->first();
+                    ->lockForUpdate()
+                    ->first();
 
-            if (! $marker || $marker->value === '1' || User::query()->where('role', 'ADMIN')->lockForUpdate()->exists()) {
-                throw new \RuntimeException('Initial administrator already exists.');
-            }
+                if (! $marker || $marker->value === '1' || User::query()->where('role', 'ADMIN')->lockForUpdate()->exists()) {
+                    throw new \RuntimeException('Initial administrator already exists.');
+                }
 
-            $admin = User::create([
+                $admin = User::create([
                 'name' => $name,
                 'email' => $email,
                 'password' => $password,
                 'role' => 'ADMIN',
                 'status' => 'active',
-            ]);
-
-            $admin->forceFill(['email_verified_at' => now()])->save();
-
-            DB::table('system_settings')
-                ->where('key', 'core.initial_admin_created')
-                ->update([
-                    'value' => '1',
-                    'updated_at' => now(),
                 ]);
+
+                    $admin->forceFill(['email_verified_at' => now()])->save();
+
+                DB::table('system_settings')
+                ->where('key', 'core.initial_admin_created')
+                    ->update([
+                        'value' => '1',
+                        'updated_at' => now(),
+                    ]);
             });
         } catch (\Throwable $e) {
             report($e);
