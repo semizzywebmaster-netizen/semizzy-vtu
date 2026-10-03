@@ -17,7 +17,7 @@ SEMIZZY ONE CORE V2 is a single integrated Laravel + React/TypeScript applicatio
 
 ## Requirements
 
-- PHP 8.3+ with Laravel-required extensions
+- PHP 8.4+ with Laravel-required extensions
 - Composer 2
 - Node.js 22/npm for frontend build
 - MySQL or MariaDB for deployment (SQLite is used by CI tests)
