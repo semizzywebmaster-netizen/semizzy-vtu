@@ -142,6 +142,37 @@ class AddonLifecycleTest extends TestCase
         ]);
     }
 
+    public function test_installed_addon_can_be_uninstalled_and_archived_with_lifecycle_events(): void
+    {
+        $service = app(AddonLifecycleService::class);
+
+        $addon = $service->register([
+            'identifier' => 'uninstallable-addon',
+            'name' => 'Uninstallable Addon',
+            'version' => '1.0.0',
+        ]);
+
+        $service->install($addon);
+        $uninstalled = $service->uninstall($addon);
+
+        $this->assertSame('archived', $uninstalled->status);
+        $this->assertNull($uninstalled->activated_at);
+        $this->assertNull($uninstalled->last_error);
+
+        $this->assertDatabaseHas('addon_lifecycle_events', [
+            'addon_id' => $addon->id,
+            'event' => 'uninstall_started',
+            'from_status' => 'installed',
+            'to_status' => 'uninstalling',
+        ]);
+        $this->assertDatabaseHas('addon_lifecycle_events', [
+            'addon_id' => $addon->id,
+            'event' => 'uninstalled',
+            'from_status' => 'uninstalling',
+            'to_status' => 'archived',
+        ]);
+    }
+
     public function test_duplicate_registration_is_rejected_instead_of_silently_updating(): void
     {
         $service = app(AddonLifecycleService::class);
