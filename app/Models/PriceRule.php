@@ -31,6 +31,21 @@ class PriceRule extends Model
    if ($rule->customer_tier !== null && ! in_array($rule->customer_tier, $validTiers, true)) {
     throw new InvalidArgumentException('Invalid customer tier.');
    }
+   if ($rule->fixed_fee !== null && BigDecimal::of((string) $rule->fixed_fee)->isNegative()) {
+    throw new InvalidArgumentException('Fixed fee cannot be negative.');
+   }
+   if ($rule->percentage !== null && BigDecimal::of((string) $rule->percentage)->isNegative()) {
+    throw new InvalidArgumentException('Percentage cannot be negative.');
+   }
+   if ($rule->minimum_price !== null && BigDecimal::of((string) $rule->minimum_price)->isNegative()) {
+    throw new InvalidArgumentException('Minimum price cannot be negative.');
+   }
+   if ($rule->maximum_price !== null && BigDecimal::of((string) $rule->maximum_price)->isNegative()) {
+    throw new InvalidArgumentException('Maximum price cannot be negative.');
+   }
+   if ($rule->effective_from !== null && $rule->effective_to !== null && $rule->effective_from->gt($rule->effective_to)) {
+    throw new InvalidArgumentException('Effective start cannot be after effective end.');
+   }
    if ($rule->minimum_price !== null && $rule->maximum_price !== null && BigDecimal::of((string) $rule->minimum_price)->isGreaterThan(BigDecimal::of((string) $rule->maximum_price))) {
     throw new InvalidArgumentException('Minimum price cannot exceed maximum price.');
    }
