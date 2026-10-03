@@ -15,7 +15,7 @@ class ApiTokenController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'abilities' => ['sometimes', 'array', 'max:50'],
-            'abilities.*' => ['string', 'max:100'],
+            'abilities.*' => ['string', 'max:100', 'in:core.read'],
             'expires_at' => ['nullable', 'date', 'after:now'],
         ]);
 
@@ -30,14 +30,14 @@ class ApiTokenController extends Controller
 
         $token = $request->user()->createToken(
             $data['name'],
-            $data['abilities'] ?? ['*'],
+            $data['abilities'] ?? ['core.read'],
             $expiresAt
         );
 
         $security->record('api_token.created', 'info', [
             'token_id' => $token->accessToken->getKey(),
             'name' => $data['name'],
-            'abilities' => $data['abilities'] ?? ['*'],
+            'abilities' => $data['abilities'] ?? ['core.read'],
         ], $request);
 
         return response()->json([
