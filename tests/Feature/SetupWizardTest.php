@@ -69,7 +69,10 @@ class SetupWizardTest extends TestCase
         $response = app(\App\Http\Controllers\SetupController::class)->createAdmin($request);
 
         $this->assertSame(302, $response->getStatusCode());
-        $this->assertTrue($response->getSession()->getErrors()->has('setup'));
+        $this->assertSame(
+            'Application key is not configured. Generate the key before creating the initial administrator.',
+            $response->getSession()->get('_errors')->getBag('default')->first('setup')
+        );
         $this->assertDatabaseMissing('users', ['email' => 'setup-admin@example.test']);
     }
 }
