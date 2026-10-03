@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Brick\Math\BigDecimal;
+use InvalidArgumentException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -32,7 +34,7 @@ class PriceRule extends Model
    if ($rule->minimum_price !== null && $rule->maximum_price !== null && BigDecimal::of((string) $rule->minimum_price)->isGreaterThan(BigDecimal::of((string) $rule->maximum_price))) {
     throw new InvalidArgumentException('Minimum price cannot exceed maximum price.');
    }
-   if ((int) $rule->rounding_increment < 0) {
+   if ($rule->rounding_increment !== null && BigDecimal::of((string) $rule->rounding_increment)->isNegative()) {
     throw new InvalidArgumentException('Rounding increment cannot be negative.');
    }
   });
