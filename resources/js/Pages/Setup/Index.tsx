@@ -8,6 +8,7 @@ type Props = {
 };
 
 export default function Setup({ checks, migrations_table, app_url }: Props) {
+  const keyForm = useForm({});
   const migrate = useForm({ confirm: false });
   const admin = useForm({ name: '', email: '', password: '', password_confirmation: '' });
   const ready = Object.values(checks).every(Boolean);
@@ -23,6 +24,10 @@ export default function Setup({ checks, migrations_table, app_url }: Props) {
     storage: 'Storage writable',
     bootstrap_cache: 'Bootstrap cache writable',
     database: 'Database connection',
+  };
+
+  const generateKey = () => {
+    keyForm.post('/setup/key');
   };
 
   const runMigrations = (e: FormEvent) => {
@@ -46,6 +51,13 @@ export default function Setup({ checks, migrations_table, app_url }: Props) {
             <h1 className="mt-2 text-3xl font-bold">Initial setup</h1>
             <p className="mt-2 text-slate-400">Complete the server checks, database migration, and first administrator setup.</p>
           </div>
+          {!checks.app_key && <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+            <h2 className="text-lg font-semibold">Application key</h2>
+            <p className="mt-2 text-sm text-slate-400">The installer can generate APP_KEY for you when the .env file is writable.</p>
+            <button type="button" onClick={generateKey} disabled={keyForm.processing} className="mt-4 rounded-xl bg-white px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">
+              {keyForm.processing ? 'Generating…' : 'Generate application key'}
+            </button>
+          </section>}
           <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
             <h2 className="text-lg font-semibold">Environment checks</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
