@@ -90,11 +90,27 @@ class PriceEngineTest extends TestCase
 
     public function test_invalid_pricing_evaluation_timestamp_is_rejected(): void
     {
-        $product = ServiceProduct::factory()->create();
+        [, $service, $product] = $this->makeProduct();
+        $provider = $this->makeLiveProvider('price-invalid-time-provider');
+
+        ProviderServiceMapping::create([
+            'api_provider_id' => $provider->id,
+            'service_id' => $service->id,
+            'service_key' => $service->key,
+            'enabled' => true,
+        ]);
+        ProviderServiceProduct::create([
+            'api_provider_id' => $provider->id,
+            'service_product_id' => $product->id,
+            'provider_product_id' => 'invalid-time-product',
+            'provider_cost' => '10.000000',
+            'currency' => 'NGN',
+            'enabled' => true,
+        ]);
 
         $this->expectException(InvalidArgumentException::class);
 
-        app(\App\Services\Pricing\PriceEngine::class)->quote($product, 'USER', 'not-a-date');
+        app(PriceEngine::class)->quote($product, 'USER', 'not-a-date');
     }
 
     public function test_price_rule_rejects_negative_amounts_and_invalid_effective_window(): void
