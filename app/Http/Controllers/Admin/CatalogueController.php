@@ -95,8 +95,8 @@ class CatalogueController extends Controller
             $mapping = ProviderServiceMapping::query()->lockForUpdate()->findOrFail($mapping->id);
             $provider = ApiProvider::query()->lockForUpdate()->findOrFail($mapping->api_provider_id);
 
-            if (!$mapping->enabled && ($provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
-                return back()->with('error','A provider service mapping can only be enabled for a live-verified provider.');
+            if (!$mapping->enabled && (! $provider->enabled || $provider->paused || $provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
+                return back()->with('error','A provider service mapping can only be enabled for an enabled, unpaused, live-verified provider.');
             }
 
             $enabled = ! $mapping->enabled;
