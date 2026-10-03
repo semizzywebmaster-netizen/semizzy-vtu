@@ -29,6 +29,7 @@ class SecurityHardeningTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'USER',
             'status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         $this->actingAs($u);
