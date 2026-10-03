@@ -66,13 +66,15 @@ class AdminUserManagementTest extends TestCase
 
     private function makeUser(string $email, string $role, string $name = 'Test User'): User
     {
-        return User::create([
+        $user = User::create([
             'name' => $name,
             'email' => $email,
             'password' => 'Strong-Password-123!',
             'role' => $role,
             'status' => 'active',
-            'email_verified_at' => now(),
         ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        return $user;
     }
 }
