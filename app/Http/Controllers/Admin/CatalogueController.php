@@ -12,6 +12,7 @@ use App\Models\ServiceCategory;
 use App\Models\ServiceProduct;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,7 +26,7 @@ class CatalogueController extends Controller
         ]);
     }
 
-    public function storeCategory(Request $request): RedirectResponse
+    public function storeCategory(Request $request, AuditLogger $audit): RedirectResponse
     {
         $data=$request->validate([
             'key'=>'required|string|max:100|alpha_dash|unique:service_categories,key',
@@ -34,11 +35,12 @@ class CatalogueController extends Controller
             'sort_order'=>'nullable|integer|min:0|max:100000',
             'enabled'=>'nullable|boolean',
         ]);
-        ServiceCategory::create($data+['enabled'=>$data['enabled']??true]);
+        $category = ServiceCategory::create($data+['enabled'=>$data['enabled']??true]);
+        $audit->record('catalogue.category.created', $category, ['key' => $category->key], $request);
         return back()->with('success','Service category created.');
     }
 
-    public function storeService(Request $request): RedirectResponse
+    public function storeService(Request $request, AuditLogger $audit): RedirectResponse
     {
         $data=$request->validate([
             'category_id'=>'required|integer|exists:service_categories,id',
@@ -48,11 +50,12 @@ class CatalogueController extends Controller
             'metadata'=>'nullable|array',
             'enabled'=>'nullable|boolean',
         ]);
-        Service::create($data+['enabled'=>$data['enabled']??true]);
+        $service = Service::create($data+['enabled'=>$data['enabled']??true]);
+        $audit->record('catalogue.service.created', $service, ['key' => $service->key], $request);
         return back()->with('success','Service created.');
     }
 
-    public function storeProduct(Request $request): RedirectResponse
+    public function storeProduct(Request $request, AuditLogger $audit): RedirectResponse
     {
         $data=$request->validate([
             'service_id'=>'required|integer|exists:services,id',
@@ -64,7 +67,8 @@ class CatalogueController extends Controller
         ]);
         if(ServiceProduct::query()->where('service_id',$data['service_id'])->where('key',$data['key'])->exists())
             return back()->with('error','A product with this key already exists under this service.');
-        ServiceProduct::create($data+['currency'=>strtoupper($data['currency']),'enabled'=>$data['enabled']??false]);
+        $product = ServiceProduct::create($data+['currency'=>strtoupper($data['currency']),'enabled'=>$data['enabled']??false]);
+        $audit->record('catalogue.product.created', $product, ['service_id' => $product->service_id, 'key' => $product->key], $request);
         return back()->with('success','Service product created.');
     }
 
@@ -85,22 +89,25 @@ class CatalogueController extends Controller
         return back()->with('success',"Catalogue sync completed. {$count} product record(s) processed.");
     }
 
-    public function toggleMapping(ProviderServiceMapping $mapping): RedirectResponse
+    public function toggleMapping(ProviderServiceMapping $mapping, AuditLogger $audit, Request $request): RedirectResponse
     {
         $provider=$mapping->provider;
         if (!$mapping->enabled && ($provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
             return back()->with('error','A provider service mapping can only be enabled for a live-verified provider.');
         }
-        $mapping->update(['enabled'=>!$mapping->enabled]);
+        $enabled = ! $mapping->enabled;
+        $mapping->update(['enabled' => $enabled]);
+        $audit->record($enabled ? 'catalogue.mapping.enabled' : 'catalogue.mapping.disabled', $mapping, ['provider_id' => $mapping->api_provider_id, 'service_id' => $mapping->service_id], $request);
         return back()->with('success','Provider service mapping status updated.');
     }
 
-    public function disableProduct(ServiceProduct $product): RedirectResponse
+    public function disableProduct(ServiceProduct $product, AuditLogger $audit, Request $request): RedirectResponse
     {
         DB::transaction(function () use ($product): void {
             ProviderServiceProduct::query()->where('service_product_id', $product->id)->update(['enabled' => false]);
             $product->update(['enabled' => false]);
         });
+        $audit->record('catalogue.product.disabled', $product, ['service_id' => $product->service_id], $request);
         return back()->with('success','Product and provider mappings disabled.');
     }
 }
