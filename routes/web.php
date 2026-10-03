@@ -77,6 +77,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->middleware('permission:providers.manage')->name('admin.providers.update');
         Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->middleware('permission:providers.manage')->name('admin.providers.test');
         Route::post('/providers/{provider}/toggle', [ProviderController::class, 'toggle'])->middleware('permission:providers.manage')->name('admin.providers.toggle');
+        Route::delete('/providers/{provider}', [ProviderController::class, 'destroy'])->middleware('permission:providers.manage')->name('admin.providers.destroy');
 
         Route::get('/catalogue', [CatalogueController::class, 'index'])->middleware('permission:catalogue.view')->name('admin.catalogue.index');
         Route::post('/catalogue/categories', [CatalogueController::class, 'storeCategory'])->middleware('permission:catalogue.manage')->name('admin.catalogue.categories.store');
