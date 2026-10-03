@@ -32,6 +32,10 @@ const statusClass: Record<string, string> = {
   inactive: 'bg-amber-100 text-amber-800',
   failed: 'bg-red-100 text-red-800',
   archived: 'bg-slate-200 text-slate-700',
+  enabling: 'bg-violet-100 text-violet-800',
+  disabling: 'bg-violet-100 text-violet-800',
+  updating: 'bg-indigo-100 text-indigo-800',
+  uninstalling: 'bg-violet-100 text-violet-800',
   installing: 'bg-violet-100 text-violet-800',
   validating: 'bg-violet-100 text-violet-800',
   draft: 'bg-slate-100 text-slate-700',
@@ -157,6 +161,9 @@ export default function Addons({ addons }: Props) {
                     )}
                     {addon.status === 'active' && (
                       <button onClick={() => action('/admin/addons/' + addon.id + '/disable')} className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-white">Disable</button>
+                    )}
+                    {['installed', 'inactive', 'failed'].includes(addon.status) && (
+                      <button onClick={() => action('/admin/addons/' + addon.id + '/uninstall', 'Uninstall this addon? The addon will be archived after the uninstall contract is recorded.')} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700">Uninstall</button>
                     )}
                     {['draft', 'installed', 'inactive', 'failed'].includes(addon.status) && (
                       <button onClick={() => action('/admin/addons/' + addon.id + '/archive', 'Archive this addon?')} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700">Archive</button>
