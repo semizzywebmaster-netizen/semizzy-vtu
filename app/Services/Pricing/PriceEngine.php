@@ -79,7 +79,11 @@ class PriceEngine
 
     private function rules(ServiceProduct $product, string $tier, ?string $at): \Illuminate\Database\Eloquent\Collection
     {
-        $time = $at ? Carbon::parse($at) : now();
+        try {
+            $time = $at ? Carbon::parse($at) : now();
+        } catch (\Throwable $e) {
+            throw new InvalidArgumentException('Invalid pricing evaluation timestamp.', 0, $e);
+        }
 
         return PriceRule::query()
             ->where('enabled', true)
