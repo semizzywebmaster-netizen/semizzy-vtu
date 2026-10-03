@@ -53,6 +53,14 @@ class WebhookReplayGuard
                     ->first();
 
                 if ($existing) {
+                    if (! hash_equals($existing->payload_hash, $payloadHash)) {
+                        throw new RuntimeException('Webhook event ID was already claimed with a different payload.');
+                    }
+
+                    if ($existing->signature_hash !== null && $signatureHash !== null && ! hash_equals($existing->signature_hash, $signatureHash)) {
+                        throw new RuntimeException('Webhook event ID was already claimed with a different signature.');
+                    }
+
                     return $existing;
                 }
             }

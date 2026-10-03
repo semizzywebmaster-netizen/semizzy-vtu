@@ -45,6 +45,18 @@ class WebhookReplayGuardTest extends TestCase
         $this->assertDatabaseCount('webhook_receipts', 1);
     }
 
+
+    public function test_same_event_id_with_different_payload_is_rejected(): void
+    {
+        $provider = $this->provider();
+        $guard = app(WebhookReplayGuard::class);
+
+        $guard->claim($provider, 'evt_integrity', '{"amount":100}');
+
+        $this->expectException(\RuntimeException::class);
+        $guard->claim($provider, 'evt_integrity', '{"amount":999}');
+    }
+
     public function test_webhook_event_can_be_marked_processed_or_failed(): void
     {
         $provider = $this->provider();
