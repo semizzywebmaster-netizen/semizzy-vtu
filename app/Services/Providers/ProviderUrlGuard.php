@@ -18,7 +18,8 @@ final class ProviderUrlGuard
             !$parts
             || !in_array(strtolower((string) ($parts['scheme'] ?? '')), ['https', 'http'], true)
             || empty($parts['host'])
-            || isset($parts['user'], $parts['pass'])
+            || array_key_exists('user', $parts)
+            || array_key_exists('pass', $parts)
         ) {
             throw new InvalidArgumentException('Provider URL must use HTTP or HTTPS, contain a valid host, and not embed credentials.');
         }
