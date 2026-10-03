@@ -53,7 +53,7 @@ class SystemHealthService
     {
         $required = [
             'bcmath', 'ctype', 'curl', 'dom', 'fileinfo', 'filter', 'hash',
-            'json', 'mbstring', 'openssl', 'pcre', 'pdo', 'session', 'tokenizer', 'xml',
+            'json', 'mbstring', 'openssl', 'pcre', 'pdo', 'pdo_mysql', 'session', 'tokenizer', 'xml',
         ];
         $missing = array_values(array_filter($required, fn (string $extension): bool => ! extension_loaded($extension)));
         $ok = $missing === [];
