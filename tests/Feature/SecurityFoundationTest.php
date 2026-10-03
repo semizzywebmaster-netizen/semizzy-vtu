@@ -143,6 +143,36 @@ class SecurityFoundationTest extends TestCase
         $this->assertSame('kept', $event->context['nested']['deep']['value']);
     }
 
+    public function test_security_event_context_redacts_variant_sensitive_key_names(): void
+    {
+        $user = User::create([
+            'name' => 'Variant Event User',
+            'email' => 'variant-event@example.test',
+            'password' => 'Strong-Test-Password-123!',
+            'role' => 'USER',
+            'status' => 'active',
+        ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        $this->actingAs($user);
+
+        app(SecurityEventLogger::class)->record('security.variant_sanitization_test', 'warning', [
+            'x-api-key' => 'header-secret',
+            'webhook_secret' => 'webhook-secret',
+            'client-secret' => 'client-secret',
+            'refresh_token_value' => 'refresh-secret',
+            'safe_value' => 'kept',
+        ], request());
+
+        $event = $user->securityEvents()->latest('id')->firstOrFail();
+
+        $this->assertArrayNotHasKey('x-api-key', $event->context);
+        $this->assertArrayNotHasKey('webhook_secret', $event->context);
+        $this->assertArrayNotHasKey('client-secret', $event->context);
+        $this->assertArrayNotHasKey('refresh_token_value', $event->context);
+        $this->assertSame('kept', $event->context['safe_value']);
+    }
+
     public function test_security_event_admin_view_redacts_sensitive_context_recursively(): void
     {
         $admin = User::create([
