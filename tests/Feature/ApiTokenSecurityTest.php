@@ -88,6 +88,17 @@ class ApiTokenSecurityTest extends TestCase
             ->assertJsonPath('status', 'ok');
     }
 
+    public function test_token_without_required_ability_is_forbidden_from_core_api(): void
+    {
+        $user = $this->makeUser();
+        $token = $user->createToken('Wrong ability token', ['profile.read']);
+
+        $this->withHeader('Authorization', 'Bearer '.$token->plainTextToken)
+            ->getJson('/api/v1/core-check')
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Insufficient token ability.');
+    }
+
     public function test_user_cannot_revoke_another_users_token(): void
     {
         $owner = $this->makeUser();
