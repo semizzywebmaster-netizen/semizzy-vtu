@@ -22,6 +22,7 @@ class PriceEngine
 
         $resolvedProvider = $this->resolveProviderCost($product, $provider);
         $cost = BigDecimal::of($resolvedProvider['cost']);
+        $customerTier = strtoupper($customerTier);
         $this->validateCustomerTier($customerTier);
         $rule = $this->rules($product, $customerTier, $at)->first();
 
