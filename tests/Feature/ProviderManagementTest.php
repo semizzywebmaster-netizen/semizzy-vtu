@@ -59,6 +59,42 @@ class ProviderManagementTest extends TestCase
         $this->assertSame(1, ApiProvider::withTrashed()->whereKey($provider->id)->count());
     }
 
+    public function test_admin_removal_disables_provider_product_mappings(): void
+    {
+        $admin = $this->makeAdmin();
+        $provider = ApiProvider::create([
+            'identifier' => 'product-remove-provider',
+            'display_name' => 'Product Remove Provider',
+            'enabled' => true,
+            'paused' => false,
+            'verification_status' => 'live_verified',
+            'integration_status' => 'live_verified',
+        ]);
+        $categoryId = \DB::table('service_categories')->insertGetId([
+            'key' => 'test-category', 'name' => 'Test Category', 'enabled' => true,
+            'sort_order' => 100, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $serviceId = \DB::table('services')->insertGetId([
+            'category_id' => $categoryId, 'key' => 'test-service', 'name' => 'Test Service',
+            'enabled' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $productId = \DB::table('service_products')->insertGetId([
+            'service_id' => $serviceId, 'key' => 'test-product', 'name' => 'Test Product',
+            'currency' => 'NGN', 'enabled' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $mappingId = \DB::table('provider_service_products')->insertGetId([
+            'api_provider_id' => $provider->id, 'service_product_id' => $productId,
+            'provider_product_id' => 'provider-product-1', 'provider_cost' => '100.000000',
+            'currency' => 'NGN', 'enabled' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->delete('/admin/providers/'.$provider->id)->assertRedirect();
+
+        $this->assertDatabaseHas('provider_service_products', [
+            'id' => $mappingId, 'enabled' => 0,
+        ]);
+    }
+
     public function test_provider_configuration_change_forces_reverification(): void
     {
         $admin = $this->makeAdmin();
