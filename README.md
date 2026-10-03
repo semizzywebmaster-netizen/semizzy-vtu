@@ -46,6 +46,7 @@ Before enabling live traffic, run the following from the application directory a
 
     php artisan migrate:status
     php artisan schedule:list
+    # only for a fresh install with no administrator yet
     php artisan semizzy:admin:create
 
 Run the administrator command only once and only when no administrator exists. Do not place its invocation in a cron job or public route.
