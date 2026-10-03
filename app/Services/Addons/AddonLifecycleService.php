@@ -69,7 +69,7 @@ class AddonLifecycleService
                 $this->recordStep($addon, 'initialize', 'Addon initialization contract validated; no addon code is executed by Core.');
                 $this->recordStep($addon, 'health', 'Addon health contract validated.');
 
-                $from = $addon->status;
+                $from = 'installing';
                 $addon->update([
                     'status' => 'installed',
                     'installed_at' => now(),
@@ -137,7 +137,7 @@ class AddonLifecycleService
                 $this->recordStep($addon, 'initialize', 'Addon update initialization contract validated; no addon code is executed by Core.');
                 $this->recordStep($addon, 'health', 'Addon update health contract validated.');
 
-                $from = $addon->status;
+                $from = 'updating';
                 $addon->fill($this->manifestAttributes($manifest));
                 $addon->status = $wasActive ? 'active' : 'installed';
                 $addon->last_error = null;
@@ -200,7 +200,7 @@ class AddonLifecycleService
             $this->transition($addon, 'uninstalling', 'uninstall_started', 'Addon uninstall started.', $actorId);
             $this->recordStep($addon, 'uninstall', 'Addon uninstall contract validated; Core does not execute arbitrary addon code.');
 
-            $from = $addon->status;
+            $from = 'uninstalling';
             $addon->update([
                 'status' => 'archived',
                 'activated_at' => null,
