@@ -18,7 +18,7 @@ class RestJsonProviderAdapterTest extends TestCase
         $provider = ApiProvider::create([
             'identifier' => 'adapter-exception-test',
             'display_name' => 'Adapter Exception Test',
-            'base_url' => 'https://api.example.test',
+            'base_url' => 'https://8.8.8.8',
             'endpoints' => ['transaction_status' => '/status'],
             'auth_type' => 'bearer',
             'credentials' => ['token' => 'provider-token-secret'],
