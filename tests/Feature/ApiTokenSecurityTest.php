@@ -53,6 +53,30 @@ class ApiTokenSecurityTest extends TestCase
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }
 
+    public function test_empty_abilities_are_rejected(): void
+    {
+        $user = $this->makeUser();
+
+        $this->actingAs($user)->postJson('/api/v1/tokens', [
+            'name' => 'Empty abilities',
+            'abilities' => [],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['abilities']);
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
+    public function test_inactive_user_cannot_manage_api_tokens(): void
+    {
+        $user = $this->makeUser();
+        $user->forceFill(['status' => 'suspended'])->save();
+
+        $this->actingAs($user)->getJson('/api/v1/tokens')
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
     public function test_core_check_accepts_a_core_read_token(): void
     {
         $user = $this->makeUser();
