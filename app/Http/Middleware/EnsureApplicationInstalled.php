@@ -51,17 +51,10 @@ class EnsureApplicationInstalled
                 return false;
             }
 
-            $marker = DB::table('system_settings')
-                ->where('key', 'core.initial_admin_created')
-                ->value('value');
-
-            if ((string) $marker !== '1') {
-                return false;
-            }
-
-            return DB::table('users')
-                ->where('role', 'ADMIN')
-                ->exists();
+            if ($request->is('/') || $request->is('manifest.webmanifest') || $request->is('icons/*') || $request->is('login') || $request->is('register') || $request->is('forgot-password') || $request->is('reset-password/*')) return true;
+            $marker = DB::table('system_settings')->where('key', 'core.initial_admin_created')->value('value');
+            if ((string) $marker === '1') return true;
+            return DB::table('users')->where('role', 'ADMIN')->exists();
         } catch (\Throwable) {
             // A missing/inaccessible database is an uninstalled state from
             // the application's perspective. The setup wizard will explain
