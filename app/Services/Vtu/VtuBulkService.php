@@ -81,8 +81,29 @@ class VtuBulkService
                 }
             } catch (\Throwable $e) {
                 Log::warning('VTU bulk item processing failed.', ['bulk_operation_id' => $bulk->id, 'bulk_item_id' => $row->id, 'user_id' => $uid, 'exception' => get_class($e)]);
-                $row->update(['status' => 'failed', 'error_message' => 'This item could not be processed. Contact support with the bulk reference.']);
-                $bulk->increment('failed_items');
+                // A timeout or local exception can occur after the transaction
+                // has been reserved. Reflect the durable transaction state rather
+                // than incorrectly reporting a failed/refunded item.
+                $transaction = \App\Models\VtuTransaction::query()
+                    ->where('idempotency_key', $key)
+                    ->where('user_id', $uid)
+                    ->first();
+                if ($transaction) {
+                    $row->update([
+                        'vtu_transaction_id' => $transaction->id,
+                        'status' => $transaction->status,
+                        'amount_minor' => $transaction->total_minor,
+                        'error_message' => $transaction->failure_message,
+                    ]);
+                    if ($transaction->status === 'successful') {
+                        $bulk->increment('successful_items');
+                    } elseif (in_array($transaction->status, ['failed', 'reversed', 'cancelled'], true)) {
+                        $bulk->increment('failed_items');
+                    }
+                } else {
+                    $row->update(['status' => 'failed', 'error_message' => 'This item could not be processed. Contact support with the bulk reference.']);
+                    $bulk->increment('failed_items');
+                }
             }
             $bulk->increment('processed_items');
         }
