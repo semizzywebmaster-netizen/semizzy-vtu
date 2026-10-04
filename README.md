@@ -26,15 +26,19 @@ SEMIZZY ONE CORE V2 is a single integrated Laravel + React/TypeScript applicatio
 
 1. Copy .env.example to .env.
 2. Configure a dedicated non-production database and mail transport.
-3. Run composer install, php artisan key:generate, and php artisan migrate.
+3. Run composer install.
 4. Run npm install and npm run build.
-5. Run checks with php artisan test, npm run typecheck, and npm run build.
+5. Start the application and open the configured APP_URL. On a fresh database, the installation guard automatically redirects the browser to /setup.
+6. Complete the web installer: server checks, APP_KEY, database migrations, and initial administrator.
+7. Run checks with php artisan test, npm run typecheck, and npm run build.
 
 Never point automated tests at production. Never commit .env, real provider credentials, production database dumps or private logs.
 
 ## Initial administrator bootstrap
 
-After configuring the environment and running migrations, create the first administrator from the terminal:
+The web installer at /setup is the normal production bootstrap path. It is automatically enforced on fresh or partially installed deployments.
+
+For emergency/CLI-only provisioning, the first administrator can also be created from the terminal after configuring the environment and running migrations:
 
     php artisan semizzy:admin:create
 
