@@ -24,6 +24,14 @@ class VtuBulkService
         if ($operationKey !== null && (trim($operationKey) === '' || strlen($operationKey) > 160)) {
             throw \Illuminate\Validation\ValidationException::withMessages(['idempotency_key' => 'The bulk idempotency key is invalid.']);
         }
+        foreach (array_values($items) as $index => $item) {
+            if (! is_array($item) || ! isset($item['product_id']) || ! is_numeric($item['product_id']) || (int) $item['product_id'] < 1) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['items.' . $index . '.product_id' => 'A valid product ID is required.']);
+            }
+            if (isset($item['payload']) && ! is_array($item['payload'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['items.' . $index . '.payload' => 'The item payload must be an object.']);
+            }
+        }
         $operationKey = $operationKey ?: 'vtu-bulk-' . Str::uuid();
         $existing = VtuBulkOperation::query()->where('user_id', $uid)->where('idempotency_key', $operationKey)->first();
 
