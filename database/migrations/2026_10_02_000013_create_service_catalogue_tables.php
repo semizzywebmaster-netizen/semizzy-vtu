@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Database\\Migrations\\Migration;
-use Illuminate\Database\\Schema\\Blueprint;
-use Illuminate\Support\\Facades\\Schema;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void
@@ -64,10 +64,6 @@ return new class extends Migration {
             });
         }
 
-        // MySQL/MariaDB limits identifiers to 64 characters. The old
-        // auto-generated composite name exceeded that limit. Add the
-        // constraint only when the partial failed installation does not
-        // already contain it.
         if (Schema::hasTable('provider_service_products')) {
             $indexes = Schema::getIndexes('provider_service_products');
             $hasProviderProductUnique = collect($indexes)->contains(
