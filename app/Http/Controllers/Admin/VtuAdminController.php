@@ -4,6 +4,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Service;
 use App\Models\ServiceProduct;
 use App\Models\VtuTransaction;
+use App\Models\VtuBulkOperation;
 use App\Models\ApiProvider;
 use App\Models\ProviderServiceMapping;
 use App\Services\Audit\AuditLogger;
@@ -47,6 +48,7 @@ class VtuAdminController extends Controller{
  public function products(){return Inertia::render('Admin/VTU/Products',['products'=>ServiceProduct::whereHas('service.category',fn($q)=>$q->where('key','vtu-digital-services'))->with('service')->latest()->paginate(50)]);}
  public function enableProduct(ServiceProduct $product){$product->update(['enabled'=>true]);return back()->with('success','Product enabled.');}
  public function disableProduct(ServiceProduct $product){$product->update(['enabled'=>false]);return back()->with('success','Product disabled.');}
+ public function bulkOperations(Request $r){return Inertia::render('Admin/VTU/BulkOperations',['operations'=>VtuBulkOperation::with(['user'])->latest()->paginate(50)->withQueryString()]);}
  public function transactions(Request $r){$q=VtuTransaction::with(['user','service','product','provider'])->latest();foreach(['status','service_id','api_provider_id','user_id'] as $f)if($r->filled($f))$q->where($f,$r->input($f));return Inertia::render('Admin/VTU/Transactions',['transactions'=>$q->paginate(50)->withQueryString()]);}
  public function requery(VtuTransaction $t,VtuTransactionService $s){$s->requery($t);return back()->with('success','Transaction requery completed.');}
  public function enableService(Service $s){$s->update(['enabled'=>true]);return back()->with('success','Service enabled.');}
