@@ -106,6 +106,8 @@ Route::middleware(['auth'])->group(function (): void {
             Route::post('/services/{service}/enable', [VtuAdminController::class, 'enableService'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services.enable');
             Route::post('/services/{service}/disable', [VtuAdminController::class, 'disableService'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services.disable');
             Route::get('/products', [VtuAdminController::class, 'products'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products');
+            Route::get('/mappings', [VtuAdminController::class, 'mappings'])->middleware('permission:vtu.mappings.manage')->name('admin.vtu.mappings');
+            Route::post('/mappings', [VtuAdminController::class, 'saveMapping'])->middleware('permission:vtu.mappings.manage')->name('admin.vtu.mappings.save');
             Route::post('/products/{product}/enable', [VtuAdminController::class, 'enableProduct'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products.enable');
             Route::post('/products/{product}/disable', [VtuAdminController::class, 'disableProduct'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products.disable');
             Route::get('/transactions', [VtuAdminController::class, 'transactions'])->middleware('permission:vtu.transactions.view')->name('admin.vtu.transactions');
