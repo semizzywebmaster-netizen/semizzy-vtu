@@ -108,13 +108,25 @@ class SetupController extends Controller
             if (! $this->databaseAvailable()) {
                 throw new \RuntimeException('Database is unavailable.');
             }
-            Artisan::call('migrate', ['--force' => true]);
+            $exitCode = Artisan::call('migrate', ['--force' => true]);
+            if ($exitCode !== 0) {
+                throw new \RuntimeException('Database migrations returned a failure status.');
+            }
         } catch (\Throwable $e) {
             report($e);
             return back()->withErrors(['setup' => 'Database setup could not be completed. Check the database configuration and application logs.']);
         }
 
         return redirect()->route('setup')->with('success', 'Database migrations completed. You can now create the initial administrator.');
+    }
+
+    private function pendingMigrations(): array
+    {
+        $migrator = app('migrator');
+        $files = $migrator->getMigrationFiles(database_path('migrations'));
+        $ran = $migrator->getRepository()->getRan();
+
+        return array_values(array_diff(array_keys($files), $ran));
     }
 
     public function createAdmin(Request $request)
@@ -128,6 +140,11 @@ class SetupController extends Controller
         try {
             if (! Schema::hasTable('users') || ! Schema::hasTable('system_settings')) {
                 return back()->withErrors(['setup' => 'Complete the database migration step before creating the administrator.']);
+            }
+
+            $pending = $this->pendingMigrations();
+            if ($pending !== []) {
+                return back()->withErrors(['setup' => 'Database migrations are not complete. Run the migration step again before creating the administrator.']);
             }
         } catch (\Throwable $e) {
             report($e);
