@@ -36,6 +36,16 @@ class ProviderManager
 
         return $query->get();
     }
+    public function executeProvider(ApiProvider $provider,string $serviceKey,string $operation,array $payload=[],?string $idempotencyKey=null): ProviderResult
+    {
+        if(!$this->registry->supports($provider,$operation)) return new ProviderResult(false,'UNSUPPORTED',message:'Provider capability is not enabled.');
+        try{$this->registry->validate($provider);}catch(\Throwable $e){return new ProviderResult(false,'UNSUPPORTED',message:'Provider configuration is invalid.');}
+        $started=microtime(true);
+        $result=$this->rest->execute($provider,$operation,$payload,$idempotencyKey);
+        $this->logger->record($provider,$operation,$serviceKey,$result,(int)round((microtime(true)-$started)*1000),$idempotencyKey);
+        return $result;
+    }
+
 
     public function execute(string $serviceKey,string $operation,array $payload=[],?string $idempotencyKey=null): ProviderResult
     {
