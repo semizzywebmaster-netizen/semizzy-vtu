@@ -1,6 +1,7 @@
 import '../css/app.css';
 import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
+import type { ComponentType } from 'react';
 import AdminLayout from './Layouts/AdminLayout';
 
 type ViteImportMeta = ImportMeta & {
@@ -21,7 +22,19 @@ createInertiaApp({
     const pages = (import.meta as ViteImportMeta).glob('./Pages/**/*.tsx');
     const page = pages[`./Pages/${name}.tsx`];
     if (!page) throw new Error(`Inertia page not found: ${name}`);
-    return (await page()) as never;
+
+    const ResolvedPage = (await page()) as ComponentType<Record<string, unknown>>;
+    const isAdminPage = name === 'Dashboard' || name.startsWith('Admin/');
+
+    if (!isAdminPage) {
+      return ResolvedPage;
+    }
+
+    return (pageProps: Record<string, unknown>) => (
+      <AdminLayout>
+        <ResolvedPage {...pageProps} />
+      </AdminLayout>
+    );
   },
   setup({ el, App, props }) {
     createRoot(el).render(<App {...props} />);
