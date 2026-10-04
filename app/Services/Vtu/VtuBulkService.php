@@ -19,10 +19,10 @@ class VtuBulkService
     public function execute(int $uid, array $items, string $tier = 'USER', ?string $operationKey = null): VtuBulkOperation
     {
         if (count($items) < 1 || count($items) > self::MAX_ITEMS) {
-            throw \\Illuminate\\Validation\\ValidationException::withMessages(['items' => 'A bulk request must contain between 1 and ' . self::MAX_ITEMS . ' items.']);
+            throw \Illuminate\Validation\ValidationException::withMessages(['items' => 'A bulk request must contain between 1 and ' . self::MAX_ITEMS . ' items.']);
         }
         if ($operationKey !== null && (trim($operationKey) === '' || strlen($operationKey) > 160)) {
-            throw \\Illuminate\\Validation\\ValidationException::withMessages(['idempotency_key' => 'The bulk idempotency key is invalid.']);
+            throw \Illuminate\Validation\ValidationException::withMessages(['idempotency_key' => 'The bulk idempotency key is invalid.']);
         }
         $operationKey = $operationKey ?: 'vtu-bulk-' . Str::uuid();
         $existing = VtuBulkOperation::query()->where('user_id', $uid)->where('idempotency_key', $operationKey)->first();
