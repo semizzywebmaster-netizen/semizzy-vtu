@@ -63,7 +63,7 @@ class VtuBulkService
                     $bulk->increment('failed_items');
                 }
             } catch (\Throwable $e) {
-                $row->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+                $row->update(['status' => 'failed', 'error_message' => 'This item could not be processed. Contact support with the bulk reference.']);
                 $bulk->increment('failed_items');
             }
             $bulk->increment('processed_items');
