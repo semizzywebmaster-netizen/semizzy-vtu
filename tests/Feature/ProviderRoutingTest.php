@@ -85,6 +85,62 @@ class ProviderRoutingTest extends TestCase
         $this->assertTrue($result->duplicateRisk);
     }
 
+    public function test_failover_result_preserves_the_provider_that_accepted(): void
+    {
+        [$service] = $this->makeService('airtime-failover');
+        $first = $this->makeProvider('first-failover', 1);
+        $second = $this->makeProvider('second-failover', 2);
+
+        foreach ([$first, $second] as $provider) {
+            ProviderServiceMapping::create([
+                'api_provider_id' => $provider->id,
+                'service_id' => $service->id,
+                'service_key' => $service->key,
+                'provider_service_id' => $service->key,
+                'capabilities' => ['transaction_initiation', 'transaction_status'],
+                'enabled' => true,
+            ]);
+        }
+
+        $adapter = Mockery::mock(\\App\\Services\\Providers\\RestJsonProviderAdapter::class);
+        $adapter->shouldReceive('execute')->once()->with($first, 'transaction_initiation', ['recipient' => '08000000000'], 'idem-failover')
+            ->andReturn(new \\App\\Services\\Providers\\ProviderResult(false, 'FAILED', message: 'Rejected'));
+        $adapter->shouldReceive('execute')->once()->with($second, 'transaction_initiation', ['recipient' => '08000000000'], 'idem-failover')
+            ->andReturn(new \\App\\Services\\Providers\\ProviderResult(true, 'SUCCESS', providerReference: 'P-2'));
+
+        $this->app->instance(\\App\\Services\\Providers\\RestJsonProviderAdapter::class, $adapter);
+        $result = app(ProviderManager::class)->execute('airtime-failover', 'transaction_initiation', ['recipient' => '08000000000'], 'idem-failover');
+
+        $this->assertTrue($result->accepted);
+        $this->assertSame($second->id, $result->providerId);
+        $this->assertSame('P-2', $result->providerReference);
+    }
+
+    public function test_vtu_requery_uses_the_original_provider_only(): void
+    {
+        $service = new Service(['key' => 'airtime-requery']);
+        $provider = $this->makeProvider('original-requery', 1);
+        $tx = new \\App\\Models\\VtuTransaction([
+            'reference' => 'VTU-REQUERY-1',
+            'provider_reference' => 'PROVIDER-123',
+            'api_provider_id' => $provider->id,
+            'idempotency_key' => 'idem-requery',
+        ]);
+        $tx->setRelation('service', $service);
+        $tx->setRelation('provider', $provider);
+
+        $manager = Mockery::mock(ProviderManager::class);
+        $manager->shouldReceive('executeProvider')->once()->with(
+            $provider, 'airtime-requery', 'transaction_status',
+            ['reference' => 'PROVIDER-123', 'transaction_reference' => 'VTU-REQUERY-1'],
+            'idem-requery:requery'
+        )->andReturn(new \\App\\Services\\Providers\\ProviderResult(true, 'SUCCESS', providerReference: 'PROVIDER-123', providerId: $provider->id));
+        $this->app->instance(ProviderManager::class, $manager);
+
+        $result = app(\\App\\Services\\Vtu\\VtuProviderGateway::class)->requery($tx);
+        $this->assertTrue($result->accepted);
+        $this->assertSame($provider->id, $result->providerId);
+    }
     private function makeService(string $key): array
     {
         $category = ServiceCategory::create([
