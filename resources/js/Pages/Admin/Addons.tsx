@@ -98,6 +98,7 @@ export default function Addons({ addons }: Props) {
               <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Addon Manager</h1>
               <p className="mt-2 text-sm text-slate-600">Register, validate, install, activate, disable, and archive Core addons.</p>
             </div>
+            <button onClick={() => router.post('/admin/addons/install-vtu')} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white">Install VTU</button>
             <button onClick={() => setShowRegister((v) => !v)} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">
               {showRegister ? 'Close' : '+ Register addon'}
             </button>
