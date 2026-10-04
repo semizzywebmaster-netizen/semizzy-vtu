@@ -110,6 +110,7 @@ Route::middleware(['auth'])->group(function (): void {
             Route::post('/mappings', [VtuAdminController::class, 'saveMapping'])->middleware('permission:vtu.mappings.manage')->name('admin.vtu.mappings.save');
             Route::post('/products/{product}/enable', [VtuAdminController::class, 'enableProduct'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products.enable');
             Route::post('/products/{product}/disable', [VtuAdminController::class, 'disableProduct'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products.disable');
+            Route::get('/bulk', [VtuAdminController::class, 'bulkOperations'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk');
             Route::get('/transactions', [VtuAdminController::class, 'transactions'])->middleware('permission:vtu.transactions.view')->name('admin.vtu.transactions');
             Route::post('/transactions/{transaction}/requery', [VtuAdminController::class, 'requery'])->middleware('permission:vtu.requery')->name('admin.vtu.transactions.requery');
         });
