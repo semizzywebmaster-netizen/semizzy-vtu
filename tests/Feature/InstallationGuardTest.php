@@ -20,6 +20,9 @@ class InstallationGuardTest extends TestCase
     public function test_setup_remains_accessible_before_installation(): void
     {
         $this->get('/setup')->assertOk();
+
+        $this->assertSame('file', config('session.driver'));
+        $this->assertSame('file', config('cache.default'));
     }
 
     public function test_installed_application_allows_homepage(): void
