@@ -33,7 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.token' => AuthenticateApiToken::class,
             'ensure.active.api' => EnsureActiveApiAccount::class,
             'security.throttle' => SecurityThrottle::class,
-            'ensure.vtu' => EnsureVtuAddonActive::class;
+            'ensure.vtu' => EnsureVtuAddonActive::class,
         ]);
         $middleware->append([RequestId::class, SecurityHeaders::class]);
         $middleware->web(prepend: [EnsureApplicationInstalled::class]);
