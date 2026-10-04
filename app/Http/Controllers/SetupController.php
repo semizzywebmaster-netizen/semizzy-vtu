@@ -29,12 +29,12 @@ class SetupController extends Controller
         }
 
         try {
-            if (! Schema::hasTable('system_settings')) {
-                return Schema::hasTable('users') && User::query()->exists();
+            if (! Schema::hasTable('system_settings') || ! Schema::hasTable('users')) {
+                return false;
             }
 
             return DB::table('system_settings')->where('key', 'core.initial_admin_created')->value('value') === '1'
-                || User::query()->where('role', 'ADMIN')->exists();
+                && User::query()->where('role', 'ADMIN')->exists();
         } catch (\Throwable) {
             return false;
         }
@@ -53,7 +53,7 @@ class SetupController extends Controller
             'mbstring' => extension_loaded('mbstring'),
             'openssl' => extension_loaded('openssl'),
             'json' => extension_loaded('json'),
-            'pdo_mysql' => true,
+            'pdo_mysql' => extension_loaded('pdo_mysql'),
             'app_key' => filled(config('app.key')),
             'app_url' => filter_var(config('app.url'), FILTER_VALIDATE_URL) !== false,
             'storage' => is_writable(storage_path()),
