@@ -43,7 +43,7 @@ export default function Dashboard({ role, metrics, quickLinks }: Props) {
 
           <p className="mt-8 text-xs text-slate-500">No demo balances, fabricated charts, or sample transactions are shown. Financial features remain unavailable until a separately reviewed addon is installed and enabled.</p>
 
-          <CoreMobileNav active="home" unreadCount={unreadCount} />
+          {!['ADMIN', 'STAFF', 'SUPPORT'].includes(role) && <CoreMobileNav active="home" unreadCount={unreadCount} />}
         </div>
       </main>
     </>
