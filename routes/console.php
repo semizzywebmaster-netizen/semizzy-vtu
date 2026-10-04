@@ -12,3 +12,5 @@ Schedule::command('queue:work database', [
     ->onOneServer();
 
 Schedule::command('queue:prune-failed', ['--hours' => 168])->weekly();
+
+Schedule::command('vtu:reconcile-pending', ['--limit' => 50])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
