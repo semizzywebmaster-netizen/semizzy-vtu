@@ -24,11 +24,11 @@ class VtuBulkService
         if ($operationKey !== null && (trim($operationKey) === '' || strlen($operationKey) > 160)) {
             throw \Illuminate\Validation\ValidationException::withMessages(['idempotency_key' => 'The bulk idempotency key is invalid.']);
         }
-        foreach (array_values($items) as $index => $item) {
+        $items = array_values($items);\n        $seenKeys = [];\n        foreach ($items as $index => $item) {
             if (! is_array($item) || ! isset($item['product_id']) || ! is_numeric($item['product_id']) || (int) $item['product_id'] < 1) {
                 throw \Illuminate\Validation\ValidationException::withMessages(['items.' . $index . '.product_id' => 'A valid product ID is required.']);
             }
-            if (isset($item['payload']) && ! is_array($item['payload'])) {
+            if (isset($item['idempotency_key'])) {\n                if (! is_string($item['idempotency_key']) || trim($item['idempotency_key']) === '' || strlen($item['idempotency_key']) > 160) {\n                    throw \\Illuminate\\Validation\\ValidationException::withMessages(['items.' . $index . '.idempotency_key' => 'The item idempotency key is invalid.']);\n                }\n                if (isset($seenKeys[$item['idempotency_key']])) {\n                    throw \\Illuminate\\Validation\\ValidationException::withMessages(['items.' . $index . '.idempotency_key' => 'Item idempotency keys must be unique within a bulk request.']);\n                }\n                $seenKeys[$item['idempotency_key']] = true;\n            }\n            if (isset($item['payload']) && ! is_array($item['payload'])) {
                 throw \Illuminate\Validation\ValidationException::withMessages(['items.' . $index . '.payload' => 'The item payload must be an object.']);
             }
         }
