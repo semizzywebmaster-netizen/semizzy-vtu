@@ -24,6 +24,7 @@ class ProviderManager
                             });
                     });
             })
+            ->with('serviceMappings.service')
             ->orderBy('priority');
 
         if ($operation === 'transaction_initiation') {
@@ -34,7 +35,14 @@ class ProviderManager
                 ->whereIn('verification_status',['live_verified','sandbox_verified']);
         }
 
-        return $query->get();
+        return $query->get()->filter(function (ApiProvider $provider) use ($serviceKey, $operation): bool {
+            $mapping = $provider->serviceMappings->first(function ($mapping) use ($serviceKey): bool {
+                return ($mapping->service?->key === $serviceKey) || ($mapping->service_id === null && $mapping->service_key === $serviceKey);
+            });
+            if (! $mapping) return false;
+            $capabilities = $mapping->capabilities;
+            return ! is_array($capabilities) || $capabilities === [] || in_array($operation, $capabilities, true);
+        })->values();
     }
     public function executeProvider(ApiProvider $provider,string $serviceKey,string $operation,array $payload=[],?string $idempotencyKey=null): ProviderResult
     {
