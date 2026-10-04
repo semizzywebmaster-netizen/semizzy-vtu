@@ -18,6 +18,8 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SupportTicketController;
+use App\Http\Controllers\VtuController;
+use App\Http\Controllers\Admin\VtuAdminController;
 use App\Http\Controllers\SetupController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -59,6 +61,7 @@ Route::post('/'.$adminLoginPath, [AuthenticatedSessionController::class, 'storeA
 
 Route::middleware(['auth'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->middleware('verified')->name('dashboard');
+    Route::middleware(['verified','ensure.vtu'])->group(function (): void { Route::get('/vtu', [VtuController::class, 'index'])->middleware('permission:vtu.view')->name('vtu.services'); });
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->middleware('throttle:30,1')->name('notifications.read-all');
@@ -95,6 +98,17 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/catalogue/mappings/{mapping}/toggle', [CatalogueController::class, 'toggleMapping'])->middleware('permission:catalogue.manage')->name('admin.catalogue.mappings.toggle');
 
         Route::get('/addons', [AddonController::class, 'index'])->middleware('permission:addons.view')->name('admin.addons.index');
+        Route::post('/addons/install-vtu', [AddonController::class, 'installVtu'])->middleware('permission:addons.manage')->name('admin.addons.install-vtu');
+        Route::middleware('ensure.vtu')->prefix('vtu')->group(function (): void {
+            Route::get('/', [VtuAdminController::class, 'dashboard'])->middleware('permission:vtu.view')->name('admin.vtu.dashboard');
+            Route::get('/services', [VtuAdminController::class, 'services'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services');
+            Route::post('/services/bootstrap', [VtuAdminController::class, 'bootstrap'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services.bootstrap');
+            Route::post('/services/{service}/enable', [VtuAdminController::class, 'enableService'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services.enable');
+            Route::post('/services/{service}/disable', [VtuAdminController::class, 'disableService'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services.disable');
+            Route::get('/products', [VtuAdminController::class, 'products'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products');
+            Route::get('/transactions', [VtuAdminController::class, 'transactions'])->middleware('permission:vtu.transactions.view')->name('admin.vtu.transactions');
+            Route::post('/transactions/{transaction}/requery', [VtuAdminController::class, 'requery'])->middleware('permission:vtu.requery')->name('admin.vtu.transactions.requery');
+        });
         Route::post('/addons/register', [AddonController::class, 'register'])->middleware('permission:addons.manage')->name('admin.addons.register');
         Route::post('/addons/{addon}/install', [AddonController::class, 'install'])->middleware('permission:addons.manage')->name('admin.addons.install');
         Route::post('/addons/{addon}/update', [AddonController::class, 'update'])->middleware('permission:addons.manage')->name('admin.addons.update');
