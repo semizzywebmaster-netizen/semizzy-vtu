@@ -15,7 +15,7 @@ class ApiTokenController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'abilities' => ['sometimes', 'array', 'min:1', 'max:50'],
-            'abilities.*' => ['string', 'max:100', 'distinct', 'in:core.read'],
+            'abilities.*' => ['string', 'max:100', 'distinct', 'in:core.read,vtu.read,vtu.transact,vtu.bulk'],
             'expires_at' => ['nullable', 'date', 'after:now'],
         ]);
 
