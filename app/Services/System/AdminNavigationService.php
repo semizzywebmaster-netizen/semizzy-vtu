@@ -1,0 +1,96 @@
+<?php
+
+namespace App\Services\System;
+
+use App\Models\Addon;
+use App\Models\User;
+use Illuminate\Support\Arr;
+
+class AdminNavigationService
+{
+    public function for(User $user): array
+    {
+        if (! in_array($user->role, ['ADMIN', 'STAFF', 'SUPPORT'], true)) {
+            return [];
+        }
+
+        $permissions = config('semizzy.role_permissions.' . $user->role, []);
+
+        $core = [
+            ['id' => 'dashboard', 'label' => 'Dashboard', 'url' => '/dashboard', 'icon' => 'home', 'section' => 'core', 'order' => 10],
+            ['id' => 'users', 'label' => 'Users & Staff', 'url' => '/admin/users', 'icon' => 'users', 'section' => 'core', 'permission' => 'users.view', 'roles' => ['ADMIN'], 'order' => 20],
+            ['id' => 'addons', 'label' => 'Addons', 'url' => '/admin/addons', 'icon' => 'puzzle', 'section' => 'core', 'permission' => 'addons.view', 'roles' => ['ADMIN'], 'order' => 30],
+            ['id' => 'providers', 'label' => 'Providers', 'url' => '/admin/providers', 'icon' => 'server', 'section' => 'core', 'permission' => 'providers.view', 'order' => 40],
+            ['id' => 'catalogue', 'label' => 'Catalogue', 'url' => '/admin/catalogue', 'icon' => 'catalogue', 'section' => 'core', 'permission' => 'catalogue.view', 'order' => 50],
+            ['id' => 'pricing', 'label' => 'Pricing', 'url' => '/admin/pricing', 'icon' => 'pricing', 'section' => 'core', 'permission' => 'pricing.view', 'order' => 60],
+            ['id' => 'api', 'label' => 'API', 'url' => '/admin/api', 'icon' => 'api', 'section' => 'core', 'permission' => 'api.view', 'roles' => ['ADMIN'], 'order' => 70],
+            ['id' => 'notifications', 'label' => 'Notifications', 'url' => '/notifications', 'icon' => 'bell', 'section' => 'core', 'order' => 80],
+            ['id' => 'security', 'label' => 'Security', 'url' => '/admin/security-events', 'icon' => 'shield', 'section' => 'core', 'permission' => 'security.view', 'order' => 90],
+            ['id' => 'support', 'label' => 'Support', 'url' => '/support', 'icon' => 'support', 'section' => 'core', 'roles' => ['ADMIN', 'STAFF', 'SUPPORT'], 'order' => 100],
+            ['id' => 'system', 'label' => 'System', 'url' => '/admin/health', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.view', 'order' => 110],
+            ['id' => 'audit', 'label' => 'Audit Events', 'url' => '/admin/audit-events', 'icon' => 'audit', 'section' => 'core', 'permission' => 'audit.view', 'order' => 120],
+            ['id' => 'profile', 'label' => 'Profile', 'url' => '/profile', 'icon' => 'profile', 'section' => 'account', 'order' => 1000],
+        ];
+
+        $items = array_values(array_filter($core, fn (array $item) => $this->visible($item, $user, $permissions)));
+
+        $addons = Addon::query()
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['identifier', 'name', 'navigation']);
+
+        foreach ($addons as $addon) {
+            foreach ($this->normalizeAddonNavigation($addon->navigation) as $index => $item) {
+                if (! is_array($item) || empty($item['label']) || empty($item['url'])) {
+                    continue;
+                }
+
+                $item['id'] = 'addon:' . $addon->identifier . ':' . ($item['id'] ?? $index);
+                $item['section'] = $item['section'] ?? 'addons';
+                $item['order'] = (int) ($item['order'] ?? 100);
+                $item['addon'] = $addon->identifier;
+                $item['addonName'] = $addon->name;
+
+                if ($this->visible($item, $user, $permissions)) {
+                    $items[] = $item;
+                }
+            }
+        }
+
+        usort($items, function (array $a, array $b): int {
+            $sectionOrder = ['core' => 10, 'addons' => 20, 'account' => 30];
+            return [$sectionOrder[$a['section']] ?? 99, (int) ($a['order'] ?? 100), $a['label']]
+                <=> [$sectionOrder[$b['section']] ?? 99, (int) ($b['order'] ?? 100), $b['label']];
+        });
+
+        return array_map(static fn (array $item): array => Arr::only($item, [
+            'id', 'label', 'url', 'icon', 'section', 'order', 'addon', 'addonName',
+        ]), $items);
+    }
+
+    private function visible(array $item, User $user, array $permissions): bool
+    {
+        if (! empty($item['roles']) && ! in_array($user->role, (array) $item['roles'], true)) {
+            return false;
+        }
+
+        if (! empty($item['permission']) && ! in_array($item['permission'], $permissions, true)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function normalizeAddonNavigation(mixed $navigation): array
+    {
+        if (! is_array($navigation)) {
+            return [];
+        }
+
+        $items = isset($navigation['items']) && is_array($navigation['items'])
+            ? $navigation['items']
+            : $navigation;
+
+        return array_values(array_filter($items, 'is_array'));
+    }
+}
