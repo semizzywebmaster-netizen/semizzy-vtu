@@ -16,7 +16,7 @@ class VtuBulkService
     public function execute(int $uid, array $items, string $tier = 'USER', ?string $operationKey = null): VtuBulkOperation
     {
         $operationKey = $operationKey ?: 'vtu-bulk-' . Str::uuid();
-        $existing = VtuBulkOperation::query()->where('idempotency_key', $operationKey)->first();
+        $existing = VtuBulkOperation::query()->where('user_id', $uid)->where('idempotency_key', $operationKey)->first();
 
         if ($existing) {
             return $existing->load('items');
