@@ -11,6 +11,7 @@ use App\Http\Middleware\RequirePermission;
 use App\Http\Middleware\RequireRole;
 use App\Http\Middleware\SecurityThrottle;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\EnsureVtuAddonActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -32,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.token' => AuthenticateApiToken::class,
             'ensure.active.api' => EnsureActiveApiAccount::class,
             'security.throttle' => SecurityThrottle::class,
+            'ensure.vtu' => EnsureVtuAddonActive::class;
         ]);
         $middleware->append([RequestId::class, SecurityHeaders::class]);
         $middleware->web(prepend: [EnsureApplicationInstalled::class]);
