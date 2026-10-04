@@ -12,5 +12,6 @@ final readonly class ProviderResult
         public ?string $message = null,
         public bool $retryable = false,
         public bool $duplicateRisk = false,
+        public ?int $providerId = null,
     ) {}
 }
