@@ -32,10 +32,10 @@ class VtuBulkService
             }
             if (isset($item['idempotency_key'])) {
                 if (! is_string($item['idempotency_key']) || trim($item['idempotency_key']) === '' || strlen($item['idempotency_key']) > 160) {
-                    throw \Illuminate\\Validation\\ValidationException::withMessages(['items.' . $index . '.idempotency_key' => 'The item idempotency key is invalid.']);
+                    throw \Illuminate\Validation\ValidationException::withMessages(['items.' . $index . '.idempotency_key' => 'The item idempotency key is invalid.']);
                 }
                 if (isset($seenKeys[$item['idempotency_key']])) {
-                    throw \Illuminate\\Validation\\ValidationException::withMessages(['items.' . $index . '.idempotency_key' => 'Item idempotency keys must be unique within a bulk request.']);
+                    throw \Illuminate\Validation\ValidationException::withMessages(['items.' . $index . '.idempotency_key' => 'Item idempotency keys must be unique within a bulk request.']);
                 }
                 $seenKeys[$item['idempotency_key']] = true;
             }
