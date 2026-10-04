@@ -10,7 +10,8 @@ return new class extends Migration
     {
         if (! Schema::hasColumn('vtu_bulk_operations', 'idempotency_key')) {
             Schema::table('vtu_bulk_operations', function (Blueprint $table): void {
-                $table->string('idempotency_key', 160)->nullable()->unique()->after('reference');
+                $table->string('idempotency_key', 160)->nullable()->after('reference');
+                $table->unique(['user_id', 'idempotency_key'], 'vtu_bulk_user_idempotency_unique');
             });
         }
     }
@@ -19,7 +20,7 @@ return new class extends Migration
     {
         if (Schema::hasColumn('vtu_bulk_operations', 'idempotency_key')) {
             Schema::table('vtu_bulk_operations', function (Blueprint $table): void {
-                $table->dropUnique(['idempotency_key']);
+                $table->dropUnique('vtu_bulk_user_idempotency_unique');
                 $table->dropColumn('idempotency_key');
             });
         }
