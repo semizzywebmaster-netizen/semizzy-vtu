@@ -51,7 +51,16 @@ class ProviderManager
         $started=microtime(true);
         $result=$this->rest->execute($provider,$operation,$payload,$idempotencyKey);
         $this->logger->record($provider,$operation,$serviceKey,$result,(int)round((microtime(true)-$started)*1000),$idempotencyKey);
-        return $result;
+        return new ProviderResult(
+            accepted: $result->accepted,
+            status: $result->status,
+            providerReference: $result->providerReference,
+            data: $result->data,
+            message: $result->message,
+            retryable: $result->retryable,
+            duplicateRisk: $result->duplicateRisk,
+            providerId: $provider->id,
+        );
     }
 
 
@@ -70,6 +79,16 @@ class ProviderManager
             $started=microtime(true);
             $result=$this->rest->execute($provider,$operation,$payload,$idempotencyKey);
             $this->logger->record($provider,$operation,$serviceKey,$result,(int)round((microtime(true)-$started)*1000),$idempotencyKey);
+            $result = new ProviderResult(
+                accepted: $result->accepted,
+                status: $result->status,
+                providerReference: $result->providerReference,
+                data: $result->data,
+                message: $result->message,
+                retryable: $result->retryable,
+                duplicateRisk: $result->duplicateRisk,
+                providerId: $provider->id,
+            );
             if($result->accepted) return $result;
             if($result->duplicateRisk || $result->status==='UNKNOWN') return $result;
         }
