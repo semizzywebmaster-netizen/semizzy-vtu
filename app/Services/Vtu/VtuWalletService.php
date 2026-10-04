@@ -34,14 +34,11 @@ class VtuWalletService
                 $wallet->held_minor = bcadd($held, $total, 0);
             } else {
                 // Do not silently overflow PHP integers on shared hosts without BCMath.
-                if (! ctype_digit($available) || ! ctype_digit($total) || ! ctype_digit($held)
-                    || strlen(ltrim($available, '0')) > 18
-                    || strlen(ltrim($total, '0')) > 18
-                    || strlen(ltrim($held, '0')) > 18) {
+                if (! $this->fitsNativeInteger($available) || ! $this->fitsNativeInteger($total) || ! $this->fitsNativeInteger($held)) {
                     throw new RuntimeException('Large wallet amounts require the BCMath PHP extension.');
                 }
 
-                if ((float) $available < (float) $total) {
+                if ($this->compareIntegerStrings($available, $total) < 0) {
                     throw new RuntimeException('Insufficient wallet balance.');
                 }
 
@@ -51,6 +48,20 @@ class VtuWalletService
 
             $wallet->save();
         });
+    }
+
+    private function fitsNativeInteger(string $value): bool
+    {
+        $value = ltrim($value, '0');
+        return ctype_digit($value === '' ? '0' : $value)
+            && strlen($value) <= 17;
+    }
+
+    private function compareIntegerStrings(string $left, string $right): int
+    {
+        $left = ltrim($left, '0') ?: '0';
+        $right = ltrim($right, '0') ?: '0';
+        return strlen($left) <=> strlen($right) ?: strcmp($left, $right);
     }
 
     public function settle(VtuTransaction $tx, bool $success): void
@@ -75,13 +86,10 @@ class VtuWalletService
                     $wallet->available_minor = bcadd($available, $total, 0);
                 }
             } else {
-                if (! ctype_digit($held) || ! ctype_digit($total) || ! ctype_digit($available)
-                    || strlen(ltrim($held, '0')) > 18
-                    || strlen(ltrim($total, '0')) > 18
-                    || strlen(ltrim($available, '0')) > 18) {
+                if (! $this->fitsNativeInteger($held) || ! $this->fitsNativeInteger($total) || ! $this->fitsNativeInteger($available)) {
                     throw new RuntimeException('Large wallet amounts require the BCMath PHP extension.');
                 }
-                if ((float) $held < (float) $total) {
+                if ($this->compareIntegerStrings($held, $total) < 0) {
                     throw new RuntimeException('Wallet hold is inconsistent.');
                 }
                 $wallet->held_minor = (string) ((int) $held - (int) $total);
