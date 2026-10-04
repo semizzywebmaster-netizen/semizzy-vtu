@@ -1,6 +1,7 @@
 import '../css/app.css';
 import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
+import AdminLayout from './Layouts/AdminLayout';
 
 type ViteImportMeta = ImportMeta & {
   env: { PROD: boolean };
