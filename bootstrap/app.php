@@ -34,7 +34,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'security.throttle' => SecurityThrottle::class,
         ]);
         $middleware->append([RequestId::class, SecurityHeaders::class]);
-        $middleware->web(append: [ApplySystemSettings::class, EnsureApplicationInstalled::class, EnsureActiveAccount::class, HandleInertiaRequests::class]);
+        $middleware->web(prepend: [EnsureApplicationInstalled::class]);
+        $middleware->web(append: [ApplySystemSettings::class, EnsureActiveAccount::class, HandleInertiaRequests::class]);
         $middleware->api(append: [EnsureActiveApiAccount::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
