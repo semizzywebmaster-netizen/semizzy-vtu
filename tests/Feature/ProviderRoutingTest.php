@@ -102,13 +102,13 @@ class ProviderRoutingTest extends TestCase
             ]);
         }
 
-        $adapter = Mockery::mock(\\App\\Services\\Providers\\RestJsonProviderAdapter::class);
+        $adapter = Mockery::mock(\App\Services\Providers\RestJsonProviderAdapter::class);
         $adapter->shouldReceive('execute')->once()->with($first, 'transaction_initiation', ['recipient' => '08000000000'], 'idem-failover')
-            ->andReturn(new \\App\\Services\\Providers\\ProviderResult(false, 'FAILED', message: 'Rejected'));
+            ->andReturn(new \App\Services\Providers\ProviderResult(false, 'FAILED', message: 'Rejected'));
         $adapter->shouldReceive('execute')->once()->with($second, 'transaction_initiation', ['recipient' => '08000000000'], 'idem-failover')
-            ->andReturn(new \\App\\Services\\Providers\\ProviderResult(true, 'SUCCESS', providerReference: 'P-2'));
+            ->andReturn(new \App\Services\Providers\ProviderResult(true, 'SUCCESS', providerReference: 'P-2'));
 
-        $this->app->instance(\\App\\Services\\Providers\\RestJsonProviderAdapter::class, $adapter);
+        $this->app->instance(\App\Services\Providers\RestJsonProviderAdapter::class, $adapter);
         $result = app(ProviderManager::class)->execute('airtime-failover', 'transaction_initiation', ['recipient' => '08000000000'], 'idem-failover');
 
         $this->assertTrue($result->accepted);
@@ -120,7 +120,7 @@ class ProviderRoutingTest extends TestCase
     {
         $service = new Service(['key' => 'airtime-requery']);
         $provider = $this->makeProvider('original-requery', 1);
-        $tx = new \\App\\Models\\VtuTransaction([
+        $tx = new \App\Models\VtuTransaction([
             'reference' => 'VTU-REQUERY-1',
             'provider_reference' => 'PROVIDER-123',
             'api_provider_id' => $provider->id,
@@ -134,10 +134,10 @@ class ProviderRoutingTest extends TestCase
             $provider, 'airtime-requery', 'transaction_status',
             ['reference' => 'PROVIDER-123', 'transaction_reference' => 'VTU-REQUERY-1'],
             'idem-requery:requery'
-        )->andReturn(new \\App\\Services\\Providers\\ProviderResult(true, 'SUCCESS', providerReference: 'PROVIDER-123', providerId: $provider->id));
+        )->andReturn(new \App\Services\Providers\ProviderResult(true, 'SUCCESS', providerReference: 'PROVIDER-123', providerId: $provider->id));
         $this->app->instance(ProviderManager::class, $manager);
 
-        $result = app(\\App\\Services\\Vtu\\VtuProviderGateway::class)->requery($tx);
+        $result = app(\App\Services\Vtu\VtuProviderGateway::class)->requery($tx);
         $this->assertTrue($result->accepted);
         $this->assertSame($provider->id, $result->providerId);
     }
