@@ -68,7 +68,7 @@ class AddonLifecycleService
                 $this->recordMigrationContract($addon);
                 $this->recordStep($addon, 'initialize', 'Addon initialization contract validated.');
                 if ($addon->identifier === 'vtu.digital-services') {
-                    app(\\App\\Services\\Vtu\\VtuAddonInstaller::class)->install();
+                    app(\App\Services\Vtu\VtuAddonInstaller::class)->install();
                 }
                 $this->recordStep($addon, 'health', 'Addon health contract validated.');
 
