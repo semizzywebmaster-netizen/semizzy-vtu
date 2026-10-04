@@ -5,6 +5,7 @@ namespace App\Services\Vtu;
 use App\Models\ServiceProduct;
 use App\Models\VtuBulkOperation;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class VtuBulkService
 {
@@ -71,6 +72,7 @@ class VtuBulkService
                     $bulk->increment('failed_items');
                 }
             } catch (\Throwable $e) {
+                Log::warning('VTU bulk item processing failed.', ['bulk_operation_id' => $bulk->id, 'bulk_item_id' => $row->id, 'user_id' => $uid, 'exception' => get_class($e)]);
                 $row->update(['status' => 'failed', 'error_message' => 'This item could not be processed. Contact support with the bulk reference.']);
                 $bulk->increment('failed_items');
             }
