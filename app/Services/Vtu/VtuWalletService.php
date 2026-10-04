@@ -54,7 +54,7 @@ class VtuWalletService
     {
         $value = ltrim($value, '0');
         return ctype_digit($value === '' ? '0' : $value)
-            && strlen($value) <= 17;
+            && PHP_INT_SIZE >= 8 && strlen($value) <= 17;
     }
 
     private function compareIntegerStrings(string $left, string $right): int
