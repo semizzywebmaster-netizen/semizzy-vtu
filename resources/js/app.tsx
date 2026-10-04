@@ -4,6 +4,8 @@ import { createRoot } from 'react-dom/client';
 import type { ComponentType } from 'react';
 import AdminLayout from './Layouts/AdminLayout';
 
+type PageModule = { default: ComponentType<Record<string, unknown>> };
+
 type ViteImportMeta = ImportMeta & {
   env: { PROD: boolean };
   glob: (pattern: string) => Record<string, () => Promise<unknown>>;
@@ -23,7 +25,8 @@ createInertiaApp({
     const page = pages[`./Pages/${name}.tsx`];
     if (!page) throw new Error(`Inertia page not found: ${name}`);
 
-    const ResolvedPage = (await page()) as ComponentType<Record<string, unknown>>;
+    const module = (await page()) as PageModule;
+    const ResolvedPage = module.default;
     const isAdminPage = name === 'Dashboard' || name.startsWith('Admin/');
 
     if (!isAdminPage) {
