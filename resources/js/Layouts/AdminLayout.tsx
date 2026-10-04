@@ -26,6 +26,8 @@ export default function AdminLayout({ children }: PropsWithChildren) {
   const [open, setOpen] = useState(false);
   const user = page.props.auth?.user;
   const items = page.props.navigation?.admin?.items ?? [];
+  const isAdminArea = ['ADMIN', 'STAFF', 'SUPPORT'].includes(user?.role ?? '');
+  if (!isAdminArea) return <>{children}</>;
 
   const grouped = items.reduce<Record<string, MenuItem[]>>((groups, item) => {
     const section = item.section || 'core';
