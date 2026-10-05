@@ -152,6 +152,71 @@ class VtuBulkService
         }
     }
 
+        [$leaseAcquired, $leaseToken] = $this->acquireWorkerLease($bulk);
+        if (!$leaseAcquired) {
+            return $bulk->fresh('items');
+        }
+
+        try {
+            foreach ($items as $i => $item) {
+                $this->heartbeatWorkerLease($bulk, $leaseToken);
+
+                $row = $bulk->items->firstWhere('sequence', $i + 1);
+
+                if (!$row) {
+                    throw new \RuntimeException('Bulk operation item records are incomplete.');
+                }
+
+                if (in_array($row->status, ['successful', 'failed', 'reversed', 'cancelled'], true)) {
+                    continue;
+                }
+
+                $key = (string) ($item['idempotency_key'] ?? ($bulk->reference . ':' . ($i + 1)));
+                $payload = (array) ($item['payload'] ?? []);
+
+                try {
+                    $product = ServiceProduct::query()->with('service')->findOrFail((int) $item['product_id']);
+
+                    if (!$product->service || !$product->enabled || !$product->service->enabled) {
+                        throw new \RuntimeException('The selected VTU product or service is unavailable.');
+                    }
+
+                    $this->validator->validate($product->service, $payload);
+
+                    $transaction = $this->transactions->process(
+                        $this->transactions->create($uid, $product, $payload, $tier, $key),
+                    );
+
+                    $this->syncItemFromTransaction($row, $transaction);
+                } catch (\Throwable $e) {
+                    Log::warning('VTU bulk item processing failed.', [
+                        'bulk_operation_id' => $bulk->id,
+                        'bulk_item_id' => $row->id,
+                        'user_id' => $uid,
+                        'exception' => get_class($e),
+                    ]);
+
+                    $transaction = VtuTransaction::query()
+                        ->where('idempotency_key', $key)
+                        ->where('user_id', $uid)
+                        ->first();
+
+                    if ($transaction) {
+                        $this->syncItemFromTransaction($row, $transaction);
+                    } else {
+                        $row->update([
+                            'status' => 'failed',
+                            'error_message' => 'This item could not be processed. Contact support with the bulk reference.',
+                        ]);
+                    }
+                }
+            }
+        } finally {
+            $this->releaseWorkerLease($bulk, $leaseToken);
+        }
+
+        return $this->recalculate($bulk->fresh('items'));
+
     private const WORKER_LEASE_MINUTES = 15;
 
     private function acquireWorkerLease(VtuBulkOperation $bulk): array
