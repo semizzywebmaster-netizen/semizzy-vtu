@@ -24,46 +24,70 @@ class AuthenticatedSessionController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $credentials = $request->validate(['email'=>'required|email','password'=>'required|string']);
+        $credentials = $request->validate([
+            'login' => 'required|string|max:190',
+            'password' => 'required|string',
+            'remember' => 'nullable|boolean',
+        ]);
+
         $this->authenticate($request, $credentials, false);
+
         return redirect()->intended(route('dashboard'));
     }
 
     public function storeAdmin(Request $request): RedirectResponse
     {
-        $credentials = $request->validate(['email'=>'required|email','password'=>'required|string']);
+        $credentials = $request->validate(['email' => 'required|email','password' => 'required|string']);
         $this->authenticate($request, $credentials, true);
+
         return redirect()->intended(route('dashboard'));
     }
 
     private function authenticate(Request $request, array $credentials, bool $admin): void
     {
-        $key = 'login:'.strtolower($credentials['email']).'|'.$request->ip();
+        $login = strtolower(trim((string) ($credentials['login'] ?? $credentials['email'] ?? '')));
+        $query = \App\Models\User::query()->where('status', 'active');
+
+        if ($admin) {
+            $query->where('email', $login);
+        } else {
+            $query->where(function ($q) use ($login): void {
+                $q->whereRaw('LOWER(email) = ?', [$login])
+                    ->orWhereRaw('LOWER(username) = ?', [$login])
+                    ->orWhere('phone', preg_replace('/[^0-9+]/', '', $login));
+            });
+        }
+
+        $user = $query->first();
+        $key = 'login:' . hash('sha256', $login) . '|' . $request->ip();
+
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            $this->securityEvents->record('auth.login.rate_limited', 'warning', [
-                'admin' => $admin,
-            ], $request);
-            throw ValidationException::withMessages(['email'=>'Too many login attempts. Please try again later.']);
+            $this->securityEvents->record('auth.login.rate_limited', 'warning', ['admin' => $admin], $request);
+            throw ValidationException::withMessages(['login' => 'Too many login attempts. Please try again later.']);
         }
-        if (!Auth::attempt(array_merge($credentials, ['status'=>'active']))) {
+
+        if (! $user || ! Auth::validate(['email' => $user->email, 'password' => (string) $credentials['password'], 'status' => 'active'])) {
             RateLimiter::hit($key, 60);
-            $this->securityEvents->record('auth.login.failed', 'warning', [
-                'admin' => $admin,
-            ], $request);
-            throw ValidationException::withMessages(['email'=>'The provided credentials are invalid.']);
+            $this->securityEvents->record('auth.login.failed', 'warning', ['admin' => $admin], $request);
+            throw ValidationException::withMessages(['login' => 'The provided credentials are invalid.']);
         }
-        if ($admin && !$request->user()->hasRole(['ADMIN','STAFF','SUPPORT'])) {
-            $this->securityEvents->record('auth.admin_login.denied', 'warning', [
-                'admin' => true,
-            ], $request);
+
+        if (! $admin && $user->phone === preg_replace('/[^0-9+]/', '', $login) && ! $user->phone_verified_at) {
+            RateLimiter::hit($key, 60);
+            throw ValidationException::withMessages(['login' => 'This phone number is not verified. Please use your email or username, or verify your phone first.']);
+        }
+
+        Auth::login($user, (bool) ($credentials['remember'] ?? false));
+
+        if ($admin && ! $request->user()->hasRole(['ADMIN','STAFF','SUPPORT'])) {
+            $this->securityEvents->record('auth.admin_login.denied', 'warning', ['admin' => true], $request);
             Auth::logout();
-            throw ValidationException::withMessages(['email'=>'This account is not authorized for the admin area.']);
+            throw ValidationException::withMessages(['login' => 'This account is not authorized for the admin area.']);
         }
+
         RateLimiter::clear($key);
         $request->session()->regenerate();
-        $this->securityEvents->record($admin ? 'auth.admin_login.success' : 'auth.login.success', 'info', [
-            'admin' => $admin,
-        ], $request);
+        $this->securityEvents->record($admin ? 'auth.admin_login.success' : 'auth.login.success', 'info', ['admin' => $admin], $request);
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -72,6 +96,7 @@ class AuthenticatedSessionController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('home');
     }
 }
