@@ -47,4 +47,4 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
 
-# CI trigger checkpoint for provider-toggle hardening.
+# CI trigger checkpoint for full Core, analytics, communication, realtime, auth, security and VTU validation.
