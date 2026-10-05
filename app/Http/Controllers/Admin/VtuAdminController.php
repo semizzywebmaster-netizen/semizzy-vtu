@@ -55,7 +55,14 @@ class VtuAdminController extends Controller
 
  public function bulkToggleMappings(Request $r, AuditLogger $audit){
   $data=$r->validate(['mapping_ids'=>['required','array','min:1','max:100'],'mapping_ids.*'=>['integer','distinct','exists:provider_service_mappings,id'],'enabled'=>['required','boolean']]);$changed=0;$skipped=0;
-  foreach(ProviderServiceMapping::query()->whereIn('id',$data['mapping_ids'])->with(['provider','service.category'])->get() as $mapping){$provider=$mapping->provider;$service=$mapping->service;if(!$provider||!$service||!$service->category||$service->category->key!=='vtu-digital-services'||($data['enabled']&&(!$provider->enabled||$provider->paused||$provider->verification_status!=='live_verified'||$provider->integration_status!=='live_verified'||!$service->enabled))){$skipped++;continue;}$mapping->update(['enabled'=>$data['enabled']]);$changed++;$audit->record($data['enabled']?'vtu.provider_mapping.enabled':'vtu.provider_mapping.disabled',$mapping,['bulk'=>true],$r);}
+  foreach(ProviderServiceMapping::query()->whereIn('id',$data['mapping_ids'])->with(['provider','service.category'])->get() as $mapping){
+   try{
+    $provider=$mapping->provider;$service=$mapping->service;
+    if(!$provider||!$service||!$service->category||$service->category->key!=='vtu-digital-services'||($data['enabled']&&(!$provider->enabled||$provider->paused||$provider->verification_status!=='live_verified'||$provider->integration_status!=='live_verified'||!$service->enabled))){$skipped++;continue;}
+    $mapping->updateOrFail(['enabled'=>$data['enabled']]);$changed++;
+    try{$audit->record($data['enabled']?'vtu.provider_mapping.enabled':'vtu.provider_mapping.disabled',$mapping,['bulk'=>true],$r);}catch(\Throwable $auditException){report($auditException);}
+   }catch(\Throwable $e){report($e);$skipped++;}
+  }
   return back()->with('success',"Bulk mapping update completed: {$changed} changed, {$skipped} skipped.");
  }
 
@@ -86,12 +93,24 @@ class VtuAdminController extends Controller
  public function products(){return Inertia::render('Admin/VTU/Products',['products'=>ServiceProduct::whereHas('service.category',fn($q)=>$q->where('key','vtu-digital-services'))->with('service')->latest()->paginate(50)]);}
  public function bulkToggleServices(Request $r, AuditLogger $audit){
   $data=$r->validate(['service_ids'=>['required','array','min:1','max:100'],'service_ids.*'=>['integer','distinct','exists:services,id'],'enabled'=>['required','boolean']]);$changed=0;$skipped=0;
-  foreach(Service::query()->whereIn('id',$data['service_ids'])->with('category')->get() as $service){if(!$service->category||$service->category->key!=='vtu-digital-services'){ $skipped++; continue; }$service->update(['enabled'=>$data['enabled']]);$changed++;$audit->record($data['enabled']?'vtu.service.enabled':'vtu.service.disabled',$service,['bulk'=>true],$r);}
+  foreach(Service::query()->whereIn('id',$data['service_ids'])->with('category')->get() as $service){
+   try{
+    if(!$service->category||$service->category->key!=='vtu-digital-services'){ $skipped++; continue; }
+    $service->updateOrFail(['enabled'=>$data['enabled']]);$changed++;
+    try{$audit->record($data['enabled']?'vtu.service.enabled':'vtu.service.disabled',$service,['bulk'=>true],$r);}catch(\Throwable $auditException){report($auditException);}
+   }catch(\Throwable $e){report($e);$skipped++;}
+  }
   return back()->with('success',"Bulk service status update completed: {$changed} changed, {$skipped} skipped.");
  }
  public function bulkToggleProducts(Request $r, AuditLogger $audit){
   $data=$r->validate(['product_ids'=>['required','array','min:1','max:100'],'product_ids.*'=>['integer','distinct','exists:service_products,id'],'enabled'=>['required','boolean']]);$changed=0;$skipped=0;
-  foreach(ServiceProduct::query()->whereIn('id',$data['product_ids'])->with('service.category')->get() as $product){if(!$product->service||!$product->service->category||$product->service->category->key!=='vtu-digital-services'||($data['enabled']&&!$product->service->enabled)){ $skipped++; continue; }$product->update(['enabled'=>$data['enabled']]);$changed++;$audit->record($data['enabled']?'vtu.product.enabled':'vtu.product.disabled',$product,['bulk'=>true],$r);}
+  foreach(ServiceProduct::query()->whereIn('id',$data['product_ids'])->with('service.category')->get() as $product){
+   try{
+    if(!$product->service||!$product->service->category||$product->service->category->key!=='vtu-digital-services'||($data['enabled']&&!$product->service->enabled)){ $skipped++; continue; }
+    $product->updateOrFail(['enabled'=>$data['enabled']]);$changed++;
+    try{$audit->record($data['enabled']?'vtu.product.enabled':'vtu.product.disabled',$product,['bulk'=>true],$r);}catch(\Throwable $auditException){report($auditException);}
+   }catch(\Throwable $e){report($e);$skipped++;}
+  }
   return back()->with('success',"Bulk product status update completed: {$changed} changed, {$skipped} skipped.");
  }
  public function enableProduct(ServiceProduct $product){if(!$product->service || !$product->service->category || $product->service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU products can be managed here.');if(!$product->service->enabled)return back()->with('error','Enable the VTU service before enabling its product.');$product->update(['enabled'=>true]);return back()->with('success','Product enabled.');}
@@ -119,7 +138,7 @@ class VtuAdminController extends Controller
     $attempted++;
     try{$tx=$service->requery($item->transaction);if($tx->status!==$item->status)$reconciled++;}catch(\Throwable $e){}
    }
-   $bulkService->recalculate($bulk);
+   try{$bulkService->recalculate($bulk);}catch(\Throwable $e){report($e);}
   }
   return back()->with('success',"Selected bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
  }
