@@ -358,25 +358,28 @@ class VtuBulkService
 
     private function recalculate(VtuBulkOperation $bulk): VtuBulkOperation
     {
-        $successful = $bulk->items()->where('status', 'successful')->count();
-        $failed = $bulk->items()->whereIn('status', ['failed', 'reversed', 'cancelled'])->count();
-        $pending = max(0, $bulk->total_items - $successful - $failed);
+        return DB::transaction(function () use ($bulk): VtuBulkOperation {
+            $locked = VtuBulkOperation::query()->lockForUpdate()->findOrFail($bulk->id);
+            $successful = $locked->items()->where('status', 'successful')->count();
+            $failed = $locked->items()->whereIn('status', ['failed', 'reversed', 'cancelled'])->count();
+            $pending = max(0, $locked->total_items - $successful - $failed);
 
-        $bulk->successful_items = $successful;
-        $bulk->failed_items = $failed;
-        $bulk->processed_items = $successful + $failed;
-        $bulk->status = match (true) {
-            $pending > 0 => 'pending',
-            $failed > 0 && $successful > 0 => 'partial',
-            $failed > 0 => 'failed',
-            default => 'successful',
-        };
-        $bulk->metadata = array_merge((array) $bulk->metadata, [
-            'pending_items' => $pending,
-        ]);
-        $bulk->save();
+            $locked->successful_items = $successful;
+            $locked->failed_items = $failed;
+            $locked->processed_items = $successful + $failed;
+            $locked->status = match (true) {
+                $pending > 0 => 'pending',
+                $failed > 0 && $successful > 0 => 'partial',
+                $failed > 0 => 'failed',
+                default => 'successful',
+            };
+            $locked->metadata = array_merge((array) $locked->metadata, [
+                'pending_items' => $pending,
+            ]);
+            $locked->save();
 
-        return $bulk->fresh('items');
+            return $locked->fresh('items');
+        });
     }
 
     private function assertFingerprintMatches(VtuBulkOperation $bulk, string $fingerprint, int $itemCount): void
