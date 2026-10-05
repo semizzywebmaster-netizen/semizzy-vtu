@@ -55,43 +55,49 @@ class UserController extends Controller
             'status' => ['required', 'in:active,suspended,disabled'],
         ]);
 
-        abort_if(
-            $user->is($request->user()) && ($data['status'] !== 'active' || $data['role'] !== $request->user()->role),
-            422,
-            'You cannot deactivate or change your own role.'
-        );
+        try {
+            abort_if(
+                $user->is($request->user()) && ($data['status'] !== 'active' || $data['role'] !== $request->user()->role),
+                422,
+                'You cannot deactivate or change your own role.'
+            );
 
-        DB::transaction(function () use ($user, $data): void {
-            $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
-            $demotingAdmin = $lockedUser->role === 'ADMIN' && $data['role'] !== 'ADMIN';
-            $deactivatingAdmin = $lockedUser->role === 'ADMIN' && $data['status'] !== 'active';
+            DB::transaction(function () use ($user, $data): void {
+                $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
+                $demotingAdmin = $lockedUser->role === 'ADMIN' && $data['role'] !== 'ADMIN';
+                $deactivatingAdmin = $lockedUser->role === 'ADMIN' && $data['status'] !== 'active';
 
-            if ($demotingAdmin || $deactivatingAdmin) {
-                // Lock the complete active-admin set before checking the invariant.
-                // This serializes competing demotions/deactivations and prevents two
-                // concurrent requests from both removing the final two administrators.
-                $activeAdminIds = User::query()
-                    ->where('role', 'ADMIN')
-                    ->where('status', 'active')
-                    ->lockForUpdate()
-                    ->pluck('id');
+                if ($demotingAdmin || $deactivatingAdmin) {
+                    $activeAdminIds = User::query()
+                        ->where('role', 'ADMIN')
+                        ->where('status', 'active')
+                        ->lockForUpdate()
+                        ->pluck('id');
 
-                abort_if(
-                    $activeAdminIds->count() < 2 || ! $activeAdminIds->contains(fn ($id): bool => (int) $id !== (int) $lockedUser->id),
-                    422,
-                    'You cannot remove or deactivate the last active administrator.'
-                );
+                    abort_if(
+                        $activeAdminIds->count() < 2 || ! $activeAdminIds->contains(fn ($id): bool => (int) $id !== (int) $lockedUser->id),
+                        422,
+                        'You cannot remove or deactivate the last active administrator.'
+                    );
+                }
+
+                $lockedUser->updateOrFail($data);
+            });
+
+            try {
+                $audit->record('admin.user.updated', $user->fresh(), [
+                    'target_user_id' => $user->id,
+                    'role' => $data['role'],
+                    'status' => $data['status'],
+                ], $request);
+            } catch (\Throwable $auditException) {
+                report($auditException);
             }
 
-            $lockedUser->update($data);
-        });
-
-        $audit->record('admin.user.updated', $user->fresh(), [
-            'target_user_id' => $user->id,
-            'role' => $data['role'],
-            'status' => $data['status'],
-        ], $request);
-
-        return back()->with('success', 'User account updated.');
+            return back()->with('success', 'User account updated.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'User account update failed safely.');
+        }
     }
 }
