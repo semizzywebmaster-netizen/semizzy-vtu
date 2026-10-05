@@ -25,6 +25,8 @@ class RegisteredUserController extends Controller
     {
         $phone = preg_replace('/[^0-9+]/', '', (string) $request->input('phone'));
         $username = strtolower(trim((string) $request->input('username')));
+        $reserved = collect(config('semizzy.username_policy.reserved', []))->map(fn ($value) => strtolower((string) $value));
+        $protected = collect(config('semizzy.username_policy.protected_terms', []))->map(fn ($value) => strtolower((string) $value));
         $referralInput = trim((string) $request->input('referral_code'));
 
         $data = $request->validate([
@@ -34,6 +36,10 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'terms' => 'accepted',
         ]);
+
+        if ($reserved->contains($username) || $protected->contains(fn ($term) => $term !== '' && str_contains($username, $term))) {
+            return back()->withErrors(['username' => 'That username is reserved or protected. Please choose another username.'])->withInput();
+        }
 
         $request->merge([
             'username' => $username,
