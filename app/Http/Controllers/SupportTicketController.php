@@ -50,30 +50,18 @@ class SupportTicketController extends Controller
         try {
             $ticket = DB::transaction(function () use ($request, $data): SupportTicket {
                 $ticket = SupportTicket::create([
-                    'user_id' => $request->user()->id,
-                    'reference' => 'SUP-'.Str::upper(Str::random(10)),
-                    'subject' => $data['subject'],
-                    'category' => $data['category'],
-                    'priority' => 'normal',
-                    'status' => 'open',
-                    'last_reply_at' => now(),
+                    'user_id' => $request->user()->id, 'reference' => 'SUP-'.Str::upper(Str::random(10)),
+                    'subject' => $data['subject'], 'category' => $data['category'], 'priority' => 'normal',
+                    'status' => 'open', 'last_reply_at' => now(),
                 ]);
                 $ticket->messages()->create(['user_id' => $request->user()->id, 'message' => $data['message']]);
                 return $ticket;
             });
-
-            try { $audit->record('support.ticket.created', $ticket, ['category' => $ticket->category], $request); } catch (\Throwable $e) { report($e); }
+            try { $audit->record('support.ticket.created', $ticket, ['category'=>$ticket->category], $request); } catch (\Throwable $e) { report($e); }
             try { $request->user()->notify(new CoreNotification('Support ticket created','Your support ticket '.$ticket->reference.' was created.','/support/'.$ticket->id)); } catch (\Throwable $e) { report($e); }
-            try {
-                User::query()->where('status', 'active')->whereIn('role', ['ADMIN', 'STAFF', 'SUPPORT'])
-                    ->whereKeyNot($request->user()->id)->get()
-                    ->each(fn (User $recipient) => $recipient->notify(new CoreNotification('New support ticket','A new support ticket '.$ticket->reference.' needs attention.','/support/'.$ticket->id)));
-            } catch (\Throwable $e) { report($e); }
-
             return redirect()->route('support.show', $ticket)->with('success', 'Support ticket created.');
         } catch (\Throwable $e) {
-            report($e);
-            return back()->with('error', 'Support ticket could not be created safely.');
+            report($e); return back()->with('error', 'Support ticket could not be created safely.');
         }
     }
 
@@ -110,40 +98,35 @@ class SupportTicketController extends Controller
             $data = $request->validate(['message' => ['required', 'string', 'min:2', 'max:10000']]);
             [$ticket, $isStaffReply] = DB::transaction(function () use ($request, $ticket, $data): array {
                 $lockedTicket = SupportTicket::query()->lockForUpdate()->findOrFail($ticket->id);
-                abort_if(in_array($lockedTicket->status, ['closed', 'resolved'], true) && ! $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']), 409, 'This ticket is closed.');
-                $isStaffReply = $request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']);
-                $lockedTicket->messages()->create(['user_id' => $request->user()->id, 'message' => $data['message']]);
-                $lockedTicket->forceFill(['last_reply_at' => now(), 'status' => $isStaffReply ? 'pending' : 'open'])->saveOrFail();
+                abort_if(in_array($lockedTicket->status, ['closed','resolved'], true) && ! $request->user()->hasRole(['ADMIN','STAFF','SUPPORT']), 409, 'This ticket is closed.');
+                $isStaffReply = $request->user()->hasRole(['ADMIN','STAFF','SUPPORT']);
+                $lockedTicket->messages()->create(['user_id'=>$request->user()->id,'message'=>$data['message']]);
+                $lockedTicket->forceFill(['last_reply_at'=>now(),'status'=>$isStaffReply?'pending':'open'])->saveOrFail();
                 return [$lockedTicket->fresh(), $isStaffReply];
             });
-            try { $audit->record('support.ticket.replied', $ticket, ['staff_reply' => $isStaffReply], $request); } catch (\Throwable $e) { report($e); }
-            try {
-                if ($isStaffReply) $ticket->user()->first()?->notify(new CoreNotification('Support replied','Support replied to ticket '.$ticket->reference.'.','/support/'.$ticket->id));
-                else User::query()->where('status','active')->whereIn('role',['ADMIN','STAFF','SUPPORT'])->get()->each(fn(User $recipient)=>$recipient->notify(new CoreNotification('Customer replied','A customer replied to ticket '.$ticket->reference.'.','/support/'.$ticket->id)));
-            } catch (\Throwable $e) { report($e); }
-            return back()->with('success', 'Reply added.');
+            try { $audit->record('support.ticket.replied',$ticket,['staff_reply'=>$isStaffReply],$request); } catch (\Throwable $e) { report($e); }
+            try { if ($isStaffReply) $ticket->user()->first()?->notify(new CoreNotification('Support replied','Support replied to ticket '.$ticket->reference.'.','/support/'.$ticket->id)); } catch (\Throwable $e) { report($e); }
+            return back()->with('success','Reply added.');
         } catch (\Throwable $e) {
-            report($e);
-            return back()->with('error', 'Support reply failed safely.');
+            report($e); return back()->with('error','Support reply failed safely.');
         }
     }
 
     public function updateStatus(Request $request, SupportTicket $ticket, AuditLogger $audit): RedirectResponse
     {
         try {
-            abort_unless($request->user()->hasRole(['ADMIN', 'STAFF', 'SUPPORT']), 403);
-            $data = $request->validate(['status' => ['required', 'in:open,pending,resolved,closed']]);
-            DB::transaction(function () use ($ticket, $data, $request, $audit): void {
-                $ticket = SupportTicket::query()->lockForUpdate()->findOrFail($ticket->id);
-                $previousStatus = $ticket->status;
-                if ($previousStatus === $data['status']) return;
-                $ticket->updateOrFail(['status' => $data['status']]);
-                try { $audit->record('support.ticket.status_changed', $ticket, ['from'=>$previousStatus,'to'=>$data['status']], $request); } catch (\Throwable $e) { report($e); }
+            abort_unless($request->user()->hasRole(['ADMIN','STAFF','SUPPORT']), 403);
+            $data = $request->validate(['status'=>['required','in:open,pending,resolved,closed']]);
+            DB::transaction(function () use ($ticket,$data,$request,$audit): void {
+                $locked = SupportTicket::query()->lockForUpdate()->findOrFail($ticket->id);
+                if ($locked->status === $data['status']) return;
+                $previous = $locked->status;
+                $locked->updateOrFail(['status'=>$data['status']]);
+                try { $audit->record('support.ticket.status_changed',$locked,['from'=>$previous,'to'=>$data['status']],$request); } catch (\Throwable $e) { report($e); }
             });
-            return back()->with('success', 'Ticket status updated.');
+            return back()->with('success','Ticket status updated.');
         } catch (\Throwable $e) {
-            report($e);
-            return back()->with('error', 'Ticket status update failed safely.');
+            report($e); return back()->with('error','Ticket status update failed safely.');
         }
     }
 
