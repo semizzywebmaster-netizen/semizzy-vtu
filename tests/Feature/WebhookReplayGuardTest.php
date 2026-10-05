@@ -71,6 +71,23 @@ class WebhookReplayGuardTest extends TestCase
         ]);
     }
 
+    public function test_failed_webhook_processing_can_be_retried_safely(): void
+    {
+        $provider = $this->provider();
+        $guard = app(WebhookReplayGuard::class);
+
+        $receipt = $guard->claim($provider, 'evt_retry', '{"ok":true}');
+        $guard->beginProcessing($receipt);
+        $guard->markFailed($receipt->fresh(), 'Temporary processing failure.');
+
+        $this->assertTrue($guard->beginProcessing($receipt->fresh()));
+        $this->assertDatabaseHas('webhook_receipts', [
+            'id' => $receipt->id,
+            'status' => 'processing',
+            'processing_error' => null,
+        ]);
+    }
+
     public function test_webhook_event_can_be_marked_processed_or_failed(): void
     {
         $provider = $this->provider();
