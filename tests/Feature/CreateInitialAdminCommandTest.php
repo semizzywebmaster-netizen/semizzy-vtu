@@ -42,10 +42,6 @@ class CreateInitialAdminCommandTest extends TestCase
         ]);
 
         $this->artisan('semizzy:admin:create')
-            ->expectsQuestion('Administrator name', 'Another Admin')
-            ->expectsQuestion('Administrator email', 'another-admin@example.test')
-            ->expectsQuestion('Administrator password', 'Strong-Password-123!')
-            ->expectsQuestion('Confirm administrator password', 'Strong-Password-123!')
             ->expectsOutputToContain('An initial administrator has already been created.')
             ->assertExitCode(1);
 
