@@ -115,6 +115,7 @@ Route::middleware(['auth'])->group(function (): void {
             Route::get('/products', [VtuAdminController::class, 'products'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products');
             Route::get('/mappings', [VtuAdminController::class, 'mappings'])->middleware('permission:vtu.mappings.manage')->name('admin.vtu.mappings');
             Route::post('/mappings', [VtuAdminController::class, 'saveMapping'])->middleware('permission:vtu.mappings.manage')->name('admin.vtu.mappings.save');
+            Route::post('/mappings/bulk/toggle', [VtuAdminController::class, 'bulkToggleMappings'])->middleware('permission:vtu.mappings.manage')->name('admin.vtu.mappings.bulk-toggle');
             Route::post('/products/{product}/enable', [VtuAdminController::class, 'enableProduct'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products.enable');
             Route::post('/products/{product}/disable', [VtuAdminController::class, 'disableProduct'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products.disable');
             Route::post('/products/bulk/toggle', [VtuAdminController::class, 'bulkToggleProducts'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products.bulk-toggle');
