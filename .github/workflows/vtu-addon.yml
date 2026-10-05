@@ -1,4 +1,5 @@
 name: SEMIZZY ONE VTU ADDON CI
+# P0 verification: this workflow is intentionally exercised through PRs as well as main pushes.
 on:
   push:
     branches: [main]
