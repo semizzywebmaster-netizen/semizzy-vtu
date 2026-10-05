@@ -7,6 +7,7 @@ type ServiceCategory = { key: string; name: string; description?: string | null;
 type Wallet = { available_minor: string; held_minor: string; currency: string; status: string };
 type Tier = { id: number; name: string };
 type TierLimit = { id: number; name: string; dailyLimitMinor: string; balanceLimitMinor: string | null; upgradeLabel: string | null };
+type DashboardMessages = { greeting?: { message: string } | null; quote?: { message: string } | null; seasonal?: { message: string } | null; promotional?: { message: string } | null };
 
 const iconFor = (value: string) => {
   const key = value.toLowerCase();
@@ -33,19 +34,20 @@ const money = (minor: string | undefined, currency = 'NGN') => {
   } catch { return '—'; }
 };
 
-export default function Dashboard({ role, user, metrics = [], quickLinks = [], serviceCategories = [], wallet = null, tier = null, tierLimits = [] }: {
+export default function Dashboard({ role, user, metrics = [], quickLinks = [], serviceCategories = [], wallet = null, tier = null, tierLimits = [], dashboardMessages = {} }: {
   role: string; user?: { name?: string; email?: string; username?: string }; metrics?: Metric[]; quickLinks?: QuickLink[];
-  serviceCategories?: ServiceCategory[]; wallet?: Wallet | null; tier?: Tier | null; tierLimits?: TierLimit[];
+  serviceCategories?: ServiceCategory[]; wallet?: Wallet | null; tier?: Tier | null; tierLimits?: TierLimit[]; dashboardMessages?: DashboardMessages;
 }) {
   const isUser = !['ADMIN', 'STAFF', 'SUPPORT'].includes(role);
 
   if (isUser) {
     const firstName = (user?.name || 'there').trim().split(/\s+/)[0];
     const visibleCategories = serviceCategories.filter(category => category.services.length > 0);
+    const greeting = dashboardMessages.greeting?.message || `Welcome back, ${firstName}`;
     return <main className="min-h-screen bg-slate-50 pb-24 text-slate-900">
       <Head title="Home" />
       <section className="bg-slate-900 px-5 pb-7 pt-5 text-white sm:px-8"><div className="mx-auto max-w-6xl">
-        <div className="flex items-center justify-between"><div><p className="text-xs font-medium text-slate-300">Welcome back</p><h1 className="mt-1 text-2xl font-black">{firstName} 👋</h1></div>
+        <div className="flex items-center justify-between"><div><p className="text-xs font-medium text-slate-300">{greeting}</p><h1 className="mt-1 text-2xl font-black">{firstName} 👋</h1></div>
           <div className="flex items-center gap-2"><Link href="/notifications" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10">♧</Link><Link href="/profile" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-black">{firstName.charAt(0).toUpperCase()}</Link></div></div>
         <div className="mt-5 rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-700 p-5 shadow-xl"><div className="flex items-start justify-between"><div>
           <p className="text-xs font-semibold uppercase tracking-wider text-indigo-100">Available balance</p><p className="mt-2 text-3xl font-black tracking-tight">{wallet ? money(wallet.available_minor, wallet.currency) : 'Wallet not funded'}</p>
@@ -55,7 +57,7 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
         </div></div></section>
       <div className="mx-auto max-w-6xl px-4 sm:px-8">
         <section className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><div className="grid grid-cols-4 gap-2">{[['Services','/vtu','✦'],['Notifications','/notifications','♧'],['Support','/support','?'],['Profile','/profile','●']].map(([label,url,icon]) => <Link key={label} href={url} className="flex flex-col items-center gap-2 rounded-2xl px-2 py-3 text-center hover:bg-slate-50"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-lg font-black text-indigo-700">{icon}</span><span className="text-xs font-semibold text-slate-700">{label}</span></Link>)}</div></section>
-        <section className="mt-6 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <section className="mt-6 grid gap-4 md:grid-cols-2">{dashboardMessages.quote?.message && <article className="rounded-3xl bg-slate-900 p-5 text-white shadow-sm"><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Daily inspiration</p><p className="mt-2 text-lg font-bold leading-relaxed">“{dashboardMessages.quote.message}”</p></article>}{dashboardMessages.seasonal?.message && <article className="rounded-3xl bg-amber-50 p-5 text-slate-900 ring-1 ring-amber-100"><p className="text-xs font-bold uppercase tracking-wider text-amber-700">Seasonal message</p><p className="mt-2 text-lg font-bold">{dashboardMessages.seasonal.message}</p></article>}</section>{dashboardMessages.promotional?.message && <section className="mt-4 rounded-3xl bg-indigo-600 p-5 text-white shadow-sm"><p className="text-xs font-bold uppercase tracking-wider text-indigo-200">Special for you</p><p className="mt-2 text-lg font-black">{dashboardMessages.promotional.message}</p></section>}<section className="mt-6 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <div className="flex items-start justify-between gap-4">
             <div><p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Account level</p><h2 className="mt-1 text-2xl font-black">{tier?.name || 'Tier 1'}</h2><p className="mt-1 text-sm text-slate-500">Higher tiers unlock higher transaction capacity after the required verification.</p></div>
             {tier && tier.id < 3 && <Link href="/support?subject=Tier%20Upgrade" className="shrink-0 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">{tierLimits.find(item => item.id === tier.id)?.upgradeLabel || 'Upgrade tier'}</Link>}
