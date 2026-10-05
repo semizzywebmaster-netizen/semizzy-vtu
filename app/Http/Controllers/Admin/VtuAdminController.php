@@ -74,6 +74,11 @@ class VtuAdminController extends Controller{
  }
  public function transactions(Request $r){$q=VtuTransaction::with(['user','service','product','provider'])->latest();foreach(['status','service_id','api_provider_id','user_id'] as $f)if($r->filled($f))$q->where($f,$r->input($f));return Inertia::render('Admin/VTU/Transactions',['transactions'=>$q->paginate(50)->withQueryString()]);}
  public function requery(VtuTransaction $transaction,VtuTransactionService $s){$s->requery($transaction);return back()->with('success','Transaction requery completed.');}
+ public function refund(Request $r,VtuTransaction $transaction,VtuTransactionService $s){
+  $data=$r->validate(['reason'=>['nullable','string','max:500']]);
+  $transaction=$s->refund($transaction,(string)($data['reason']??'Administrative refund'));
+  return back()->with($transaction->status==='reversed'?'success':'error',$transaction->status==='reversed'?'Transaction refunded successfully.':($transaction->failure_message??'Refund requires provider reconciliation.'));
+ }
  public function enableService(Service $s){if(!$s->category || $s->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');$s->update(['enabled'=>true]);return back()->with('success','Service enabled.');}
  public function disableService(Service $s){if(!$s->category || $s->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');$s->update(['enabled'=>false]);return back()->with('success','Service disabled.');}
  public function bootstrap(VtuServiceRegistry $r){$r->bootstrapCatalogue();return back()->with('success','VTU service registry synchronized.');}
