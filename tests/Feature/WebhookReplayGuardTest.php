@@ -57,6 +57,20 @@ class WebhookReplayGuardTest extends TestCase
         $guard->claim($provider, 'evt_integrity', '{"amount":999}');
     }
 
+    public function test_only_one_concurrent_webhook_handler_can_begin_processing(): void
+    {
+        $provider = $this->provider();
+        $guard = app(WebhookReplayGuard::class);
+        $receipt = $guard->claim($provider, 'evt_processing', '{"ok":true}');
+
+        $this->assertTrue($guard->beginProcessing($receipt));
+        $this->assertFalse($guard->beginProcessing($receipt->fresh()));
+        $this->assertDatabaseHas('webhook_receipts', [
+            'id' => $receipt->id,
+            'status' => 'processing',
+        ]);
+    }
+
     public function test_webhook_event_can_be_marked_processed_or_failed(): void
     {
         $provider = $this->provider();
