@@ -68,7 +68,9 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 $status >= 500 ? 'UNKNOWN' : 'FAILED',
                 message: 'Provider HTTP '.$status,
                 retryable: $status >= 500,
-                duplicateRisk: $operation === 'transaction_initiation'
+                // Definitive 4xx rejections are safe to fail over. Only an
+                // uncertain 5xx response carries duplicate risk.
+                duplicateRisk: $operation === 'transaction_initiation' && $status >= 500
             );
         } catch (\Throwable $e) {
             return new ProviderResult(
