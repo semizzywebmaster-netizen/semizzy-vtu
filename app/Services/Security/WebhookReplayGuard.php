@@ -62,11 +62,14 @@ class WebhookReplayGuard
         return DB::transaction(function () use ($receipt): bool {
             $locked = WebhookReceipt::query()->lockForUpdate()->findOrFail($receipt->id);
 
-            if ($locked->status !== 'received') {
+            if (! in_array($locked->status, ['received', 'failed'], true)) {
                 return false;
             }
 
-            $locked->forceFill(['status' => 'processing'])->save();
+            $locked->forceFill([
+                'status' => 'processing',
+                'processing_error' => null,
+            ])->save();
 
             return true;
         });
