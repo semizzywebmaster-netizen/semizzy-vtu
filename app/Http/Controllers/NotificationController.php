@@ -34,12 +34,17 @@ class NotificationController extends Controller
 
     public function markRead(Request $request, string $notification): RedirectResponse
     {
+        $record = $request->user()->notifications()->whereKey($notification)->first();
+
+        abort_unless($record !== null, 404);
+
         try {
-            $record = $request->user()->notifications()->whereKey($notification)->firstOrFail();
             $record->markAsRead();
+
             return back()->with('success', 'Notification marked as read.');
         } catch (\Throwable $e) {
             report($e);
+
             return back()->with('error', 'Notification could not be marked as read safely.');
         }
     }
