@@ -91,6 +91,101 @@ class VtuTransactionService{
     return $tx->fresh();
   });
  }
+
+ public function refund(VtuTransaction $tx, string $reason = 'Administrative refund'): VtuTransaction
+ {
+  $claim=DB::transaction(function()use($tx):?string{
+   $locked=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);
+   if($locked->status==='reversed')return null;
+   if($locked->status!=='successful')throw new RuntimeException('Only a successful VTU transaction can be refunded.');
+   $metadata=(array)$locked->metadata;
+   if(($metadata['refund_settlement_applied']??false)===true)return null;
+   if(isset($metadata['refund_claim_token']))return null;
+   $token=(string)Str::uuid();
+   $metadata['refund_claim_token']=$token;
+   $metadata['refund_claimed_at']=now()->toIso8601String();
+   $metadata['refund_reason']=$reason;
+   $locked->metadata=$metadata;
+   $locked->save();
+   return $token;
+  });
+  if($claim===null)return $tx->fresh();
+
+  $r=$this->gateway->refund($tx,$reason);
+
+  return DB::transaction(function()use($tx,$r,$claim,$reason){
+   $locked=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);
+   $metadata=(array)$locked->metadata;
+   if(($metadata['refund_claim_token']??null)!==$claim)return $locked->fresh();
+
+   $providerId=$r->providerId??$locked->api_provider_id;
+   $n=(int)$locked->attempts()->max('attempt_number')+1;
+   $locked->attempts()->create([
+    'api_provider_id'=>$providerId,
+    'attempt_number'=>$n,
+    'operation'=>'refund',
+    'status'=>$r->status,
+    'provider_reference'=>$r->providerReference??$locked->provider_reference,
+    'request_payload'=>[
+     'reference'=>$locked->provider_reference,
+     'transaction_reference'=>$locked->reference,
+     'amount_minor'=>$locked->total_minor,
+     'currency'=>$locked->currency,
+     'reason'=>$reason,
+    ],
+    'response_payload'=>is_array($r->data)?$r->data:null,
+    'error_message'=>$r->message,
+    'started_at'=>now(),
+    'finished_at'=>now(),
+   ]);
+
+   if($r->accepted){
+    $this->wallet->creditRefund($locked);
+    $metadata['refund_settlement_applied']=true;
+    $metadata['refund_settlement_applied_at']=now()->toIso8601String();
+    $metadata['refund_provider_reference']=$r->providerReference;
+    unset($metadata['refund_claim_token'],$metadata['refund_claimed_at']);
+    $locked->metadata=$metadata;
+    $locked->provider_status=$r->status;
+    if($r->providerReference!==null)$locked->provider_reference=$r->providerReference;
+    $locked->status='reversed';
+    $locked->failure_code=null;
+    $locked->failure_message=null;
+    $locked->completed_at=now();
+    $op=$locked->financialOperation()->lockForUpdate()->first();
+    if($op && $op->status==='completed'){
+     $op->status='reversed';
+     $op->provider_reference=$locked->provider_reference;
+     $op->metadata=array_merge((array)$op->metadata,['refund_reference'=>$r->providerReference,'refund_reason'=>$reason]);
+     $op->save();
+    }
+    $locked->save();
+    $this->audit->record('vtu.transaction.refunded',$locked,['reference'=>$locked->reference,'provider_reference'=>$locked->provider_reference,'refund_provider_reference'=>$r->providerReference,'reason'=>$reason,'status'=>'reversed']);
+    $this->syncBulkState($locked);
+    return $locked->fresh();
+   }
+
+   $locked->provider_status=$r->status;
+   if($r->providerReference!==null)$locked->provider_reference=$r->providerReference;
+   if($r->status==='UNKNOWN'||$r->duplicateRisk||$r->status==='PENDING'){
+    $metadata['refund_pending']=true;
+    $metadata['refund_provider_status']=$r->status;
+    $metadata['refund_manual_resolution_required']=true;
+    $locked->failure_code='REFUND_PROVIDER_STATE_UNKNOWN';
+    $locked->failure_message='Provider refund state is uncertain; no wallet credit or retry is allowed until reconciliation.';
+    $locked->metadata=$metadata;
+   }else{
+    unset($metadata['refund_claim_token'],$metadata['refund_claimed_at']);
+    $metadata['refund_failed_at']=now()->toIso8601String();
+    $locked->metadata=$metadata;
+    $locked->failure_code='REFUND_FAILED';
+    $locked->failure_message=$r->message?:'Provider rejected the refund.';
+   }
+   $locked->save();
+   return $locked->fresh();
+  });
+ }
+
  public function recoverStaleInitiationClaim(VtuTransaction $tx, int $staleMinutes = 10): VtuTransaction
  {
   return DB::transaction(function()use($tx,$staleMinutes){
