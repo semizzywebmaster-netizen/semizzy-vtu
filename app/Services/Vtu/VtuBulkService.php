@@ -356,7 +356,7 @@ class VtuBulkService
         ]);
     }
 
-    private function recalculate(VtuBulkOperation $bulk): VtuBulkOperation
+    public function recalculate(VtuBulkOperation $bulk): VtuBulkOperation
     {
         return DB::transaction(function () use ($bulk): VtuBulkOperation {
             $locked = VtuBulkOperation::query()->lockForUpdate()->findOrFail($bulk->id);
