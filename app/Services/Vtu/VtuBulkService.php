@@ -6,6 +6,7 @@ use App\Models\ServiceProduct;
 use App\Models\VtuBulkOperation;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\QueryException;
 
 class VtuBulkService
 {
@@ -44,20 +45,66 @@ class VtuBulkService
             }
         }
         $operationKey = $operationKey ?: 'vtu-bulk-' . Str::uuid();
-        $existing = VtuBulkOperation::query()->where('user_id', $uid)->where('idempotency_key', $operationKey)->first();
+
+        // Bind a caller-supplied bulk idempotency key to the exact normalized
+        // request. This prevents replaying the same key with different work.
+        $fingerprintPayload = array_map(
+            static function (array $item): array {
+                return [
+                    'product_id' => (int) $item['product_id'],
+                    'idempotency_key' => isset($item['idempotency_key']) ? (string) $item['idempotency_key'] : null,
+                    'payload' => (array) ($item['payload'] ?? []),
+                ];
+            },
+            $items
+        );
+        $fingerprint = hash('sha256', json_encode($fingerprintPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+
+        $existing = VtuBulkOperation::query()
+            ->where('user_id', $uid)
+            ->where('idempotency_key', $operationKey)
+            ->first();
 
         if ($existing) {
+            $metadata = (array) $existing->metadata;
+            if (($metadata['request_fingerprint'] ?? null) !== $fingerprint ||
+                (int) $existing->total_items !== count($items)) {
+                throw new \RuntimeException('Bulk idempotency key has already been used for a different request.');
+            }
+
             return $existing->load('items');
         }
 
-        $bulk = VtuBulkOperation::create([
-            'uuid' => (string) Str::uuid(),
-            'reference' => 'BULK-' . strtoupper(Str::random(20)),
-            'user_id' => $uid,
-            'status' => 'processing',
-            'total_items' => count($items),
-            'idempotency_key' => $operationKey,
-        ]);
+        try {
+            $bulk = VtuBulkOperation::create([
+                'uuid' => (string) Str::uuid(),
+                'reference' => 'BULK-' . strtoupper(Str::random(20)),
+                'user_id' => $uid,
+                'status' => 'processing',
+                'total_items' => count($items),
+                'idempotency_key' => $operationKey,
+                'metadata' => ['request_fingerprint' => $fingerprint],
+            ]);
+        } catch (QueryException $e) {
+            // Another concurrent request may have won the unique key race.
+            // Only recover if the durable row proves this is the same request.
+            $existing = VtuBulkOperation::query()
+                ->where('user_id', $uid)
+                ->where('idempotency_key', $operationKey)
+                ->first();
+
+            if (! $existing) {
+                throw $e;
+            }
+
+            $metadata = (array) $existing->metadata;
+            if (($metadata['request_fingerprint'] ?? null) !== $fingerprint ||
+                (int) $existing->total_items !== count($items)) {
+                throw new \RuntimeException('Bulk idempotency key has already been used for a different request.');
+            }
+
+            return $existing->load('items');
+        }
 
         foreach (array_values($items) as $i => $item) {
             $key = (string) ($item['idempotency_key'] ?? ($bulk->reference . ':' . ($i + 1)));
