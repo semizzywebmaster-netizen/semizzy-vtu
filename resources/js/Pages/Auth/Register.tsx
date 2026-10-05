@@ -1,23 +1,24 @@
 import { Head, Link, useForm } from '@inertiajs/react';
+import type { FormEvent } from 'react';
 
 export default function Register() {
   const form = useForm({ name: '', email: '', phone: '', password: '', password_confirmation: '', terms: false });
-  const submit = (e: React.FormEvent) => { e.preventDefault(); form.post('/register'); };
+  const submit = (e: FormEvent) => { e.preventDefault(); form.post('/register'); };
   return <main className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
     <Head title="Create account" />
     <form onSubmit={submit} className="w-full max-w-lg rounded-3xl bg-white p-7 shadow-xl">
       <p className="text-sm font-semibold text-indigo-700">SEMIZZY ONE</p><h1 className="mt-1 text-3xl font-black text-slate-900">Create your account</h1>
       <p className="mt-2 text-sm text-slate-600">Register with your real details. Email verification is required before protected platform access.</p>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <label className="sm:col-span-2"><span className="text-sm font-semibold">Full name</span><input autoComplete="name" className="mt-1 w-full rounded-xl border p-3" value={form.data.name} onChange={e=>form.setData('name',e.target.value)} />{form.errors.name&&<p className="mt-1 text-sm text-red-600">{form.errors.name}</p>}</label>
-        <label><span className="text-sm font-semibold">Email address</span><input autoComplete="email" className="mt-1 w-full rounded-xl border p-3" type="email" value={form.data.email} onChange={e=>form.setData('email',e.target.value)} />{form.errors.email&&<p className="mt-1 text-sm text-red-600">{form.errors.email}</p>}</label>
-        <label><span className="text-sm font-semibold">Phone number</span><input autoComplete="tel" inputMode="tel" className="mt-1 w-full rounded-xl border p-3" placeholder="08012345678" value={form.data.phone} onChange={e=>form.setData('phone',e.target.value)} />{form.errors.phone&&<p className="mt-1 text-sm text-red-600">{form.errors.phone}</p>}</label>
-        <label><span className="text-sm font-semibold">Password</span><input autoComplete="new-password" className="mt-1 w-full rounded-xl border p-3" type="password" value={form.data.password} onChange={e=>form.setData('password',e.target.value)} />{form.errors.password&&<p className="mt-1 text-sm text-red-600">{form.errors.password}</p>}</label>
-        <label><span className="text-sm font-semibold">Confirm password</span><input autoComplete="new-password" className="mt-1 w-full rounded-xl border p-3" type="password" value={form.data.password_confirmation} onChange={e=>form.setData('password_confirmation',e.target.value)} />{form.errors.password_confirmation&&<p className="mt-1 text-sm text-red-600">{form.errors.password_confirmation}</p>}</label>
+        <label className="sm:col-span-2"><span className="text-sm font-semibold">Full name</span><input autoComplete="name" required className="mt-1 w-full rounded-xl border p-3" value={form.data.name} onChange={e=>form.setData('name',e.target.value)} />{form.errors.name&&<p className="mt-1 text-sm text-red-600">{form.errors.name}</p>}</label>
+        <label><span className="text-sm font-semibold">Email address</span><input required autoComplete="email" className="mt-1 w-full rounded-xl border p-3" type="email" value={form.data.email} onChange={e=>form.setData('email',e.target.value)} />{form.errors.email&&<p className="mt-1 text-sm text-red-600">{form.errors.email}</p>}</label>
+        <label><span className="text-sm font-semibold">Phone number</span><input required autoComplete="tel" inputMode="tel" className="mt-1 w-full rounded-xl border p-3" placeholder="08012345678" value={form.data.phone} onChange={e=>form.setData('phone',e.target.value)} />{form.errors.phone&&<p className="mt-1 text-sm text-red-600">{form.errors.phone}</p>}</label>
+        <label><span className="text-sm font-semibold">Password</span><input required autoComplete="new-password" className="mt-1 w-full rounded-xl border p-3" type="password" value={form.data.password} onChange={e=>form.setData('password',e.target.value)} />{form.errors.password&&<p className="mt-1 text-sm text-red-600">{form.errors.password}</p>}</label>
+        <label><span className="text-sm font-semibold">Confirm password</span><input required autoComplete="new-password" className="mt-1 w-full rounded-xl border p-3" type="password" value={form.data.password_confirmation} onChange={e=>form.setData('password_confirmation',e.target.value)} />{form.errors.password_confirmation&&<p className="mt-1 text-sm text-red-600">{form.errors.password_confirmation}</p>}</label>
       </div>
-      <label className="mt-5 flex items-start gap-3 text-sm text-slate-600"><input type="checkbox" checked={form.data.terms} onChange={e=>form.setData('terms',e.target.checked)} className="mt-1" /><span>I agree to the platform terms and confirm the information I provide is accurate.</span></label>
+      <label className="mt-5 flex items-start gap-3 text-sm text-slate-600"><input required type="checkbox" checked={form.data.terms} onChange={e=>form.setData('terms',e.target.checked)} className="mt-1" /><span>I agree to the platform terms and confirm the information I provide is accurate.</span></label>
       {form.errors.terms&&<p className="mt-1 text-sm text-red-600">{form.errors.terms}</p>}
-      <button disabled={form.processing} className="mt-6 w-full rounded-xl bg-slate-900 p-3 font-semibold text-white disabled:opacity-50">{form.processing?'Creating account…':'Create account'}</button>
+      <button type="submit" disabled={form.processing} className="mt-6 w-full rounded-xl bg-slate-900 p-3 font-semibold text-white disabled:opacity-50">{form.processing?'Creating account…':'Create account'}</button>
       <p className="mt-5 text-center text-sm text-slate-600">Already have an account? <Link href="/login" className="font-bold text-indigo-700 hover:underline">Sign in</Link></p>
     </form>
   </main>;
