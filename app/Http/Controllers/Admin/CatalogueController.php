@@ -123,12 +123,12 @@ class CatalogueController extends Controller
             }
         }
 
-        $audit->record('catalogue.sync_all_completed', null, [
+        try { $audit->record('catalogue.sync_all_completed', null, [
             'providers_considered' => $providers->count(),
             'service_syncs_completed' => $processed,
             'products_processed' => $products,
             'failures' => $failures,
-        ], $request);
+        ], $request); } catch (\Throwable $auditException) { report($auditException); }
 
         if ($providers->isEmpty()) {
             return back()->with('error', 'No enabled, verified provider with catalogue retrieval capability is ready for sync.');
