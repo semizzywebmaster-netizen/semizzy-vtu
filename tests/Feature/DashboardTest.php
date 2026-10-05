@@ -65,7 +65,7 @@ class DashboardTest extends TestCase
                 ->where('metrics.0.value', 1)
                 ->where('metrics.1.label', 'Unread notifications')
                 ->where('metrics.1.value', 1)
-                ->has('quickLinks', 4)
+                ->has('quickLinks', 5)
                 ->where('quickLinks.0.url', '/notifications')
             );
     }
