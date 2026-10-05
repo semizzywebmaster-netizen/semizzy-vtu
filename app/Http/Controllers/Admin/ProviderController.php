@@ -36,15 +36,14 @@ class ProviderController extends Controller
 
     public function index(ProviderPresetRegistry $registry): Response
     {
-        // The built-in provider catalogue must be materialized in the database before
-        // the dashboard can display/configure it. Only bootstrap automatically when
-        // the registry is completely empty; never overwrite an existing provider.
-        if (ApiProvider::query()->count() === 0) {
-            try {
-                $registry->install();
-            } catch (\Throwable $e) {
-                report($e);
-            }
+        // Always reconcile the built-in registry before rendering. The installer is
+        // idempotent and preserves administrator-entered credentials and status.
+        // This also repairs deployments where only part of the preset catalogue was
+        // previously imported.
+        try {
+            $registry->install();
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         return Inertia::render('Admin/Providers', [
