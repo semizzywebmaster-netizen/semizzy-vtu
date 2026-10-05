@@ -76,15 +76,35 @@ class VtuBulkService
         }
 
         try {
-            $bulk = VtuBulkOperation::create([
-                'uuid' => (string) Str::uuid(),
-                'reference' => 'BULK-' . strtoupper(Str::random(20)),
-                'user_id' => $uid,
-                'status' => 'processing',
-                'total_items' => count($items),
-                'idempotency_key' => $operationKey,
-                'metadata' => ['request_fingerprint' => $fingerprint],
-            ]);
+            // Initialize the durable operation AND every item row atomically.
+            // This closes a concurrency window where a duplicate caller could
+            // observe the operation after creation but before its items existed.
+            $bulk = \Illuminate\Support\Facades\DB::transaction(function () use ($uid, $operationKey, $fingerprint, $items): VtuBulkOperation {
+                $bulk = VtuBulkOperation::create([
+                    'uuid' => (string) Str::uuid(),
+                    'reference' => 'BULK-' . strtoupper(Str::random(20)),
+                    'user_id' => $uid,
+                    'status' => 'processing',
+                    'total_items' => count($items),
+                    'idempotency_key' => $operationKey,
+                    'metadata' => ['request_fingerprint' => $fingerprint],
+                ]);
+
+                foreach (array_values($items) as $i => $item) {
+                    $key = (string) ($item['idempotency_key'] ?? ($bulk->reference . ':' . ($i + 1)));
+                    $payload = (array) ($item['payload'] ?? []);
+
+                    $bulk->items()->create([
+                        'sequence' => $i + 1,
+                        'idempotency_key' => $key,
+                        'recipient' => $payload['recipient'] ?? $payload['phone'] ?? null,
+                        'product_id' => $item['product_id'],
+                        'status' => 'processing',
+                    ]);
+                }
+
+                return $bulk;
+            });
         } catch (QueryException $e) {
             // Only recover from the unique-key race. Other database failures
             // must surface instead of being misreported as an idempotency hit.
@@ -96,11 +116,13 @@ class VtuBulkService
                 str_contains($message, 'duplicate') ||
                 $driverCode === '1062'
             );
+
             if (! $isDuplicate) {
                 throw $e;
             }
-            // Another concurrent request may have won the unique key race.
-            // Only recover if the durable row proves this is the same request.
+
+            // The winning transaction committed the operation and all item
+            // rows together, so a recovered idempotent response is complete.
             $existing = VtuBulkOperation::query()
                 ->where('user_id', $uid)
                 ->where('idempotency_key', $operationKey)
