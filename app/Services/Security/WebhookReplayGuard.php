@@ -11,6 +11,8 @@ use RuntimeException;
 
 class WebhookReplayGuard
 {
+    private const PROCESSING_LEASE_MINUTES = 10;
+
     public function claim(ApiProvider $provider, string $eventId, string $payload, ?string $signature = null): WebhookReceipt
     {
         $eventId = trim($eventId);
@@ -62,12 +64,19 @@ class WebhookReplayGuard
         return DB::transaction(function () use ($receipt): bool {
             $locked = WebhookReceipt::query()->lockForUpdate()->findOrFail($receipt->id);
 
-            if (! in_array($locked->status, ['received', 'failed'], true)) {
+            if ($locked->status === 'processing') {
+                $started = $locked->processing_started_at;
+                if (! $started || now()->lt($started->copy()->addMinutes(self::PROCESSING_LEASE_MINUTES))) {
+                    return false;
+                }
+            } elseif (! in_array($locked->status, ['received', 'failed'], true)) {
                 return false;
             }
 
             $locked->forceFill([
                 'status' => 'processing',
+                'processing_started_at' => now(),
+                'processing_token' => (string) Str::uuid(),
                 'processing_error' => null,
             ])->save();
 
@@ -75,33 +84,60 @@ class WebhookReplayGuard
         });
     }
 
-    public function markProcessed(WebhookReceipt $receipt): WebhookReceipt
+    public function processingToken(WebhookReceipt $receipt): string
     {
-        if ($receipt->status === 'processed') {
-            return $receipt;
+        $token = trim((string) $receipt->processing_token);
+        if ($token === '') {
+            throw new RuntimeException('Webhook processing claim is missing.');
         }
 
-        $receipt->forceFill([
-            'status' => 'processed',
-            'processed_at' => now(),
-            'processing_error' => null,
-        ])->save();
-
-        return $receipt->refresh();
+        return $token;
     }
 
-    public function markFailed(WebhookReceipt $receipt, string $error): WebhookReceipt
+    public function markProcessed(WebhookReceipt $receipt, ?string $token = null): WebhookReceipt
+    {
+        return DB::transaction(function () use ($receipt, $token): WebhookReceipt {
+            $locked = WebhookReceipt::query()->lockForUpdate()->findOrFail($receipt->id);
+            if ($locked->status === 'processed') {
+                return $locked;
+            }
+            if ($locked->status !== 'processing' || ($token !== null && ! hash_equals((string) $locked->processing_token, $token))) {
+                return $locked;
+            }
+
+            $locked->forceFill([
+                'status' => 'processed',
+                'processing_started_at' => null,
+                'processing_token' => null,
+                'processed_at' => now(),
+                'processing_error' => null,
+            ])->save();
+
+            return $locked->fresh();
+        });
+    }
+
+    public function markFailed(WebhookReceipt $receipt, string $error, ?string $token = null): WebhookReceipt
     {
         $safeError = trim($error);
         $safeError = $safeError === '' ? 'Webhook processing failed.' : $safeError;
         $safeError = preg_replace('/(?:authorization|x-api-key|api[_-]?key|token|secret|password)\s*[:=]\s*[^,;]+/i', '$1: [REDACTED]', $safeError) ?? 'Webhook processing failed.';
 
-        $receipt->forceFill([
-            'status' => 'failed',
-            'processing_error' => Str::limit($safeError, 2000, ''),
-        ])->save();
+        return DB::transaction(function () use ($receipt, $safeError, $token): WebhookReceipt {
+            $locked = WebhookReceipt::query()->lockForUpdate()->findOrFail($receipt->id);
+            if ($locked->status !== 'processing' || ($token !== null && ! hash_equals((string) $locked->processing_token, $token))) {
+                return $locked;
+            }
 
-        return $receipt->refresh();
+            $locked->forceFill([
+                'status' => 'failed',
+                'processing_started_at' => null,
+                'processing_token' => null,
+                'processing_error' => Str::limit($safeError, 2000, ''),
+            ])->save();
+
+            return $locked->fresh();
+        });
     }
 
     private function isDuplicateKey(QueryException $e): bool
