@@ -32,7 +32,8 @@ class VtuAdminController extends Controller{
    'enabled'=>'nullable|boolean',
   ]);
   $provider=ApiProvider::findOrFail($data['api_provider_id']);
-  $service=Service::findOrFail($data['service_id']);
+  $service=Service::with('category')->findOrFail($data['service_id']);
+  if(!$service->category || $service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can have VTU provider mappings.');
   if($data['enabled']??false){
    if(!$provider->enabled || $provider->paused || $provider->verification_status!=='live_verified' || $provider->integration_status!=='live_verified')
     return back()->with('error','A mapping can only be enabled for an enabled, unpaused, live-verified provider.');
@@ -72,7 +73,7 @@ class VtuAdminController extends Controller{
   return back()->with('success',"Bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
  }
  public function transactions(Request $r){$q=VtuTransaction::with(['user','service','product','provider'])->latest();foreach(['status','service_id','api_provider_id','user_id'] as $f)if($r->filled($f))$q->where($f,$r->input($f));return Inertia::render('Admin/VTU/Transactions',['transactions'=>$q->paginate(50)->withQueryString()]);}
- public function requery(VtuTransaction $t,VtuTransactionService $s){$s->requery($t);return back()->with('success','Transaction requery completed.');}
+ public function requery(VtuTransaction $transaction,VtuTransactionService $s){$s->requery($transaction);return back()->with('success','Transaction requery completed.');}
  public function enableService(Service $s){if(!$s->category || $s->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');$s->update(['enabled'=>true]);return back()->with('success','Service enabled.');}
  public function disableService(Service $s){if(!$s->category || $s->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');$s->update(['enabled'=>false]);return back()->with('success','Service disabled.');}
  public function bootstrap(VtuServiceRegistry $r){$r->bootstrapCatalogue();return back()->with('success','VTU service registry synchronized.');}
