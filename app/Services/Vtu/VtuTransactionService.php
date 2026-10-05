@@ -147,7 +147,6 @@ class VtuTransactionService{
     unset($metadata['refund_claim_token'],$metadata['refund_claimed_at']);
     $locked->metadata=$metadata;
     $locked->provider_status=$r->status;
-    if($r->providerReference!==null)$locked->provider_reference=$r->providerReference;
     $locked->status='reversed';
     $locked->failure_code=null;
     $locked->failure_message=null;
@@ -155,7 +154,6 @@ class VtuTransactionService{
     $op=$locked->financialOperation()->lockForUpdate()->first();
     if($op && $op->status==='completed'){
      $op->status='reversed';
-     $op->provider_reference=$locked->provider_reference;
      $op->metadata=array_merge((array)$op->metadata,['refund_reference'=>$r->providerReference,'refund_reason'=>$reason]);
      $op->save();
     }
