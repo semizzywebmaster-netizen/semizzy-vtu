@@ -1,1 +1,1 @@
-Production frontend rebuild trigger for SEMIZZY ONE VTU admin build. Safe deployment marker.
+VTU admin UI rebuild trigger 2026-10-05.
