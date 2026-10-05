@@ -113,104 +113,134 @@ class VtuBulkService
                         'metadata' => ['request_fingerprint' => $fingerprint],
                     ]);
 
-                    foreach ($items as $i => $item) {
-                        $key = (string) ($item['idempotency_key'] ?? ($bulk->reference . ':' . ($i + 1)));
-
-                        $bulk->items()->create([
-                            'sequence' => $i + 1,
-                            'idempotency_key' => $key,
-                            'recipient' => (($item['payload'] ?? [])['recipient'] ?? ($item['payload'] ?? [])['phone'] ?? null),
-                            'product_id' => (int) $item['product_id'],
-                            'status' => 'processing',
-                        ]);
-                    }
-
-                    return $bulk;
-                });
-            } catch (QueryException $e) {
-                if (!$this->isUniqueConstraintViolation($e)) {
-                    throw $e;
-                }
-
-                // Another request won the unique idempotency race. Its operation
-                // and all item rows were committed atomically.
-                $bulk = VtuBulkOperation::query()
-                    ->where('user_id', $uid)
-                    ->where('idempotency_key', $operationKey)
-                    ->first();
-
-                if (!$bulk) {
-                    throw $e;
-                }
-
-                $this->assertFingerprintMatches($bulk, $fingerprint, count($items));
-
-                if (in_array($bulk->status, ['successful', 'failed', 'partial'], true)) {
-                    return $bulk->load('items');
-                }
-
-                $bulk->load('items');
-            }
+                    [$leaseAcquired, $leaseToken] = $this->acquireWorkerLease($bulk);
+        if (!$leaseAcquired) {
+            return $bulk->fresh('items');
         }
 
-        foreach ($items as $i => $item) {
-            $row = $bulk->items->firstWhere('sequence', $i + 1);
+        try {
+            foreach ($items as $i => $item) {
+                $this->heartbeatWorkerLease($bulk, $leaseToken);
 
-            if (!$row) {
-                // This should only be possible after a corrupted/manual database change.
-                throw new \RuntimeException('Bulk operation item records are incomplete.');
-            }
+                $row = $bulk->items->firstWhere('sequence', $i + 1);
 
-            if (in_array($row->status, ['successful', 'failed', 'reversed', 'cancelled'], true)) {
-                continue;
-            }
-
-            $key = (string) ($item['idempotency_key'] ?? ($bulk->reference . ':' . ($i + 1)));
-            $payload = (array) ($item['payload'] ?? []);
-
-            try {
-                $product = ServiceProduct::query()->with('service')->findOrFail((int) $item['product_id']);
-
-                if (!$product->service || !$product->enabled || !$product->service->enabled) {
-                    throw new \RuntimeException('The selected VTU product or service is unavailable.');
+                if (!$row) {
+                    throw new \RuntimeException('Bulk operation item records are incomplete.');
                 }
 
-                $this->validator->validate($product->service, $payload);
+                if (in_array($row->status, ['successful', 'failed', 'reversed', 'cancelled'], true)) {
+                    continue;
+                }
 
-                $transaction = $this->transactions->process(
-                    $this->transactions->create($uid, $product, $payload, $tier, $key),
-                );
+                $key = (string) ($item['idempotency_key'] ?? ($bulk->reference . ':' . ($i + 1)));
+                $payload = (array) ($item['payload'] ?? []);
 
-                $this->syncItemFromTransaction($row, $transaction);
-            } catch (\Throwable $e) {
-                Log::warning('VTU bulk item processing failed.', [
-                    'bulk_operation_id' => $bulk->id,
-                    'bulk_item_id' => $row->id,
-                    'user_id' => $uid,
-                    'exception' => get_class($e),
-                ]);
+                try {
+                    $product = ServiceProduct::query()->with('service')->findOrFail((int) $item['product_id']);
 
-                // Never manufacture a failed financial outcome when a transaction
-                // already exists and its provider state may still be uncertain.
-                $transaction = VtuTransaction::query()
-                    ->where('idempotency_key', $key)
-                    ->where('user_id', $uid)
-                    ->first();
+                    if (!$product->service || !$product->enabled || !$product->service->enabled) {
+                        throw new \RuntimeException('The selected VTU product or service is unavailable.');
+                    }
 
-                if ($transaction) {
+                    $this->validator->validate($product->service, $payload);
+
+                    $transaction = $this->transactions->process(
+                        $this->transactions->create($uid, $product, $payload, $tier, $key),
+                    );
+
                     $this->syncItemFromTransaction($row, $transaction);
-                } else {
-                    $row->update([
-                        'status' => 'failed',
-                        'error_message' => 'This item could not be processed. Contact support with the bulk reference.',
+                } catch (\Throwable $e) {
+                    Log::warning('VTU bulk item processing failed.', [
+                        'bulk_operation_id' => $bulk->id,
+                        'bulk_item_id' => $row->id,
+                        'user_id' => $uid,
+                        'exception' => get_class($e),
                     ]);
+
+                    $transaction = VtuTransaction::query()
+                        ->where('idempotency_key', $key)
+                        ->where('user_id', $uid)
+                        ->first();
+
+                    if ($transaction) {
+                        $this->syncItemFromTransaction($row, $transaction);
+                    } else {
+                        $row->update([
+                            'status' => 'failed',
+                            'error_message' => 'This item could not be processed. Contact support with the bulk reference.',
+                        ]);
+                    }
                 }
             }
+        } finally {
+            $this->releaseWorkerLease($bulk, $leaseToken);
         }
 
         return $this->recalculate($bulk->fresh('items'));
+
+    private const WORKER_LEASE_MINUTES = 15;
+
+    private function acquireWorkerLease(VtuBulkOperation $bulk): array
+    {
+        return DB::transaction(function () use ($bulk): array {
+            $locked = VtuBulkOperation::query()->lockForUpdate()->findOrFail($bulk->id);
+            if (in_array($locked->status, ['successful', 'failed', 'partial'], true)) {
+                return [false, null];
+            }
+
+            $metadata = (array) $locked->metadata;
+            $until = $metadata['worker_lease_until'] ?? null;
+            if ($until && now()->lt(\Illuminate\SupportCarbon::parse($until))) {
+                return [false, null];
+            }
+
+            $token = (string) Str::uuid();
+            $metadata['worker_lease_token'] = $token;
+            $metadata['worker_lease_until'] = now()->addMinutes(self::WORKER_LEASE_MINUTES)->toIso8601String();
+            $metadata['worker_lease_started_at'] = now()->toIso8601String();
+            $locked->metadata = $metadata;
+            $locked->status = 'processing';
+            $locked->save();
+
+            return [true, $token];
+        });
     }
 
+    private function heartbeatWorkerLease(VtuBulkOperation $bulk, string $token): void
+    {
+        $locked = VtuBulkOperation::query()->find($bulk->id);
+        if (!$locked) {
+            throw new \RuntimeException('Bulk operation no longer exists.');
+        }
+
+        $metadata = (array) $locked->metadata;
+        if (($metadata['worker_lease_token'] ?? null) !== $token) {
+            throw new \RuntimeException('Bulk worker lease was lost.');
+        }
+
+        $metadata['worker_lease_until'] = now()->addMinutes(self::WORKER_LEASE_MINUTES)->toIso8601String();
+        $metadata['worker_heartbeat_at'] = now()->toIso8601String();
+        $locked->metadata = $metadata;
+        $locked->save();
+    }
+
+    private function releaseWorkerLease(VtuBulkOperation $bulk, string $token): void
+    {
+        $locked = VtuBulkOperation::query()->find($bulk->id);
+        if (!$locked) {
+            return;
+        }
+
+        $metadata = (array) $locked->metadata;
+        if (($metadata['worker_lease_token'] ?? null) !== $token) {
+            return;
+        }
+
+        unset($metadata['worker_lease_token'], $metadata['worker_lease_until']);
+        $metadata['worker_released_at'] = now()->toIso8601String();
+        $locked->metadata = $metadata;
+        $locked->save();
+    }
 
     public function recoverStaleOperations(int $limit = 50, int $staleMinutes = 10): int
     {
@@ -223,6 +253,12 @@ class VtuBulkService
             ->get();
 
         foreach ($operations as $bulk) {
+            $metadata = (array) $bulk->metadata;
+            if (!empty($metadata['worker_lease_until']) &&
+                now()->lt(\Illuminate\SupportCarbon::parse($metadata['worker_lease_until']))) {
+                continue;
+            }
+
             $items = $bulk->items()->whereIn('status', ['processing', 'pending'])->get();
             foreach ($items as $item) {
                 $key = (string) $item->idempotency_key;
