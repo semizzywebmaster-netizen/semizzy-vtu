@@ -94,22 +94,40 @@ class UserController extends Controller
     public function update(Request $request, User $user, AuditLogger $audit): RedirectResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
-            'username' => ['required', 'string', 'min:3', 'max:40', 'regex:/^[a-zA-Z0-9._]+$/', 'unique:users,username,'.$user->id],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'role' => ['required', 'in:ADMIN,STAFF,SUPPORT,USER'],
-            'status' => ['required', 'in:active,suspended,disabled'],
-            'tier' => ['required', 'integer', 'in:1,2,3,4'],
-            'account_type' => ['required', 'in:personal,merchant'],
-            'business_name' => ['nullable', 'string', 'max:180'],
-            'business_registration_number' => ['nullable', 'string', 'max:100'],
-            'business_type' => ['nullable', 'string', 'max:100'],
-            'business_address' => ['nullable', 'string', 'max:500'],
-            'business_state' => ['nullable', 'string', 'max:100'],
-            'business_country' => ['nullable', 'string', 'max:100'],
+            'name' => ['sometimes', 'required', 'string', 'max:120'],
+            'username' => ['sometimes', 'required', 'string', 'min:3', 'max:40', 'regex:/^[a-zA-Z0-9._]+$/', 'unique:users,username,'.$user->id],
+            'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,'.$user->id],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
+            'role' => ['sometimes', 'required', 'in:ADMIN,STAFF,SUPPORT,USER'],
+            'status' => ['sometimes', 'required', 'in:active,suspended,disabled'],
+            'tier' => ['sometimes', 'required', 'integer', 'in:1,2,3,4'],
+            'account_type' => ['sometimes', 'required', 'in:personal,merchant'],
+            'business_name' => ['sometimes', 'nullable', 'string', 'max:180'],
+            'business_registration_number' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'business_type' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'business_address' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'business_state' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'business_country' => ['sometimes', 'nullable', 'string', 'max:100'],
             'password' => ['nullable', 'string', 'min:8', 'max:72'],
         ]);
+
+        $data = array_merge([
+            'name' => $user->name,
+            'username' => $user->username,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'role' => $user->role,
+            'status' => $user->status,
+            'tier' => max(1, min(4, (int) $user->tier)),
+            'account_type' => $user->account_type ?? 'personal',
+            'business_name' => $user->business_name,
+            'business_registration_number' => $user->business_registration_number,
+            'business_type' => $user->business_type,
+            'business_address' => $user->business_address,
+            'business_state' => $user->business_state,
+            'business_country' => $user->business_country,
+            'password' => null,
+        ], $data);
 
         try {
             abort_if(
