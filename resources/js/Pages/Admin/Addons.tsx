@@ -114,9 +114,9 @@ export default function Addons({ addons }: Props) {
               <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Addon Manager</h1>
               <p className="mt-2 text-sm text-slate-600">Register, validate, install, activate, disable, and archive Core addons.</p>
             </div>
-            {vtuAction && (vtuAction.url === '/admin/vtu' ? <Link href="/admin/vtu" className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Open VTU Dashboard</Link> : <button type="button" disabled={Boolean(processing) || Boolean(vtuAddon && busyStatuses.has(vtuAddon.status))} onClick={() => action(vtuAction.url, vtuAction.key)} className={`rounded-xl ${vtuAction.className} px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60`}>{processing === vtuAction.key ? `${vtuAction.label}…` : vtuAction.label}</button>)}
+            {vtuAddon?.status === 'active' && <Link href="/admin/vtu" className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Open VTU Dashboard</Link>}
             <button disabled={Boolean(processing)} onClick={() => setShowRegister((v) => !v)} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">
-              {showRegister ? 'Close' : '+ Register addon'}
+              {showRegister ? 'Close Register Addon' : 'Register Addon'}
             </button>
           </div>
 
@@ -139,7 +139,7 @@ export default function Addons({ addons }: Props) {
               ].map(([name, label, placeholder]) => (
                 <label key={name} className="text-sm font-semibold text-slate-700">
                   {label}
-                  <input name={name} placeholder={placeholder} required={name === 'identifier' || name === 'name' || name === 'version'}
+                  <input name={name} defaultValue={placeholder} placeholder={placeholder} required={name === 'identifier' || name === 'name' || name === 'version'}
                     className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 font-normal outline-none focus:border-slate-500" />
                 </label>
               ))}
