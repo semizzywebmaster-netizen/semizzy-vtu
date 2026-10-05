@@ -40,7 +40,7 @@ class VtuTransactionService{
  public function requery(VtuTransaction $tx):VtuTransaction{
   if($tx->isTerminal())return $tx;
   if(!$tx->provider_reference)throw new RuntimeException('Cannot requery without a provider reference.');
-  $claim=DB::transaction(function()use($tx,$reason):?string{
+  $claim=DB::transaction(function()use($tx):?string{
     $locked=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);
     if($locked->isTerminal()||!$locked->provider_reference)return null;
     $metadata=(array)$locked->metadata;
@@ -94,7 +94,7 @@ class VtuTransactionService{
 
  public function refund(VtuTransaction $tx, string $reason = 'Administrative refund'): VtuTransaction
  {
-  $claim=DB::transaction(function()use($tx):?string{
+  $claim=DB::transaction(function()use($tx,$reason):?string{
    $locked=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);
    if($locked->status==='reversed')return null;
    if($locked->status!=='successful')throw new RuntimeException('Only a successful VTU transaction can be refunded.');
