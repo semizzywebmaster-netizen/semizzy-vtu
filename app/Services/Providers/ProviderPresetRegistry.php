@@ -66,8 +66,10 @@ final class ProviderPresetRegistry
                         'priority' => $definition['priority'] ?? 100,
                     ])->save();
                 } else {
+                    $providerData = $definition;
+                    unset($providerData['mappings']);
                     $provider = ApiProvider::create([
-                        ...$definition,
+                        ...$providerData,
                         'environment' => 'sandbox',
                         'credentials' => [],
                         'enabled' => false,
