@@ -45,18 +45,23 @@ class SystemSettingsController extends Controller
         ];
 
         try {
-        foreach (self::KEYS as $key) {
-            SystemSetting::query()->updateOrCreate(
-                ['key' => $key],
-                ['value' => $data[$key] ?? null, 'type' => $types[$key], 'is_secret' => false],
-            );
+            foreach (self::KEYS as $key) {
+                SystemSetting::query()->updateOrCreate(
+                    ['key' => $key],
+                    ['value' => $data[$key] ?? null, 'type' => $types[$key], 'is_secret' => false],
+                );
+            }
+
+            try {
+                $audit->record('admin.system_settings.updated', null, ['setting_keys' => self::KEYS], $request);
+            } catch (\Throwable $auditException) {
+                report($auditException);
+            }
+
+            return back()->with('success', 'System settings saved.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'System settings could not be saved safely.');
         }
-
-        }
-        $audit->record('admin.system_settings.updated', null, ['setting_keys' => self::KEYS], $request);
-
-        } catch (\Throwable $e) { report($e); return back()->with('error', 'System settings could not be saved safely.'); }
-
-        return back()->with('success', 'System settings saved.');
     }
 }
