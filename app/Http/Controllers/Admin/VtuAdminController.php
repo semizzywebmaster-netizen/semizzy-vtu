@@ -52,6 +52,12 @@ class VtuAdminController extends Controller
   return Inertia::render('Admin/VTU/Mappings',compact('mappings','providers','services'));
  }
 
+ public function bulkToggleMappings(Request $r, AuditLogger $audit){
+  $data=$r->validate(['mapping_ids'=>['required','array','min:1','max:100'],'mapping_ids.*'=>['integer','distinct','exists:provider_service_mappings,id'],'enabled'=>['required','boolean']]);$changed=0;$skipped=0;
+  foreach(ProviderServiceMapping::query()->whereIn('id',$data['mapping_ids'])->with(['provider','service.category'])->get() as $mapping){$provider=$mapping->provider;$service=$mapping->service;if(!$provider||!$service||!$service->category||$service->category->key!=='vtu-digital-services'||($data['enabled']&&(!$provider->enabled||$provider->paused||$provider->verification_status!=='live_verified'||$provider->integration_status!=='live_verified'||!$service->enabled))){$skipped++;continue;}$mapping->update(['enabled'=>$data['enabled']]);$changed++;$audit->record($data['enabled']?'vtu.provider_mapping.enabled':'vtu.provider_mapping.disabled',$mapping,['bulk'=>true],$r);}
+  return back()->with('success',"Bulk mapping update completed: {$changed} changed, {$skipped} skipped.");
+ }
+
  public function saveMapping(Request $r, AuditLogger $audit){
   $data=$r->validate([
    'api_provider_id'=>'required|integer|exists:api_providers,id',
