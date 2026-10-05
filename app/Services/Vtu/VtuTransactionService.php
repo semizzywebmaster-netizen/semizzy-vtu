@@ -36,7 +36,59 @@ class VtuTransactionService{
 
   $r=$this->gateway->initiate($tx,$tx->request_payload??[]);
   return DB::transaction(function()use($tx,$r){$tx=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);if($tx->isTerminal())return $tx;$providerId=$r->providerId??$tx->api_provider_id;if($providerId!==null)$tx->api_provider_id=$providerId;$n=(int)$tx->attempts()->max('attempt_number')+1;$tx->attempts()->create(['api_provider_id'=>$providerId,'attempt_number'=>$n,'operation'=>'transaction_initiation','status'=>$r->status,'provider_reference'=>$r->providerReference,'request_payload'=>$tx->request_payload,'response_payload'=>is_array($r->data)?$r->data:null,'error_message'=>$r->message,'started_at'=>now(),'finished_at'=>now()]);$tx->provider_reference=$r->providerReference;$tx->provider_status=$r->status;$tx->response_payload=is_array($r->data)?$r->data:null;if($r->accepted){$tx->status='successful';$tx->completed_at=now();$this->finishFinancial($tx,true);}elseif($r->status==='PENDING'){$tx->status='pending';}elseif($r->status==='UNKNOWN'||$r->duplicateRisk){$tx->status='pending';$tx->failure_code='UNKNOWN_PROVIDER_STATE';$tx->failure_message='Provider state is uncertain; requery is required before retry or reversal.';}else{$tx->status='failed';$tx->failure_message=$r->message?:'Provider rejected the transaction.';$this->finishFinancial($tx,false);$tx->completed_at=now();}$tx->save();$this->syncBulkState($tx);return $tx->fresh();});}
- public function requery(VtuTransaction $tx):VtuTransaction{if($tx->isTerminal())return $tx;if(!$tx->provider_reference)throw new RuntimeException('Cannot requery without a provider reference.');$r=$this->gateway->requery($tx);return DB::transaction(function()use($tx,$r){$tx=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);if($tx->isTerminal())return $tx;$providerId=$r->providerId??$tx->api_provider_id;$n=(int)$tx->attempts()->max('attempt_number')+1;$tx->attempts()->create(['api_provider_id'=>$providerId,'attempt_number'=>$n,'operation'=>'transaction_status','status'=>$r->status,'provider_reference'=>$r->providerReference??$tx->provider_reference,'request_payload'=>['reference'=>$tx->provider_reference,'transaction_reference'=>$tx->reference],'response_payload'=>is_array($r->data)?$r->data:null,'error_message'=>$r->message,'started_at'=>now(),'finished_at'=>now()]);$tx->provider_status=$r->status;$tx->response_payload=is_array($r->data)?$r->data:$tx->response_payload;if($r->accepted){$tx->status='successful';$tx->completed_at=now();$this->finishFinancial($tx,true);}elseif($r->status==='UNKNOWN'||$r->duplicateRisk){$tx->status='pending';$tx->failure_code='UNKNOWN_PROVIDER_STATE';$tx->failure_message='Provider state is uncertain; requery is required before retry or reversal.';}elseif($r->status==='FAILED'){$tx->status='failed';$tx->failure_message=$r->message?:'Provider reports failure.';$tx->completed_at=now();$this->finishFinancial($tx,false);}else{$tx->status='pending';}$tx->save();$this->syncBulkState($tx);return $tx->fresh();});}
+ public function requery(VtuTransaction $tx):VtuTransaction{
+  if($tx->isTerminal())return $tx;
+  if(!$tx->provider_reference)throw new RuntimeException('Cannot requery without a provider reference.');
+  $claim=DB::transaction(function()use($tx):?string{
+    $locked=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);
+    if($locked->isTerminal()||!$locked->provider_reference)return null;
+    $metadata=(array)$locked->metadata;
+    $leaseUntil=$metadata['requery_claim_until']??null;
+    if($leaseUntil&&now()->lt(\Illuminate\Support\Carbon::parse($leaseUntil)))return null;
+    $token=(string)Str::uuid();
+    $metadata['requery_claim_token']=$token;
+    $metadata['requery_claimed_at']=now()->toIso8601String();
+    $metadata['requery_claim_until']=now()->addMinutes(5)->toIso8601String();
+    $locked->metadata=$metadata;
+    $locked->save();
+    return $token;
+  });
+  if($claim===null)return $tx->fresh();
+  try{$r=$this->gateway->requery($tx);}catch(\Throwable $e){
+    DB::transaction(function()use($tx,$claim){
+      $locked=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);
+      $metadata=(array)$locked->metadata;
+      if(($metadata['requery_claim_token']??null)===$claim){
+        unset($metadata['requery_claim_token'],$metadata['requery_claimed_at'],$metadata['requery_claim_until']);
+        $locked->metadata=$metadata;
+        $locked->failure_code='UNKNOWN_PROVIDER_STATE';
+        $locked->failure_message='Provider requery failed; transaction remains pending until the next reconciliation attempt.';
+        $locked->save();
+      }
+    });
+    throw $e;
+  }
+  return DB::transaction(function()use($tx,$r,$claim){
+    $tx=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);
+    if($tx->isTerminal())return $tx;
+    $metadata=(array)$tx->metadata;
+    if(($metadata['requery_claim_token']??null)!==$claim)return $tx;
+    unset($metadata['requery_claim_token'],$metadata['requery_claimed_at'],$metadata['requery_claim_until']);
+    $tx->metadata=$metadata;
+    $providerId=$r->providerId??$tx->api_provider_id;
+    $n=(int)$tx->attempts()->max('attempt_number')+1;
+    $tx->attempts()->create(['api_provider_id'=>$providerId,'attempt_number'=>$n,'operation'=>'transaction_status','status'=>$r->status,'provider_reference'=>$r->providerReference??$tx->provider_reference,'request_payload'=>['reference'=>$tx->provider_reference,'transaction_reference'=>$tx->reference],'response_payload'=>is_array($r->data)?$r->data:null,'error_message'=>$r->message,'started_at'=>now(),'finished_at'=>now()]);
+    $tx->provider_status=$r->status;
+    $tx->response_payload=is_array($r->data)?$r->data:$tx->response_payload;
+    if($r->accepted){$tx->status='successful';$tx->completed_at=now();$this->finishFinancial($tx,true);}
+    elseif($r->status==='UNKNOWN'||$r->duplicateRisk){$tx->status='pending';$tx->failure_code='UNKNOWN_PROVIDER_STATE';$tx->failure_message='Provider state is uncertain; requery is required before retry or reversal.';}
+    elseif($r->status==='FAILED'){$tx->status='failed';$tx->failure_message=$r->message?:'Provider reports failure.';$tx->completed_at=now();$this->finishFinancial($tx,false);}
+    else{$tx->status='pending';}
+    $tx->save();
+    $this->syncBulkState($tx);
+    return $tx->fresh();
+  });
+ }
  private function syncBulkState(VtuTransaction $tx):void{$item=VtuBulkOperationItem::query()->where('vtu_transaction_id',$tx->id)->first();if(!$item)return;$item->update(['status'=>$tx->status,'amount_minor'=>$tx->total_minor,'error_message'=>$tx->failure_message]);$bulk=$item->bulk()->lockForUpdate()->first();if(!$bulk)return;$successful=$bulk->items()->where('status','successful')->count();$failed=$bulk->items()->whereIn('status',['failed','reversed','cancelled'])->count();$pending=max(0,$bulk->total_items-$successful-$failed);$bulk->successful_items=$successful;$bulk->failed_items=$failed;$bulk->processed_items=$successful+$failed;$bulk->status=match(true){$pending>0=>'pending',$failed>0&&$successful>0=>'partial',$failed>0=>'failed',default=>'successful'};$bulk->metadata=array_merge((array)$bulk->metadata,['pending_items'=>$pending]);$bulk->save();}
  private function finishFinancial(VtuTransaction $tx,bool $success):void{$metadata=(array)$tx->metadata;if(($metadata['financial_settlement_applied']??false)===true){return;}$this->wallet->settle($tx,$success);$metadata['financial_settlement_applied']=true;$metadata['financial_settlement_applied_at']=now()->toIso8601String();$tx->metadata=$metadata;$op=$tx->financialOperation()->lockForUpdate()->first();if($op&&!in_array($op->status,['completed','failed','reversed'],true)){$op->status=$success?'completed':'failed';$op->provider_reference=$tx->provider_reference;$op->save();}$this->audit->record('vtu.transaction.'.($success?'successful':'failed'),$tx,['reference'=>$tx->reference,'provider_reference'=>$tx->provider_reference,'status'=>$tx->status]);}
  private function toMinor(string $a):string{if(!preg_match('/^\d+(?:\.\d{1,2})?$/',trim($a)))throw new RuntimeException('Invalid customer price.');[$x,$y]=array_pad(explode('.',trim($a),2),2,'0');$m=$x.str_pad(substr($y,0,2),2,'0');return ltrim($m,'0')?:'0';}
