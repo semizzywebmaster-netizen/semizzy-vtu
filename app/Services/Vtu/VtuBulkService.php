@@ -150,6 +150,8 @@ class VtuBulkService
                 $bulk->load('items');
             }
         }
+    }
+
     private const WORKER_LEASE_MINUTES = 15;
 
     private function acquireWorkerLease(VtuBulkOperation $bulk): array
@@ -162,7 +164,7 @@ class VtuBulkService
 
             $metadata = (array) $locked->metadata;
             $until = $metadata['worker_lease_until'] ?? null;
-            if ($until && now()->lt(\Illuminate\SupportCarbon::parse($until))) {
+            if ($until && now()->lt(\Illuminate\Support\Carbon::parse($until))) {
                 return [false, null];
             }
 
@@ -227,7 +229,7 @@ class VtuBulkService
         foreach ($operations as $bulk) {
             $metadata = (array) $bulk->metadata;
             if (!empty($metadata['worker_lease_until']) &&
-                now()->lt(\Illuminate\SupportCarbon::parse($metadata['worker_lease_until']))) {
+                now()->lt(\Illuminate\Support\Carbon::parse($metadata['worker_lease_until']))) {
                 continue;
             }
 
