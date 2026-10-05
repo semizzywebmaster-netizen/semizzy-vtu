@@ -52,6 +52,33 @@ class VtuProviderGateway
         return $result;
     }
 
+    public function refund(VtuTransaction $tx, string $reason): ProviderResult
+    {
+        if (! $tx->provider_reference) {
+            return new ProviderResult(false, 'UNKNOWN', message: 'Cannot refund without a provider reference.');
+        }
+
+        $provider = $tx->provider;
+
+        if (! $provider) {
+            return new ProviderResult(false, 'UNKNOWN', message: 'Original provider is unavailable; manual refund reconciliation is required.');
+        }
+
+        return $this->providers->executeProvider(
+            $provider,
+            $tx->service->key,
+            'refund',
+            [
+                'reference' => $tx->provider_reference,
+                'transaction_reference' => $tx->reference,
+                'amount_minor' => $tx->total_minor,
+                'currency' => $tx->currency,
+                'reason' => $reason,
+            ],
+            $tx->idempotency_key . ':refund'
+        );
+    }
+
     public function requery(VtuTransaction $tx): ProviderResult
     {
         if (! $tx->provider_reference) {
