@@ -15,10 +15,15 @@ class ProfileController extends Controller
         return Inertia::render('Profile', [
             'user' => [
                 'name' => $user->name,
+                'username' => $user->username,
                 'email' => $user->email,
+                'phone' => $user->phone,
                 'role' => $user->role,
                 'status' => $user->status,
                 'emailVerifiedAt' => $user->email_verified_at?->toISOString(),
+                'phoneVerifiedAt' => $user->phone_verified_at?->toISOString(),
+                'referralCode' => $user->referral_code,
+                'referralLink' => url('/register?ref=' . urlencode((string) $user->referral_code)),
             ],
         ]);
     }
