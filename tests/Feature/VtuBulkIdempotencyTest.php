@@ -66,7 +66,6 @@ class VtuBulkIdempotencyTest extends TestCase
             'total_minor' => '10000',
             'failure_message' => null,
         ]);
-        $tx->id = 123;
 
         $this->mock(VtuPayloadValidator::class, function ($mock): void {
             $mock->shouldReceive('validate')->once();
