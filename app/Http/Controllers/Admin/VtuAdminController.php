@@ -154,12 +154,12 @@ class VtuAdminController extends Controller
   return back()->with('success',"Bulk transaction requery checked {$checked}; {$changed} state change(s), {$skipped} skipped/failed.");
  }
 
- public function requery(VtuTransaction $transaction,VtuTransactionService $s){$s->requery($transaction);return back()->with('success','Transaction requery completed.');}
+ public function requery(VtuTransaction $transaction,VtuTransactionService $s){try{$s->requery($transaction);return back()->with('success','Transaction requery completed.');}catch(\Throwable $e){report($e);return back()->with('error','Transaction requery failed safely.');}}
  public function refund(Request $r,VtuTransaction $transaction,VtuTransactionService $s){
-  $data=$r->validate(['reason'=>['nullable','string','max:500']]);$transaction=$s->refund($transaction,(string)($data['reason']??'Administrative refund'));
+  $data=$r->validate(['reason'=>['nullable','string','max:500']]);try{$transaction=$s->refund($transaction,(string)($data['reason']??'Administrative refund'));}catch(\Throwable $e){report($e);return back()->with('error','Refund could not be completed safely. Check reconciliation state.');}
   return back()->with($transaction->status==='reversed'?'success':'error',$transaction->status==='reversed'?'Transaction refunded successfully.':($transaction->failure_message??'Refund requires provider reconciliation.'));
  }
- public function enableService(Service $service){$service->loadMissing('category');if(!$service->category||$service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');$service->update(['enabled'=>true]);return back()->with('success','Service enabled.');}
- public function disableService(Service $service){$service->loadMissing('category');if(!$service->category||$service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');$service->update(['enabled'=>false]);return back()->with('success','Service disabled.');}
+ public function enableService(Service $service){$service->loadMissing('category');if(!$service->category||$service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');try{$service->updateOrFail(['enabled'=>true]);return back()->with('success','Service enabled.');}catch(\Throwable $e){report($e);return back()->with('error','Service could not be enabled safely.');}}
+ public function disableService(Service $service){$service->loadMissing('category');if(!$service->category||$service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');try{$service->updateOrFail(['enabled'=>false]);return back()->with('success','Service disabled.');}catch(\Throwable $e){report($e);return back()->with('error','Service could not be disabled safely.');}}
  public function bootstrap(VtuServiceRegistry $r){$r->bootstrapCatalogue();return back()->with('success','VTU service registry synchronized.');}
 }
