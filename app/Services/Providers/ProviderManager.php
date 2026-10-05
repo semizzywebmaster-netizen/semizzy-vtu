@@ -88,7 +88,18 @@ class ProviderManager
                 continue;
             }
             $started=microtime(true);
-            $result=$this->rest->execute($provider,$operation,$payload,$idempotencyKey);
+            try {
+                $result=$this->rest->execute($provider,$operation,$payload,$idempotencyKey);
+            } catch (\Throwable $e) {
+                $result=new ProviderResult(
+                    accepted:false,
+                    status:'UNKNOWN',
+                    message:'Provider execution failed; provider state must be requeried before retry.',
+                    retryable:false,
+                    duplicateRisk:$operation==='transaction_initiation',
+                    providerId:$provider->id,
+                );
+            }
             $this->logger->record($provider,$operation,$serviceKey,$result,(int)round((microtime(true)-$started)*1000),$idempotencyKey);
             $result = new ProviderResult(
                 accepted: $result->accepted,
