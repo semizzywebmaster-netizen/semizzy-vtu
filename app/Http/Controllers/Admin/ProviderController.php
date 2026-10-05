@@ -286,21 +286,71 @@ class ProviderController extends Controller
 
     public function toggle(int $provider, AuditLogger $audit, Request $request): RedirectResponse
     {
-        return DB::transaction(function () use ($provider, $audit, $request): RedirectResponse {
-            $provider = ApiProvider::query()->lockForUpdate()->findOrFail($provider);
+        try {
+            $result = DB::transaction(function () use ($provider): array {
+                $providerModel = ApiProvider::query()
+                    ->lockForUpdate()
+                    ->findOrFail($provider);
 
-            if (! $provider->enabled && ($provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
-                return back()->with('error', 'Provider must be live-verified before it can be enabled.');
+                if (
+                    ! $providerModel->enabled
+                    && (
+                        $providerModel->verification_status !== 'live_verified'
+                        || $providerModel->integration_status !== 'live_verified'
+                    )
+                ) {
+                    return [
+                        'ok' => false,
+                        'enabled' => false,
+                        'message' => 'Provider must be live-verified before it can be enabled.',
+                    ];
+                }
+
+                $enabled = ! (bool) $providerModel->enabled;
+
+                $providerModel->forceFill([
+                    'enabled' => $enabled,
+                    'paused' => ! $enabled,
+                ])->saveOrFail();
+
+                return [
+                    'ok' => true,
+                    'enabled' => $enabled,
+                    'provider_id' => $providerModel->id,
+                    'identifier' => $providerModel->identifier,
+                ];
+            });
+
+            if (! $result['ok']) {
+                return back()->with('error', $result['message']);
             }
 
-            $enabled = ! $provider->enabled;
-            $provider->update(['enabled' => $enabled, 'paused' => ! $enabled]);
-            $audit->record($enabled ? 'provider.enabled' : 'provider.disabled', $provider, [
-                'identifier' => $provider->identifier,
-            ], $request);
+            // Audit after the state change commits. A logging/schema problem must
+            // never turn a successful provider status change into a HTTP 500.
+            try {
+                $providerModel = ApiProvider::query()->find($result['provider_id']);
+                $audit->record(
+                    $result['enabled'] ? 'provider.enabled' : 'provider.disabled',
+                    $providerModel,
+                    ['identifier' => $result['identifier']],
+                    $request
+                );
+            } catch (\\Throwable $auditException) {
+                report($auditException);
+            }
 
-            return back()->with('success', 'Provider status updated.');
-        });
+            return back()->with(
+                'success',
+                $result['enabled'] ? 'Provider enabled successfully.' : 'Provider disabled successfully.'
+            );
+        } catch (\\Throwable $e) {
+            report($e);
+
+            return back()->with(
+                'error',
+                'Provider status update failed safely. Check the provider record and server error log.'
+            );
+        }
     }
 
     public function destroy(int $provider, AuditLogger $audit, Request $request): RedirectResponse
