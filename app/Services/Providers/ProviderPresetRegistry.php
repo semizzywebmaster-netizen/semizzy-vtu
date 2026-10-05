@@ -61,7 +61,7 @@ final class ProviderPresetRegistry
                         'endpoints' => $definition['endpoints'],
                         'api_version' => $definition['api_version'] ?? null,
                         'auth_type' => $definition['auth_type'],
-                        'environment' => 'sandbox',
+                        'environment' => $provider->environment ?: 'sandbox',
                         'base_url' => $definition['base_url'],
                         'priority' => $definition['priority'] ?? 100,
                     ])->save();
@@ -70,7 +70,7 @@ final class ProviderPresetRegistry
                     unset($providerData['mappings']);
                     $provider = ApiProvider::create([
                         ...$providerData,
-                        'environment' => 'sandbox',
+                        'environment' => $providerData['environment'] ?? 'sandbox',
                         'credentials' => [],
                         'enabled' => false,
                         'paused' => true,
