@@ -126,9 +126,9 @@ export default function Providers({ providers }: { providers: Provider[] }) {
     };
 
     if (editingId) {
-      router.patch(`/admin/providers/${editingId}`, payload, { preserveScroll: true, onSuccess: cancelEdit });
+      router.patch(`/admin/providers/${editingId}`, payload as any, { preserveScroll: true, onSuccess: cancelEdit });
     } else {
-      router.post('/admin/providers', payload, { preserveScroll: true, onSuccess: () => { form.reset(); form.setData(emptyForm); } });
+      router.post('/admin/providers', payload as any, { preserveScroll: true, onSuccess: () => { form.reset(); form.setData(emptyForm); } });
     }
   };
 
