@@ -34,7 +34,7 @@ class VtuProviderFailureRecoveryTest extends TestCase
         $operation->forceFill(['status' => 'completed'])->save();
 
         $gateway = $this->mock(VtuProviderGateway::class);
-        $gateway->shouldReceive('refund')->once()->andThrow(new \\RuntimeException('Provider timeout after submission.'));
+        $gateway->shouldReceive('refund')->once()->andThrow(new \RuntimeException('Provider timeout after submission.'));
 
         $service = app(VtuTransactionService::class);
         $result = $service->refund($tx, 'Customer request');
@@ -47,7 +47,7 @@ class VtuProviderFailureRecoveryTest extends TestCase
         $this->assertTrue((bool) (($result->metadata ?? [])['refund_manual_resolution_required'] ?? false));
         $this->assertSame('REFUND_PROVIDER_STATE_UNKNOWN', $result->failure_code);
 
-        $this->expectException(\\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Refund is pending reconciliation; automatic retry is blocked.');
         $service->refund($result, 'Duplicate retry');
     }
