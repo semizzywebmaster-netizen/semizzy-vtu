@@ -380,8 +380,13 @@ final class ProviderPresetRegistry
                 'official_website'=>'https://flutterwave.com/',
                 'auth_type'=>'bearer',
                 'service_categories'=>['payments','transfers','verification','utilities'],
-                'capabilities'=>['health','payments','transfers','verification','bills'],
-                'endpoints'=>[],
+                'capabilities'=>['health_check','balance_inquiry','transaction_initiation','transaction_status'],
+                'endpoints'=>[
+                    'health_check'=>'/balances',
+                    'balance_inquiry'=>'/balances',
+                    'transaction_initiation'=>'/payments',
+                    'transaction_status'=>'/transactions/verify_by_reference',
+                ],
                 'api_version'=>'v3',
                 'mappings'=>[
                     ['service_key'=>'payment-collection','provider_service_id'=>'payments','capabilities'=>['transaction_initiation']],
