@@ -79,103 +79,70 @@ class ProviderController extends Controller
     public function store(Request $request, AuditLogger $audit): RedirectResponse
     {
         $data = $this->validatedProvider($request, true);
-        app(ProviderUrlGuard::class)->validate($data['base_url'] ?? null);
-        $data['credentials'] = $data['credentials'] ?? [];
-        $data['enabled'] = false;
-        $data['paused'] = true;
-        $data['verification_status'] = 'unverified';
-        $data['integration_status'] = 'draft';
-
-        $provider = ApiProvider::create($data);
-        $audit->record('provider.created', $provider, [
-            'identifier' => $provider->identifier,
-            'environment' => $provider->environment,
-            'enabled' => false,
-        ], $request);
-
-        return back()->with('success', 'Provider saved as unverified and disabled.');
+        try {
+            app(ProviderUrlGuard::class)->validate($data['base_url'] ?? null);
+            $data['credentials'] = $data['credentials'] ?? [];
+            $data['enabled'] = false;
+            $data['paused'] = true;
+            $data['verification_status'] = 'unverified';
+            $data['integration_status'] = 'draft';
+            $provider = ApiProvider::create($data);
+            try { $audit->record('provider.created', $provider, ['identifier'=>$provider->identifier,'environment'=>$provider->environment,'enabled'=>false], $request); }
+            catch (\Throwable $auditException) { report($auditException); }
+            return back()->with('success', 'Provider saved as unverified and disabled.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'Provider could not be created safely.');
+        }
     }
 
     public function update(Request $request, int $provider, AuditLogger $audit): RedirectResponse
     {
-        $provider = ApiProvider::query()->findOrFail($provider);
         $data = $this->validatedProvider($request, false);
-        app(ProviderUrlGuard::class)->validate($data['base_url'] ?? $provider->base_url);
-
-        $verificationSensitiveFields = ['base_url', 'environment', 'auth_type', 'credentials', 'capabilities', 'endpoints', 'service_categories'];
-        $requiresReverification = collect($verificationSensitiveFields)
-            ->contains(fn (string $field): bool => array_key_exists($field, $data) && $data[$field] !== $provider->getAttribute($field));
-
-        $provider->fill($data);
-
-        if ($requiresReverification) {
-            $provider->forceFill([
-                'enabled' => false,
-                'paused' => true,
-                'verification_status' => 'unverified',
-                'integration_status' => 'draft',
-                'last_test_status' => null,
-                'last_test_summary' => null,
-            ]);
+        try {
+            $model = ApiProvider::query()->findOrFail($provider);
+            app(ProviderUrlGuard::class)->validate($data['base_url'] ?? $model->base_url);
+            $verificationSensitiveFields = ['base_url','environment','auth_type','credentials','capabilities','endpoints','service_categories'];
+            $requiresReverification = collect($verificationSensitiveFields)->contains(fn (string $field): bool => array_key_exists($field, $data) && $data[$field] !== $model->getAttribute($field));
+            $model->fill($data);
+            if ($requiresReverification) {
+                $model->forceFill(['enabled'=>false,'paused'=>true,'verification_status'=>'unverified','integration_status'=>'draft','last_test_status'=>null,'last_test_summary'=>null]);
+            }
+            $model->saveOrFail();
+            try { $audit->record('provider.updated', $model, ['identifier'=>$model->identifier,'updated_fields'=>array_keys($data)], $request); }
+            catch (\Throwable $auditException) { report($auditException); }
+            return back()->with('success', 'Provider updated. Re-test it before enabling.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'Provider could not be updated safely.');
         }
-
-        $provider->save();
-        $audit->record('provider.updated', $provider, [
-            'identifier' => $provider->identifier,
-            'updated_fields' => array_keys($data),
-        ], $request);
-
-        return back()->with('success', 'Provider updated. Re-test it before enabling.');
     }
 
     public function test(int $provider, ProviderTestService $tester, AuditLogger $audit, Request $request): RedirectResponse
     {
-        $provider = ApiProvider::query()->findOrFail($provider);
         try {
-            $result = $tester->test($provider);
+            $model = ApiProvider::query()->findOrFail($provider);
+            try {
+                $result = $tester->test($model);
+            } catch (\Throwable $e) {
+                report($e);
+                $model->forceFill(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_summary'=>'Provider test failed safely.','enabled'=>false,'paused'=>true,'verification_status'=>'test_failed','integration_status'=>'test_failed'])->saveOrFail();
+                try { $audit->record('provider.test.failed',$model,['reason'=>'transport_or_adapter_exception'],$request); } catch (\Throwable $auditException) { report($auditException); }
+                return back()->with('error','Provider test failed safely. Review the server-side diagnostic log.');
+            }
+            if ($result['result']->accepted) {
+                $verified=$model->environment==='production';
+                $model->updateOrFail(['verification_status'=>$verified?'live_verified':'sandbox_verified','integration_status'=>$verified?'live_verified':'sandbox_verified','enabled'=>false,'paused'=>true]);
+                try { $audit->record('provider.test.succeeded',$model,['environment'=>$model->environment,'status'=>$result['result']->status],$request); } catch (\Throwable $auditException) { report($auditException); }
+                return back()->with('success','Provider health check succeeded. Provider remains disabled until explicitly enabled.');
+            }
+            $model->updateOrFail(['enabled'=>false,'paused'=>true,'verification_status'=>'test_failed','integration_status'=>'test_failed']);
+            try { $audit->record('provider.test.failed',$model,['environment'=>$model->environment,'status'=>$result['result']->status],$request); } catch (\Throwable $auditException) { report($auditException); }
+            return back()->with('error','Provider test did not succeed. Review server-side diagnostics.');
         } catch (\Throwable $e) {
-            $provider->forceFill([
-                'last_tested_at' => now(),
-                'last_test_status' => 'FAILED',
-                'last_test_summary' => 'Provider test failed safely.',
-                'enabled' => false,
-                'paused' => true,
-                'verification_status' => 'test_failed',
-                'integration_status' => 'test_failed',
-            ])->save();
-            $audit->record('provider.test.failed', $provider, ['reason' => 'transport_or_adapter_exception'], $request);
-
-            return back()->with('error', 'Provider test failed safely. Review the server-side diagnostic log.');
+            report($e);
+            return back()->with('error','Provider test action failed safely.');
         }
-
-        if ($result['result']->accepted) {
-            $verified = $provider->environment === 'production';
-            $provider->update([
-                'verification_status' => $verified ? 'live_verified' : 'sandbox_verified',
-                'integration_status' => $verified ? 'live_verified' : 'sandbox_verified',
-                'enabled' => false,
-                'paused' => true,
-            ]);
-            $audit->record('provider.test.succeeded', $provider, [
-                'environment' => $provider->environment,
-                'status' => $result['result']->status,
-            ], $request);
-
-            return back()->with('success', 'Provider health check succeeded. Provider remains disabled until explicitly enabled.');
-        }
-
-        $provider->update([
-            'enabled' => false,
-            'paused' => true,
-            'verification_status' => 'test_failed',
-            'integration_status' => 'test_failed',
-        ]);
-        $audit->record('provider.test.failed', $provider, [
-            'environment' => $provider->environment,
-            'status' => $result['result']->status,
-        ], $request);
-
-        return back()->with('error', 'Provider test did not succeed. Review server-side diagnostics.');
     }
 
     public function bulkTest(Request $request, ProviderTestService $tester, AuditLogger $audit): RedirectResponse
