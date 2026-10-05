@@ -335,7 +335,7 @@ class ProviderController extends Controller
                     ['identifier' => $result['identifier']],
                     $request
                 );
-            } catch (\\Throwable $auditException) {
+            } catch (\Throwable $auditException) {
                 report($auditException);
             }
 
