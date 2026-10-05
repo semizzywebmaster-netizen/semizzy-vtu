@@ -50,7 +50,7 @@ class VtuAdminController extends Controller{
  public function disableProduct(ServiceProduct $product){$product->update(['enabled'=>false]);return back()->with('success','Product disabled.');}
  public function bulkOperations(Request $r){
   $q=VtuBulkOperation::with(['user','service'])->latest();
-  if($r->filled('status'))$q->where('status',(string)$r->input('status'));
+  if($r->filled('status'))$q->whereIn('status',array_values(array_intersect([(string)$r->input('status')],['processing','pending','partial','successful','failed'])));
   if($r->filled('reference'))$q->where('reference','like','%'.addcslashes((string)$r->input('reference'),'\\%_').'%');
   return Inertia::render('Admin/VTU/BulkOperations',['operations'=>$q->paginate(50)->withQueryString()]);
  }
