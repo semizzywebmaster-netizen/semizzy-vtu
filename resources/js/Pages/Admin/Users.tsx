@@ -4,7 +4,8 @@ import { useState } from 'react';
 type UserRow = {
   id: number; name: string; username: string; email: string; phone: string | null;
   role: string; status: string; tier: number; emailVerified: boolean; phoneVerified: boolean;
-  createdAt: string | null; isSelf: boolean;
+  createdAt: string | null; isSelf: boolean; wallet: { id: number; availableMinor: string; heldMinor: string; currency: string; status: string } | null;
+  permissions: Record<string, boolean>;
 };
 type PageLink = { url: string | null; label: string; active: boolean };
 type Tier = { id: number; name: string; dailyLimitMinor: string; balanceLimitMinor: string | null; upgradeLabel: string | null };
@@ -12,12 +13,15 @@ type Props = {
   users: { data: UserRow[]; links: PageLink[]; total: number };
   filters: { search?: string; role?: string; status?: string; tier?: string };
   tiers: Tier[];
+  permissions: string[];
 };
 
 export default function Users({ users, filters, tiers }: Props) {
   const filterForm = useForm({ search: filters.search ?? '', role: filters.role ?? '', status: filters.status ?? '', tier: filters.tier ?? '' });
   const [editing, setEditing] = useState<UserRow | null>(null);
   const [funding, setFunding] = useState<UserRow | null>(null);
+  const [permissionUser, setPermissionUser] = useState<UserRow | null>(null);
+  const [permissionState, setPermissionState] = useState<Record<string, boolean>>({});
   const editForm = useForm({ name: '', username: '', email: '', phone: '', role: 'USER', status: 'active', tier: 1, password: '' });
   const fundForm = useForm({ amount: '', note: '' });
 
@@ -57,6 +61,21 @@ export default function Users({ users, filters, tiers }: Props) {
     }, { preserveScroll: true });
   };
 
+  const openPermissions = (user: UserRow) => {
+    setPermissionUser(user);
+    setPermissionState(user.permissions || {});
+  };
+
+  const savePermissions = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!permissionUser) return;
+    router.put(`/admin/users/${permissionUser.id}/permissions`, { permissions: permissionState }, { preserveScroll: true, onSuccess: () => setPermissionUser(null) });
+  };
+
+  const walletStatus = (user: UserRow, status: 'active' | 'frozen') => {
+    router.post(`/admin/users/${user.id}/wallet-status`, { status }, { preserveScroll: true });
+  };
+
   const submitFunding = (event: React.FormEvent) => {
     event.preventDefault();
     if (!funding) return;
@@ -84,7 +103,7 @@ export default function Users({ users, filters, tiers }: Props) {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="font-black text-slate-900">{user.name}{user.isSelf ? ' (you)' : ''}</h2><span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">{user.role}</span><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold">{'Tier ' + user.tier}</span></div>
           <p className="mt-1 break-all text-sm text-slate-600">@{user.username} · {user.email}</p><p className="mt-1 text-xs text-slate-500">{user.phone || 'No phone'} · {user.status} · {user.emailVerified ? 'Email verified' : 'Email unverified'} · {user.phoneVerified ? 'Phone verified' : 'Phone unverified'}</p></div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap"><button type="button" onClick={()=>openEdit(user)} className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white">Edit account</button><button type="button" onClick={()=>toggleEmail(user)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold">{user.emailVerified ? 'Unverify email' : 'Verify email'}</button><button type="button" onClick={()=>togglePhone(user)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold">{user.phoneVerified ? 'Unverify phone' : 'Verify phone'}</button><button type="button" onClick={()=>setFunding(user)} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white">Fund wallet</button></div>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap"><button type="button" onClick={()=>openEdit(user)} className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white">Edit account</button><button type="button" onClick={()=>toggleEmail(user)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold">{user.emailVerified ? 'Unverify email' : 'Verify email'}</button><button type="button" onClick={()=>togglePhone(user)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold">{user.phoneVerified ? 'Unverify phone' : 'Verify phone'}</button><button type="button" onClick={()=>openPermissions(user)} className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700">Permissions</button><button type="button" onClick={()=>setFunding(user)} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white">Fund wallet</button><button type="button" onClick={()=>user.wallet&&walletStatus(user,user.wallet.status==='frozen'?'active':'frozen')} disabled={!user.wallet} className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-40">{user.wallet?.status==='frozen'?'Unfreeze wallet':'Freeze wallet'}</button></div>
       </div>
     </article>) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-600">No accounts match these filters.</div>}</section>
 
@@ -105,6 +124,15 @@ export default function Users({ users, filters, tiers }: Props) {
         <label className="text-sm font-semibold">New password (optional)<input type="password" className="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="Leave blank to keep current" value={editForm.data.password} onChange={e=>editForm.setData('password',e.target.value)} /></label>
         <div className="sm:col-span-2 rounded-2xl bg-amber-50 p-4 text-xs text-amber-800">Changing email or phone automatically resets its verification state. Use the verification controls on the account card after saving if an administrator has confirmed the details.</div>
         <button disabled={editForm.processing} className="sm:col-span-2 rounded-xl bg-slate-900 p-3 font-bold text-white disabled:opacity-50">{editForm.processing ? 'Saving…' : 'Save account changes'}</button>
+      </form>
+    </div></div>}
+
+    {permissionUser && <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 p-4"><div className="mx-auto mt-8 max-w-3xl rounded-3xl bg-white p-6 shadow-2xl">
+      <div className="flex items-start justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Admin permission manager</p><h2 className="mt-1 text-2xl font-black">@{permissionUser.username}</h2><p className="mt-1 text-sm text-slate-500">Grant or revoke individual capabilities without changing the user's role.</p></div><button type="button" onClick={()=>setPermissionUser(null)} className="rounded-xl border px-3 py-2">Close</button></div>
+      <form onSubmit={savePermissions} className="mt-5 grid gap-2 sm:grid-cols-2">
+        {permissions.map(permission => <label key={permission} className="flex items-center gap-3 rounded-2xl border border-slate-200 p-3"><input type="checkbox" checked={permissionState[permission] === true} onChange={e=>setPermissionState({...permissionState,[permission]:e.target.checked})} /><span className="text-sm font-semibold">{permission}</span></label>)}
+        <div className="sm:col-span-2 mt-3 rounded-2xl bg-slate-50 p-4 text-xs text-slate-600">Unchecked permissions are explicitly denied for this user when saved. This lets an administrator override the default role capabilities.</div>
+        <button className="sm:col-span-2 rounded-xl bg-indigo-600 p-3 font-bold text-white">Save permissions</button>
       </form>
     </div></div>}
 
