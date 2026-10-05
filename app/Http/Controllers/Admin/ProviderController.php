@@ -201,7 +201,7 @@ class ProviderController extends Controller
                     $failed++;
                     $audit->record('provider.test.failed', $provider, ['bulk'=>true,'status'=>$result['result']->status], $request);
                 }
-            } catch (\\Throwable $e) {
+            } catch (\Throwable $e) {
                 report($e);
                 $provider->forceFill(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_summary'=>'Provider test failed safely.','enabled'=>false,'paused'=>true,'verification_status'=>'test_failed','integration_status'=>'test_failed'])->save();
                 $failed++;
