@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserPermissionOverride;
+use App\Models\WalletAccount;
 use App\Services\Audit\AuditLogger;
 use App\Services\Finance\AdminWalletFundingService;
 use Illuminate\Http\RedirectResponse;
@@ -57,11 +59,17 @@ class UserController extends Controller
                 'phoneVerified' => $user->phone_verified_at !== null,
                 'createdAt' => $user->created_at?->toISOString(),
                 'isSelf' => $user->id === $request->user()->id,
+                'wallet' => ($wallet = WalletAccount::query()->where('user_id', $user->id)->where('status', '!=', 'closed')->first()) ? [
+                    'id' => $wallet->id, 'availableMinor' => $wallet->available_minor, 'heldMinor' => $wallet->held_minor,
+                    'currency' => $wallet->currency, 'status' => $wallet->status,
+                ] : null,
+                'permissions' => UserPermissionOverride::query()->where('user_id', $user->id)->pluck('allowed', 'permission')->map(fn ($allowed): bool => (bool) $allowed)->all(),
             ]);
 
         return Inertia::render('Admin/Users', [
             'users' => $users,
             'filters' => $filters,
+            'permissions' => collect(config('semizzy.role_permissions', []))->flatten()->unique()->sort()->values()->all(),
             'tiers' => collect(config('semizzy.user_tiers', []))->map(fn (array $tier, $key): array => [
                 'id' => (int) $key,
                 'name' => $tier['name'],
@@ -202,6 +210,75 @@ class UserController extends Controller
         } catch (\Throwable $e) {
             report($e);
             return back()->with('error', $e->getMessage() ?: 'User verification update failed safely.');
+        }
+    }
+
+    public function permissions(Request $request, User $user, AuditLogger $audit): RedirectResponse
+    {
+        $data = $request->validate([
+            'permissions' => ['array'],
+            'permissions.*' => ['string', 'max:120'],
+        ]);
+
+        try {
+            $allowed = collect(config('semizzy.role_permissions', []))->flatten()->unique()->flip();
+            $requested = collect($data['permissions'] ?? [])->filter(fn ($permission) => $allowed->has($permission))->unique()->values();
+
+            DB::transaction(function () use ($user, $requested): void {
+                UserPermissionOverride::query()->where('user_id', $user->id)->delete();
+
+                $rolePermissions = collect(config('semizzy.role_permissions.'.$user->role, []))->flip();
+                $rows = $requested->map(fn ($permission) => [
+                    'user_id' => $user->id,
+                    'permission' => $permission,
+                    'allowed' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ])->all();
+
+                foreach ($rows as $row) {
+                    UserPermissionOverride::create($row);
+                }
+            });
+
+            try {
+                $audit->record('admin.user.permissions.updated', $user->fresh(), [
+                    'target_user_id' => $user->id,
+                    'permissions' => $requested->all(),
+                    'role_permissions' => $rolePermissions->keys()->all(),
+                ], $request);
+            } catch (\Throwable $auditException) { report($auditException); }
+
+            return back()->with('success', 'User permissions updated.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', $e->getMessage() ?: 'User permissions update failed safely.');
+        }
+    }
+
+    public function walletStatus(Request $request, User $user, AuditLogger $audit): RedirectResponse
+    {
+        $data = $request->validate(['status' => ['required', 'in:active,frozen']]);
+
+        try {
+            DB::transaction(function () use ($user, $data): void {
+                $wallet = WalletAccount::query()->where('user_id', $user->id)->lockForUpdate()->first();
+                if (! $wallet) {
+                    throw new \RuntimeException('This user does not have a wallet yet.');
+                }
+                $wallet->forceFill(['status' => $data['status']])->saveOrFail();
+            });
+
+            try {
+                $audit->record('admin.user.wallet.status.updated', $user->fresh(), [
+                    'target_user_id' => $user->id, 'status' => $data['status'],
+                ], $request);
+            } catch (\Throwable $auditException) { report($auditException); }
+
+            return back()->with('success', 'User wallet status updated.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', $e->getMessage() ?: 'Wallet status update failed safely.');
         }
     }
 
