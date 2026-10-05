@@ -43,13 +43,6 @@ export default function Users({ users, filters, tiers }: Props) {
     });
   };
 
-  const verify = (user: UserRow) => {
-    router.post(`/admin/users/${user.id}/verify`, {
-      email_verified: user.emailVerified,
-      phone_verified: user.phoneVerified,
-    }, { preserveScroll: true });
-  };
-
   const toggleEmail = (user: UserRow) => {
     router.post(`/admin/users/${user.id}/verify`, {
       email_verified: !user.emailVerified,
