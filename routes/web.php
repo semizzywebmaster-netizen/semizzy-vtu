@@ -17,6 +17,7 @@ use App\Http\Controllers\Auth\UpdatePasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\RealtimeController;
 use App\Http\Controllers\HelpCenterController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\VtuController;
@@ -65,6 +66,7 @@ Route::middleware(['auth'])->group(function (): void {
     Route::middleware(['verified','ensure.vtu'])->group(function (): void { Route::get('/vtu', [VtuController::class, 'index'])->middleware('permission:vtu.view')->name('vtu.services'); });
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/realtime/snapshot', [RealtimeController::class, 'snapshot'])->middleware('throttle:120,1')->name('realtime.snapshot');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->middleware('throttle:30,1')->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->middleware('throttle:60,1')->name('notifications.read');
     Route::post('/profile/password', [UpdatePasswordController::class, 'store'])->middleware('throttle:5,1')->name('profile.password.update');
