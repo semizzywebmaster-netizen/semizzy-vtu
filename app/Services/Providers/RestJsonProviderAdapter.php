@@ -43,7 +43,16 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
             $isGet = in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval'], true);
             if ($provider->auth_type === 'custom') {
-                $methodHeaders = $provider->credentials[$isGet ? 'headers_get' : 'headers_post'] ?? null;
+                $credentials = $provider->credentials ?? [];
+                $methodHeaders = $credentials[$isGet ? 'headers_get' : 'headers_post'] ?? null;
+
+                // Support both method-specific headers and a shared custom header set.
+                // This keeps providers such as Token-auth APIs configurable without
+                // introducing provider-specific authentication code.
+                if (!is_array($methodHeaders)) {
+                    $methodHeaders = $credentials['headers'] ?? [];
+                }
+
                 if (is_array($methodHeaders)) {
                     $request = $request->withHeaders($this->safeCredentialHeaders($methodHeaders));
                 }
