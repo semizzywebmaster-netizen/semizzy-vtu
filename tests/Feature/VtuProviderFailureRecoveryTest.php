@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ApiProvider;
 use App\Models\FinancialOperation;
 use App\Models\Service;
 use App\Models\ServiceCategory;
@@ -62,6 +63,15 @@ class VtuProviderFailureRecoveryTest extends TestCase
             'enabled' => true,
         ]);
 
+        $provider = ApiProvider::create([
+            'identifier' => 'failure-provider-'.$key,
+            'display_name' => 'Failure Provider',
+            'enabled' => true,
+            'paused' => false,
+            'verification_status' => 'live_verified',
+            'integration_status' => 'live_verified',
+        ]);
+
         $operation = FinancialOperation::create([
             'uuid' => (string) Str::uuid(),
             'reference' => 'FAIL-'.$key,
@@ -81,6 +91,7 @@ class VtuProviderFailureRecoveryTest extends TestCase
             'service_id' => $service->id,
             'service_product_id' => $product->id,
             'financial_operation_id' => $operation->id,
+            'api_provider_id' => $provider->id,
             'idempotency_key' => $key,
             'status' => 'processing',
             'amount_minor' => '10000',
@@ -95,7 +106,7 @@ class VtuProviderFailureRecoveryTest extends TestCase
         $operation->metadata = ['vtu_transaction_id' => $tx->id];
         $operation->save();
 
-        return [$tx, $wallet, $operation];
+        return [$tx, $wallet, $operation, $provider];
     }
 
     public function test_explicit_provider_failure_releases_wallet_hold_once(): void
@@ -126,7 +137,7 @@ class VtuProviderFailureRecoveryTest extends TestCase
 
     public function test_unknown_provider_state_keeps_hold_and_requery_can_settle_successfully(): void
     {
-        [$tx, $wallet, $operation] = $this->makeTransaction('unknown-requery');
+        [$tx, $wallet, $operation, $provider] = $this->makeTransaction('unknown-requery');
 
         $gateway = $this->mock(VtuProviderGateway::class);
         $gateway->shouldReceive('initiate')->once()->andReturn(new ProviderResult(
@@ -134,14 +145,14 @@ class VtuProviderFailureRecoveryTest extends TestCase
             status: 'UNKNOWN',
             message: 'Provider timeout.',
             duplicateRisk: true,
-            providerId: 7,
+            providerId: $provider->id,
         ));
         $gateway->shouldReceive('requery')->once()->andReturn(new ProviderResult(
             accepted: true,
             status: 'SUCCESSFUL',
             providerReference: 'PROVIDER-RECOVERED-1',
             data: ['status' => 'successful'],
-            providerId: 7,
+            providerId: $provider->id,
         ));
         $this->mock(AuditLogger::class, function ($mock): void {
             $mock->shouldReceive('record')->once();
@@ -170,7 +181,7 @@ class VtuProviderFailureRecoveryTest extends TestCase
 
     public function test_unknown_provider_state_requery_failure_preserves_pending_and_hold(): void
     {
-        [$tx, $wallet] = $this->makeTransaction('unknown-failure');
+        [$tx, $wallet, $operation, $provider] = $this->makeTransaction('unknown-failure');
 
         $gateway = $this->mock(VtuProviderGateway::class);
         $gateway->shouldReceive('initiate')->once()->andReturn(new ProviderResult(
@@ -178,7 +189,7 @@ class VtuProviderFailureRecoveryTest extends TestCase
             status: 'UNKNOWN',
             message: 'Provider timeout.',
             duplicateRisk: true,
-            providerId: 8,
+            providerId: $provider->id,
         ));
         $gateway->shouldReceive('requery')->once()->andThrow(new \RuntimeException('Provider status unavailable.'));
         $this->mock(AuditLogger::class);
