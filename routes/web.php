@@ -79,6 +79,8 @@ Route::middleware(['auth'])->group(function (): void {
         Route::patch('/users/{user}', [UserController::class, 'update'])->whereNumber('user')->middleware('permission:users.manage')->name('admin.users.update');
         Route::post('/users/{user}/verify', [UserController::class, 'verify'])->whereNumber('user')->middleware('permission:users.verify')->name('admin.users.verify');
         Route::post('/users/{user}/fund', [UserController::class, 'fund'])->whereNumber('user')->middleware('permission:users.fund')->name('admin.users.fund');
+        Route::put('/users/{user}/permissions', [UserController::class, 'permissions'])->whereNumber('user')->middleware('permission:users.manage')->name('admin.users.permissions');
+        Route::post('/users/{user}/wallet-status', [UserController::class, 'walletStatus'])->whereNumber('user')->middleware('permission:users.fund')->name('admin.users.wallet-status');
         Route::get('/health', SystemHealthController::class)->middleware('permission:system.view')->name('admin.health');
         Route::get('/settings', [SystemSettingsController::class, 'index'])->middleware('permission:system.manage')->name('admin.settings.index');
         Route::put('/settings', [SystemSettingsController::class, 'update'])->middleware(['permission:system.manage', 'throttle:20,1'])->name('admin.settings.update');
