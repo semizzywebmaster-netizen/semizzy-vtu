@@ -101,6 +101,22 @@ final class CatalogueImportService
                 $validProviderProductId = (is_string($providerProductId) || is_int($providerProductId))
                     && trim((string) $providerProductId) !== '';
 
+                // Never let one provider product identifier point to multiple local
+                // products. Reassigning an identifier silently can route future
+                // purchases/reconciliation to the wrong catalogue item.
+                if ($validProviderProductId) {
+                    $providerProductId = trim((string) $providerProductId);
+                    $conflict = ProviderServiceProduct::query()
+                        ->where('api_provider_id', $provider->id)
+                        ->where('provider_product_id', $providerProductId)
+                        ->where('service_product_id', '!=', $product->id)
+                        ->exists();
+
+                    if ($conflict) {
+                        continue;
+                    }
+                }
+
                 // A provider product without a provider identifier or exact cost is retained
                 // as catalogue metadata but never made sellable through this provider mapping.
                 $hasSellableProviderData = $validProviderProductId && $normalizedCost !== null;
