@@ -10,6 +10,14 @@ return [
         3 => ['name' => 'Tier 3', 'daily_limit_minor' => '500000000', 'balance_limit_minor' => '1000000000', 'upgrade_label' => 'Upgrade to Tier 4 Merchant', 'type' => 'personal', 'requirements' => ['enhanced verification']],
         4 => ['name' => 'Merchant', 'daily_limit_minor' => null, 'balance_limit_minor' => null, 'upgrade_label' => null, 'type' => 'merchant', 'requirements' => ['business/company details', 'merchant approval']],
     ],
+    'help' => [
+        'ai' => [
+            'enabled' => filter_var(env('HELP_AI_ENABLED', false), FILTER_VALIDATE_BOOL),
+            'endpoint' => env('HELP_AI_ENDPOINT'),
+            'api_key' => env('HELP_AI_API_KEY'),
+            'model' => env('HELP_AI_MODEL', 'help-assistant'),
+        ],
+    ],
     'core_heads_up' => [
         'future_addons' => [
             'whatsapp_transaction_bot',
