@@ -113,7 +113,7 @@ export default function BulkOperations({
                 const expanded = openId === operation.id;
 
                 return (
-                  <>
+                  <Fragment key={operation.id}>
                     <tr className="border-b last:border-0">
                       <td className="p-4 font-mono text-xs">{operation.reference}</td>
                       <td className="p-4">
@@ -155,7 +155,7 @@ export default function BulkOperations({
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>
