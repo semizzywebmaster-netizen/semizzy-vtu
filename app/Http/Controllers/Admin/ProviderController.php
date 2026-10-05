@@ -177,6 +177,85 @@ class ProviderController extends Controller
         return back()->with('error', 'Provider test did not succeed. Review server-side diagnostics.');
     }
 
+    public function bulkTest(Request $request, ProviderTestService $tester, AuditLogger $audit): RedirectResponse
+    {
+        $ids = $request->validate(['provider_ids' => 'required|array|max:50', 'provider_ids.*' => 'integer|distinct'])['provider_ids'];
+        $tested = $succeeded = $failed = 0;
+
+        foreach (ApiProvider::query()->whereIn('id', $ids)->get() as $provider) {
+            $tested++;
+            try {
+                $result = $tester->test($provider);
+                if ($result['result']->accepted) {
+                    $verified = $provider->environment === 'production';
+                    $provider->update([
+                        'verification_status' => $verified ? 'live_verified' : 'sandbox_verified',
+                        'integration_status' => $verified ? 'live_verified' : 'sandbox_verified',
+                        'enabled' => false,
+                        'paused' => true,
+                    ]);
+                    $succeeded++;
+                    $audit->record('provider.test.succeeded', $provider, ['bulk' => true, 'status' => $result['result']->status], $request);
+                } else {
+                    $provider->update(['enabled'=>false,'paused'=>true,'verification_status'=>'test_failed','integration_status'=>'test_failed']);
+                    $failed++;
+                    $audit->record('provider.test.failed', $provider, ['bulk'=>true,'status'=>$result['result']->status], $request);
+                }
+            } catch (\\Throwable $e) {
+                report($e);
+                $provider->forceFill(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_summary'=>'Provider test failed safely.','enabled'=>false,'paused'=>true,'verification_status'=>'test_failed','integration_status'=>'test_failed'])->save();
+                $failed++;
+                $audit->record('provider.test.failed', $provider, ['bulk'=>true,'reason'=>'transport_or_adapter_exception'], $request);
+            }
+        }
+
+        return back()->with('success', "Bulk provider test completed: {$tested} tested, {$succeeded} passed, {$failed} failed.");
+    }
+
+    public function bulkToggle(Request $request, AuditLogger $audit): RedirectResponse
+    {
+        $data = $request->validate([
+            'provider_ids' => 'required|array|max:50',
+            'provider_ids.*' => 'integer|distinct',
+            'enabled' => 'required|boolean',
+        ]);
+        $changed = $skipped = 0;
+
+        DB::transaction(function () use ($data, $audit, $request, &$changed, &$skipped): void {
+            foreach (ApiProvider::query()->whereIn('id', $data['provider_ids'])->lockForUpdate()->get() as $provider) {
+                if ($data['enabled'] && ($provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
+                    $skipped++;
+                    continue;
+                }
+                $provider->update(['enabled'=>$data['enabled'],'paused'=>!$data['enabled']]);
+                $changed++;
+                $audit->record($data['enabled'] ? 'provider.enabled' : 'provider.disabled', $provider, ['bulk'=>true], $request);
+            }
+        });
+
+        return back()->with('success', "Bulk provider status update completed: {$changed} changed, {$skipped} skipped.");
+    }
+
+    public function bulkDestroy(Request $request, AuditLogger $audit): RedirectResponse
+    {
+        $ids = $request->validate(['provider_ids' => 'required|array|max:50', 'provider_ids.*' => 'integer|distinct'])['provider_ids'];
+        $removed = 0;
+
+        DB::transaction(function () use ($ids, $audit, $request, &$removed): void {
+            foreach (ApiProvider::query()->whereIn('id', $ids)->lockForUpdate()->get() as $provider) {
+                $provider->serviceMappings()->lockForUpdate()->get()->each(fn ($mapping) => $mapping->forceFill(['enabled'=>false])->save());
+                $providerProductMappings = ProviderServiceProduct::query()->where('api_provider_id',$provider->id)->lockForUpdate()->get();
+                $providerProductMappings->each(fn (ProviderServiceProduct $mapping) => $mapping->forceFill(['enabled'=>false])->save());
+                $provider->forceFill(['enabled'=>false,'paused'=>true])->save();
+                $audit->record('provider.removed', $provider, ['bulk'=>true,'history_preserved'=>true,'mappings_disabled'=>true,'provider_product_mappings_disabled'=>$providerProductMappings->count()], $request);
+                $provider->delete();
+                $removed++;
+            }
+        });
+
+        return back()->with('success', "Bulk provider removal completed: {$removed} removed. Historical records are retained.");
+    }
+
     public function toggle(ApiProvider $provider, AuditLogger $audit, Request $request): RedirectResponse
     {
         return DB::transaction(function () use ($provider, $audit, $request): RedirectResponse {
