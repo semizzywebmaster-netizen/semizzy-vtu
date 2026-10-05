@@ -11,18 +11,8 @@ use RuntimeException;
 
 class WebhookReplayGuard
 {
-    /**
-     * Atomically claim a provider webhook event for processing.
-     *
-     * The caller must supply the provider's stable event identifier. The raw
-     * payload is never persisted by this core security primitive.
-     */
-    public function claim(
-        ApiProvider $provider,
-        string $eventId,
-        string $payload,
-        ?string $signature = null
-    ): WebhookReceipt {
+    public function claim(ApiProvider $provider, string $eventId, string $payload, ?string $signature = null): WebhookReceipt
+    {
         $eventId = trim($eventId);
 
         if ($eventId === '' || mb_strlen($eventId) > 191) {
@@ -35,16 +25,14 @@ class WebhookReplayGuard
             : null;
 
         try {
-            return DB::transaction(function () use ($provider, $eventId, $payloadHash, $signatureHash): WebhookReceipt {
-                return WebhookReceipt::create([
-                    'api_provider_id' => $provider->getKey(),
-                    'event_id' => $eventId,
-                    'payload_hash' => $payloadHash,
-                    'signature_hash' => $signatureHash,
-                    'status' => 'received',
-                    'received_at' => now(),
-                ]);
-            });
+            return DB::transaction(fn (): WebhookReceipt => WebhookReceipt::create([
+                'api_provider_id' => $provider->getKey(),
+                'event_id' => $eventId,
+                'payload_hash' => $payloadHash,
+                'signature_hash' => $signatureHash,
+                'status' => 'received',
+                'received_at' => now(),
+            ]));
         } catch (QueryException $e) {
             if ($this->isDuplicateKey($e)) {
                 $existing = WebhookReceipt::query()
@@ -69,6 +57,21 @@ class WebhookReplayGuard
         }
     }
 
+    public function beginProcessing(WebhookReceipt $receipt): bool
+    {
+        return DB::transaction(function () use ($receipt): bool {
+            $locked = WebhookReceipt::query()->lockForUpdate()->findOrFail($receipt->id);
+
+            if ($locked->status !== 'received') {
+                return false;
+            }
+
+            $locked->forceFill(['status' => 'processing'])->save();
+
+            return true;
+        });
+    }
+
     public function markProcessed(WebhookReceipt $receipt): WebhookReceipt
     {
         if ($receipt->status === 'processed') {
@@ -86,11 +89,9 @@ class WebhookReplayGuard
 
     public function markFailed(WebhookReceipt $receipt, string $error): WebhookReceipt
     {
-        // Never persist raw provider/application exception text: it may contain
-        // credentials, authorization headers, or other sensitive request data.
         $safeError = trim($error);
         $safeError = $safeError === '' ? 'Webhook processing failed.' : $safeError;
-        $safeError = preg_replace('/(?:authorization|x-api-key|api[_-]?key|token|secret|password)\\s*[:=]\\s*[^,;]+/i', '$1: [REDACTED]', $safeError) ?? 'Webhook processing failed.';
+        $safeError = preg_replace('/(?:authorization|x-api-key|api[_-]?key|token|secret|password)\s*[:=]\s*[^,;]+/i', '$1: [REDACTED]', $safeError) ?? 'Webhook processing failed.';
 
         $receipt->forceFill([
             'status' => 'failed',
