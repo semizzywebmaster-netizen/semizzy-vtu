@@ -25,10 +25,19 @@ class AuthenticatedSessionController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
-            'login' => 'required|string|max:190',
+            'login' => 'nullable|string|max:190',
+            'email' => 'nullable|email|max:190',
             'password' => 'required|string',
             'remember' => 'nullable|boolean',
         ]);
+
+        if (! filled($credentials['login'] ?? null) && filled($credentials['email'] ?? null)) {
+            $credentials['login'] = $credentials['email'];
+        }
+
+        if (! filled($credentials['login'] ?? null)) {
+            throw ValidationException::withMessages(['login' => 'The login field is required.']);
+        }
 
         $this->authenticate($request, $credentials, false);
 
@@ -63,18 +72,18 @@ class AuthenticatedSessionController extends Controller
 
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $this->securityEvents->record('auth.login.rate_limited', 'warning', ['admin' => $admin], $request);
-            throw ValidationException::withMessages(['login' => 'Too many login attempts. Please try again later.']);
+            throw ValidationException::withMessages([$this->loginErrorKey($request) => 'Too many login attempts. Please try again later.']);
         }
 
         if (! $user || ! Auth::validate(['email' => $user->email, 'password' => (string) $credentials['password'], 'status' => 'active'])) {
             RateLimiter::hit($key, 60);
             $this->securityEvents->record('auth.login.failed', 'warning', ['admin' => $admin], $request);
-            throw ValidationException::withMessages(['login' => 'The provided credentials are invalid.']);
+            throw ValidationException::withMessages([$this->loginErrorKey($request) => 'The provided credentials are invalid.']);
         }
 
         if (! $admin && $user->phone === preg_replace('/[^0-9+]/', '', $login) && ! $user->phone_verified_at) {
             RateLimiter::hit($key, 60);
-            throw ValidationException::withMessages(['login' => 'This phone number is not verified. Please use your email or username, or verify your phone first.']);
+            throw ValidationException::withMessages([$this->loginErrorKey($request) => 'This phone number is not verified. Please use your email or username, or verify your phone first.']);
         }
 
         Auth::login($user, (bool) ($credentials['remember'] ?? false));
@@ -88,6 +97,11 @@ class AuthenticatedSessionController extends Controller
         RateLimiter::clear($key);
         $request->session()->regenerate();
         $this->securityEvents->record($admin ? 'auth.admin_login.success' : 'auth.login.success', 'info', ['admin' => $admin], $request);
+    }
+
+    private function loginErrorKey(Request $request): string
+    {
+        return $request->has('email') && ! $request->has('login') ? 'email' : 'login';
     }
 
     public function destroy(Request $request): RedirectResponse
