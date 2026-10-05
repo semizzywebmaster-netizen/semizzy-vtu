@@ -24,13 +24,13 @@ class UserController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'role' => ['nullable', 'in:ADMIN,STAFF,SUPPORT,USER'],
             'status' => ['nullable', 'in:active,suspended,disabled'],
-            'tier' => ['nullable', 'integer', 'in:1,2,3'],
+            'tier' => ['nullable', 'integer', 'in:1,2,3,4'],
         ]);
 
         $users = User::query()
             ->select([
                 'id', 'name', 'username', 'email', 'phone', 'role', 'status', 'tier',
-                'email_verified_at', 'phone_verified_at', 'created_at',
+                'email_verified_at', 'phone_verified_at', 'account_type', 'business_name', 'business_registration_number', 'business_type', 'business_address', 'business_state', 'business_country', 'merchant_verified_at', 'tier_upgrade_status', 'created_at',
             ])
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $query->where(function ($nested) use ($search): void {
@@ -54,9 +54,18 @@ class UserController extends Controller
                 'phone' => $user->phone,
                 'role' => $user->role,
                 'status' => $user->status,
-                'tier' => max(1, min(3, (int) $user->tier)),
+                'tier' => max(1, min(4, (int) $user->tier)),
                 'emailVerified' => $user->email_verified_at !== null,
                 'phoneVerified' => $user->phone_verified_at !== null,
+                'accountType' => $user->account_type,
+                'businessName' => $user->business_name,
+                'businessRegistrationNumber' => $user->business_registration_number,
+                'businessType' => $user->business_type,
+                'businessAddress' => $user->business_address,
+                'businessState' => $user->business_state,
+                'businessCountry' => $user->business_country,
+                'merchantVerified' => $user->merchant_verified_at !== null,
+                'tierUpgradeStatus' => $user->tier_upgrade_status,
                 'createdAt' => $user->created_at?->toISOString(),
                 'isSelf' => $user->id === $request->user()->id,
                 'wallet' => ($wallet = WalletAccount::query()->where('user_id', $user->id)->where('status', '!=', 'closed')->first()) ? [
@@ -91,7 +100,14 @@ class UserController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             'role' => ['required', 'in:ADMIN,STAFF,SUPPORT,USER'],
             'status' => ['required', 'in:active,suspended,disabled'],
-            'tier' => ['required', 'integer', 'in:1,2,3'],
+            'tier' => ['required', 'integer', 'in:1,2,3,4'],
+            'account_type' => ['required', 'in:personal,merchant'],
+            'business_name' => ['nullable', 'string', 'max:180'],
+            'business_registration_number' => ['nullable', 'string', 'max:100'],
+            'business_type' => ['nullable', 'string', 'max:100'],
+            'business_address' => ['nullable', 'string', 'max:500'],
+            'business_state' => ['nullable', 'string', 'max:100'],
+            'business_country' => ['nullable', 'string', 'max:100'],
             'password' => ['nullable', 'string', 'min:8', 'max:72'],
         ]);
 
@@ -134,13 +150,22 @@ class UserController extends Controller
                 }
 
                 $payload = [
-                    'name' => trim($data['name']),
+                    'name' => ((int) $data['tier'] === 4 && trim((string) ($data['business_name'] ?? '')) !== '') ? trim((string) $data['business_name']) : trim($data['name']),
                     'username' => $data['username'],
                     'email' => strtolower(trim($data['email'])),
                     'phone' => $data['phone'],
                     'role' => $data['role'],
                     'status' => $data['status'],
                     'tier' => (int) $data['tier'],
+                    'account_type' => (int) $data['tier'] === 4 ? 'merchant' : 'personal',
+                    'business_name' => trim((string) ($data['business_name'] ?? '')) ?: null,
+                    'business_registration_number' => trim((string) ($data['business_registration_number'] ?? '')) ?: null,
+                    'business_type' => trim((string) ($data['business_type'] ?? '')) ?: null,
+                    'business_address' => trim((string) ($data['business_address'] ?? '')) ?: null,
+                    'business_state' => trim((string) ($data['business_state'] ?? '')) ?: null,
+                    'business_country' => trim((string) ($data['business_country'] ?? '')) ?: null,
+                    'merchant_verified_at' => (int) $data['tier'] === 4 ? now() : null,
+                    'tier_upgrade_status' => (int) $data['tier'] === 4 ? 'approved' : 'none',
                 ];
 
                 if ($emailChanged) {
