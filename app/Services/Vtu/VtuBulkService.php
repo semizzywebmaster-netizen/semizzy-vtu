@@ -150,7 +150,6 @@ class VtuBulkService
                 $bulk->load('items');
             }
         }
-    }
 
         [$leaseAcquired, $leaseToken] = $this->acquireWorkerLease($bulk);
         if (!$leaseAcquired) {
