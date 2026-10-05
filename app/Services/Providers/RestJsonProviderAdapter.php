@@ -57,7 +57,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
                     $body,
                     $accepted ? 'Provider request accepted.' : 'Provider returned a non-success status.',
                     retryable: false,
-                    duplicateRisk: $operation === 'transaction_initiation' && !$accepted
+                    duplicateRisk: $operation === 'transaction_initiation' && $normalized === 'UNKNOWN'
                 );
             }
 
