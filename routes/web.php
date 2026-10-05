@@ -83,6 +83,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/security-events', [SecurityEventController::class, 'index'])->middleware('permission:security.view')->name('admin.security-events.index');
 
         Route::get('/providers', [ProviderController::class, 'index'])->middleware('permission:providers.view')->name('admin.providers.index');
+        Route::post('/providers/install-presets', [ProviderController::class, 'installPresets'])->middleware('permission:providers.manage')->name('admin.providers.install-presets');
         Route::post('/providers', [ProviderController::class, 'store'])->middleware('permission:providers.manage')->name('admin.providers.store');
         Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->middleware('permission:providers.manage')->name('admin.providers.update');
         Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->middleware('permission:providers.manage')->name('admin.providers.test');
