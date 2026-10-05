@@ -30,4 +30,18 @@ class User extends Authenticatable implements MustVerifyEmail
     public function devices(): HasMany { return $this->hasMany(UserDevice::class); }
     public function securityEvents(): HasMany { return $this->hasMany(SecurityEvent::class); }
     public function referrals(): HasMany { return $this->hasMany(self::class, 'referred_by_id'); }
+
+    public function permissionOverrides(): HasMany
+    {
+        return $this->hasMany(UserPermissionOverride::class);
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        $override = $this->permissionOverrides()->where('permission', $permission)->value('allowed');
+
+        return $override !== null
+            ? (bool) $override
+            : in_array($permission, config('semizzy.role_permissions.'.$this->role, []), true);
+    }
 }
