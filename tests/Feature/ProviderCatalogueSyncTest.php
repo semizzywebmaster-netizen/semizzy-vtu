@@ -199,6 +199,44 @@ class ProviderCatalogueSyncTest extends TestCase
         $sync->sync($provider, $service);
     }
 
+    public function test_duplicate_provider_product_identifier_is_not_reassigned_to_another_local_product(): void
+    {
+        $provider = $this->makeProvider();
+        $category = ServiceCategory::create(['key' => 'duplicate-id-category', 'name' => 'Duplicate ID category']);
+        $service = Service::create(['category_id' => $category->id, 'key' => 'duplicate-id-service', 'name' => 'Duplicate ID service']);
+
+        app(CatalogueImportService::class)->import($provider, $service, [[
+            'key' => 'first-product',
+            'name' => 'First product',
+            'provider_product_id' => 'same-provider-id',
+            'provider_cost' => '10.00',
+            'currency' => 'NGN',
+        ]]);
+
+        app(CatalogueImportService::class)->import($provider, $service, [[
+            'key' => 'second-product',
+            'name' => 'Second product',
+            'provider_product_id' => 'same-provider-id',
+            'provider_cost' => '11.00',
+            'currency' => 'NGN',
+        ]]);
+
+        $first = $service->products()->where('key', 'first-product')->firstOrFail();
+        $second = $service->products()->where('key', 'second-product')->firstOrFail();
+        $firstMapping = ProviderServiceProduct::query()
+            ->where('api_provider_id', $provider->id)
+            ->where('service_product_id', $first->id)
+            ->firstOrFail();
+
+        $this->assertSame('same-provider-id', $firstMapping->provider_product_id);
+        $this->assertTrue($firstMapping->enabled);
+        $this->assertDatabaseMissing('provider_service_products', [
+            'api_provider_id' => $provider->id,
+            'service_product_id' => $second->id,
+            'provider_product_id' => 'same-provider-id',
+        ]);
+    }
+
     private function makeProvider(array $overrides = []): ApiProvider
     {
         return ApiProvider::create(array_merge([
