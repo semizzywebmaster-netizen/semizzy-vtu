@@ -169,10 +169,10 @@ export default function Addons({ addons }: Props) {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(addon.status === 'draft' || addon.status === 'failed' || addon.status === 'inactive') && (
-                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/install', `install:${addon.id}`)} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white">Install</button>
+                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/install', `install:${addon.id}`)} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">{processing === `install:${addon.id}` ? 'Installing…' : 'Install'}</button>
                     )}
                     {(addon.status === 'installed' || addon.status === 'inactive') && (
-                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/activate', `activate:${addon.id}`)} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Activate</button>
+                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/activate', `activate:${addon.id}`)} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">{processing === `activate:${addon.id}` ? 'Activating…' : 'Activate'}</button>
                     )}
                     {(addon.status === 'installed' || addon.status === 'active' || addon.status === 'inactive') && (
                       <button onClick={() => setUpdatingId(updatingId === addon.id ? null : addon.id)} className="rounded-lg border border-indigo-300 px-3 py-2 text-xs font-bold text-indigo-700">
@@ -180,13 +180,13 @@ export default function Addons({ addons }: Props) {
                       </button>
                     )}
                     {addon.status === 'active' && (
-                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/disable', `disable:${addon.id}`)} className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-white">Disable</button>
+                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/disable', `disable:${addon.id}`)} className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">{processing === `disable:${addon.id}` ? 'Disabling…' : 'Disable'}</button>
                     )}
                     {['installed', 'inactive', 'failed'].includes(addon.status) && (
-                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/uninstall', `uninstall:${addon.id}`, 'Uninstall this addon? The addon will be archived after the uninstall contract is recorded.')} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700">Uninstall</button>
+                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/uninstall', `uninstall:${addon.id}`, 'Uninstall this addon? The addon will be archived after the uninstall contract is recorded.')} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-60">{processing === `uninstall:${addon.id}` ? 'Uninstalling…' : 'Uninstall'}</button>
                     )}
                     {addon.status === 'draft' && (
-                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/archive', `archive:${addon.id}`, 'Archive this addon?')} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700">Archive</button>
+                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/archive', `archive:${addon.id}`, 'Archive this addon?')} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60">{processing === `archive:${addon.id}` ? 'Archiving…' : 'Archive'}</button>
                     )}
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export default function Addons({ addons }: Props) {
                       <input name="permissions" defaultValue={addon.permissions.join(',')} placeholder="Permissions (comma separated)" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm md:col-span-2" />
                     </div>
                     <div className="mt-3">
-                      <button type="submit" className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white">Validate & update</button>
+                      <button type="submit" disabled={processing === `update:${addon.id}`} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">{processing === `update:${addon.id}` ? 'Updating…' : 'Validate & update'}</button>
                     </div>
                   </form>
                 )}
