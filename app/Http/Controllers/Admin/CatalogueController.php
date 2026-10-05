@@ -90,6 +90,58 @@ class CatalogueController extends Controller
         return back()->with('success',"Catalogue sync completed. {$count} product record(s) processed.");
     }
 
+    public function syncAllVerified(Request $request, ProviderCatalogueSyncService $sync, AuditLogger $audit): RedirectResponse
+    {
+        $providers = ApiProvider::query()
+            ->where('enabled', true)
+            ->where('paused', false)
+            ->whereIn('verification_status', ['sandbox_verified', 'live_verified'])
+            ->whereIn('integration_status', ['sandbox_verified', 'live_verified'])
+            ->whereJsonContains('capabilities', 'catalogue_retrieval')
+            ->orderBy('priority')
+            ->get();
+
+        $processed = 0;
+        $products = 0;
+        $failures = [];
+
+        foreach ($providers as $provider) {
+            $services = Service::query()
+                ->where('enabled', true)
+                ->whereJsonContains('metadata->catalogue_request', 'service', true)
+                ->orderBy('id')
+                ->get();
+
+            foreach ($services as $service) {
+                try {
+                    $products += $sync->sync($provider, $service);
+                    $processed++;
+                } catch (\Throwable $e) {
+                    report($e);
+                    $failures[] = $provider->display_name.' / '.$service->name;
+                }
+            }
+        }
+
+        $audit->record('catalogue.sync_all_completed', null, [
+            'providers_considered' => $providers->count(),
+            'service_syncs_completed' => $processed,
+            'products_processed' => $products,
+            'failures' => $failures,
+        ], $request);
+
+        if ($providers->isEmpty()) {
+            return back()->with('error', 'No enabled, verified provider with catalogue retrieval capability is ready for sync.');
+        }
+
+        if ($failures) {
+            return back()->with('error', "Catalogue sync completed with {$processed} successful service sync(s), {$products} product record(s), and ".count($failures)." failure(s).");
+        }
+
+        return back()->with('success', "Catalogue sync completed successfully: {$processed} service sync(s), {$products} product record(s) processed.");
+    }
+
+
     public function toggleMapping(ProviderServiceMapping $mapping, AuditLogger $audit, Request $request): RedirectResponse
     {
         return DB::transaction(function () use ($mapping, $audit, $request): RedirectResponse {
