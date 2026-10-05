@@ -34,6 +34,8 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isAdmin(): bool { return $this->role === 'ADMIN'; }
     public function hasRole(string|array $roles): bool { return in_array($this->role, (array) $roles, true); }
 
+    public function walletAccounts(): HasMany { return $this->hasMany(WalletAccount::class); }
+
     public function devices(): HasMany { return $this->hasMany(UserDevice::class); }
     public function otpChallenges(): HasMany { return $this->hasMany(OtpChallenge::class); }
     public function loginActivities(): HasMany { return $this->hasMany(LoginActivity::class); }
