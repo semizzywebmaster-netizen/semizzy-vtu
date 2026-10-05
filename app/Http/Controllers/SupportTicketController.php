@@ -117,6 +117,7 @@ class SupportTicketController extends Controller
         try {
             abort_unless($request->user()->hasRole(['ADMIN','STAFF','SUPPORT']), 403);
             $data = $request->validate(['status'=>['required','in:open,pending,resolved,closed']]);
+            $previousStatus = $ticket->status;
             DB::transaction(function () use ($ticket,$data,$request,$audit): void {
                 $locked = SupportTicket::query()->lockForUpdate()->findOrFail($ticket->id);
                 if ($locked->status === $data['status']) return;
@@ -124,6 +125,17 @@ class SupportTicketController extends Controller
                 $locked->updateOrFail(['status'=>$data['status']]);
                 try { $audit->record('support.ticket.status_changed',$locked,['from'=>$previous,'to'=>$data['status']],$request); } catch (\Throwable $e) { report($e); }
             });
+            if ($previousStatus !== $data['status']) {
+                try {
+                    $ticket->fresh()?->user?->notify(new CoreNotification(
+                        'Support ticket updated',
+                        'Your support ticket '.$ticket->reference.' is now '.$data['status'].'.',
+                        '/support/'.$ticket->id
+                    ));
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
             return back()->with('success','Ticket status updated.');
         } catch (\Throwable $e) {
             report($e); return back()->with('error','Ticket status update failed safely.');
