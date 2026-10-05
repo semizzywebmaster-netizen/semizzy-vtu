@@ -13,13 +13,22 @@ use App\Services\Vtu\VtuTransactionService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 class VtuAdminController extends Controller{
- public function dashboard(){return Inertia::render('Admin/VTU/Dashboard',['metrics'=>['total'=>VtuTransaction::count(),'successful'=>VtuTransaction::where('status','successful')->count(),'pending'=>VtuTransaction::where('status','pending')->count(),'failed'=>VtuTransaction::where('status','failed')->count(),'today'=>VtuTransaction::whereDate('created_at',today())->count()]]);}
- public function services(){return Inertia::render('Admin/VTU/Services',['services'=>Service::whereHas('category',fn($q)=>$q->where('key','vtu-digital-services'))->withCount('products')->orderBy('id')->get()]);}
- public function mappings(){
-  return Inertia::render('Admin/VTU/Mappings',[
-   'mappings'=>ProviderServiceMapping::query()->where(function($q){$q->whereHas('service.category',fn($c)=>$c->where('key','vtu-digital-services'))->orWhere(function($legacy){$legacy->whereNull('service_id')->whereIn('service_key',array_keys(VtuServiceRegistry::MANIFEST));});})->with(['provider','service'])->orderBy('api_provider_id')->orderBy('service_key')->paginate(50)->withQueryString(),
-   'providers'=>ApiProvider::query()->orderBy('priority')->orderBy('display_name')->get(['id','display_name','identifier','priority','enabled','paused','verification_status','integration_status']),
-   'services'=>Service::query()->whereHas('category',fn($q)=>$q->where('key','vtu-digital-services'))->orderBy('name')->get(['id','key','name','enabled']),
+ public function dashboard(){
+  $vtuServices=Service::query()->whereHas('category',fn($q)=>$q->where('key','vtu-digital-services'));
+  $vtuServiceIds=(clone $vtuServices)->pluck('id');
+  $tx=VtuTransaction::query();
+  $recent=VtuTransaction::query()->with(['user:id,name,email','service:id,name','product:id,name','provider:id,display_name'])->latest('created_at')->limit(8)->get(['id','reference','status','amount_minor','currency','user_id','service_id','service_product_id','api_provider_id','created_at','provider_reference','failure_code']);
+  $providers=ApiProvider::query()->withCount(['serviceMappings as enabled_mappings_count'=>fn($q)=>$q->where('enabled',true)])->orderBy('priority')->orderBy('display_name')->limit(8)->get(['id','display_name','identifier','priority','enabled','paused','verification_status','integration_status','last_successful_request_at','last_tested_at','last_test_status']);
+  $pending=VtuTransaction::whereIn('status',['pending','processing'])->count();
+  $refundResolution=VtuTransaction::whereIn('status',['successful','reversed'])->where(function($q){$q->where('metadata->refund_manual_resolution_required',true)->orWhere('metadata->refund_settlement_pending',true);})->count();
+  $bulkAttention=VtuBulkOperation::whereIn('status',['pending','processing','partial'])->count();
+  $failed24h=VtuTransaction::where('status','failed')->where('created_at','>=',now()->subDay())->count();
+  return Inertia::render('Admin/VTU/Dashboard',[
+   'metrics'=>['total'=>$tx->count(),'successful'=>(clone $tx)->where('status','successful')->count(),'pending'=>$pending,'failed'=>(clone $tx)->where('status','failed')->count(),'reversed'=>(clone $tx)->where('status','reversed')->count(),'today'=>(clone $tx)->whereDate('created_at',today())->count()],
+   'catalogue'=>['services_total'=>(clone $vtuServices)->count(),'services_active'=>(clone $vtuServices)->where('enabled',true)->count(),'products_total'=>ServiceProduct::whereIn('service_id',$vtuServiceIds)->count(),'products_active'=>ServiceProduct::whereIn('service_id',$vtuServiceIds)->where('enabled',true)->count(),'mappings_active'=>ProviderServiceMapping::whereIn('service_id',$vtuServiceIds)->where('enabled',true)->count()],
+   'providers'=>['total'=>ApiProvider::count(),'eligible'=>ApiProvider::eligibleForNewTransactions()->count(),'paused'=>ApiProvider::where('paused',true)->count(),'needs_attention'=>ApiProvider::where(fn($q)=>$q->where('enabled',false)->orWhere('paused',true)->orWhere('verification_status','!=','live_verified')->orWhere('integration_status','!=','live_verified'))->count()],
+   'attention'=>['pending_transactions'=>$pending,'failed_last_24h'=>$failed24h,'refund_reconciliation'=>$refundResolution,'bulk_operations'=>$bulkAttention],
+   'recentTransactions'=>$recent,'providerHealth'=>$providers,
   ]);
  }
  public function saveMapping(Request $r, AuditLogger $audit){
