@@ -26,6 +26,7 @@ final class ProviderPresetRegistry
 
             $serviceIds = [];
             foreach ($services as $service) {
+                $existingService = Service::query()->where('key', $service['key'])->first();
                 $row = Service::query()->updateOrCreate(
                     ['key' => $service['key']],
                     [
@@ -33,7 +34,7 @@ final class ProviderPresetRegistry
                         'name' => $service['name'],
                         'description' => $service['description'],
                         'metadata' => $service['metadata'] ?? [],
-                        'enabled' => $row->exists ? (bool) $row->enabled : true,
+                        'enabled' => $existingService ? (bool) $existingService->enabled : true,
                     ]
                 );
                 $serviceIds[$row->key] = $row->id;
