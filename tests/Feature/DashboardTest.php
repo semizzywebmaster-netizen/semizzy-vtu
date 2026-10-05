@@ -23,7 +23,7 @@ class DashboardTest extends TestCase
                 ->component('Dashboard')
                 ->where('role', 'ADMIN')
                 ->where('metrics.0.value', 2)
-                ->has('quickLinks', 9)
+                ->has('quickLinks', 16)
                 ->where('quickLinks.0.url', '/admin/users')
                 ->where('quickLinks.5.url', '/admin/settings')
             );
@@ -65,7 +65,7 @@ class DashboardTest extends TestCase
                 ->where('metrics.0.value', 1)
                 ->where('metrics.1.label', 'Unread notifications')
                 ->where('metrics.1.value', 1)
-                ->has('quickLinks', 3)
+                ->has('quickLinks', 4)
                 ->where('quickLinks.0.url', '/notifications')
             );
     }
