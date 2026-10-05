@@ -27,6 +27,7 @@ class PriceEngineTest extends TestCase
             'service_id' => $service->id,
             'service_key' => $service->key,
             'enabled' => true,
+            'capabilities' => ['transaction_initiation'],
         ]);
         ProviderServiceProduct::create([
             'api_provider_id' => $provider->id,
@@ -74,6 +75,7 @@ class PriceEngineTest extends TestCase
             'service_id' => $service->id,
             'service_key' => $service->key,
             'enabled' => true,
+            'capabilities' => ['transaction_initiation'],
         ]);
         ProviderServiceProduct::create([
             'api_provider_id' => $provider->id,
@@ -98,6 +100,7 @@ class PriceEngineTest extends TestCase
             'service_id' => $service->id,
             'service_key' => $service->key,
             'enabled' => true,
+            'capabilities' => ['transaction_initiation'],
         ]);
         ProviderServiceProduct::create([
             'api_provider_id' => $provider->id,
