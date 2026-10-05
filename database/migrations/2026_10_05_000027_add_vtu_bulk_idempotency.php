@@ -8,6 +8,16 @@ return new class extends Migration
 {
     private const INDEX = 'vtu_bulk_user_idempotency_unique';
 
+    private function hasUniqueKey(): bool
+    {
+        return collect(Schema::getIndexes('vtu_bulk_operations'))->contains(function ($index): bool {
+            $columns = is_array($index) ? ($index['columns'] ?? []) : ($index->columns ?? []);
+            $unique = is_array($index) ? (bool) ($index['unique'] ?? false) : (bool) ($index->unique ?? false);
+
+            return $unique && array_map('strtolower', $columns) === ['user_id', 'idempotency_key'];
+        });
+    }
+
     public function up(): void
     {
         if (! Schema::hasTable('vtu_bulk_operations')) {
@@ -20,13 +30,7 @@ return new class extends Migration
             });
         }
 
-        $hasIndex = collect(Schema::getIndexes('vtu_bulk_operations'))
-            ->contains(function ($index): bool {
-                $name = is_array($index) ? ($index['name'] ?? null) : ($index->name ?? null);
-                return $name === self::INDEX;
-            });
-
-        if (! $hasIndex) {
+        if (! $this->hasUniqueKey()) {
             Schema::table('vtu_bulk_operations', function (Blueprint $table): void {
                 $table->unique(['user_id', 'idempotency_key'], self::INDEX);
             });
@@ -39,15 +43,16 @@ return new class extends Migration
             return;
         }
 
-        $hasIndex = collect(Schema::getIndexes('vtu_bulk_operations'))
-            ->contains(function ($index): bool {
-                $name = is_array($index) ? ($index['name'] ?? null) : ($index->name ?? null);
-                return $name === self::INDEX;
-            });
+        $index = collect(Schema::getIndexes('vtu_bulk_operations'))->first(function ($index): bool {
+            $columns = is_array($index) ? ($index['columns'] ?? []) : ($index->columns ?? []);
+            $unique = is_array($index) ? (bool) ($index['unique'] ?? false) : (bool) ($index->unique ?? false);
+            return $unique && array_map('strtolower', $columns) === ['user_id', 'idempotency_key'];
+        });
 
-        if ($hasIndex) {
-            Schema::table('vtu_bulk_operations', function (Blueprint $table): void {
-                $table->dropUnique(self::INDEX);
+        if ($index) {
+            $name = is_array($index) ? ($index['name'] ?? self::INDEX) : ($index->name ?? self::INDEX);
+            Schema::table('vtu_bulk_operations', function (Blueprint $table) use ($name): void {
+                $table->dropUnique($name);
             });
         }
 
