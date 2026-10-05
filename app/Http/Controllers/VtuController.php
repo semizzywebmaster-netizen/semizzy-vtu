@@ -18,7 +18,13 @@ class VtuController extends Controller
 {
     public function index(VtuServiceRegistry $r){return Inertia::render('VTU/Services',['services'=>$r->services()->map(fn($s)=>['id'=>$s->id,'key'=>$s->key,'name'=>$s->name,'description'=>$s->description,'metadata'=>$s->metadata,'products'=>$s->products->map(fn($p)=>['id'=>$p->id,'key'=>$p->key,'name'=>$p->name,'metadata'=>$p->metadata])])]);}
     public function apiServices(VtuServiceRegistry $r){return response()->json(['data'=>$r->services()->map(fn($s)=>['id'=>$s->id,'key'=>$s->key,'name'=>$s->name,'description'=>$s->description,'metadata'=>$s->metadata,'products'=>$s->products->map(fn($p)=>['id'=>$p->id,'key'=>$p->key,'name'=>$p->name,'metadata'=>$p->metadata])])]);}
-    public function quote(Request $r,VtuTransactionService $s){$d=$r->validate(['product_id'=>['required','integer','exists:service_products,id']]);$quote=$s->quote(ServiceProduct::findOrFail($d['product_id']),$r->user()->role);return response()->json(['data'=>['customer_price'=>$quote['customer_price'],'currency'=>$quote['currency']]]);}
+    public function quote(Request $r,VtuTransactionService $s){
+        $d=$r->validate(['product_id'=>['required','integer','exists:service_products,id']]);
+        $product=ServiceProduct::with('service')->findOrFail($d['product_id']);
+        abort_unless($product->enabled && $product->service?->enabled,422,'Service is unavailable.');
+        $quote=$s->quote($product,$r->user()->role);
+        return response()->json(['data'=>['customer_price'=>$quote['customer_price'],'currency'=>$quote['currency']]]);
+    }
     public function store(Request $r,VtuTransactionService $s,VtuPayloadValidator $v){$d=$r->validate(['product_id'=>['required','integer','exists:service_products,id'],'idempotency_key'=>['nullable','string','max:120'],'payload'=>['required','array']]);$p=ServiceProduct::with('service')->findOrFail($d['product_id']);abort_unless($p->enabled&&$p->service->enabled,422,'Service is unavailable.');$v->validate($p->service,$d['payload']);$tx=$s->process($s->create($r->user()->id,$p,$d['payload'],$r->user()->role,$d['idempotency_key']??null));return response()->json(['data'=>$this->present($tx)],$tx->status==='failed'?422:201);}
     public function bulk(Request $r,VtuBulkService $b){$d=$r->validate(['items'=>['required','array','min:1','max:500'],'items.*.product_id'=>['required','integer','exists:service_products,id'],'items.*.payload'=>['required','array'],'items.*.idempotency_key'=>['nullable','string','max:120'],'idempotency_key'=>['nullable','string','max:160']]);return response()->json(['data'=>$b->execute($r->user()->id,$d['items'],$r->user()->role,$d['idempotency_key']??null)],201);}
     public function history(Request $r){return response()->json(['data'=>VtuTransaction::with('service','product')->where('user_id',$r->user()->id)->latest()->paginate(25)]);}
