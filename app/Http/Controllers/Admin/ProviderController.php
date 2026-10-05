@@ -370,14 +370,16 @@ class ProviderController extends Controller
                 $mapping->forceFill(['enabled' => false])->save();
             });
 
+            // Safe archive: preserve provider identity and history so foreign-key
+            // references and preset reconciliation cannot break future operations.
             $provider->forceFill(['enabled' => false, 'paused' => true])->save();
             $audit->record('provider.removed', $provider, [
                 'identifier' => $provider->identifier,
                 'history_preserved' => true,
+                'archived' => true,
                 'mappings_disabled' => true,
                 'provider_product_mappings_disabled' => $providerProductMappings->count(),
             ], $request);
-            $provider->delete();
         });
 
         return back()->with('success', 'Provider removed from the active registry. Historical records are retained.');
