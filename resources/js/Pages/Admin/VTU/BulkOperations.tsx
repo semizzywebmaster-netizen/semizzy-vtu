@@ -26,6 +26,8 @@ export default function BulkOperations({
   const [status, setStatus] = useState('');
   const [reference, setReference] = useState('');
   const [reconcilingId, setReconcilingId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkReconciling, setBulkReconciling] = useState(false);
 
   const submitFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -41,6 +43,30 @@ export default function BulkOperations({
       preserveScroll: true,
       onFinish: () => setReconcilingId(null),
     });
+  };
+
+  const reconcileSelected = () => {
+    if (!selectedIds.length) return;
+    setBulkReconciling(true);
+    router.post('/admin/vtu/bulk/reconcile-selected', { bulk_ids: selectedIds }, {
+      preserveScroll: true,
+      onSuccess: () => setSelectedIds([]),
+      onFinish: () => setBulkReconciling(false),
+    });
+  };
+
+  const toggleSelected = (id: number) => {
+    setSelectedIds((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
+  };
+
+  const selectableIds = operations.data
+    .filter((operation) => (operation.metadata?.pending_items ?? Math.max(0, operation.total_items - operation.successful_items - operation.failed_items)) > 0)
+    .map((operation) => operation.id);
+
+  const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.includes(id));
+
+  const toggleAll = () => {
+    setSelectedIds(allSelected ? [] : selectableIds);
   };
 
   const resetFilters = () => {
@@ -96,10 +122,19 @@ export default function BulkOperations({
           </button>
         </form>
 
+        <div className="mt-4 rounded-xl border bg-white p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={toggleAll} disabled={!selectableIds.length} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{allSelected ? 'Clear selection' : 'Select pending'}</button>
+            <button type="button" onClick={reconcileSelected} disabled={!selectedIds.length || bulkReconciling} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">{bulkReconciling ? 'Reconciling selected…' : `Reconcile selected (${selectedIds.length})`}</button>
+            {selectedIds.length > 0 && <span className="text-xs text-slate-500">{selectedIds.length} bulk operation(s) selected</span>}
+          </div>
+        </div>
+
         <div className="mt-4 overflow-x-auto rounded-xl border bg-white">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b bg-slate-50">
+                <th className="p-4"><input type="checkbox" aria-label="Select all pending bulk operations" checked={allSelected} onChange={toggleAll} disabled={!selectableIds.length} /></th>
                 <th className="p-4">Reference</th>
                 <th className="p-4">User</th>
                 <th className="p-4">Status</th>
@@ -124,6 +159,7 @@ export default function BulkOperations({
                 return (
                   <Fragment key={operation.id}>
                     <tr className="border-b last:border-0">
+                      <td className="p-4"><input type="checkbox" aria-label={`Select ${operation.reference}`} checked={selectedIds.includes(operation.id)} onChange={() => toggleSelected(operation.id)} disabled={pending === 0} /></td>
                       <td className="p-4 font-mono text-xs">{operation.reference}</td>
                       <td className="p-4">
                         {operation.user?.name ?? operation.user?.email ?? '—'}
@@ -146,7 +182,7 @@ export default function BulkOperations({
                     </tr>
                     {expanded && (
                       <tr className="border-b bg-slate-50">
-                        <td colSpan={7} className="p-4 text-xs text-slate-600">
+                        <td colSpan={8} className="p-4 text-xs text-slate-600">
                           <div className="grid gap-3 sm:grid-cols-3">
                             <div><span className="font-bold">Items:</span> {operation.total_items}</div>
                             <div><span className="font-bold">Processed:</span> {operation.processed_items}</div>
