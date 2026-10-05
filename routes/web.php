@@ -115,6 +115,7 @@ Route::middleware(['auth'])->group(function (): void {
             Route::post('/bulk/{bulk}/reconcile', [VtuAdminController::class, 'reconcileBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.reconcile');
             Route::get('/transactions', [VtuAdminController::class, 'transactions'])->middleware('permission:vtu.transactions.view')->name('admin.vtu.transactions');
             Route::post('/transactions/{transaction}/requery', [VtuAdminController::class, 'requery'])->middleware('permission:vtu.requery')->name('admin.vtu.transactions.requery');
+            Route::post('/transactions/{transaction}/refund', [VtuAdminController::class, 'refund'])->middleware(['permission:vtu.refunds.manage','throttle:10,1'])->name('admin.vtu.transactions.refund');
         });
         Route::post('/addons/register', [AddonController::class, 'register'])->middleware('permission:addons.manage')->name('admin.addons.register');
         Route::post('/addons/{addon}/install', [AddonController::class, 'install'])->middleware('permission:addons.manage')->name('admin.addons.install');
