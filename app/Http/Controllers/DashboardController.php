@@ -134,7 +134,7 @@ class DashboardController extends Controller
         $tierLimits = [];
         if (!$isOperations) {
             $wallet = WalletAccount::query()->where('user_id', $user->id)->where('status', '!=', 'closed')->first();
-            $tierNumber = max(1, min(3, (int) $user->tier));
+            $tierNumber = max(1, min(4, (int) $user->tier));
             $tier = [
                 'id' => $tierNumber,
                 'name' => config("semizzy.user_tiers.{$tierNumber}.name", 'Tier '.$tierNumber),
