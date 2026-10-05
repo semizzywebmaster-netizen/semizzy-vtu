@@ -89,6 +89,27 @@ class VtuTransactionService{
     return $tx->fresh();
   });
  }
+ public function recoverStaleInitiationClaim(VtuTransaction $tx, int $staleMinutes = 10): VtuTransaction
+ {
+  return DB::transaction(function()use($tx,$staleMinutes){
+   $locked=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);
+   if($locked->isTerminal())return $locked;
+   $metadata=(array)$locked->metadata;
+   if(($metadata['provider_initiation_claimed']??false)!==true)return $locked;
+   $claimedAt=$metadata['provider_initiation_claimed_at']??null;
+   if(!$claimedAt || now()->lt(\Illuminate\Support\Carbon::parse($claimedAt)->addMinutes($staleMinutes)))return $locked;
+   if($locked->provider_reference)return $locked;
+   $metadata['provider_initiation_recovery_at']=now()->toIso8601String();
+   $metadata['manual_provider_resolution_required']=true;
+   $locked->metadata=$metadata;
+   $locked->status='pending';
+   $locked->failure_code='UNKNOWN_PROVIDER_STATE';
+   $locked->failure_message='Provider initiation did not finish durably. No automatic retry is allowed; provider state requires reconciliation or manual resolution.';
+   $locked->save();
+   $this->syncBulkState($locked);
+   return $locked->fresh();
+  });
+ }
  private function syncBulkState(VtuTransaction $tx):void{$item=VtuBulkOperationItem::query()->where('vtu_transaction_id',$tx->id)->first();if(!$item)return;$item->update(['status'=>$tx->status,'amount_minor'=>$tx->total_minor,'error_message'=>$tx->failure_message]);$bulk=$item->bulk()->lockForUpdate()->first();if(!$bulk)return;$successful=$bulk->items()->where('status','successful')->count();$failed=$bulk->items()->whereIn('status',['failed','reversed','cancelled'])->count();$pending=max(0,$bulk->total_items-$successful-$failed);$bulk->successful_items=$successful;$bulk->failed_items=$failed;$bulk->processed_items=$successful+$failed;$bulk->status=match(true){$pending>0=>'pending',$failed>0&&$successful>0=>'partial',$failed>0=>'failed',default=>'successful'};$bulk->metadata=array_merge((array)$bulk->metadata,['pending_items'=>$pending]);$bulk->save();}
  private function finishFinancial(VtuTransaction $tx,bool $success):void{$metadata=(array)$tx->metadata;if(($metadata['financial_settlement_applied']??false)===true){return;}$this->wallet->settle($tx,$success);$metadata['financial_settlement_applied']=true;$metadata['financial_settlement_applied_at']=now()->toIso8601String();$tx->metadata=$metadata;$op=$tx->financialOperation()->lockForUpdate()->first();if($op&&!in_array($op->status,['completed','failed','reversed'],true)){$op->status=$success?'completed':'failed';$op->provider_reference=$tx->provider_reference;$op->save();}$this->audit->record('vtu.transaction.'.($success?'successful':'failed'),$tx,['reference'=>$tx->reference,'provider_reference'=>$tx->provider_reference,'status'=>$tx->status]);}
  private function toMinor(string $a):string{if(!preg_match('/^\d+(?:\.\d{1,2})?$/',trim($a)))throw new RuntimeException('Invalid customer price.');[$x,$y]=array_pad(explode('.',trim($a),2),2,'0');$m=$x.str_pad(substr($y,0,2),2,'0');return ltrim($m,'0')?:'0';}
