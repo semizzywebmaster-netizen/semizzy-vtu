@@ -13,6 +13,8 @@ class WebhookReceipt extends \Illuminate\Database\Eloquent\Model
         'signature_hash',
         'status',
         'received_at',
+        'processing_started_at',
+        'processing_token',
         'processed_at',
         'processing_error',
     ];
@@ -21,6 +23,7 @@ class WebhookReceipt extends \Illuminate\Database\Eloquent\Model
     {
         return [
             'received_at' => 'datetime',
+            'processing_started_at' => 'datetime',
             'processed_at' => 'datetime',
         ];
     }
