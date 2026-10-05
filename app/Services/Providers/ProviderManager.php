@@ -25,7 +25,8 @@ class ProviderManager
                     });
             })
             ->with('serviceMappings.service')
-            ->orderBy('priority');
+            ->orderBy('priority')
+            ->orderBy('id');
 
         if ($operation === 'transaction_initiation') {
             $query->where('integration_status','live_verified')
@@ -130,7 +131,13 @@ class ProviderManager
                 providerId: $provider->id,
             );
             if($result->accepted) return $result;
-            if($result->duplicateRisk || $result->status==='UNKNOWN') return $result;
+
+            // Never fail over a request whose outcome may already be in-flight.
+            // PENDING and UNKNOWN both require reconciliation/status inquiry first;
+            // retrying against another provider could create a duplicate fulfilment.
+            if($result->duplicateRisk || in_array($result->status,['UNKNOWN','PENDING'],true)) return $result;
+
+            // Definitive failures may safely proceed to the next verified provider.
         }
         return new ProviderResult(false,'FAILED',message:'All eligible providers failed.');
     }
