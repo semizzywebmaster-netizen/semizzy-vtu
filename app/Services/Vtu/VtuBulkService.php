@@ -204,8 +204,8 @@ class VtuBulkService
                         $this->syncItemFromTransaction($row, $transaction);
                     } else {
                         $row->update([
-                            'status' => 'failed',
-                            'error_message' => 'This item could not be processed. Contact support with the bulk reference.',
+                            'status' => 'pending',
+                            'error_message' => 'Bulk worker stopped before this transaction was created. The item is queued for safe resume using its idempotency key.',
                         ]);
                     }
                 }
@@ -215,6 +215,7 @@ class VtuBulkService
         }
 
         return $this->recalculate($bulk->fresh('items'));
+    }
 
     private const WORKER_LEASE_MINUTES = 15;
 
