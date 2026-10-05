@@ -77,6 +77,16 @@ class VtuAdminController extends Controller
  }
 
  public function products(){return Inertia::render('Admin/VTU/Products',['products'=>ServiceProduct::whereHas('service.category',fn($q)=>$q->where('key','vtu-digital-services'))->with('service')->latest()->paginate(50)]);}
+ public function bulkToggleServices(Request $r, AuditLogger $audit){
+  $data=$r->validate(['service_ids'=>['required','array','min:1','max:100'],'service_ids.*'=>['integer','distinct','exists:services,id'],'enabled'=>['required','boolean']]);$changed=0;$skipped=0;
+  foreach(Service::query()->whereIn('id',$data['service_ids'])->with('category')->get() as $service){if(!$service->category||$service->category->key!=='vtu-digital-services'){ $skipped++; continue; }$service->update(['enabled'=>$data['enabled']]);$changed++;$audit->record($data['enabled']?'vtu.service.enabled':'vtu.service.disabled',$service,['bulk'=>true],$r);}
+  return back()->with('success',"Bulk service status update completed: {$changed} changed, {$skipped} skipped.");
+ }
+ public function bulkToggleProducts(Request $r, AuditLogger $audit){
+  $data=$r->validate(['product_ids'=>['required','array','min:1','max:100'],'product_ids.*'=>['integer','distinct','exists:service_products,id'],'enabled'=>['required','boolean']]);$changed=0;$skipped=0;
+  foreach(ServiceProduct::query()->whereIn('id',$data['product_ids'])->with('service.category')->get() as $product){if(!$product->service||!$product->service->category||$product->service->category->key!=='vtu-digital-services'||($data['enabled']&&!$product->service->enabled)){ $skipped++; continue; }$product->update(['enabled'=>$data['enabled']]);$changed++;$audit->record($data['enabled']?'vtu.product.enabled':'vtu.product.disabled',$product,['bulk'=>true],$r);}
+  return back()->with('success',"Bulk product status update completed: {$changed} changed, {$skipped} skipped.");
+ }
  public function enableProduct(ServiceProduct $product){if(!$product->service || !$product->service->category || $product->service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU products can be managed here.');if(!$product->service->enabled)return back()->with('error','Enable the VTU service before enabling its product.');$product->update(['enabled'=>true]);return back()->with('success','Product enabled.');}
  public function disableProduct(ServiceProduct $product){if(!$product->service || !$product->service->category || $product->service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU products can be managed here.');$product->update(['enabled'=>false]);return back()->with('success','Product disabled.');}
  public function bulkOperations(Request $r){
