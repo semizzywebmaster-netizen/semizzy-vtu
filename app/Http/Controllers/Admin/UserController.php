@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -224,6 +225,10 @@ class UserController extends Controller
 
             return back()->with('success', 'User account updated.');
         } catch (\Throwable $e) {
+            if ($e instanceof HttpExceptionInterface) {
+                throw $e;
+            }
+
             report($e);
             return back()->with('error', $e->getMessage() ?: 'User account update failed safely.');
         }
