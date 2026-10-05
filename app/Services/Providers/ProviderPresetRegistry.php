@@ -129,11 +129,11 @@ final class ProviderPresetRegistry
     private function services(): array
     {
         return [
-            ['key'=>'airtime', 'category_key'=>'airtime', 'name'=>'Airtime Recharge', 'description'=>'Airtime top-up across supported mobile networks.', 'metadata'=>['provider_catalogue_supported'=>true]],
-            ['key'=>'data', 'category_key'=>'data', 'name'=>'Mobile Data Bundles', 'description'=>'Mobile data bundles across supported networks.', 'metadata'=>['provider_catalogue_supported'=>true]],
-            ['key'=>'electricity', 'category_key'=>'electricity', 'name'=>'Electricity Bills', 'description'=>'Electricity prepaid and postpaid bill payments.', 'metadata'=>['provider_catalogue_supported'=>true]],
-            ['key'=>'cable-tv', 'category_key'=>'cable-tv', 'name'=>'Cable TV Subscription', 'description'=>'DSTV, GOtv, Startimes and other supported TV services.', 'metadata'=>['provider_catalogue_supported'=>true]],
-            ['key'=>'education', 'category_key'=>'education', 'name'=>'Education Payments', 'description'=>'WAEC and other supported education products.', 'metadata'=>['provider_catalogue_supported'=>true]],
+            ['key'=>'airtime', 'category_key'=>'airtime', 'name'=>'Airtime Recharge', 'description'=>'Airtime top-up across supported mobile networks.', 'metadata'=>['provider_catalogue_supported'=>true,'catalogue_request'=>['identifier'=>'airtime']]],
+            ['key'=>'data', 'category_key'=>'data', 'name'=>'Mobile Data Bundles', 'description'=>'Mobile data bundles across supported networks.', 'metadata'=>['provider_catalogue_supported'=>true,'catalogue_request'=>['identifier'=>'data']]],
+            ['key'=>'electricity', 'category_key'=>'electricity', 'name'=>'Electricity Bills', 'description'=>'Electricity prepaid and postpaid bill payments.', 'metadata'=>['provider_catalogue_supported'=>true,'catalogue_request'=>['identifier'=>'electricity-bill']]],
+            ['key'=>'cable-tv', 'category_key'=>'cable-tv', 'name'=>'Cable TV Subscription', 'description'=>'DSTV, GOtv, Startimes and other supported TV services.', 'metadata'=>['provider_catalogue_supported'=>true,'catalogue_request'=>['identifier'=>'tv-subscription']]],
+            ['key'=>'education', 'category_key'=>'education', 'name'=>'Education Payments', 'description'=>'WAEC and other supported education products.', 'metadata'=>['provider_catalogue_supported'=>true,'catalogue_request'=>['identifier'=>'education']]],
             ['key'=>'payment-collection', 'category_key'=>'payments', 'name'=>'Payment Collection', 'description'=>'Online payment collection and checkout.', 'metadata'=>['provider_catalogue_supported'=>false]],
             ['key'=>'bank-transfer', 'category_key'=>'transfers', 'name'=>'Bank Transfers', 'description'=>'Payouts and bank transfers.', 'metadata'=>['provider_catalogue_supported'=>false]],
             ['key'=>'account-verification', 'category_key'=>'verification', 'name'=>'Bank/Account Verification', 'description'=>'Bank account and customer verification.', 'metadata'=>['provider_catalogue_supported'=>false]],
