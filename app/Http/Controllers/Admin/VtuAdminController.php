@@ -48,7 +48,12 @@ class VtuAdminController extends Controller{
  public function products(){return Inertia::render('Admin/VTU/Products',['products'=>ServiceProduct::whereHas('service.category',fn($q)=>$q->where('key','vtu-digital-services'))->with('service')->latest()->paginate(50)]);}
  public function enableProduct(ServiceProduct $product){$product->update(['enabled'=>true]);return back()->with('success','Product enabled.');}
  public function disableProduct(ServiceProduct $product){$product->update(['enabled'=>false]);return back()->with('success','Product disabled.');}
- public function bulkOperations(Request $r){return Inertia::render('Admin/VTU/BulkOperations',['operations'=>VtuBulkOperation::with(['user'])->latest()->paginate(50)->withQueryString()]);}
+ public function bulkOperations(Request $r){
+  $q=VtuBulkOperation::with(['user','service'])->latest();
+  if($r->filled('status'))$q->where('status',(string)$r->input('status'));
+  if($r->filled('reference'))$q->where('reference','like','%'.addcslashes((string)$r->input('reference'),'\\%_').'%');
+  return Inertia::render('Admin/VTU/BulkOperations',['operations'=>$q->paginate(50)->withQueryString()]);
+ }
  public function transactions(Request $r){$q=VtuTransaction::with(['user','service','product','provider'])->latest();foreach(['status','service_id','api_provider_id','user_id'] as $f)if($r->filled($f))$q->where($f,$r->input($f));return Inertia::render('Admin/VTU/Transactions',['transactions'=>$q->paginate(50)->withQueryString()]);}
  public function requery(VtuTransaction $t,VtuTransactionService $s){$s->requery($t);return back()->with('success','Transaction requery completed.');}
  public function enableService(Service $s){$s->update(['enabled'=>true]);return back()->with('success','Service enabled.');}
