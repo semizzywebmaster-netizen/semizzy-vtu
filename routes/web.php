@@ -17,6 +17,7 @@ use App\Http\Controllers\Auth\UpdatePasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\HelpCenterController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\VtuController;
 use App\Http\Controllers\Admin\VtuAdminController;
@@ -67,6 +68,10 @@ Route::middleware(['auth'])->group(function (): void {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->middleware('throttle:30,1')->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->middleware('throttle:60,1')->name('notifications.read');
     Route::post('/profile/password', [UpdatePasswordController::class, 'store'])->middleware('throttle:5,1')->name('profile.password.update');
+    Route::get('/help', [HelpCenterController::class, 'index'])->name('help.index');
+    Route::get('/help/articles/{article:slug}', [HelpCenterController::class, 'show'])->name('help.article');
+    Route::post('/help/articles/{article:slug}/feedback', [HelpCenterController::class, 'feedback'])->middleware('throttle:20,1')->name('help.feedback');
+    Route::post('/help/assistant', [HelpCenterController::class, 'ask'])->middleware('throttle:20,1')->name('help.assistant');
     Route::get('/support', [SupportTicketController::class, 'index'])->name('support.index');
     Route::post('/support', [SupportTicketController::class, 'store'])->middleware('throttle:10,1')->name('support.store');
     Route::get('/support/{ticket}', [SupportTicketController::class, 'show'])->whereNumber('ticket')->name('support.show');
@@ -85,6 +90,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/settings', [SystemSettingsController::class, 'index'])->middleware('permission:system.manage')->name('admin.settings.index');
         Route::put('/settings', [SystemSettingsController::class, 'update'])->middleware(['permission:system.manage', 'throttle:20,1'])->name('admin.settings.update');
         Route::get('/security-events', [SecurityEventController::class, 'index'])->middleware('permission:security.view')->name('admin.security-events.index');
+        Route::get('/help/unanswered', [HelpCenterController::class, 'unanswered'])->middleware('permission:help.manage')->name('admin.help.unanswered');
 
         Route::get('/providers', [ProviderController::class, 'index'])->middleware('permission:providers.view')->name('admin.providers.index');
         Route::post('/providers/install-presets', [ProviderController::class, 'installPresets'])->middleware('permission:providers.manage')->name('admin.providers.install-presets');
