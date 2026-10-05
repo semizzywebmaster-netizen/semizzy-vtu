@@ -75,6 +75,13 @@ class DashboardController extends Controller
                 ['label' => 'System settings', 'url' => '/admin/settings'],
                 ['label' => 'Audit events', 'url' => '/admin/audit-events'],
                 ['label' => 'Security events', 'url' => '/admin/security-events'],
+                ['label' => 'VTU Control Center', 'url' => '/admin/vtu'],
+                ['label' => 'VTU Services', 'url' => '/admin/vtu/services'],
+                ['label' => 'VTU Products', 'url' => '/admin/vtu/products'],
+                ['label' => 'VTU Providers', 'url' => '/admin/providers'],
+                ['label' => 'VTU Mappings', 'url' => '/admin/vtu/mappings'],
+                ['label' => 'VTU Transactions', 'url' => '/admin/vtu/transactions'],
+                ['label' => 'VTU Bulk Operations', 'url' => '/admin/vtu/bulk'],
                 ['label' => 'Support desk', 'url' => '/support'],
             ];
         } elseif ($isStaff) {
@@ -101,6 +108,7 @@ class DashboardController extends Controller
             ];
         } else {
             $quickLinks = [
+                ['label' => 'VTU Services', 'url' => '/vtu'],
                 ['label' => 'Notifications', 'url' => '/notifications'],
                 ['label' => 'Contact support', 'url' => '/support'],
                 ['label' => 'My profile', 'url' => '/profile'],
