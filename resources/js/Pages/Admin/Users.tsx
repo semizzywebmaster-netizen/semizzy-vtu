@@ -16,7 +16,7 @@ type Props = {
   permissions: string[];
 };
 
-export default function Users({ users, filters, tiers }: Props) {
+export default function Users({ users, filters, tiers, permissions }: Props) {
   const filterForm = useForm({ search: filters.search ?? '', role: filters.role ?? '', status: filters.status ?? '', tier: filters.tier ?? '' });
   const [editing, setEditing] = useState<UserRow | null>(null);
   const [funding, setFunding] = useState<UserRow | null>(null);
