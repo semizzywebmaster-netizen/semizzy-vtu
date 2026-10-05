@@ -87,9 +87,13 @@ class UserController extends Controller
 
         try {
             abort_if(
-                $user->is($request->user()) && ($data['status'] !== 'active' || $data['role'] !== 'ADMIN'),
+                $user->is($request->user()) && (
+                    $data['status'] !== 'active'
+                    || $data['role'] !== 'ADMIN'
+                    || strcasecmp((string) $user->email, (string) $data['email']) !== 0
+                ),
                 422,
-                'You cannot deactivate or change your own administrator role.'
+                'You cannot deactivate, demote, or change the email of your own administrator account.'
             );
 
             $data['username'] = strtolower(trim($data['username']));
@@ -171,6 +175,10 @@ class UserController extends Controller
         ]);
 
         try {
+            if ($user->is($request->user()) && (! $data['email_verified'] || ! $data['phone_verified'])) {
+                throw new \RuntimeException('You cannot remove verification from your own administrator account.');
+            }
+
             if ($data['phone_verified'] && trim((string) $user->phone) === '') {
                 throw new \RuntimeException('A phone number is required before phone verification can be enabled.');
             }
