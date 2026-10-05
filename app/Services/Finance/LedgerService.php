@@ -13,22 +13,38 @@ class LedgerService
     {
         abort_unless(config('semizzy.finance_enabled'), 503, 'Finance core is disabled.');
 
+        $reference = trim($reference);
+        $type = trim($type);
+        $currency = strtoupper(trim($currency));
+
+        if ($reference === '' || $type === '') {
+            throw new RuntimeException('Ledger reference and type are required.');
+        }
+
+        if (!preg_match('/^[A-Z]{3}$/', $currency)) {
+            throw new RuntimeException('Ledger currency must be a three-letter ISO-style code.');
+        }
+
         return DB::transaction(function () use ($reference, $type, $currency, $entries, $description, $metadata) {
-            $existing = LedgerTransaction::query()->where('reference', $reference)->lockForUpdate()->first();
+            $existing = LedgerTransaction::query()
+                ->where('reference', $reference)
+                ->lockForUpdate()
+                ->first();
+
             if ($existing) {
+                if ($existing->type !== $type || strtoupper((string) $existing->currency) !== $currency) {
+                    throw new RuntimeException('Ledger reference is already bound to a different transaction type or currency.');
+                }
+
+                if (!$existing->isBalanced()) {
+                    throw new RuntimeException('Existing ledger transaction is unbalanced and requires reconciliation.');
+                }
+
                 return $existing->load('entries');
             }
 
             if (count($entries) < 2) {
                 throw new RuntimeException('A ledger transaction requires at least two entries.');
-            }
-
-            $currency = strtoupper(trim($currency));
-            if (!preg_match('/^[A-Z]{3}$/', $currency)) {
-                throw new RuntimeException('Ledger currency must be a three-letter ISO-style code.');
-            }
-            if (trim($reference) === '' || trim($type) === '') {
-                throw new RuntimeException('Ledger reference and type are required.');
             }
 
             $debit = '0';
@@ -44,6 +60,7 @@ class LedgerService
                 if (($d === '0') === ($c === '0')) {
                     throw new RuntimeException('Each ledger entry must contain exactly one side.');
                 }
+
                 $ledgerAccountId = $entry['ledger_account_id'] ?? null;
                 if (!is_numeric($ledgerAccountId) || (int) $ledgerAccountId < 1) {
                     throw new RuntimeException('Each ledger entry requires a valid ledger account.');
@@ -53,9 +70,11 @@ class LedgerService
                     ->where('id', (int) $ledgerAccountId)
                     ->where('status', 'active')
                     ->first(['id', 'currency']);
+
                 if ($account === null) {
                     throw new RuntimeException('Each ledger entry requires an active ledger account.');
                 }
+
                 if (strtoupper((string) $account->currency) !== $currency) {
                     throw new RuntimeException('Ledger entry account currency must match the transaction currency.');
                 }
@@ -107,6 +126,7 @@ class LedgerService
         $b = ltrim($b, '0') ?: '0';
         $carry = 0;
         $out = '';
+
         for ($i = 0, $j = 0; $i < strlen($a) || $j < strlen($b); $i++, $j++) {
             $sum = ($i < strlen($a) ? ord($a[strlen($a) - 1 - $i]) - 48 : 0)
                 + ($j < strlen($b) ? ord($b[strlen($b) - 1 - $j]) - 48 : 0)
@@ -114,6 +134,7 @@ class LedgerService
             $out = ($sum % 10) . $out;
             $carry = intdiv($sum, 10);
         }
+
         return $carry === 0 ? $out : $carry . $out;
     }
 }
