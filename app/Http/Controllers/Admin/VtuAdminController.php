@@ -99,7 +99,7 @@ class VtuAdminController extends Controller
    foreach($items as $item){
     if(!$item->transaction||!$item->transaction->provider_reference)continue;
     $attempted++;
-    try{$tx=$service->requery($item->transaction);if($tx->status!==$item->status)$reconciled++;}catch(\\Throwable $e){}
+    try{$tx=$service->requery($item->transaction);if($tx->status!==$item->status)$reconciled++;}catch(\Throwable $e){}
    }
   }
   return back()->with('success',"Selected bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
