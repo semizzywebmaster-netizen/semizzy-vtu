@@ -54,6 +54,8 @@ const emptyForm: FormData = {
 
 export default function Providers({ providers }: { providers: Provider[] }) {
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const form = useForm<FormData>(emptyForm);
 
   const beginEdit = (provider: Provider) => {
@@ -132,6 +134,20 @@ export default function Providers({ providers }: { providers: Provider[] }) {
     }
   };
 
+  const selectableIds = providers.map(p => p.id);
+  const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedIds.includes(id));
+
+  const toggleSelected = (id: number) => setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+  const toggleAll = () => setSelectedIds(allSelected ? [] : selectableIds);
+
+  const runBulk = (url: string, method: 'post' | 'delete', confirmText: string, data: Record<string, unknown> = {}) => {
+    if (!selectedIds.length || !window.confirm(confirmText)) return;
+    setBulkBusy(true);
+    const options = { preserveScroll: true, onFinish: () => setBulkBusy(false), onSuccess: () => setSelectedIds([]) };
+    if (method === 'delete') router.delete(url, { ...options, data: { provider_ids: selectedIds } });
+    else router.post(url, { provider_ids: selectedIds, ...data }, options);
+  };
+
   const remove = (provider: Provider) => {
     if (window.confirm(`Remove ${provider.display_name} from the active provider registry? Historical records will be retained.`)) {
       router.delete(`/admin/providers/${provider.id}`, { preserveScroll: true });
@@ -142,7 +158,7 @@ export default function Providers({ providers }: { providers: Provider[] }) {
     <Link href="/dashboard" className="text-sm font-semibold text-indigo-700">← Dashboard</Link>
     <header className="mt-3 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><h1 className="text-3xl font-extrabold text-slate-900">API Providers</h1><p className="mt-2 text-slate-600">Add as many providers as needed. New providers are always saved disabled and unverified; test and verify real credentials before enabling.</p></div><div className="flex flex-wrap gap-2">
 <button type="button" onClick={()=>{if(window.confirm('Install the built-in provider catalogue and service mappings? Existing provider credentials will not be overwritten.')) router.post('/admin/providers/install-presets', {}, {preserveScroll:true})}} className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white">Install provider catalogue</button>
-<button type="button" onClick={()=>{if(window.confirm('Sync all enabled and verified providers now? Failed providers/services will be skipped and reported; no credentials or selling prices will be changed.')) router.post('/admin/catalogue/sync-all', {}, {preserveScroll:true})}} className="rounded-xl border border-indigo-200 bg-white px-4 py-3 text-sm font-bold text-indigo-700">Sync all verified catalogues</button>
+<button type="button" onClick={()=>{if(window.confirm('Sync all enabled and verified providers now? Failed providers/services will be skipped and reported; no credentials or selling prices will be changed.')) router.post('/admin/catalogue/sync-all', {}, {preserveScroll:true})}} className="rounded-xl border border-indigo-200 bg-white px-4 py-3 text-sm font-bold text-indigo-700">Sync all verified catalogues</button>{providers.length > 0 && <button type="button" onClick={toggleAll} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold">{allSelected ? 'Clear selection' : 'Select all'}</button>}
 </div></header>
 
     <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -167,8 +183,8 @@ export default function Providers({ providers }: { providers: Provider[] }) {
       <div className="flex flex-wrap gap-3"><button disabled={form.processing} className="rounded-xl bg-indigo-700 px-5 py-3 font-semibold text-white disabled:opacity-50">{form.processing ? 'Saving…' : editingId ? 'Save changes' : 'Add provider'}</button>{editingId && <button type="button" onClick={cancelEdit} className="rounded-xl border border-slate-300 px-5 py-3 font-semibold">Cancel edit</button>}</div>
     </form>
 
-    <section className="mt-8 space-y-4"><h2 className="text-xl font-bold text-slate-900">Registered providers ({providers.length})</h2>
-      {providers.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-600">No providers registered yet. Add a provider above using its verified documentation.</div> : providers.map(provider => <article key={provider.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="mt-8 space-y-4"><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><h2 className="text-xl font-bold text-slate-900">Registered providers ({providers.length})</h2>{selectedIds.length > 0 && <div className="flex flex-wrap gap-2"><span className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700">{selectedIds.length} selected</span><button disabled={bulkBusy} onClick={()=>runBulk('/admin/providers/bulk/test','post','Test all selected providers now? Each provider will remain disabled until verified.')} className="rounded-lg border border-indigo-200 px-3 py-2 text-sm font-semibold text-indigo-700 disabled:opacity-50">Test selected</button><button disabled={bulkBusy} onClick={()=>runBulk('/admin/providers/bulk/toggle','post','Enable all selected providers that are already live-verified? Unverified providers will be skipped.',{enabled:true})} className="rounded-lg border border-emerald-200 px-3 py-2 text-sm font-semibold text-emerald-700 disabled:opacity-50">Enable selected</button><button disabled={bulkBusy} onClick={()=>runBulk('/admin/providers/bulk/toggle','post','Disable all selected providers?',{enabled:false})} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50">Disable selected</button><button disabled={bulkBusy} onClick={()=>runBulk('/admin/providers/bulk','delete','Remove all selected providers? Historical records remain, but active provider records and mappings will be disabled.',{})} className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">Remove selected</button></div>}</div>
+      {providers.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-600">No providers registered yet. Add a provider above using its verified documentation.</div> : providers.map(provider => <article key={provider.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="mb-3 flex items-center gap-3"><input type="checkbox" aria-label={`Select ${provider.display_name}`} checked={selectedIds.includes(provider.id)} onChange={()=>toggleSelected(provider.id)} className="h-4 w-4" /><span className="text-xs font-semibold text-slate-500">Select provider</span></div>
         <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-lg font-bold text-slate-900">{provider.display_name}</h3><p className="mt-1 break-all text-xs text-slate-500">{provider.identifier} · {provider.environment} · priority {provider.priority}</p><p className="mt-2 break-all text-sm text-slate-600">{provider.base_url || 'No API base URL configured'}</p></div><div className="flex flex-wrap gap-2"><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">{provider.verification_status}</span><span className={`rounded-full px-3 py-1 text-xs font-semibold ${provider.enabled && !provider.paused ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{provider.enabled && !provider.paused ? 'Enabled' : 'Disabled / paused'}</span></div></div>
         <p className="mt-3 text-sm text-slate-600">Authentication: {provider.auth_type} · Integration: {provider.integration_status} · Capabilities: {provider.capabilities.join(', ') || 'none'}</p>
         {provider.last_tested_at && <p className="mt-2 text-xs text-slate-500">Last test: {provider.last_test_status || 'unknown'} · {new Date(provider.last_tested_at).toLocaleString()} · {provider.last_test_summary || 'No summary'}</p>}
