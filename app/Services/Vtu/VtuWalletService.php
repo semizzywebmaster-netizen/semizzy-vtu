@@ -37,7 +37,14 @@ class VtuWalletService
     {
         DB::transaction(function () use ($tx,$success): void {
             $wallet=$this->wallet($tx); $key="vtu:{$tx->id}:settle:".($success?'success':'failure');
-            if(WalletMovement::query()->where('wallet_account_id',$wallet->id)->where('operation_key',$key)->exists()) return;
+            $op=WalletMovement::query()->where('wallet_account_id',$wallet->id)->where('operation_key',$key)->first();
+            if($op) return;
+
+            $oppositeKey="vtu:{$tx->id}:settle:".($success?'failure':'success');
+            if(WalletMovement::query()->where('wallet_account_id',$wallet->id)->where('operation_key',$oppositeKey)->exists()) {
+                throw new RuntimeException('Wallet settlement already finalized with the opposite outcome.');
+            }
+
             $beforeAvailable=(string)$wallet->available_minor; $beforeHeld=(string)$wallet->held_minor; $total=(string)$tx->total_minor;
             if($this->compareIntegerStrings($beforeHeld,$total)<0) throw new RuntimeException('Wallet hold is inconsistent.');
             $wallet->held_minor=$this->sub($beforeHeld,$total); if(!$success) $wallet->available_minor=$this->add($beforeAvailable,$total); $wallet->save();
