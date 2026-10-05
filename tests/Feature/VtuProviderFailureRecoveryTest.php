@@ -144,6 +144,7 @@ class VtuProviderFailureRecoveryTest extends TestCase
             accepted: false,
             status: 'UNKNOWN',
             message: 'Provider timeout.',
+            providerReference: 'PROVIDER-PENDING-1',
             duplicateRisk: true,
             providerId: $provider->id,
         ));
