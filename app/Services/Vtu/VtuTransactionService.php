@@ -31,7 +31,7 @@ class VtuTransactionService{
     $tx->setRawAttributes($locked->getAttributes());
     $tx->exists=true;
     return true;
-  });
+  }, 5);
   if(!$claimed)return $tx->fresh();
 
   $r=$this->gateway->initiate($tx,$tx->request_payload??[]);
