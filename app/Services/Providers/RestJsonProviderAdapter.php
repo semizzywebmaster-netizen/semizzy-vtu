@@ -41,7 +41,15 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 $request = $request->withHeaders(['Idempotency-Key' => $idempotencyKey]);
             }
 
-            $response = in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval'], true)
+            $isGet = in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval'], true);
+            if ($provider->auth_type === 'custom') {
+                $methodHeaders = $provider->credentials[$isGet ? 'headers_get' : 'headers_post'] ?? null;
+                if (is_array($methodHeaders)) {
+                    $request = $request->withHeaders($this->safeCredentialHeaders($methodHeaders));
+                }
+            }
+
+            $response = $isGet
                 ? $request->get($url, $payload)
                 : $request->post($url, $payload);
 
@@ -96,8 +104,24 @@ class RestJsonProviderAdapter implements ProviderAdapter
             'api_key_header' => Http::acceptJson()->withHeaders([
                 (string) ($credentials['header'] ?? 'X-API-Key') => (string) ($credentials['key'] ?? ''),
             ]),
-            default => Http::acceptJson()->withHeaders((array) ($credentials['headers'] ?? [])),
+            default => Http::acceptJson()->withHeaders($this->safeCredentialHeaders((array) ($credentials['headers'] ?? []))),
         };
+    }
+
+    /**
+     * Prevent accidental credential leakage through invalid/non-string header values.
+     * Header names and values remain provider-controlled configuration and are never logged here.
+     */
+    private function safeCredentialHeaders(array $headers): array
+    {
+        $safe = [];
+        foreach ($headers as $name => $value) {
+            if (!is_string($name) || $name === '' || !is_scalar($value)) {
+                continue;
+            }
+            $safe[$name] = (string) $value;
+        }
+        return $safe;
     }
 
     private function endpoint(ApiProvider $provider, string $operation): ?string
