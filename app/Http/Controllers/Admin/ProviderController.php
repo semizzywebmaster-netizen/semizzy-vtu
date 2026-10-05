@@ -327,6 +327,7 @@ class ProviderController extends Controller
                 $productMappings=ProviderServiceProduct::query()->where('api_provider_id',$model->id)->lockForUpdate()->get();
                 $productMappings->each(fn(ProviderServiceProduct $mapping)=>$mapping->forceFill(['enabled'=>false])->saveOrFail());
                 $model->forceFill(['enabled'=>false,'paused'=>true])->saveOrFail();
+                $model->delete();
                 return ['provider_id'=>$model->id,'identifier'=>$model->identifier,'mapping_count'=>$productMappings->count()];
             });
             try { $audit->record('provider.removed',ApiProvider::find($result['provider_id']),['identifier'=>$result['identifier'],'history_preserved'=>true,'archived'=>true,'mappings_disabled'=>true,'provider_product_mappings_disabled'=>$result['mapping_count']],$request); } catch(\Throwable $auditException){report($auditException);}
