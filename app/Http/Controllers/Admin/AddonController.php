@@ -42,31 +42,31 @@ class AddonController extends Controller
         ]);
     }
 
+    public function registerVtu(AddonLifecycleService $lifecycle): RedirectResponse
+    {
+        $manifest = $this->vtuManifest();
+        $addon = Addon::query()->where('identifier', $manifest['identifier'])->first();
+
+        if (!$addon) {
+            $lifecycle->register($manifest, auth()->id());
+        }
+
+        return back()->with('success', 'VTU & Digital Services addon registered. Install it before activation.');
+    }
+
     public function installVtu(AddonLifecycleService $lifecycle): RedirectResponse
     {
-        $manifest = [
-            'identifier' => 'vtu.digital-services',
-            'name' => 'VTU & Digital Services',
-            'version' => '1.0.0',
-            'compatibility' => '>=2.0.0',
-            'dependencies' => [],
-            'permissions' => ['vtu.view','vtu.services.manage','vtu.products.manage','vtu.providers.manage','vtu.mappings.manage','vtu.transactions.view','vtu.transactions.manage','vtu.bulk.manage','vtu.requery','vtu.refunds.manage','vtu.settings.manage'],
-            'navigation' => [['label' => 'VTU', 'url' => '/vtu', 'permission' => 'vtu.view']],
-            'settings' => [],
-            'migrations' => [
-                '2026_10_05_000026_create_vtu_addon_tables.php',
-                '2026_10_05_000027_add_vtu_bulk_idempotency.php',
-            ],
-            'routes' => ['/vtu'],
-            'api_routes' => ['/api/v1/vtu'],
-            'services' => ['provider-driven digital services'],
-            'provider_integrations' => ['Core ProviderManager'],
-            'scheduled_tasks' => ['pending transaction reconciliation'],
-            'events' => [],
-        ];
+        $manifest = $this->vtuManifest();
         $addon = Addon::query()->where('identifier', $manifest['identifier'])->first();
-        if (!$addon) $addon = $lifecycle->register($manifest, auth()->id());
-        if (in_array($addon->status, ['draft','failed','inactive'], true)) $lifecycle->install($addon, auth()->id());
+
+        if (!$addon) {
+            $addon = $lifecycle->register($manifest, auth()->id());
+        }
+
+        if (in_array($addon->status, ['draft','failed','inactive'], true)) {
+            $lifecycle->install($addon, auth()->id());
+        }
+
         return back()->with('success', 'VTU & Digital Services addon installed. Activate it to expose its services.');
     }
 
@@ -117,6 +117,34 @@ class AddonController extends Controller
         $lifecycle->archive($addon, auth()->id());
 
         return back()->with('success', 'Addon archived.');
+    }
+
+    private function vtuManifest(): array
+    {
+        return [
+            'identifier' => 'vtu.digital-services',
+            'name' => 'VTU & Digital Services',
+            'version' => '1.0.0',
+            'compatibility' => '>=2.0.0',
+            'dependencies' => [],
+            'permissions' => [
+                'vtu.view','vtu.services.manage','vtu.products.manage','vtu.providers.manage',
+                'vtu.mappings.manage','vtu.transactions.view','vtu.transactions.manage',
+                'vtu.bulk.manage','vtu.requery','vtu.refunds.manage','vtu.settings.manage',
+            ],
+            'navigation' => [['label' => 'VTU', 'url' => '/vtu', 'permission' => 'vtu.view']],
+            'settings' => [],
+            'migrations' => [
+                '2026_10_05_000026_create_vtu_addon_tables.php',
+                '2026_10_05_000027_add_vtu_bulk_idempotency.php',
+            ],
+            'routes' => ['/vtu'],
+            'api_routes' => ['/api/v1/vtu'],
+            'services' => ['provider-driven digital services'],
+            'provider_integrations' => ['Core ProviderManager'],
+            'scheduled_tasks' => ['pending transaction reconciliation'],
+            'events' => [],
+        ];
     }
 
     private function validatedManifest(Request $request): array
