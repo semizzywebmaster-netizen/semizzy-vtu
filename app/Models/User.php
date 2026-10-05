@@ -34,22 +34,14 @@ class User extends Authenticatable implements MustVerifyEmail
 
                 $user->username = $candidate;
             }
-        });
 
-        static::created(function (self $user): void {
-            if (filled($user->referral_code)) {
-                return;
+            if (! filled($user->referral_code)) {
+                do {
+                    $candidate = 'SEM' . strtoupper(Str::random(8));
+                } while (DB::table('users')->where('referral_code', $candidate)->exists());
+
+                $user->referral_code = $candidate;
             }
-
-            $base = 'SEM' . strtoupper(base_convert((string) $user->id, 10, 36));
-            $candidate = $base;
-            $suffix = 1;
-
-            while (DB::table('users')->where('referral_code', $candidate)->where('id', '!=', $user->id)->exists()) {
-                $candidate = $base . $suffix++;
-            }
-
-            $user->forceFill(['referral_code' => $candidate])->saveQuietly();
         });
     }
 
