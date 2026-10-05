@@ -42,6 +42,11 @@ class VtuSettlementProcessConcurrencyTest extends TestCase
 
         DB::purge('sqlite');
         DB::reconnect('sqlite');
+        // SQLite serializes writers. Give concurrent processes enough time
+        // to wait for the writer lock instead of failing immediately with
+        // "database is locked". Production MySQL/MariaDB uses row-level
+        // locking and is not affected by this test-only setting.
+        DB::statement('PRAGMA busy_timeout = 5000');
         Artisan::call('migrate:fresh', ['--force' => true]);
     }
 
@@ -186,6 +191,7 @@ class VtuSettlementProcessConcurrencyTest extends TestCase
             try {
                 DB::disconnect('sqlite');
                 DB::reconnect('sqlite');
+                DB::statement('PRAGMA busy_timeout = 5000');
 
                 file_put_contents($startPath, 'child-ready');
                 while (! is_file($startPath.'.go')) {
@@ -215,6 +221,7 @@ class VtuSettlementProcessConcurrencyTest extends TestCase
         }
 
         file_put_contents($startPath.'.go', 'go');
+        DB::statement('PRAGMA busy_timeout = 5000');
 
         $parentTx = VtuTransaction::query()->findOrFail($tx->id);
         app(VtuTransactionService::class)->process($parentTx);
