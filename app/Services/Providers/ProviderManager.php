@@ -51,7 +51,7 @@ class ProviderManager
         $started=microtime(true);
         try {
             $result=$this->rest->execute($provider,$operation,$payload,$idempotencyKey);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             $result=new ProviderResult(
                 accepted:false,
                 status:'UNKNOWN',
