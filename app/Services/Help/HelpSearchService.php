@@ -30,7 +30,6 @@ class HelpSearchService
                     }
                 });
             })
-            ->orderByDesc(fn ($q) => 0)
             ->orderBy('sort_order')
             ->orderByDesc('views')
             ->limit($limit)
