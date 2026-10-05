@@ -24,7 +24,7 @@ Route::middleware(['auth', 'verified', 'ensure.active.api', 'security.throttle:a
 
 Route::middleware(['auth:sanctum', 'ensure.active.api', 'api.token:core.read'])->get('/v1/core-check', fn () => response()->json(['status' => 'ok']))->name('api.v1.core-check');
 
-Route::post('/v1/vtu/webhooks/{provider}', [VtuController::class, 'webhook'])->middleware('throttle:120,1')->name('api.v1.vtu.webhook');
+Route::post('/v1/vtu/webhooks/{provider:identifier}', [VtuController::class, 'webhook'])->middleware('throttle:120,1')->name('api.v1.vtu.webhook');
 
 Route::middleware(['auth:sanctum','ensure.active.api','api.token:vtu.read','ensure.vtu'])->prefix('/v1/vtu')->group(function (): void {
     Route::get('/services', [VtuController::class, 'apiServices'])->name('api.v1.vtu.services');
