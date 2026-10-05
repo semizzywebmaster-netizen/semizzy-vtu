@@ -11,6 +11,7 @@ use App\Models\SupportTicket;
 use App\Models\User;
 use App\Models\VtuTransaction;
 use App\Models\WalletAccount;
+use App\Services\Dashboard\DashboardMessageService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -148,13 +149,17 @@ class DashboardController extends Controller
             ])->values()->all();
         }
 
+        $dashboardMessages = app(DashboardMessageService::class)->compose($user);
+
         return Inertia::render('Dashboard', [
             'role' => $role,
             'user' => [
                 'name' => $user->name,
                 'email' => $user->email,
                 'username' => $user->username,
+                'business_name' => $user->business_name,
             ],
+            'dashboardMessages' => $dashboardMessages,
             'metrics' => $metrics,
             'quickLinks' => $quickLinks,
             'serviceCategories' => $serviceCategories,
