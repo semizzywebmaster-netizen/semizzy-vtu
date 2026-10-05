@@ -84,6 +84,9 @@ Route::middleware(['auth'])->group(function (): void {
 
         Route::get('/providers', [ProviderController::class, 'index'])->middleware('permission:providers.view')->name('admin.providers.index');
         Route::post('/providers/install-presets', [ProviderController::class, 'installPresets'])->middleware('permission:providers.manage')->name('admin.providers.install-presets');
+        Route::post('/providers/bulk/test', [ProviderController::class, 'bulkTest'])->middleware('permission:providers.manage')->name('admin.providers.bulk.test');
+        Route::post('/providers/bulk/toggle', [ProviderController::class, 'bulkToggle'])->middleware('permission:providers.manage')->name('admin.providers.bulk.toggle');
+        Route::delete('/providers/bulk', [ProviderController::class, 'bulkDestroy'])->middleware('permission:providers.manage')->name('admin.providers.bulk.destroy');
         Route::post('/providers', [ProviderController::class, 'store'])->middleware('permission:providers.manage')->name('admin.providers.store');
         Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->middleware('permission:providers.manage')->name('admin.providers.update');
         Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->middleware('permission:providers.manage')->name('admin.providers.test');
