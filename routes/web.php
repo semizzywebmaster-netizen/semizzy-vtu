@@ -111,11 +111,13 @@ Route::middleware(['auth'])->group(function (): void {
             Route::post('/services/bootstrap', [VtuAdminController::class, 'bootstrap'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services.bootstrap');
             Route::post('/services/{service}/enable', [VtuAdminController::class, 'enableService'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services.enable');
             Route::post('/services/{service}/disable', [VtuAdminController::class, 'disableService'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services.disable');
+            Route::post('/services/bulk/toggle', [VtuAdminController::class, 'bulkToggleServices'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services.bulk-toggle');
             Route::get('/products', [VtuAdminController::class, 'products'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products');
             Route::get('/mappings', [VtuAdminController::class, 'mappings'])->middleware('permission:vtu.mappings.manage')->name('admin.vtu.mappings');
             Route::post('/mappings', [VtuAdminController::class, 'saveMapping'])->middleware('permission:vtu.mappings.manage')->name('admin.vtu.mappings.save');
             Route::post('/products/{product}/enable', [VtuAdminController::class, 'enableProduct'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products.enable');
             Route::post('/products/{product}/disable', [VtuAdminController::class, 'disableProduct'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products.disable');
+            Route::post('/products/bulk/toggle', [VtuAdminController::class, 'bulkToggleProducts'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products.bulk-toggle');
             Route::get('/bulk', [VtuAdminController::class, 'bulkOperations'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk');
             Route::post('/bulk/{bulk}/reconcile', [VtuAdminController::class, 'reconcileBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.reconcile');
             Route::post('/bulk/reconcile-selected', [VtuAdminController::class, 'reconcileSelectedBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.reconcile-selected');
