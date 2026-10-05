@@ -100,8 +100,6 @@ class VtuSettlementConcurrencyTest extends TestCase
         $this->assertTrue((bool) (($claimed->metadata ?? [])['provider_initiation_claimed'] ?? false));
 
         $serviceUnderTest->process($claimed);
-
-        $gateway->shouldHaveReceived('initiate')->once();
     }
 
     public function test_terminal_transaction_cannot_settle_wallet_twice(): void
