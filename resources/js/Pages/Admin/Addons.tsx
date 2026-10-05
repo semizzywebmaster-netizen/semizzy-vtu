@@ -53,10 +53,9 @@ export default function Addons({ addons }: Props) {
 
   const submitRegister = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
     const payload = { identifier: 'vtu.digital-services' };
     setProcessing('register');
-    router.post('/admin/addons/register', payload, {
+    router.post('/admin/addons/register-vtu', payload, {
       onSuccess: () => {
         setShowRegister(false);
         event.currentTarget.reset();
@@ -163,7 +162,6 @@ export default function Addons({ addons }: Props) {
             </form>
           )}
 
-)}
 
           <div className="mt-6 grid gap-4">
             {addons.length === 0 && (
