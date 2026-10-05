@@ -96,8 +96,9 @@ class ProviderController extends Controller
         return back()->with('success', 'Provider saved as unverified and disabled.');
     }
 
-    public function update(Request $request, ApiProvider $provider, AuditLogger $audit): RedirectResponse
+    public function update(Request $request, int $provider, AuditLogger $audit): RedirectResponse
     {
+        $provider = ApiProvider::query()->findOrFail($provider);
         $data = $this->validatedProvider($request, false);
         app(ProviderUrlGuard::class)->validate($data['base_url'] ?? $provider->base_url);
 
@@ -127,8 +128,9 @@ class ProviderController extends Controller
         return back()->with('success', 'Provider updated. Re-test it before enabling.');
     }
 
-    public function test(ApiProvider $provider, ProviderTestService $tester, AuditLogger $audit, Request $request): RedirectResponse
+    public function test(int $provider, ProviderTestService $tester, AuditLogger $audit, Request $request): RedirectResponse
     {
+        $provider = ApiProvider::query()->findOrFail($provider);
         try {
             $result = $tester->test($provider);
         } catch (\Throwable $e) {
@@ -282,10 +284,10 @@ class ProviderController extends Controller
         return back()->with('success', "Bulk provider removal completed: {$removed} provider(s) safely archived and disabled.");
     }
 
-    public function toggle(ApiProvider $provider, AuditLogger $audit, Request $request): RedirectResponse
+    public function toggle(int $provider, AuditLogger $audit, Request $request): RedirectResponse
     {
         return DB::transaction(function () use ($provider, $audit, $request): RedirectResponse {
-            $provider = ApiProvider::query()->lockForUpdate()->findOrFail($provider->id);
+            $provider = ApiProvider::query()->lockForUpdate()->findOrFail($provider);
 
             if (! $provider->enabled && ($provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
                 return back()->with('error', 'Provider must be live-verified before it can be enabled.');
@@ -301,10 +303,10 @@ class ProviderController extends Controller
         });
     }
 
-    public function destroy(ApiProvider $provider, AuditLogger $audit, Request $request): RedirectResponse
+    public function destroy(int $provider, AuditLogger $audit, Request $request): RedirectResponse
     {
         DB::transaction(function () use ($provider, $audit, $request): void {
-            $provider = ApiProvider::query()->lockForUpdate()->findOrFail($provider->id);
+            $provider = ApiProvider::query()->lockForUpdate()->findOrFail($provider);
 
             $provider->serviceMappings()->lockForUpdate()->get()->each(function ($mapping): void {
                 $mapping->forceFill(['enabled' => false])->save();
