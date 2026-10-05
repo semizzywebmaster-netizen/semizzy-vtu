@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 
 type AddonEvent = {
   id: number;
@@ -26,6 +26,10 @@ type Addon = {
 
 type Props = { addons: Addon[] };
 
+const busyStatuses = new Set(['validating', 'installing', 'enabling', 'disabling', 'updating', 'uninstalling']);
+const formatDate = (value: string | null) => { if (!value) return 'Not recorded'; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString(); };
+const formatEvent = (event: AddonEvent) => { const transition = event.from_status || event.to_status ? `${event.from_status ?? '—'} → ${event.to_status ?? '—'}` : null; return transition ? `${event.event} · ${transition}` : event.event; };
+
 const statusClass: Record<string, string> = {
   active: 'bg-emerald-100 text-emerald-800',
   installed: 'bg-blue-100 text-blue-800',
@@ -44,6 +48,8 @@ const statusClass: Record<string, string> = {
 export default function Addons({ addons }: Props) {
   const [showRegister, setShowRegister] = useState(false);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [processing, setProcessing] = useState<string | null>(null);
+  const vtuAddon = useMemo(() => addons.find((addon) => addon.identifier === 'vtu.digital-services'), [addons]);
 
   const submitRegister = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -56,11 +62,13 @@ export default function Addons({ addons }: Props) {
       dependencies: String(form.get('dependencies') ?? '').split(',').map((v) => v.trim()).filter(Boolean),
       permissions: String(form.get('permissions') ?? '').split(',').map((v) => v.trim()).filter(Boolean),
     };
+    setProcessing('register');
     router.post('/admin/addons/register', payload, {
       onSuccess: () => {
         setShowRegister(false);
         event.currentTarget.reset();
       },
+      onFinish: () => setProcessing(null),
     });
   };
 
@@ -70,6 +78,7 @@ export default function Addons({ addons }: Props) {
     const dependencies = String(form.get('dependencies') ?? '').split(',').map((v) => v.trim()).filter(Boolean);
     const permissions = String(form.get('permissions') ?? '').split(',').map((v) => v.trim()).filter(Boolean);
 
+    setProcessing(`update:${addon.id}`);
     router.post('/admin/addons/' + addon.id + '/update', {
       identifier: addon.identifier,
       name: String(form.get('name') ?? addon.name),
@@ -79,13 +88,20 @@ export default function Addons({ addons }: Props) {
       permissions,
     }, {
       onSuccess: () => setUpdatingId(null),
+      onFinish: () => setProcessing(null),
     });
   };
 
-  const action = (url: string, confirmText?: string) => {
-    if (confirmText && !window.confirm(confirmText)) return;
-    router.post(url);
+  const action = (url: string, key: string, confirmText?: string) => {
+    if (processing || (confirmText && !window.confirm(confirmText))) return;
+    setProcessing(key);
+    router.post(url, undefined, { onFinish: () => setProcessing(null) });
   };
+
+  const vtuAction = vtuAddon
+    ? vtuAddon.status === 'active' ? { label: 'Open VTU Dashboard', url: '/admin/vtu', key: 'vtu-open', className: 'bg-emerald-600' }
+    : ['installed', 'inactive'].includes(vtuAddon.status) ? { label: 'Activate VTU', url: `/admin/addons/${vtuAddon.id}/activate`, key: `activate:${vtuAddon.id}`, className: 'bg-emerald-600' } : null
+    : { label: 'Install VTU', url: '/admin/addons/install-vtu', key: 'vtu-install', className: 'bg-indigo-600' };
 
   return (
     <>
@@ -98,8 +114,8 @@ export default function Addons({ addons }: Props) {
               <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Addon Manager</h1>
               <p className="mt-2 text-sm text-slate-600">Register, validate, install, activate, disable, and archive Core addons.</p>
             </div>
-            <button onClick={() => router.post('/admin/addons/install-vtu')} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white">Install VTU</button>
-            <button onClick={() => setShowRegister((v) => !v)} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">
+            {vtuAction && (vtuAction.url === '/admin/vtu' ? <Link href="/admin/vtu" className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Open VTU Dashboard</Link> : <button type="button" disabled={Boolean(processing) || Boolean(vtuAddon && busyStatuses.has(vtuAddon.status))} onClick={() => action(vtuAction.url, vtuAction.key)} className={`rounded-xl ${vtuAction.className} px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60`}>{processing === vtuAction.key ? `${vtuAction.label}…` : vtuAction.label}</button>)}
+            <button disabled={Boolean(processing)} onClick={() => setShowRegister((v) => !v)} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">
               {showRegister ? 'Close' : '+ Register addon'}
             </button>
           </div>
@@ -126,9 +142,10 @@ export default function Addons({ addons }: Props) {
                   <input name={name} placeholder={placeholder} required={name === 'identifier' || name === 'name' || name === 'version'}
                     className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 font-normal outline-none focus:border-slate-500" />
                 </label>
-              ))}
+              );
+            })}
               <div className="md:col-span-2">
-                <button type="submit" className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white">Register manifest</button>
+                <button type="submit" disabled={processing === 'register'} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">{processing === 'register' ? 'Registering…' : 'Register manifest'}</button>
               </div>
             </form>
           )}
@@ -137,23 +154,25 @@ export default function Addons({ addons }: Props) {
             {addons.length === 0 && (
               <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">No addons registered yet.</div>
             )}
-            {addons.map((addon) => (
+            {addons.map((addon) => {
+              const isBusy = busyStatuses.has(addon.status) || processing !== null;
+              return (
               <article key={addon.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-lg font-extrabold text-slate-900">{addon.name}</h2>
-                      <span className={statusClass[addon.status] ?? 'bg-slate-100 text-slate-700'}>{addon.status}</span>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${statusClass[addon.status] ?? 'bg-slate-100 text-slate-700'}`}>{busyStatuses.has(addon.status) ? `${addon.status}…` : addon.status}</span>
                     </div>
                     <p className="mt-1 text-xs font-mono text-slate-500">{addon.identifier} · v{addon.version}</p>
                     {addon.last_error && <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">{addon.last_error}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(addon.status === 'draft' || addon.status === 'failed' || addon.status === 'inactive') && (
-                      <button onClick={() => action('/admin/addons/' + addon.id + '/install')} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white">Install</button>
+                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/install', `install:${addon.id}`)} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white">Install</button>
                     )}
                     {(addon.status === 'installed' || addon.status === 'inactive') && (
-                      <button onClick={() => action('/admin/addons/' + addon.id + '/activate')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Activate</button>
+                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/activate', `activate:${addon.id}`)} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Activate</button>
                     )}
                     {(addon.status === 'installed' || addon.status === 'active' || addon.status === 'inactive') && (
                       <button onClick={() => setUpdatingId(updatingId === addon.id ? null : addon.id)} className="rounded-lg border border-indigo-300 px-3 py-2 text-xs font-bold text-indigo-700">
@@ -161,13 +180,13 @@ export default function Addons({ addons }: Props) {
                       </button>
                     )}
                     {addon.status === 'active' && (
-                      <button onClick={() => action('/admin/addons/' + addon.id + '/disable')} className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-white">Disable</button>
+                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/disable', `disable:${addon.id}`)} className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-white">Disable</button>
                     )}
                     {['installed', 'inactive', 'failed'].includes(addon.status) && (
-                      <button onClick={() => action('/admin/addons/' + addon.id + '/uninstall', 'Uninstall this addon? The addon will be archived after the uninstall contract is recorded.')} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700">Uninstall</button>
+                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/uninstall', `uninstall:${addon.id}`, 'Uninstall this addon? The addon will be archived after the uninstall contract is recorded.')} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700">Uninstall</button>
                     )}
                     {addon.status === 'draft' && (
-                      <button onClick={() => action('/admin/addons/' + addon.id + '/archive', 'Archive this addon?')} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700">Archive</button>
+                      <button disabled={isBusy} onClick={() => action('/admin/addons/' + addon.id + '/archive', `archive:${addon.id}`, 'Archive this addon?')} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700">Archive</button>
                     )}
                   </div>
                 </div>
@@ -194,13 +213,10 @@ export default function Addons({ addons }: Props) {
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Dependencies</p>
                     <p className="mt-1 text-sm text-slate-600">{addon.dependencies.length ? addon.dependencies.map((d) => typeof d === 'string' ? d : d.identifier).filter(Boolean).join(', ') : 'None'}</p>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Recent lifecycle events</p>
-                    <div className="mt-1 space-y-1">
-                      {addon.events.length ? addon.events.slice(0, 4).map((event) => (
-                        <p key={event.id} className="text-xs text-slate-600"><span className="font-semibold">{event.event}</span> — {event.message}</p>
-                      )) : <p className="text-sm text-slate-500">No events.</p>}
-                    </div>
+                  <div className="space-y-4">
+                    <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Permissions</p>{addon.permissions.length ? <div className="mt-2 flex flex-wrap gap-1.5">{addon.permissions.map((permission) => <span key={permission} className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700">{permission}</span>)}</div> : <p className="mt-1 text-sm text-slate-500">None declared.</p>}</div>
+                    <div className="grid gap-3 sm:grid-cols-2"><div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Installed</p><p className="mt-1 text-sm text-slate-600">{formatDate(addon.installed_at)}</p></div><div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Activated</p><p className="mt-1 text-sm text-slate-600">{formatDate(addon.activated_at)}</p></div></div>
+                    <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Recent lifecycle events</p><div className="mt-2 space-y-2">{addon.events.length ? addon.events.slice(0, 4).map((event) => <div key={event.id} className="rounded-lg border border-slate-100 bg-slate-50 p-2.5"><div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><span className="text-xs font-bold text-slate-700">{formatEvent(event)}</span><time className="text-[11px] text-slate-400">{formatDate(event.created_at)}</time></div>{event.message && <p className="mt-1 text-xs leading-5 text-slate-600">{event.message}</p>}</div>) : <p className="text-sm text-slate-500">No events.</p>}</div></div>
                   </div>
                 </div>
               </article>
