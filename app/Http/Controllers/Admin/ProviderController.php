@@ -330,7 +330,7 @@ class ProviderController extends Controller
                 $model->delete();
                 return ['provider_id'=>$model->id,'identifier'=>$model->identifier,'mapping_count'=>$productMappings->count()];
             });
-            try { $audit->record('provider.removed',ApiProvider::find($result['provider_id']),['identifier'=>$result['identifier'],'history_preserved'=>true,'archived'=>true,'mappings_disabled'=>true,'provider_product_mappings_disabled'=>$result['mapping_count']],$request); } catch(\Throwable $auditException){report($auditException);}
+            try { $audit->record('provider.removed',ApiProvider::withTrashed()->find($result['provider_id']),['identifier'=>$result['identifier'],'history_preserved'=>true,'archived'=>true,'mappings_disabled'=>true,'provider_product_mappings_disabled'=>$result['mapping_count']],$request); } catch(\Throwable $auditException){report($auditException);}
             return back()->with('success','Provider removed from the active registry. Historical records are retained.');
         } catch(\Throwable $e){report($e);return back()->with('error','Provider could not be removed safely.');}
     }
