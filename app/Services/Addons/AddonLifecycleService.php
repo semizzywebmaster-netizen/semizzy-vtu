@@ -49,30 +49,35 @@ class AddonLifecycleService
         $addonId = $addon->id;
 
         try {
+            // IMPORTANT: do not run Laravel migrations inside DB::transaction().
+            // MySQL/MariaDB implicitly commit DDL, which can invalidate the outer
+            // PDO transaction and turn a successful addon install into a 500.
+            $this->beginInstallation($addonId, $actorId);
+
+            $addon = Addon::query()->findOrFail($addonId);
+            $this->assertManifest($addon);
+            $this->assertCoreCompatibility($addon->compatibility_constraint);
+            $this->assertDependencies($addon->dependencies, $addon->identifier);
+
+            $this->recordInstallationStep($addonId, 'register', 'Addon registration validated.');
+            $this->recordMigrationContract($addon);
+            $this->recordInstallationStep($addonId, 'initialize', 'Addon initialization contract validated.');
+
+            if ($addon->identifier === 'vtu.digital-services') {
+                app(\\App\\Services\\Vtu\\VtuAddonInstaller::class)->install();
+            }
+
+            $this->recordInstallationStep($addonId, 'health', 'Addon health contract validated.');
+
             return DB::transaction(function () use ($addonId, $actorId): Addon {
                 $addon = Addon::query()->lockForUpdate()->findOrFail($addonId);
 
-                if (!in_array($addon->status, ['draft', 'failed', 'inactive'], true)) {
+                if ($addon->status !== 'installing') {
                     throw ValidationException::withMessages([
-                        'addon' => 'Only a draft, failed, or inactive addon can begin installation.',
+                        'addon' => 'Addon installation state changed unexpectedly during installation.',
                     ]);
                 }
 
-                $this->transition($addon, 'validating', 'install_started', 'Addon validation started.', $actorId);
-                $this->assertManifest($addon);
-                $this->assertCoreCompatibility($addon->compatibility_constraint);
-                $this->assertDependencies($addon->dependencies, $addon->identifier);
-                $this->transition($addon, 'installing', 'installing', 'Addon installation started.', $actorId);
-
-                $this->recordStep($addon, 'register', 'Addon registration validated.');
-                $this->recordMigrationContract($addon);
-                $this->recordStep($addon, 'initialize', 'Addon initialization contract validated.');
-                if ($addon->identifier === 'vtu.digital-services') {
-                    app(\App\Services\Vtu\VtuAddonInstaller::class)->install();
-                }
-                $this->recordStep($addon, 'health', 'Addon health contract validated.');
-
-                $from = 'installing';
                 $addon->update([
                     'status' => 'installed',
                     'installed_at' => now(),
@@ -82,7 +87,7 @@ class AddonLifecycleService
                 $addon->lifecycleEvents()->create([
                     'addon_identifier' => $addon->identifier,
                     'event' => 'installed',
-                    'from_status' => $from,
+                    'from_status' => 'installing',
                     'to_status' => 'installed',
                     'message' => 'Addon installed successfully.',
                     'actor_id' => $actorId,
@@ -337,6 +342,25 @@ class AddonLifecycleService
         ];
     }
 
+    private function beginInstallation(int $addonId, ?int $actorId): void
+    {
+        DB::transaction(function () use ($addonId, $actorId): void {
+            $addon = Addon::query()->lockForUpdate()->findOrFail($addonId);
+
+            if (!in_array($addon->status, ['draft', 'failed', 'inactive'], true)) {
+                throw ValidationException::withMessages([
+                    'addon' => 'Only a draft, failed, or inactive addon can begin installation.',
+                ]);
+            }
+
+            $this->transition($addon, 'validating', 'install_started', 'Addon validation started.', $actorId);
+            $this->assertManifest($addon);
+            $this->assertCoreCompatibility($addon->compatibility_constraint);
+            $this->assertDependencies($addon->dependencies, $addon->identifier);
+            $this->transition($addon, 'installing', 'installing', 'Addon installation started.', $actorId);
+        });
+    }
+
     private function persistFailure(int $addonId, ?int $actorId, Throwable $exception, string $event): void
     {
         report($exception);
@@ -432,6 +456,21 @@ class AddonLifecycleService
             'to_status' => $addon->status,
             'message' => $message,
         ]);
+    }
+
+    private function recordInstallationStep(int $addonId, string $step, string $message): void
+    {
+        DB::transaction(function () use ($addonId, $step, $message): void {
+            $addon = Addon::query()->findOrFail($addonId);
+
+            if ($addon->status !== 'installing') {
+                throw ValidationException::withMessages([
+                    'addon' => 'Addon installation state changed unexpectedly while recording an installation step.',
+                ]);
+            }
+
+            $this->recordStep($addon, $step, $message);
+        });
     }
 
     private function recordMigrationContract(Addon $addon, ?array $manifest = null): void
