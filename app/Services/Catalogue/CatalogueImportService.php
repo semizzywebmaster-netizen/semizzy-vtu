@@ -101,6 +101,20 @@ final class CatalogueImportService
                 $validProviderProductId = (is_string($providerProductId) || is_int($providerProductId))
                     && trim((string) $providerProductId) !== '';
 
+                // A provider product without a provider identifier or exact cost is retained
+                // as catalogue metadata but never made sellable through this provider mapping.
+                $hasSellableProviderData = $validProviderProductId && $normalizedCost !== null;
+
+                $product = ServiceProduct::query()->firstOrCreate(
+                    ['service_id' => $service->id, 'key' => $key],
+                    [
+                        'name' => $name,
+                        'currency' => $currency,
+                        'enabled' => false,
+                    ]
+                );
+                $product = ServiceProduct::query()->lockForUpdate()->findOrFail($product->id);
+
                 // Never let one provider product identifier point to multiple local
                 // products. Reassigning an identifier silently can route future
                 // purchases/reconciliation to the wrong catalogue item.
@@ -116,20 +130,6 @@ final class CatalogueImportService
                         continue;
                     }
                 }
-
-                // A provider product without a provider identifier or exact cost is retained
-                // as catalogue metadata but never made sellable through this provider mapping.
-                $hasSellableProviderData = $validProviderProductId && $normalizedCost !== null;
-
-                $product = ServiceProduct::query()->firstOrCreate(
-                    ['service_id' => $service->id, 'key' => $key],
-                    [
-                        'name' => $name,
-                        'currency' => $currency,
-                        'enabled' => false,
-                    ]
-                );
-                $product = ServiceProduct::query()->lockForUpdate()->findOrFail($product->id);
 
                 $currencyCompatible = strtoupper((string) $product->currency) === $currency;
                 if (!$currencyCompatible) {
