@@ -31,6 +31,8 @@ return [
         'verification_channels' => ['email', 'sms', 'whatsapp'],
         'realtime' => ['polling', 'webhooks', 'broadcast_when_supported'],
         'communications' => ['web_push', 'email', 'sms', 'whatsapp'],
+        'communication_types' => ['announcement', 'direct_message', 'marketing', 'service_notification', 'security_alert'],
+        'communication_segments' => ['all', 'tiers', 'agents', 'merchants', 'resellers', 'developers', 'students', 'sellers', 'smm_users', 'website_owners', 'verified', 'unverified', 'new', 'inactive', 'custom'],
         'analytics' => ['wallet', 'transactions', 'spending', 'funding', 'fees', 'refunds'],
     ],
     'username_policy' => [
