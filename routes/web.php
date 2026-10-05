@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FinancialAnalyticsController;
 use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\AuditEventController;
 use App\Http\Controllers\Admin\CatalogueController;
@@ -65,6 +66,8 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->middleware('verified')->name('dashboard');
     Route::middleware(['verified','ensure.vtu'])->group(function (): void { Route::get('/vtu', [VtuController::class, 'index'])->middleware('permission:vtu.view')->name('vtu.services'); });
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::get('/analytics', [FinancialAnalyticsController::class, 'index'])->name('analytics.index');
+    Route::get('/analytics/export', [FinancialAnalyticsController::class, 'export'])->middleware('throttle:10,1')->name('analytics.export');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/realtime/snapshot', [RealtimeController::class, 'snapshot'])->middleware('throttle:120,1')->name('realtime.snapshot');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->middleware('throttle:30,1')->name('notifications.read-all');
