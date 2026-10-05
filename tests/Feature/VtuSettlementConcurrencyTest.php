@@ -20,6 +20,90 @@ class VtuSettlementConcurrencyTest extends TestCase
 {
     use RefreshDatabase;
 
+
+    public function test_provider_exception_leaves_initiation_claim_and_blocks_blind_retry(): void
+    {
+        $user = User::create([
+            'name' => 'Claim Test',
+            'email' => 'claim-test@example.test',
+            'password' => 'password',
+            'role' => 'USER',
+            'status' => 'active',
+        ]);
+
+        $category = ServiceCategory::create([
+            'key' => 'claim-test',
+            'name' => 'Claim Test',
+            'enabled' => true,
+            'sort_order' => 1,
+        ]);
+
+        $service = Service::create([
+            'category_id' => $category->id,
+            'key' => 'claim-test-service',
+            'name' => 'Claim Test Service',
+            'enabled' => true,
+        ]);
+
+        $product = ServiceProduct::create([
+            'service_id' => $service->id,
+            'key' => 'claim-product',
+            'name' => 'Claim Product',
+            'provider_cost' => '100.00',
+            'currency' => 'NGN',
+            'enabled' => true,
+        ]);
+
+        $operation = FinancialOperation::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'reference' => 'CLAIM-TEST-1',
+            'user_id' => $user->id,
+            'type' => 'vtu.purchase',
+            'status' => 'processing',
+            'amount_minor' => '10000',
+            'currency' => 'NGN',
+            'idempotency_key' => 'claim-test-1',
+            'metadata' => [],
+        ]);
+
+        $tx = VtuTransaction::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'reference' => 'VTU-CLAIM-TEST-1',
+            'user_id' => $user->id,
+            'service_id' => $service->id,
+            'service_product_id' => $product->id,
+            'financial_operation_id' => $operation->id,
+            'idempotency_key' => 'claim-test-1',
+            'status' => 'processing',
+            'amount_minor' => '10000',
+            'fee_minor' => '0',
+            'total_minor' => '10000',
+            'currency' => 'NGN',
+            'customer_tier' => 'USER',
+            'request_payload' => ['phone' => '08000000000'],
+            'metadata' => [],
+        ]);
+
+        $gateway = $this->mock(VtuProviderGateway::class);
+        $gateway->shouldReceive('initiate')->once()->andThrow(new \RuntimeException('provider timeout'));
+
+        $serviceUnderTest = app(VtuTransactionService::class);
+
+        try {
+            $serviceUnderTest->process($tx);
+            $this->fail('Expected provider exception.');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('provider timeout', $e->getMessage());
+        }
+
+        $claimed = $tx->fresh();
+        $this->assertTrue((bool) (($claimed->metadata ?? [])['provider_initiation_claimed'] ?? false));
+
+        $serviceUnderTest->process($claimed);
+
+        $gateway->shouldHaveReceived('initiate')->once();
+    }
+
     public function test_terminal_transaction_cannot_settle_wallet_twice(): void
     {
         $user = User::create([
