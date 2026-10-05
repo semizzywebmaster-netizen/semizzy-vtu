@@ -161,5 +161,5 @@ class VtuAdminController extends Controller
  }
  public function enableService(Service $service){$service->loadMissing('category');if(!$service->category||$service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');try{$service->updateOrFail(['enabled'=>true]);return back()->with('success','Service enabled.');}catch(\Throwable $e){report($e);return back()->with('error','Service could not be enabled safely.');}}
  public function disableService(Service $service){$service->loadMissing('category');if(!$service->category||$service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');try{$service->updateOrFail(['enabled'=>false]);return back()->with('success','Service disabled.');}catch(\Throwable $e){report($e);return back()->with('error','Service could not be disabled safely.');}}
- public function bootstrap(VtuServiceRegistry $r){$r->bootstrapCatalogue();return back()->with('success','VTU service registry synchronized.');}
+ public function bootstrap(VtuServiceRegistry $r){try{$r->bootstrapCatalogue();return back()->with('success','VTU service registry synchronized.');}catch(\Throwable $e){report($e);return back()->with('error','VTU service registry synchronization failed safely.');}}
 }
