@@ -22,6 +22,10 @@ SEMIZZY ONE CORE V2 is a single integrated Laravel + React/TypeScript applicatio
 - Node.js 22/npm for frontend build
 - MySQL or MariaDB for deployment (SQLite is used by CI tests)
 
+## CI trigger marker
+
+<!-- ci-trigger: 2026-10-05T09:00:00Z -->
+
 ## Local setup
 
 1. Copy .env.example to .env.
