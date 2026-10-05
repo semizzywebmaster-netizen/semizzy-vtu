@@ -63,7 +63,9 @@ class UserController extends Controller
                     'id' => $wallet->id, 'availableMinor' => $wallet->available_minor, 'heldMinor' => $wallet->held_minor,
                     'currency' => $wallet->currency, 'status' => $wallet->status,
                 ] : null,
-                'permissions' => UserPermissionOverride::query()->where('user_id', $user->id)->pluck('allowed', 'permission')->map(fn ($allowed): bool => (bool) $allowed)->all(),
+                'permissions' => collect(config('semizzy.role_permissions.'.$user->role, []))->mapWithKeys(fn ($permission): array => [$permission => true])->merge(
+                    UserPermissionOverride::query()->where('user_id', $user->id)->pluck('allowed', 'permission')->map(fn ($allowed): bool => (bool) $allowed)
+                )->all(),
             ]);
 
         return Inertia::render('Admin/Users', [
