@@ -47,6 +47,13 @@ class HelpCenterController extends Controller
         return back()->with('success', 'Thanks for the feedback.');
     }
 
+    public function unanswered(Request $request)
+    {
+        return response()->json([
+            'questions' => HelpQuestion::query()->where('answered', false)->latest()->paginate(50),
+        ]);
+    }
+
     public function ask(Request $request, HelpAssistantService $assistant)
     {
         $data = $request->validate(['question'=>['required','string','min:2','max:2000'],'context'=>['nullable','string','max:120']]);
