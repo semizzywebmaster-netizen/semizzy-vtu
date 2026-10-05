@@ -34,8 +34,19 @@ class ProviderController extends Controller
         }
     }
 
-    public function index(): Response
+    public function index(ProviderPresetRegistry $registry): Response
     {
+        // The built-in provider catalogue must be materialized in the database before
+        // the dashboard can display/configure it. Only bootstrap automatically when
+        // the registry is completely empty; never overwrite an existing provider.
+        if (ApiProvider::query()->count() === 0) {
+            try {
+                $registry->install();
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         return Inertia::render('Admin/Providers', [
             'providers' => ApiProvider::query()->latest()->get()->map(fn (ApiProvider $p) => [
                 'id' => $p->id,
