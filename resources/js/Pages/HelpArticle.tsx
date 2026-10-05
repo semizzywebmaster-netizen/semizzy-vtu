@@ -1,0 +1,8 @@
+import { Head, useForm } from '@inertiajs/react';
+import CoreMobileNav from '../Components/CoreMobileNav';
+
+type Article={id:number;type:string;title:string;slug:string;excerpt:string|null;content:string;category:string|null;contextKey:string|null;tags:string[]|null;views:number};
+export default function HelpArticle({article,context}:{article:Article;context:string|null}) {
+ const form=useForm({helpful:true,comment:'',context_key:context??''});
+ return <><Head title={article.title}/><main className="min-h-screen bg-slate-50 p-4 pb-24 md:p-8"><div className="mx-auto max-w-3xl"><a href="/help" className="text-sm font-semibold text-indigo-700">← Help Center</a><article className="mt-4 rounded-3xl border bg-white p-6 md:p-8"><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase">{article.type}</span><h1 className="mt-4 text-3xl font-extrabold">{article.title}</h1>{article.excerpt&&<p className="mt-3 text-slate-600">{article.excerpt}</p>}<div className="prose mt-6 max-w-none whitespace-pre-wrap text-slate-800">{article.content}</div></article><section className="mt-5 rounded-2xl border bg-white p-5"><h2 className="font-bold">Was this helpful?</h2><div className="mt-3 flex gap-2"><button onClick={()=>{form.setData('helpful',true);form.post('/help/articles/'+article.slug+'/feedback')}} className="rounded-xl border px-4 py-2">Yes</button><button onClick={()=>{form.setData('helpful',false);form.post('/help/articles/'+article.slug+'/feedback')}} className="rounded-xl border px-4 py-2">No</button></div><textarea value={form.data.comment} onChange={e=>form.setData('comment',e.target.value)} className="mt-3 w-full rounded-xl border p-3" placeholder="Optional comment"/></section><CoreMobileNav active="support" /></div></main></>;
+}
