@@ -55,7 +55,10 @@ class InstallationGuardTest extends TestCase
 
     public function test_partial_installation_still_redirects_to_setup(): void
     {
-        User::factory()->create([
+        User::create([
+            'name' => 'Partial Installation Admin',
+            'email' => 'partial-admin@example.test',
+            'password' => 'StrongPassword123!',
             'role' => 'ADMIN',
             'status' => 'active',
         ]);
