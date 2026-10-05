@@ -52,7 +52,7 @@ return new class extends Migration
             ['type'=>'greeting','message'=>'Good evening, :name. Nice work keeping things moving.','time_period'=>'evening','audiences'=>json_encode(['agent']),'priority'=>25],
             ['type'=>'greeting','message'=>'Good night, :name. Take a well-earned break.','time_period'=>'night','audiences'=>json_encode(['agent']),'priority'=>25],
         ];
-        foreach ($rows as &$row) { $row['tiers'] = $row['tiers'] ?? null; $row['season_key'] = null; $row['active']=true; $row['starts_at']=null; $row['ends_at']=null; $row['created_at']=$now; $row['updated_at']=$now; }
+        foreach ($rows as &$row) { $row['title'] = $row['title'] ?? null; $row['tiers'] = $row['tiers'] ?? null; $row['audiences'] = $row['audiences'] ?? null; $row['season_key'] = null; $row['active']=true; $row['starts_at']=null; $row['ends_at']=null; $row['created_at']=$now; $row['updated_at']=$now; }
         DB::table('dashboard_messages')->insert($rows);
     }
 
