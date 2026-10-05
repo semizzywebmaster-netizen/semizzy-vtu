@@ -100,16 +100,14 @@ class AddonController extends Controller
 
     public function register(Request $request, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        $lifecycle->register($this->validatedManifest($request), $request->user()?->id);
-
-        return back()->with('success', 'Addon manifest registered.');
+        try { $lifecycle->register($this->validatedManifest($request), $request->user()?->id); return back()->with('success', 'Addon manifest registered.'); }
+        catch (\Throwable $e) { report($e); return back()->with('error', 'Addon registration failed safely.'); }
     }
 
     public function install(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        $lifecycle->install($addon, auth()->id());
-
-        return back()->with('success', 'Addon installed and left inactive until explicitly enabled.');
+        try { $lifecycle->install($addon, auth()->id()); return back()->with('success', 'Addon installed and left inactive until explicitly enabled.'); }
+        catch (\Throwable $e) { report($e); return back()->with('error', 'Addon installation failed safely.'); }
     }
 
     public function update(Request $request, Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
@@ -121,30 +119,22 @@ class AddonController extends Controller
 
     public function activate(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        $lifecycle->activate($addon, auth()->id());
-
-        return back()->with('success', 'Addon activated.');
+        try { $lifecycle->activate($addon, auth()->id()); return back()->with('success', 'Addon activated.'); } catch (\\Throwable $e) { report($e); return back()->with('error', 'Addon activate failed safely.'); }
     }
 
     public function disable(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        $lifecycle->disable($addon, auth()->id());
-
-        return back()->with('success', 'Addon disabled.');
+        try { $lifecycle->disable($addon, auth()->id()); return back()->with('success', 'Addon disabled.'); } catch (\\Throwable $e) { report($e); return back()->with('error', 'Addon disable failed safely.'); }
     }
 
     public function uninstall(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        $lifecycle->uninstall($addon, auth()->id());
-
-        return back()->with('success', 'Addon uninstalled and archived.');
+        try { $lifecycle->uninstall($addon, auth()->id()); return back()->with('success', 'Addon uninstalled and archived.'); } catch (\\Throwable $e) { report($e); return back()->with('error', 'Addon uninstall failed safely.'); }
     }
 
     public function archive(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        $lifecycle->archive($addon, auth()->id());
-
-        return back()->with('success', 'Addon archived.');
+        try { $lifecycle->archive($addon, auth()->id()); return back()->with('success', 'Addon archived.'); } catch (\\Throwable $e) { report($e); return back()->with('error', 'Addon archive failed safely.'); }
     }
 
     private function vtuManifest(): array
