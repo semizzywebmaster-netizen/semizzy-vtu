@@ -206,7 +206,8 @@ class ProviderController extends Controller
                 report($e);
                 $provider->forceFill(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_summary'=>'Provider test failed safely.','enabled'=>false,'paused'=>true,'verification_status'=>'test_failed','integration_status'=>'test_failed'])->save();
                 $failed++;
-                $audit->record('provider.test.failed', $provider, ['bulk'=>true,'reason'=>'transport_or_adapter_exception'], $request);
+                try { $audit->record('provider.test.failed', $provider, ['bulk'=>true,'reason'=>'transport_or_adapter_exception'], $request); }
+                catch (\Throwable $auditException) { report($auditException); }
             }
         }
 
@@ -222,17 +223,28 @@ class ProviderController extends Controller
         ]);
         $changed = $skipped = 0;
 
-        DB::transaction(function () use ($data, $audit, $request, &$changed, &$skipped): void {
-            foreach (ApiProvider::query()->whereIn('id', $data['provider_ids'])->lockForUpdate()->get() as $provider) {
-                if ($data['enabled'] && ($provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
-                    $skipped++;
-                    continue;
-                }
-                $provider->update(['enabled'=>$data['enabled'],'paused'=>!$data['enabled']]);
+        foreach (ApiProvider::query()->whereIn('id', $data['provider_ids'])->get() as $provider) {
+            try {
+                $result = DB::transaction(function () use ($provider, $data): array {
+                    $locked = ApiProvider::query()->lockForUpdate()->find($provider->id);
+                    if (! $locked) {
+                        return ['changed' => false, 'skipped' => true, 'provider' => null];
+                    }
+                    if ($data['enabled'] && ($locked->verification_status !== 'live_verified' || $locked->integration_status !== 'live_verified')) {
+                        return ['changed' => false, 'skipped' => true, 'provider' => $locked];
+                    }
+                    $locked->forceFill(['enabled'=>(bool)$data['enabled'],'paused'=>!$data['enabled']])->saveOrFail();
+                    return ['changed' => true, 'skipped' => false, 'provider' => $locked];
+                });
+                if ($result['skipped']) { $skipped++; continue; }
                 $changed++;
-                $audit->record($data['enabled'] ? 'provider.enabled' : 'provider.disabled', $provider, ['bulk'=>true], $request);
+                try { $audit->record($data['enabled'] ? 'provider.enabled' : 'provider.disabled', $result['provider'], ['bulk'=>true], $request); }
+                catch (\Throwable $auditException) { report($auditException); }
+            } catch (\Throwable $e) {
+                report($e);
+                $skipped++;
             }
-        });
+        }
 
         return back()->with('success', "Bulk provider status update completed: {$changed} changed, {$skipped} skipped.");
     }
@@ -246,40 +258,26 @@ class ProviderController extends Controller
 
         $removed = 0;
 
-        DB::transaction(function () use ($ids, $audit, $request, &$removed): void {
-            foreach (ApiProvider::query()->whereIn('id', $ids)->lockForUpdate()->get() as $provider) {
-                $provider->serviceMappings()->lockForUpdate()->get()->each(
-                    fn ($mapping) => $mapping->forceFill(['enabled' => false])->save()
-                );
-
-                $providerProductMappings = ProviderServiceProduct::query()
-                    ->where('api_provider_id', $provider->id)
-                    ->lockForUpdate()
-                    ->get();
-
-                $providerProductMappings->each(
-                    fn (ProviderServiceProduct $mapping) => $mapping->forceFill(['enabled' => false])->save()
-                );
-
-                // Providers are financial/integration history, so "Remove" is a safe
-                // archive operation rather than a hard delete that can violate FKs.
-                // The row remains available for audit/history and can be reconfigured.
-                $provider->forceFill([
-                    'enabled' => false,
-                    'paused' => true,
-                ])->save();
-
-                $audit->record('provider.removed', $provider, [
-                    'bulk' => true,
-                    'history_preserved' => true,
-                    'archived' => true,
-                    'mappings_disabled' => true,
-                    'provider_product_mappings_disabled' => $providerProductMappings->count(),
-                ], $request);
-
+        foreach (ApiProvider::query()->whereIn('id', $ids)->get() as $provider) {
+            try {
+                $result = DB::transaction(function () use ($provider): array {
+                    $locked = ApiProvider::query()->lockForUpdate()->find($provider->id);
+                    if (! $locked) return ['removed'=>false,'provider'=>null,'mapping_count'=>0];
+                    $locked->serviceMappings()->lockForUpdate()->get()->each(fn ($mapping) => $mapping->forceFill(['enabled'=>false])->saveOrFail());
+                    $providerProductMappings = ProviderServiceProduct::query()->where('api_provider_id',$locked->id)->lockForUpdate()->get();
+                    $providerProductMappings->each(fn (ProviderServiceProduct $mapping) => $mapping->forceFill(['enabled'=>false])->saveOrFail());
+                    $locked->forceFill(['enabled'=>false,'paused'=>true])->saveOrFail();
+                    return ['removed'=>true,'provider'=>$locked,'mapping_count'=>$providerProductMappings->count()];
+                });
+                if (!$result['removed']) { continue; }
+                try {
+                    $audit->record('provider.removed', $result['provider'], ['bulk'=>true,'history_preserved'=>true,'archived'=>true,'mappings_disabled'=>true,'provider_product_mappings_disabled'=>$result['mapping_count']], $request);
+                } catch (\Throwable $auditException) { report($auditException); }
                 $removed++;
+            } catch (\Throwable $e) {
+                report($e);
             }
-        });
+        }
 
         return back()->with('success', "Bulk provider removal completed: {$removed} provider(s) safely archived and disabled.");
     }
