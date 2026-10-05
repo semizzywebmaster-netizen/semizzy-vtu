@@ -64,6 +64,31 @@ class VtuWalletService
         return strlen($left) <=> strlen($right) ?: strcmp($left, $right);
     }
 
+    public function creditRefund(VtuTransaction $tx): void
+    {
+        DB::transaction(function () use ($tx): void {
+            $wallet = WalletAccount::query()
+                ->where('user_id', $tx->user_id)
+                ->where('currency', $tx->currency)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $amount = (string) $tx->total_minor;
+            $available = (string) $wallet->available_minor;
+
+            if (function_exists('bcadd')) {
+                $wallet->available_minor = bcadd($available, $amount, 0);
+            } else {
+                if (! $this->fitsNativeInteger($available) || ! $this->fitsNativeInteger($amount)) {
+                    throw new RuntimeException('Large wallet amounts require the BCMath PHP extension.');
+                }
+                $wallet->available_minor = (string) ((int) $available + (int) $amount);
+            }
+
+            $wallet->save();
+        });
+    }
+
     public function settle(VtuTransaction $tx, bool $success): void
     {
         DB::transaction(function () use ($tx, $success): void {
