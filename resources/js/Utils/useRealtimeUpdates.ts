@@ -11,10 +11,13 @@ type Snapshot = {
 const DEFAULT_ACTIVE_MS = 4000;
 const DEFAULT_IDLE_MS = 15000;
 
-export function useRealtimeUpdates(onUpdate:(snapshot:Snapshot)=>void, options?:{enabled?:boolean; activeMs?:number; idleMs?:number}) {
+export function useRealtimeUpdates(onUpdate:(snapshot:Snapshot)=>void, options?:{enabled?:boolean; activeMs?:number; idleMs?:number; stopWhenTerminal?:boolean; watchReferences?:string[]}) {
   const enabled = options?.enabled ?? true;
   const activeMs = options?.activeMs ?? DEFAULT_ACTIVE_MS;
   const idleMs = options?.idleMs ?? DEFAULT_IDLE_MS;
+  const stopWhenTerminal = options?.stopWhenTerminal ?? false;
+  const watchReferences = options?.watchReferences ?? [];
+
   const callback = useRef(onUpdate);
   const [running,setRunning] = useState(enabled);
 
@@ -41,7 +44,11 @@ export function useRealtimeUpdates(onUpdate:(snapshot:Snapshot)=>void, options?:
           callback.current(snapshot);
           previousVersion = snapshot.version;
         }
-        terminal = snapshot.transactions.length === 0 || snapshot.transactions.every(tx => tx.terminal);
+        const watched = watchReferences.length > 0
+          ? snapshot.transactions.filter(tx => watchReferences.includes(tx.reference) || watchReferences.includes(tx.uuid))
+          : snapshot.transactions;
+        terminal = watched.length === 0 ? watchReferences.length === 0 : watched.every(tx => tx.terminal);
+        if (stopWhenTerminal && terminal) { setRunning(false); return; }
         delay = terminal ? idleMs : activeMs;
         setRunning(true);
       } catch {
