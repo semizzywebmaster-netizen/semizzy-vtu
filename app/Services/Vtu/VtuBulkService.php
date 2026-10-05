@@ -86,6 +86,19 @@ class VtuBulkService
                 'metadata' => ['request_fingerprint' => $fingerprint],
             ]);
         } catch (QueryException $e) {
+            // Only recover from the unique-key race. Other database failures
+            // must surface instead of being misreported as an idempotency hit.
+            $sqlState = (string) ($e->errorInfo[0] ?? $e->getCode());
+            $driverCode = (string) ($e->errorInfo[1] ?? '');
+            $message = strtolower($e->getMessage());
+            $isDuplicate = $sqlState === '23000' && (
+                str_contains($message, 'unique') ||
+                str_contains($message, 'duplicate') ||
+                $driverCode === '1062'
+            );
+            if (! $isDuplicate) {
+                throw $e;
+            }
             // Another concurrent request may have won the unique key race.
             // Only recover if the durable row proves this is the same request.
             $existing = VtuBulkOperation::query()
