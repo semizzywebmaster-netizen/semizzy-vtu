@@ -12,7 +12,12 @@ class EnsureApplicationInstalled
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $installed = $this->isInstalled();
+        // Feature tests can opt into an installed application without
+        // creating a synthetic administrator. Installation-specific tests
+        // explicitly disable this flag.
+        $installed = app()->environment('testing') && config('semizzy.testing_installed')
+            ? true
+            : $this->isInstalled();
 
         // A fresh installation cannot use database-backed sessions/cache
         // because their tables do not exist until the installer runs the
