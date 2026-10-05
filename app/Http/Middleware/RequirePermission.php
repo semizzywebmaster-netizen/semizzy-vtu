@@ -13,7 +13,7 @@ class RequirePermission
         $user = $request->user();
 
         abort_unless(
-            $user && in_array($permission, config('semizzy.role_permissions.'.$user->role, []), true),
+            $user && $user->hasPermission($permission),
             403
         );
 
