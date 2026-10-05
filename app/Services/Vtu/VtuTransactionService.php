@@ -79,6 +79,7 @@ class VtuTransactionService{
     $n=(int)$tx->attempts()->max('attempt_number')+1;
     $tx->attempts()->create(['api_provider_id'=>$providerId,'attempt_number'=>$n,'operation'=>'transaction_status','status'=>$r->status,'provider_reference'=>$r->providerReference??$tx->provider_reference,'request_payload'=>['reference'=>$tx->provider_reference,'transaction_reference'=>$tx->reference],'response_payload'=>is_array($r->data)?$r->data:null,'error_message'=>$r->message,'started_at'=>now(),'finished_at'=>now()]);
     $tx->provider_status=$r->status;
+    if($r->providerReference!==null)$tx->provider_reference=$r->providerReference;
     $tx->response_payload=is_array($r->data)?$r->data:$tx->response_payload;
     if($r->accepted){$tx->status='successful';$tx->completed_at=now();$this->finishFinancial($tx,true);}
     elseif($r->status==='UNKNOWN'||$r->duplicateRisk){$tx->status='pending';$tx->failure_code='UNKNOWN_PROVIDER_STATE';$tx->failure_message='Provider state is uncertain; requery is required before retry or reversal.';}
