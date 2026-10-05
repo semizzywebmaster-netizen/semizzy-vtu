@@ -343,7 +343,7 @@ final class ProviderPresetRegistry
                 'official_website'=>'https://monnify.com/',
                 'auth_type'=>'bearer',
                 'service_categories'=>['payments','transfers','verification','utilities','airtime'],
-                'capabilities'=>['health','payments','transfers','verification','bills'],
+                'capabilities'=>['health_check','transaction_initiation','transaction_status'],
                 'endpoints'=>[],
                 'api_version'=>'v1',
                 'mappings'=>[
@@ -362,7 +362,7 @@ final class ProviderPresetRegistry
                 'official_website'=>'https://paystack.com/',
                 'auth_type'=>'bearer',
                 'service_categories'=>['payments','transfers','verification'],
-                'capabilities'=>['health','payments','transfers','verification'],
+                'capabilities'=>['health_check','transaction_initiation','transaction_status'],
                 'endpoints'=>[],
                 'api_version'=>'v1',
                 'mappings'=>[
@@ -399,7 +399,7 @@ final class ProviderPresetRegistry
                 'official_website'=>'https://termii.com/',
                 'auth_type'=>'custom',
                 'service_categories'=>['messaging'],
-                'capabilities'=>['sms','otp','insights'],
+                'capabilities'=>['transaction_initiation','transaction_status'],
                 'endpoints'=>[
                     'transaction_initiation'=>'/api/sms/send',
                 ],
