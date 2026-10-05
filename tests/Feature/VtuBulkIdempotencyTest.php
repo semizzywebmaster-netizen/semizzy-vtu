@@ -71,7 +71,7 @@ class VtuBulkIdempotencyTest extends TestCase
             $mock->shouldReceive('validate')->once();
         });
 
-        $this->mock(VtuTransactionService::class, function ($mock) use ($product, $tx): void {
+        $this->mock(VtuTransactionService::class, function ($mock) use ($product, $tx, $user): void {
             $mock->shouldReceive('create')
                 ->once()
                 ->with($user->id, $product, ['phone' => '08000000000'], 'USER', 'item-1')
