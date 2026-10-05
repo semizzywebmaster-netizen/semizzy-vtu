@@ -53,7 +53,7 @@ class RestJsonProviderAdapterTest extends TestCase
         $provider = ApiProvider::create([
             'identifier' => 'adapter-4xx-failover',
             'display_name' => 'Adapter 4xx Failover',
-            'base_url' => 'https://provider.example',
+            'base_url' => 'https://8.8.8.8',
             'endpoints' => ['transaction_initiation' => '/purchase'],
             'auth_type' => 'bearer',
             'credentials' => ['token' => 'provider-token-secret'],
@@ -61,7 +61,7 @@ class RestJsonProviderAdapterTest extends TestCase
         ]);
 
         Http::fake([
-            'https://provider.example/purchase' => Http::response(['status' => 'rejected'], 400),
+            'https://8.8.8.8/purchase' => Http::response(['status' => 'rejected'], 400),
         ]);
 
         $result = app(RestJsonProviderAdapter::class)->execute(
@@ -82,7 +82,7 @@ class RestJsonProviderAdapterTest extends TestCase
         $provider = ApiProvider::create([
             'identifier' => 'adapter-2xx-failed',
             'display_name' => 'Adapter 2xx Failed',
-            'base_url' => 'https://provider.example',
+            'base_url' => 'https://8.8.8.8',
             'endpoints' => ['transaction_initiation' => '/purchase'],
             'auth_type' => 'bearer',
             'credentials' => ['token' => 'provider-token-secret'],
@@ -90,7 +90,7 @@ class RestJsonProviderAdapterTest extends TestCase
         ]);
 
         Http::fake([
-            'https://provider.example/purchase' => Http::response(['status' => 'declined'], 200),
+            'https://8.8.8.8/purchase' => Http::response(['status' => 'declined'], 200),
         ]);
 
         $result = app(RestJsonProviderAdapter::class)->execute(
