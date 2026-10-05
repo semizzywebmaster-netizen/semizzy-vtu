@@ -7,6 +7,7 @@ use App\Models\ApiProvider;
 use App\Models\ProviderServiceProduct;
 use App\Services\Audit\AuditLogger;
 use App\Services\Providers\ProviderTestService;
+use App\Services\Providers\ProviderPresetRegistry;
 use App\Services\Providers\ProviderUrlGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,23 @@ use Inertia\Response;
 
 class ProviderController extends Controller
 {
+    public function installPresets(ProviderPresetRegistry $registry, AuditLogger $audit, Request $request): RedirectResponse
+    {
+        try {
+            $result = $registry->install();
+            $audit->record('provider.presets.installed', null, [
+                'providers' => $result['providers'],
+                'services' => $result['services'],
+                'mappings' => $result['mappings'],
+            ], $request);
+
+            return back()->with('success', "Provider catalogue installed: {$result['providers']} providers, {$result['services']} services and {$result['mappings']} provider mappings. Credentials remain blank and providers remain disabled until configured and verified.");
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'Provider preset installation failed safely. No provider credentials were changed.');
+        }
+    }
+
     public function index(): Response
     {
         return Inertia::render('Admin/Providers', [
