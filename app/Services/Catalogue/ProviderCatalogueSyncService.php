@@ -60,8 +60,70 @@ final class ProviderCatalogueSyncService
             );
         }
 
-        $items=$this->extractProducts($result->data);
+        $items = $this->normalizeProducts($provider, $service, $result->data);
         return $this->importer->import($provider, $service, $items);
+    }
+
+    private function normalizeProducts(ApiProvider $provider, Service $service, mixed $body): array
+    {
+        $items = $this->extractProducts($body);
+        $normalized = [];
+
+        foreach ($items as $index => $item) {
+            $key = $this->firstScalar($item, [
+                'key', 'product_key', 'productKey', 'variation_code', 'variationCode',
+                'variation_code', 'serviceID', 'service_id', 'serviceId', 'code', 'id',
+            ]);
+            $name = $this->firstScalar($item, [
+                'name', 'product_name', 'productName', 'variation_name', 'variationName',
+                'description', 'title', 'package', 'plan_name', 'planName',
+            ]);
+            $providerProductId = $this->firstScalar($item, [
+                'provider_product_id', 'providerProductId', 'variation_code', 'variationCode',
+                'serviceID', 'service_id', 'serviceId', 'id', 'code',
+            ]);
+            $cost = $this->firstScalar($item, [
+                'provider_cost', 'providerCost', 'cost', 'price', 'amount',
+                'selling_price', 'sellingPrice', 'unit_price', 'unitPrice',
+            ]);
+            $currency = $this->firstScalar($item, ['currency', 'currency_code', 'currencyCode']) ?? 'NGN';
+
+            if ($key === null) {
+                $key = $provider->identifier.':'.$service->key.':'.($providerProductId ?? (string) $index);
+            }
+            if ($name === null) {
+                $name = $key;
+            }
+
+            if (!is_scalar($key) || !is_scalar($name) || !is_scalar($currency)) {
+                continue;
+            }
+
+            $normalized[] = [
+                'key' => trim((string) $key),
+                'name' => trim((string) $name),
+                'provider_product_id' => $providerProductId !== null && is_scalar($providerProductId)
+                    ? trim((string) $providerProductId)
+                    : null,
+                'provider_cost' => $cost !== null && is_scalar($cost) ? trim((string) $cost) : null,
+                'currency' => strtoupper(trim((string) $currency)),
+                'metadata' => $item,
+            ];
+        }
+
+        return $normalized;
+    }
+
+    private function firstScalar(array $item, array $keys): mixed
+    {
+        foreach ($keys as $key) {
+            $value = Arr::get($item, $key);
+            if (is_scalar($value) && trim((string) $value) !== '') {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     private function extractProducts(mixed $body): array
@@ -70,15 +132,26 @@ final class ProviderCatalogueSyncService
             throw new InvalidArgumentException('Provider catalogue response is not a JSON object/array.');
         }
 
-        $items=Arr::get($body, 'products');
-        if (!is_array($items)) $items=Arr::get($body, 'data.products');
-        if (!is_array($items)) $items=Arr::get($body, 'items');
-        if (!is_array($items) && array_is_list($body)) $items=$body;
+        $paths = [
+            'products', 'data.products', 'items', 'data.items', 'variations',
+            'data.variations', 'data', 'content', 'data.content', 'results',
+            'data.results', 'services', 'data.services',
+        ];
 
-        if (!is_array($items)) {
-            throw new InvalidArgumentException('Provider catalogue response contains no supported product collection.');
+        foreach ($paths as $path) {
+            $items = $path === 'data' && array_is_list($body) ? $body : Arr::get($body, $path);
+            if (is_array($items)) {
+                $filtered = array_values(array_filter($items, static fn(mixed $item): bool => is_array($item)));
+                if ($filtered !== []) {
+                    return $filtered;
+                }
+            }
         }
 
-        return array_values(array_filter($items, static fn(mixed $item): bool => is_array($item)));
+        if (array_is_list($body)) {
+            return array_values(array_filter($body, static fn(mixed $item): bool => is_array($item)));
+        }
+
+        throw new InvalidArgumentException('Provider catalogue response contains no supported product collection.');
     }
 }
