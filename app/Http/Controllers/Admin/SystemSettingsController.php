@@ -44,6 +44,7 @@ class SystemSettingsController extends Controller
             'default_timezone' => 'string',
         ];
 
+        try {
         foreach (self::KEYS as $key) {
             SystemSetting::query()->updateOrCreate(
                 ['key' => $key],
@@ -51,7 +52,10 @@ class SystemSettingsController extends Controller
             );
         }
 
+        }
         $audit->record('admin.system_settings.updated', null, ['setting_keys' => self::KEYS], $request);
+
+        } catch (\Throwable $e) { report($e); return back()->with('error', 'System settings could not be saved safely.'); }
 
         return back()->with('success', 'System settings saved.');
     }
