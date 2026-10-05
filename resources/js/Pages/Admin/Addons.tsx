@@ -54,14 +54,7 @@ export default function Addons({ addons }: Props) {
   const submitRegister = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const payload = {
-      identifier: String(form.get('identifier') ?? ''),
-      name: String(form.get('name') ?? ''),
-      version: String(form.get('version') ?? ''),
-      compatibility: String(form.get('compatibility') ?? '') || null,
-      dependencies: String(form.get('dependencies') ?? '').split(',').map((v) => v.trim()).filter(Boolean),
-      permissions: String(form.get('permissions') ?? '').split(',').map((v) => v.trim()).filter(Boolean),
-    };
+    const payload = { identifier: 'vtu.digital-services' };
     setProcessing('register');
     router.post('/admin/addons/register', payload, {
       onSuccess: () => {
@@ -110,9 +103,9 @@ export default function Addons({ addons }: Props) {
               <p className="mt-2 text-sm text-slate-600">Register, validate, install, activate, disable, and archive Core addons.</p>
             </div>
             {vtuAddon?.status === 'active' && <Link href="/admin/vtu" className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Open VTU Dashboard</Link>}
-            <button disabled={Boolean(processing)} onClick={() => setShowRegister((v) => !v)} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">
-              {showRegister ? 'Close Register Addon' : 'Register Addon'}
-            </button>
+            {!vtuAddon && <button disabled={Boolean(processing)} onClick={() => setShowRegister((v) => !v)} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">
+              {showRegister ? 'Close VTU Registration' : 'Register VTU Addon'}
+            </button>}
           </div>
 
           <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
@@ -122,27 +115,55 @@ export default function Addons({ addons }: Props) {
             </p>
           </section>
 
-          {showRegister && (
-            <form onSubmit={submitRegister} className="mt-6 grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 md:grid-cols-2">
-              {[
-                ['identifier', 'Identifier', 'vtu'],
-                ['name', 'Name', 'VTU Services'],
-                ['version', 'Version', '1.0.0'],
-                ['compatibility', 'Core compatibility', '>=2.0.0'],
-                ['dependencies', 'Dependencies (comma separated)', 'payments,notifications'],
-                ['permissions', 'Permissions (comma separated)', 'catalogue.read,transactions.create'],
-              ].map(([name, label, placeholder]) => (
-                <label key={name} className="text-sm font-semibold text-slate-700">
-                  {label}
-                  <input name={name} defaultValue={placeholder} placeholder={placeholder} required={name === 'identifier' || name === 'name' || name === 'version'}
-                    className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 font-normal outline-none focus:border-slate-500" />
-                </label>
-              ))}
-              <div className="md:col-span-2">
-                <button type="submit" disabled={processing === 'register'} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">{processing === 'register' ? 'Registering…' : 'Register manifest'}</button>
+          {showRegister && !vtuAddon && (
+            <form onSubmit={submitRegister} className="mt-6 rounded-2xl border border-indigo-200 bg-white p-5 shadow-sm">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-indigo-600">Built-in addon</p>
+                <h2 className="mt-1 text-xl font-extrabold text-slate-900">VTU & Digital Services</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  This is the production VTU addon already built into SEMIZZY ONE. The manifest is fixed by the application, so you do not need to guess identifiers, dependencies, permissions, or migration names.
+                </p>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  ['Identifier', 'vtu.digital-services'],
+                  ['Version', '1.0.0'],
+                  ['Core compatibility', '>=2.0.0'],
+                  ['Dependencies', 'None'],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
+                    <p className="mt-1 break-words text-sm font-semibold text-slate-800">{value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Permissions</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {['vtu.view','vtu.services.manage','vtu.products.manage','vtu.providers.manage','vtu.mappings.manage','vtu.transactions.view','vtu.transactions.manage','vtu.bulk.manage','vtu.requery','vtu.refunds.manage','vtu.settings.manage'].map((permission) => (
+                      <span key={permission} className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700">{permission}</span>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Migrations</p>
+                  <div className="mt-2 space-y-1 text-xs font-mono text-slate-600">
+                    <p>2026_10_05_000026_create_vtu_addon_tables.php</p>
+                    <p>2026_10_05_000027_add_vtu_bulk_idempotency.php</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <button type="submit" disabled={processing === 'register'} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+                  {processing === 'register' ? 'Registering…' : 'Register VTU Addon'}
+                </button>
+                <span className="text-xs text-slate-500">Registration does not activate the addon.</span>
               </div>
             </form>
           )}
+
+)}
 
           <div className="mt-6 grid gap-4">
             {addons.length === 0 && (
