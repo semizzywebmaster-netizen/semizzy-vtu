@@ -126,6 +126,12 @@ class VtuAdminController extends Controller
   $transactions=$q->paginate(50)->withQueryString();
   return Inertia::render('Admin/VTU/Transactions',['transactions'=>$transactions]);
  }
+ public function bulkRequery(Request $r,VtuTransactionService $service){
+  $data=$r->validate(['transaction_ids'=>['required','array','min:1','max:100'],'transaction_ids.*'=>['integer','distinct','exists:vtu_transactions,id']]);$checked=0;$changed=0;$skipped=0;
+  foreach(VtuTransaction::query()->whereIn('id',$data['transaction_ids'])->whereIn('status',['pending','processing'])->get() as $tx){if(!$tx->provider_reference){$skipped++;continue;}$checked++;try{$before=$tx->status;$after=$service->requery($tx);if($after->status!==$before)$changed++;}catch(\Throwable $e){$skipped++;}}
+  return back()->with('success',"Bulk transaction requery checked {$checked}; {$changed} state change(s), {$skipped} skipped/failed.");
+ }
+
  public function requery(VtuTransaction $transaction,VtuTransactionService $s){$s->requery($transaction);return back()->with('success','Transaction requery completed.');}
  public function refund(Request $r,VtuTransaction $transaction,VtuTransactionService $s){
   $data=$r->validate(['reason'=>['nullable','string','max:500']]);$transaction=$s->refund($transaction,(string)($data['reason']??'Administrative refund'));
