@@ -104,6 +104,7 @@ class DashboardController extends Controller
             $quickLinks = [
                 ['label' => 'Notifications', 'url' => '/notifications'],
                 ['label' => 'VTU Services', 'url' => '/vtu'],
+                ['label' => 'Spending & analytics', 'url' => '/analytics'],
                 ['label' => 'Contact support', 'url' => '/support'],
                 ['label' => 'My profile', 'url' => '/profile'],
             ];
