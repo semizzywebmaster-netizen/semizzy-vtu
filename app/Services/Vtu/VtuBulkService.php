@@ -211,6 +211,57 @@ class VtuBulkService
         return $this->recalculate($bulk->fresh('items'));
     }
 
+
+    public function recoverStaleOperations(int $limit = 50, int $staleMinutes = 10): int
+    {
+        $recovered = 0;
+        $operations = VtuBulkOperation::query()
+            ->where('status', 'processing')
+            ->where('updated_at', '<', now()->subMinutes($staleMinutes))
+            ->oldest('id')
+            ->limit(max(1, min($limit, 100)))
+            ->get();
+
+        foreach ($operations as $bulk) {
+            $items = $bulk->items()->whereIn('status', ['processing', 'pending'])->get();
+            foreach ($items as $item) {
+                $key = (string) $item->idempotency_key;
+                $transaction = VtuTransaction::query()
+                    ->where('idempotency_key', $key)
+                    ->where('user_id', $bulk->user_id)
+                    ->first();
+
+                if (!$transaction) {
+                    if ($item->status === 'processing') {
+                        $item->update([
+                            'status' => 'failed',
+                            'error_message' => 'Bulk worker stopped before this transaction was created. The item is safe to retry using its idempotency key.',
+                        ]);
+                        $recovered++;
+                    }
+                    continue;
+                }
+
+                if (!$transaction->isTerminal()) {
+                    $metadata = (array) $transaction->metadata;
+                    if (($metadata['provider_initiation_claimed'] ?? false) === true &&
+                        !empty($metadata['provider_initiation_claimed_at']) &&
+                        now()->gte(\Illuminate\Support\Carbon::parse($metadata['provider_initiation_claimed_at'])->addMinutes($staleMinutes)) &&
+                        !$transaction->provider_reference) {
+                        $transaction = $this->transactions->recoverStaleInitiationClaim($transaction, $staleMinutes);
+                    }
+                }
+
+                $this->syncItemFromTransaction($item, $transaction);
+                $recovered++;
+            }
+
+            $this->recalculate($bulk->fresh('items'));
+        }
+
+        return $recovered;
+    }
+
     private function syncItemFromTransaction($row, VtuTransaction $transaction): void
     {
         $row->update([
