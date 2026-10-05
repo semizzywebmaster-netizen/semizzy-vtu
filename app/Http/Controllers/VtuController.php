@@ -29,7 +29,7 @@ class VtuController extends Controller
     public function bulk(Request $r,VtuBulkService $b){$d=$r->validate(['items'=>['required','array','min:1','max:500'],'items.*.product_id'=>['required','integer','exists:service_products,id'],'items.*.payload'=>['required','array'],'items.*.idempotency_key'=>['nullable','string','max:120'],'idempotency_key'=>['nullable','string','max:160']]);return response()->json(['data'=>$b->execute($r->user()->id,$d['items'],$r->user()->role,$d['idempotency_key']??null)],201);}
     public function history(Request $r){return response()->json(['data'=>VtuTransaction::with('service','product')->where('user_id',$r->user()->id)->latest()->paginate(25)]);}
     public function show(Request $r,VtuTransaction $t){abort_unless($t->user_id===$r->user()->id,404);return response()->json(['data'=>$this->present($t->load('service','product'))]);}
-    public function webhook(Request $r,ApiProvider $provider,VtuTransactionService $service,WebhookSignatureService $signatures,WebhookReplayGuard $replays){
+    public function webhook(Request $r,ApiProvider $provider,VtuTransactionService $service,WebhookSignatureService $signatures,WebhookReplayGuard $replays){abort_unless(\App\Models\Addon::query()->where('identifier','vtu.digital-services')->where('status','active')->exists(),404,'VTU & Digital Services addon is not active.');
         abort_unless($provider->enabled && !$provider->paused,404,'Provider is unavailable.');
         $secret=(string)($provider->credentials['webhook_secret']??'');
         abort_unless($secret!=='',401);
