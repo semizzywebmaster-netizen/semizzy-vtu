@@ -15,3 +15,5 @@ Schedule::command('queue:prune-failed', ['--hours' => 168])->weekly();
 
 Schedule::command('vtu:reconcile-pending', ['--limit' => 50])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
 Schedule::command('vtu:recover-bulk', ['--limit' => 50, '--stale-minutes' => 10])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
+
+Schedule::command('vtu:recover-stale-initiations', ['--limit' => 50, '--stale-minutes' => 10])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
