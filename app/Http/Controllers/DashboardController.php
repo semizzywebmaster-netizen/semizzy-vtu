@@ -130,8 +130,22 @@ class DashboardController extends Controller
         }
 
         $wallet = null;
+        $tier = null;
+        $tierLimits = [];
         if (!$isOperations) {
             $wallet = WalletAccount::query()->where('user_id', $user->id)->where('status', '!=', 'closed')->first();
+            $tierNumber = max(1, min(3, (int) $user->tier));
+            $tier = [
+                'id' => $tierNumber,
+                'name' => config("semizzy.user_tiers.{$tierNumber}.name", 'Tier '.$tierNumber),
+            ];
+            $tierLimits = collect(config('semizzy.user_tiers', []))->map(fn (array $definition, $key): array => [
+                'id' => (int) $key,
+                'name' => $definition['name'],
+                'dailyLimitMinor' => $definition['daily_limit_minor'],
+                'balanceLimitMinor' => $definition['balance_limit_minor'],
+                'upgradeLabel' => $definition['upgrade_label'],
+            ])->values()->all();
         }
 
         return Inertia::render('Dashboard', [
@@ -139,6 +153,7 @@ class DashboardController extends Controller
             'user' => [
                 'name' => $user->name,
                 'email' => $user->email,
+                'username' => $user->username,
             ],
             'metrics' => $metrics,
             'quickLinks' => $quickLinks,
@@ -149,6 +164,8 @@ class DashboardController extends Controller
                 'currency' => $wallet->currency,
                 'status' => $wallet->status,
             ] : null,
+            'tier' => $tier,
+            'tierLimits' => $tierLimits,
             'workspace' => [
                 'operations' => $isOperations,
                 'staff' => $isStaff,
