@@ -23,6 +23,7 @@ use App\Http\Controllers\HelpCenterController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\VtuController;
 use App\Http\Controllers\Admin\VtuAdminController;
+use App\Http\Controllers\Admin\CommunicationController;
 use App\Http\Controllers\SetupController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -63,6 +64,9 @@ Route::get('/'.$adminLoginPath, [AuthenticatedSessionController::class, 'createA
 Route::post('/'.$adminLoginPath, [AuthenticatedSessionController::class, 'storeAdmin'])->middleware('guest')->name('admin.login.store');
 
 Route::middleware(['auth'])->group(function (): void {
+    Route::get('/admin/communications', [CommunicationController::class, 'index'])->middleware('permission:communications.manage')->name('admin.communications');
+    Route::post('/admin/communications', [CommunicationController::class, 'store'])->middleware('permission:communications.manage')->name('admin.communications.store');
+    Route::post('/admin/communications/{campaign}/send', [CommunicationController::class, 'send'])->middleware('permission:communications.manage')->name('admin.communications.send');
     Route::get('/dashboard', DashboardController::class)->middleware('verified')->name('dashboard');
     Route::middleware(['verified','ensure.vtu'])->group(function (): void { Route::get('/vtu', [VtuController::class, 'index'])->middleware('permission:vtu.view')->name('vtu.services'); });
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
