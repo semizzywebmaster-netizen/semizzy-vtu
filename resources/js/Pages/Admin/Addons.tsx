@@ -219,7 +219,8 @@ export default function Addons({ addons }: Props) {
                   </div>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         </div>
       </main>
