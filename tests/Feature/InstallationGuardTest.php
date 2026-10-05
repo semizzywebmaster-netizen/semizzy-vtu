@@ -11,6 +11,12 @@ class InstallationGuardTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['semizzy.testing_installed' => false]);
+    }
+
     public function test_fresh_application_redirects_to_setup(): void
     {
         $this->get('/')->assertRedirect(route('setup'));
