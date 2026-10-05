@@ -217,35 +217,29 @@ class UserController extends Controller
     {
         $data = $request->validate([
             'permissions' => ['array'],
-            'permissions.*' => ['string', 'max:120'],
+            'permissions.*' => ['boolean'],
         ]);
 
         try {
-            $allowed = collect(config('semizzy.role_permissions', []))->flatten()->unique()->flip();
-            $requested = collect($data['permissions'] ?? [])->filter(fn ($permission) => $allowed->has($permission))->unique()->values();
-
-            DB::transaction(function () use ($user, $requested): void {
+            $catalog = collect(config('semizzy.role_permissions', []))->flatten()->unique()->values();
+            DB::transaction(function () use ($user, $data, $catalog): void {
                 UserPermissionOverride::query()->where('user_id', $user->id)->delete();
 
-                $rolePermissions = collect(config('semizzy.role_permissions.'.$user->role, []))->flip();
-                $rows = $requested->map(fn ($permission) => [
-                    'user_id' => $user->id,
-                    'permission' => $permission,
-                    'allowed' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ])->all();
-
-                foreach ($rows as $row) {
-                    UserPermissionOverride::create($row);
+                foreach ($catalog as $permission) {
+                    if (array_key_exists($permission, $data['permissions'] ?? [])) {
+                        UserPermissionOverride::create([
+                            'user_id' => $user->id,
+                            'permission' => $permission,
+                            'allowed' => (bool) $data['permissions'][$permission],
+                        ]);
+                    }
                 }
             });
 
             try {
                 $audit->record('admin.user.permissions.updated', $user->fresh(), [
                     'target_user_id' => $user->id,
-                    'permissions' => $requested->all(),
-                    'role_permissions' => $rolePermissions->keys()->all(),
+                    'permissions' => $data['permissions'] ?? [],
                 ], $request);
             } catch (\Throwable $auditException) { report($auditException); }
 
