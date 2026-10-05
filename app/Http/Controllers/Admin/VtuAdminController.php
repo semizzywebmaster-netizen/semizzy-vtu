@@ -90,6 +90,20 @@ class VtuAdminController extends Controller
   foreach($items as $item){if(!$item->transaction||!$item->transaction->provider_reference)continue;$attempted++;try{$tx=$service->requery($item->transaction);if($tx->status!==$item->status)$reconciled++;}catch(\Throwable $e){}}
   return back()->with('success',"Bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
  }
+ public function reconcileSelectedBulk(Request $r,VtuTransactionService $service){
+  $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id']]);
+  $attempted=0;$reconciled=0;
+  $bulks=VtuBulkOperation::query()->whereIn('id',$data['bulk_ids'])->get();
+  foreach($bulks as $bulk){
+   $items=$bulk->items()->with('transaction')->whereIn('status',['pending','processing'])->whereNotNull('vtu_transaction_id')->limit(50)->get();
+   foreach($items as $item){
+    if(!$item->transaction||!$item->transaction->provider_reference)continue;
+    $attempted++;
+    try{$tx=$service->requery($item->transaction);if($tx->status!==$item->status)$reconciled++;}catch(\\Throwable $e){}
+   }
+  }
+  return back()->with('success',"Selected bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
+ }
  public function transactions(Request $r){
   $q=VtuTransaction::with(['user:id,name,email','service:id,name','product:id,name','provider:id,display_name'])->latest('created_at');
   foreach(['status','service_id','api_provider_id','user_id'] as $f)if($r->filled($f))$q->where($f,$r->input($f));
