@@ -10,6 +10,12 @@ class SetupWizardTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['semizzy.testing_installed' => false]);
+    }
+
     public function test_setup_page_is_available_before_initial_admin_creation(): void
     {
         $response = $this->get(route('setup'));
