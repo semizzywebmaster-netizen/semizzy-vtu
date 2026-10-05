@@ -88,10 +88,10 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/providers/bulk/toggle', [ProviderController::class, 'bulkToggle'])->middleware('permission:providers.manage')->name('admin.providers.bulk.toggle');
         Route::delete('/providers/bulk', [ProviderController::class, 'bulkDestroy'])->middleware('permission:providers.manage')->name('admin.providers.bulk.destroy');
         Route::post('/providers', [ProviderController::class, 'store'])->middleware('permission:providers.manage')->name('admin.providers.store');
-        Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->middleware('permission:providers.manage')->name('admin.providers.update');
-        Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->middleware('permission:providers.manage')->name('admin.providers.test');
-        Route::post('/providers/{provider}/toggle', [ProviderController::class, 'toggle'])->middleware('permission:providers.manage')->name('admin.providers.toggle');
-        Route::delete('/providers/{provider}', [ProviderController::class, 'destroy'])->middleware('permission:providers.manage')->name('admin.providers.destroy');
+        Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.update');
+        Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.test');
+        Route::post('/providers/{provider}/toggle', [ProviderController::class, 'toggle'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.toggle');
+        Route::delete('/providers/{provider}', [ProviderController::class, 'destroy'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.destroy');
 
         Route::get('/catalogue', [CatalogueController::class, 'index'])->middleware('permission:catalogue.view')->name('admin.catalogue.index');
         Route::post('/catalogue/categories', [CatalogueController::class, 'storeCategory'])->middleware('permission:catalogue.manage')->name('admin.catalogue.categories.store');
