@@ -144,7 +144,7 @@ class CatalogueController extends Controller
 
     public function toggleMapping(ProviderServiceMapping $mapping, AuditLogger $audit, Request $request): RedirectResponse
     {
-        return DB::transaction(function () use ($mapping, $audit, $request): RedirectResponse {
+        try { return DB::transaction(function () use ($mapping, $audit, $request): RedirectResponse {
             $mapping = ProviderServiceMapping::query()->lockForUpdate()->findOrFail($mapping->id);
             $provider = ApiProvider::query()->lockForUpdate()->findOrFail($mapping->api_provider_id);
 
@@ -160,17 +160,17 @@ class CatalogueController extends Controller
             ], $request);
 
             return back()->with('success','Provider service mapping status updated.');
-        });
+        }); } catch (\Throwable $e) { report($e); return back()->with('error','Provider service mapping update failed safely.'); }
     }
 
     public function disableProduct(ServiceProduct $product, AuditLogger $audit, Request $request): RedirectResponse
     {
-        DB::transaction(function () use ($product): void {
+        try { DB::transaction(function () use ($product): void {
             $product = ServiceProduct::query()->lockForUpdate()->findOrFail($product->id);
             ProviderServiceProduct::query()->where('service_product_id', $product->id)->lockForUpdate()->get()->each->update(['enabled' => false]);
             $product->update(['enabled' => false]);
-        });
-        $audit->record('catalogue.product.disabled', $product, ['service_id' => $product->service_id], $request);
+        }); } catch (\Throwable $e) { report($e); return back()->with('error','Catalogue product could not be disabled safely.'); }
+        try { $audit->record('catalogue.product.disabled', $product, ['service_id' => $product->service_id], $request); } catch (\Throwable $e) { report($e); }
         return back()->with('success','Product and provider mappings disabled.');
     }
 }
