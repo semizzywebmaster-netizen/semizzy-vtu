@@ -28,7 +28,8 @@ class FinancialOperation extends Model
         });
 
         static::updating(function (self $operation): void {
-            if (self::isTerminal($operation->getOriginal('status'))) {
+            $originalStatus=$operation->getOriginal('status');
+            if (self::isTerminal($originalStatus) && !($originalStatus==='completed' && $operation->status==='reversed')) {
                 throw new LogicException('Terminal financial operations are immutable.');
             }
 
