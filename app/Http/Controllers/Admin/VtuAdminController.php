@@ -17,7 +17,7 @@ class VtuAdminController extends Controller{
  public function services(){return Inertia::render('Admin/VTU/Services',['services'=>Service::whereHas('category',fn($q)=>$q->where('key','vtu-digital-services'))->withCount('products')->orderBy('id')->get()]);}
  public function mappings(){
   return Inertia::render('Admin/VTU/Mappings',[
-   'mappings'=>ProviderServiceMapping::with(['provider','service'])->orderBy('api_provider_id')->orderBy('service_key')->paginate(50)->withQueryString(),
+   'mappings'=>ProviderServiceMapping::query()->where(function($q){$q->whereHas('service.category',fn($c)=>$c->where('key','vtu-digital-services'))->orWhere(function($legacy){$legacy->whereNull('service_id')->whereIn('service_key',array_keys(VtuServiceRegistry::MANIFEST));});})->with(['provider','service'])->orderBy('api_provider_id')->orderBy('service_key')->paginate(50)->withQueryString(),
    'providers'=>ApiProvider::query()->orderBy('priority')->orderBy('display_name')->get(['id','display_name','identifier','priority','enabled','paused','verification_status','integration_status']),
    'services'=>Service::query()->whereHas('category',fn($q)=>$q->where('key','vtu-digital-services'))->orderBy('name')->get(['id','key','name','enabled']),
   ]);
