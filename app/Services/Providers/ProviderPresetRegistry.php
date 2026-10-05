@@ -33,7 +33,7 @@ final class ProviderPresetRegistry
                         'name' => $service['name'],
                         'description' => $service['description'],
                         'metadata' => $service['metadata'] ?? [],
-                        'enabled' => true,
+                        'enabled' => $row->exists ? (bool) $row->enabled : true,
                     ]
                 );
                 $serviceIds[$row->key] = $row->id;
@@ -96,7 +96,10 @@ final class ProviderPresetRegistry
                             'service_key' => $mapping['service_key'],
                             'provider_service_id' => $mapping['provider_service_id'] ?? $mapping['service_key'],
                             'capabilities' => $mapping['capabilities'] ?? [],
-                            'enabled' => false,
+                            'enabled' => ProviderServiceMapping::query()
+                                ->where('api_provider_id', $provider->id)
+                                ->where('service_id', $serviceIds[$mapping['service_key']])
+                                ->value('enabled') ?? false,
                         ]
                     );
 
