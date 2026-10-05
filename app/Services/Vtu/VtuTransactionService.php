@@ -100,6 +100,13 @@ class VtuTransactionService{
    if($locked->status!=='successful')throw new RuntimeException('Only a successful VTU transaction can be refunded.');
    $metadata=(array)$locked->metadata;
    if(($metadata['refund_settlement_applied']??false)===true)return null;
+   // A provider refund that timed out or was accepted while local settlement
+   // failed is a reconciliation case. Never allow a second provider refund.
+   if(($metadata['refund_manual_resolution_required']??false)===true
+      || ($metadata['refund_pending']??false)===true
+      || ($metadata['refund_provider_accepted']??false)===true) {
+    throw new RuntimeException('Refund is pending reconciliation; automatic retry is blocked.');
+   }
    if(isset($metadata['refund_claim_token']))return null;
    $token=(string)Str::uuid();
    $metadata['refund_claim_token']=$token;
@@ -111,7 +118,30 @@ class VtuTransactionService{
   });
   if($claim===null)return $tx->fresh();
 
-  $r=$this->gateway->refund($tx,$reason);
+  try {
+   $r=$this->gateway->refund($tx,$reason);
+  } catch (\Throwable $e) {
+   // A timeout/error after the provider request may still mean the refund was
+   // accepted. Keep the transaction successful, but permanently block an
+   // automatic second refund until reconciliation confirms the provider state.
+   return DB::transaction(function()use($tx,$claim,$reason,$e){
+    $locked=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);
+    $metadata=(array)$locked->metadata;
+    if(($metadata['refund_claim_token']??null)===$claim){
+     unset($metadata['refund_claim_token'],$metadata['refund_claimed_at']);
+     $metadata['refund_pending']=true;
+     $metadata['refund_manual_resolution_required']=true;
+     $metadata['refund_provider_status']='UNKNOWN';
+     $metadata['refund_reason']=$reason;
+     $metadata['refund_error']=$e->getMessage();
+     $locked->metadata=$metadata;
+     $locked->failure_code='REFUND_PROVIDER_STATE_UNKNOWN';
+     $locked->failure_message='Provider refund state is uncertain; no wallet credit or retry is allowed until reconciliation.';
+     $locked->save();
+    }
+    return $locked->fresh();
+   });
+  }
 
   return DB::transaction(function()use($tx,$r,$claim,$reason){
    $locked=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);
@@ -187,6 +217,7 @@ class VtuTransactionService{
     $metadata['refund_pending']=true;
     $metadata['refund_provider_status']=$r->status;
     $metadata['refund_manual_resolution_required']=true;
+    unset($metadata['refund_claim_token'],$metadata['refund_claimed_at']);
     $locked->failure_code='REFUND_PROVIDER_STATE_UNKNOWN';
     $locked->failure_message='Provider refund state is uncertain; no wallet credit or retry is allowed until reconciliation.';
     $locked->metadata=$metadata;
