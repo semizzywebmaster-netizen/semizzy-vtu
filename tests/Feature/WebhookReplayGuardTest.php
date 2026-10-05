@@ -88,6 +88,44 @@ class WebhookReplayGuardTest extends TestCase
         ]);
     }
 
+    public function test_stale_processing_claim_can_be_recovered_but_active_claim_cannot(): void
+    {
+        $provider = $this->provider();
+        $guard = app(WebhookReplayGuard::class);
+
+        $receipt = $guard->claim($provider, 'evt_stale', '{"ok":true}');
+        $this->assertTrue($guard->beginProcessing($receipt));
+        $receipt->refresh();
+
+        $this->assertFalse($guard->beginProcessing($receipt));
+
+        $receipt->forceFill(['processing_started_at' => now()->subMinutes(11)])->save();
+        $this->assertTrue($guard->beginProcessing($receipt->fresh()));
+        $this->assertNotSame($receipt->processing_token, $receipt->fresh()->processing_token);
+    }
+
+    public function test_old_processing_token_cannot_finalize_a_reclaimed_webhook(): void
+    {
+        $provider = $this->provider();
+        $guard = app(WebhookReplayGuard::class);
+
+        $receipt = $guard->claim($provider, 'evt_token', '{"ok":true}');
+        $this->assertTrue($guard->beginProcessing($receipt));
+        $first = $receipt->fresh();
+        $firstToken = $guard->processingToken($first);
+
+        $first->forceFill(['processing_started_at' => now()->subMinutes(11)])->save();
+        $this->assertTrue($guard->beginProcessing($first->fresh()));
+        $second = $first->fresh();
+        $secondToken = $guard->processingToken($second);
+
+        $guard->markProcessed($second, $firstToken);
+        $this->assertSame('processing', $second->fresh()->status);
+
+        $guard->markProcessed($second->fresh(), $secondToken);
+        $this->assertSame('processed', $second->fresh()->status);
+    }
+
     public function test_webhook_event_can_be_marked_processed_or_failed(): void
     {
         $provider = $this->provider();
