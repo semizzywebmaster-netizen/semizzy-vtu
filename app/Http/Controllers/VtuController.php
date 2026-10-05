@@ -30,6 +30,7 @@ class VtuController extends Controller
     public function history(Request $r){return response()->json(['data'=>VtuTransaction::with('service','product')->where('user_id',$r->user()->id)->latest()->paginate(25)]);}
     public function show(Request $r,VtuTransaction $t){abort_unless($t->user_id===$r->user()->id,404);return response()->json(['data'=>$this->present($t->load('service','product'))]);}
     public function webhook(Request $r,ApiProvider $provider,VtuTransactionService $service,WebhookSignatureService $signatures,WebhookReplayGuard $replays){
+        abort_unless($provider->enabled && !$provider->paused,404,'Provider is unavailable.');
         $secret=(string)($provider->credentials['webhook_secret']??'');
         abort_unless($secret!=='',401);
         $raw=$r->getContent();
