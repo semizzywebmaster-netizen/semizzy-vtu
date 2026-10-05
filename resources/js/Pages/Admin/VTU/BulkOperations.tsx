@@ -58,11 +58,31 @@ export default function BulkOperations({ operations }: { operations: { data: Ope
                 <td className="p-4 text-emerald-700">{op.successful_items}</td>
                 <td className="p-4 text-red-700">{op.failed_items}</td><td className="p-4"><button type="button" onClick={() => setOpenId(openId === op.id ? null : op.id)} className="rounded-lg border px-2.5 py-1.5 text-xs font-bold text-slate-700">{openId === op.id ? 'Hide' : 'Details'}</button></td>
               </tr>
+              {openId === op.id && (
+                <tr className="border-b bg-slate-50">
+                  <td colSpan={7} className="p-4 text-xs text-slate-600">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div><span className="font-bold">Items:</span> {op.total_items}</div>
+                      <div><span className="font-bold">Processed:</span> {op.processed_items}</div>
+                      <div><span className="font-bold">Pending:</span> {op.metadata?.pending_items ?? Math.max(0, op.total_items - op.successful_items - op.failed_items)}</div>
+                    </div>
+                    <div className="mt-3"><span className="font-bold">Idempotency:</span> <span className="font-mono">{op.idempotency_key ?? '—'}</span></div>
+                  </td>
+                </tr>
+              )}
             ))}
           </tbody>
         </table>
         {!operations.data.length && <div className="p-8 text-center text-sm text-slate-500">No bulk operations yet.</div>}
       </div>
-    </div>
+      {operations.links && operations.links.length > 3 && (
+        <div className="mt-4 flex flex-wrap gap-1">
+          {operations.links.map((link) => (
+            <button key={link.label} type="button" disabled={!link.url} onClick={() => link.url && router.get(link.url, {}, { preserveState: true, replace: true })} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${link.active ? 'bg-slate-900 text-white' : 'border bg-white text-slate-700'} disabled:opacity-40`} dangerouslySetInnerHTML={{ __html: link.label }} />
+          ))}
+        </div>
+      )}
+      </div>
+    </>
   );
 }
