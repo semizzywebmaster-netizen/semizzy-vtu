@@ -129,6 +129,15 @@ class ProviderRoutingTest extends TestCase
         $tx->setRelation('service', $service);
         $tx->setRelation('provider', $provider);
 
+        ProviderServiceMapping::create([
+            'api_provider_id' => $provider->id,
+            'service_id' => $service->id,
+            'service_key' => $service->key,
+            'provider_service_id' => $service->key,
+            'capabilities' => ['transaction_status'],
+            'enabled' => true,
+        ]);
+
         $manager = Mockery::mock(ProviderManager::class);
         $manager->shouldReceive('executeProvider')->once()->with(
             $provider, 'airtime-requery', 'transaction_status',
