@@ -8,6 +8,7 @@ use App\Models\Service;
 use App\Models\ServiceProduct;
 use App\Models\SupportTicket;
 use App\Models\User;
+use App\Models\VtuTransaction;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,10 +18,13 @@ class DashboardController extends Controller
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
-        $isAdmin = $user->hasRole('ADMIN');
-        $canViewProviders = in_array($user->role, ['ADMIN', 'STAFF'], true);
-        $canViewCatalogue = in_array($user->role, ['ADMIN', 'STAFF'], true);
-        $canManageSupport = $user->hasRole(['ADMIN', 'STAFF', 'SUPPORT']);
+        $role = $user->role;
+        $permissions = config('semizzy.role_permissions.' . $role, []);
+        $isAdmin = $role === 'ADMIN';
+        $isStaff = $role === 'STAFF';
+        $isSupport = $role === 'SUPPORT';
+        $isOperations = $isAdmin || $isStaff || $isSupport;
+        $can = static fn (string $permission): bool => in_array($permission, $permissions, true);
 
         $metrics = [];
 
@@ -32,22 +36,31 @@ class DashboardController extends Controller
                 ['label' => 'Enabled products', 'value' => ServiceProduct::query()->where('enabled', true)->count(), 'description' => 'Catalogue products enabled in core'],
                 ['label' => 'Open support tickets', 'value' => SupportTicket::query()->whereIn('status', ['open', 'pending'])->count(), 'description' => 'Tickets awaiting attention'],
             ];
-        } else {
-            if ($canViewProviders) {
+        } elseif ($isStaff) {
+            if ($can('providers.view')) {
                 $metrics[] = ['label' => 'Eligible providers', 'value' => ApiProvider::query()->eligibleForNewTransactions()->count(), 'description' => 'Verified, enabled and unpaused'];
             }
-
-            if ($canViewCatalogue) {
-                $metrics[] = ['label' => 'Enabled services', 'value' => Service::query()->where('enabled', true)->count(), 'description' => 'Core catalogue services'];
+            if ($can('catalogue.view')) {
+                $metrics[] = ['label' => 'Enabled services', 'value' => Service::query()->where('enabled', true)->count(), 'description' => 'Services currently enabled in catalogue'];
+                $metrics[] = ['label' => 'Enabled products', 'value' => ServiceProduct::query()->where('enabled', true)->count(), 'description' => 'Products currently enabled in catalogue'];
             }
-
-            if ($canManageSupport) {
-                $metrics[] = ['label' => 'Open support tickets', 'value' => SupportTicket::query()->whereIn('status', ['open', 'pending'])->count(), 'description' => 'Tickets awaiting attention'];
-            } else {
-                $metrics[] = ['label' => 'My support tickets', 'value' => SupportTicket::query()->where('user_id', $user->id)->count(), 'description' => 'Tickets submitted by your account'];
+            if ($can('vtu.transactions.view')) {
+                $metrics[] = ['label' => 'VTU transactions', 'value' => VtuTransaction::query()->count(), 'description' => 'Transactions recorded by the VTU addon'];
             }
-
-            $metrics[] = ['label' => 'Unread notifications', 'value' => $user->unreadNotifications()->count(), 'description' => 'Updates waiting for you'];
+            $metrics[] = ['label' => 'Open support tickets', 'value' => SupportTicket::query()->where('status', 'open')->count(), 'description' => 'Customer requests awaiting first response'];
+            $metrics[] = ['label' => 'Pending support tickets', 'value' => SupportTicket::query()->where('status', 'pending')->count(), 'description' => 'Requests awaiting follow-up'];
+            $metrics[] = ['label' => 'Unread notifications', 'value' => $user->unreadNotifications()->count(), 'description' => 'Operational updates waiting for you'];
+        } elseif ($isSupport) {
+            $metrics = [
+                ['label' => 'Open support tickets', 'value' => SupportTicket::query()->where('status', 'open')->count(), 'description' => 'Customer requests awaiting first response'],
+                ['label' => 'Pending support tickets', 'value' => SupportTicket::query()->where('status', 'pending')->count(), 'description' => 'Requests awaiting follow-up'],
+                ['label' => 'Unread notifications', 'value' => $user->unreadNotifications()->count(), 'description' => 'Updates waiting for you'],
+            ];
+        } else {
+            $metrics = [
+                ['label' => 'My support tickets', 'value' => SupportTicket::query()->where('user_id', $user->id)->count(), 'description' => 'Tickets submitted by your account'],
+                ['label' => 'Unread notifications', 'value' => $user->unreadNotifications()->count(), 'description' => 'Updates waiting for you'],
+            ];
         }
 
         $quickLinks = [];
@@ -64,14 +77,28 @@ class DashboardController extends Controller
                 ['label' => 'Security events', 'url' => '/admin/security-events'],
                 ['label' => 'Support desk', 'url' => '/support'],
             ];
-        } elseif ($user->hasRole('STAFF')) {
+        } elseif ($isStaff) {
+            if ($can('users.view')) {
+                $quickLinks[] = ['label' => 'Users & staff', 'url' => '/admin/users'];
+            }
+            if ($can('providers.view')) {
+                $quickLinks[] = ['label' => 'API providers', 'url' => '/admin/providers'];
+            }
+            if ($can('catalogue.view')) {
+                $quickLinks[] = ['label' => 'Service catalogue', 'url' => '/admin/catalogue'];
+            }
+            if ($can('vtu.transactions.view')) {
+                $quickLinks[] = ['label' => 'VTU transactions', 'url' => '/admin/vtu/transactions'];
+            }
+            $quickLinks[] = ['label' => 'Support desk', 'url' => '/support'];
+            $quickLinks[] = ['label' => 'Notifications', 'url' => '/notifications'];
+            $quickLinks[] = ['label' => 'My profile', 'url' => '/profile'];
+        } elseif ($isSupport) {
             $quickLinks = [
-                ['label' => 'API providers', 'url' => '/admin/providers'],
-                ['label' => 'Service catalogue', 'url' => '/admin/catalogue'],
                 ['label' => 'Support desk', 'url' => '/support'],
+                ['label' => 'Notifications', 'url' => '/notifications'],
+                ['label' => 'My profile', 'url' => '/profile'],
             ];
-        } elseif ($user->hasRole('SUPPORT')) {
-            $quickLinks = [['label' => 'Support desk', 'url' => '/support']];
         } else {
             $quickLinks = [
                 ['label' => 'Notifications', 'url' => '/notifications'],
@@ -81,9 +108,15 @@ class DashboardController extends Controller
         }
 
         return Inertia::render('Dashboard', [
-            'role' => $user->role,
+            'role' => $role,
             'metrics' => $metrics,
             'quickLinks' => $quickLinks,
+            'workspace' => [
+                'operations' => $isOperations,
+                'staff' => $isStaff,
+                'supportOpen' => $isOperations ? SupportTicket::query()->where('status', 'open')->count() : 0,
+                'supportPending' => $isOperations ? SupportTicket::query()->where('status', 'pending')->count() : 0,
+            ],
         ]);
     }
 }
