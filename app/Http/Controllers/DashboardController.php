@@ -108,8 +108,8 @@ class DashboardController extends Controller
             ];
         } else {
             $quickLinks = [
-                ['label' => 'VTU Services', 'url' => '/vtu'],
                 ['label' => 'Notifications', 'url' => '/notifications'],
+                ['label' => 'VTU Services', 'url' => '/vtu'],
                 ['label' => 'Contact support', 'url' => '/support'],
                 ['label' => 'My profile', 'url' => '/profile'],
             ];
