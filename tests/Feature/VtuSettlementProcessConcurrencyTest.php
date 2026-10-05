@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditEvent;
 use App\Models\FinancialOperation;
 use App\Models\Service;
 use App\Models\ServiceCategory;
@@ -13,7 +14,7 @@ use App\Services\Audit\AuditLogger;
 use App\Services\Providers\ProviderResult;
 use App\Services\Vtu\VtuProviderGateway;
 use App\Services\Vtu\VtuTransactionService;
-use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -165,7 +166,11 @@ class VtuSettlementProcessConcurrencyTest extends TestCase
         $this->app->instance(VtuProviderGateway::class, $gateway);
         $this->app->instance(AuditLogger::class, new class extends AuditLogger {
             public function __construct() {}
-            public function record(string $event, $subject, array $context = []): void {}
+
+            public function record(string $event, ?object $subject = null, array $context = [], ?Request $request = null): AuditEvent
+            {
+                return new AuditEvent();
+            }
         });
 
         $startPath = storage_path('framework/testing/vtu-concurrency-start-'.Str::uuid().'.signal');
@@ -220,6 +225,7 @@ class VtuSettlementProcessConcurrencyTest extends TestCase
         $operation->refresh();
         $final = $tx->fresh();
 
+        $this->assertTrue(pcntl_wifexited($status), is_file($childResultPath) ? file_get_contents($childResultPath) : 'child result missing');
         $this->assertSame(0, pcntl_wexitstatus($status), is_file($childResultPath) ? file_get_contents($childResultPath) : 'child result missing');
         $this->assertSame('1', trim((string) file_get_contents($counterPath)));
         $this->assertSame('successful', $final->status);
