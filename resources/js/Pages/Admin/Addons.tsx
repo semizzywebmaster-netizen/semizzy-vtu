@@ -142,8 +142,7 @@ export default function Addons({ addons }: Props) {
                   <input name={name} placeholder={placeholder} required={name === 'identifier' || name === 'name' || name === 'version'}
                     className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 font-normal outline-none focus:border-slate-500" />
                 </label>
-              );
-            })}
+              ))}
               <div className="md:col-span-2">
                 <button type="submit" disabled={processing === 'register'} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">{processing === 'register' ? 'Registering…' : 'Register manifest'}</button>
               </div>
