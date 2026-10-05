@@ -22,6 +22,36 @@ class VtuProviderFailureRecoveryTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_refund_provider_exception_blocks_duplicate_refund_and_keeps_wallet_hold_settled(): void
+    {
+        [$tx, $wallet, $operation, $provider] = $this->makeTransaction('refund-timeout');
+        $tx->forceFill([
+            'status' => 'successful',
+            'provider_reference' => 'PROVIDER-SUCCESS-1',
+            'metadata' => ['financial_settlement_applied' => true],
+        ])->save();
+        $wallet->forceFill(['available_minor' => '0', 'held_minor' => '0'])->save();
+        $operation->forceFill(['status' => 'completed'])->save();
+
+        $gateway = $this->mock(VtuProviderGateway::class);
+        $gateway->shouldReceive('refund')->once()->andThrow(new \\RuntimeException('Provider timeout after submission.'));
+
+        $service = app(VtuTransactionService::class);
+        $result = $service->refund($tx, 'Customer request');
+        $result->refresh();
+        $wallet->refresh();
+
+        $this->assertSame('successful', $result->status);
+        $this->assertSame('0', (string) $wallet->available_minor);
+        $this->assertTrue((bool) (($result->metadata ?? [])['refund_pending'] ?? false));
+        $this->assertTrue((bool) (($result->metadata ?? [])['refund_manual_resolution_required'] ?? false));
+        $this->assertSame('REFUND_PROVIDER_STATE_UNKNOWN', $result->failure_code);
+
+        $this->expectException(\\RuntimeException::class);
+        $this->expectExceptionMessage('Refund is pending reconciliation; automatic retry is blocked.');
+        $service->refund($result, 'Duplicate retry');
+    }
+
     private function makeTransaction(string $key): array
     {
         $user = User::create([
