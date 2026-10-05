@@ -141,16 +141,12 @@ class VtuBulkService
             return $existing->load('items');
         }
 
+        // Item rows were created atomically with the bulk operation above.
+        // Reuse those durable rows instead of inserting them a second time.
         foreach (array_values($items) as $i => $item) {
             $key = (string) ($item['idempotency_key'] ?? ($bulk->reference . ':' . ($i + 1)));
             $payload = (array) ($item['payload'] ?? []);
-            $row = $bulk->items()->create([
-                'sequence' => $i + 1,
-                'idempotency_key' => $key,
-                'recipient' => $payload['recipient'] ?? $payload['phone'] ?? null,
-                'product_id' => $item['product_id'],
-                'status' => 'processing',
-            ]);
+            $row = $bulk->items()->where('sequence', $i + 1)->firstOrFail();
 
             try {
                 $product = ServiceProduct::query()->with('service')->findOrFail((int) $item['product_id']);
