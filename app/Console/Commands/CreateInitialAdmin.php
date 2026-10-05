@@ -17,6 +17,16 @@ class CreateInitialAdmin extends Command
 
     public function handle(): int
     {
+        $marker = DB::table('system_settings')
+            ->where('key', 'core.initial_admin_created')
+            ->value('value');
+
+        if ($marker === '1' || User::query()->where('role', 'ADMIN')->exists()) {
+            $this->error('An initial administrator has already been created. Use the existing admin account or follow the documented recovery procedure.');
+
+            return self::FAILURE;
+        }
+
         $name = trim((string) $this->ask('Administrator name'));
         $email = strtolower(trim((string) $this->ask('Administrator email')));
         $password = (string) $this->secret('Administrator password');
