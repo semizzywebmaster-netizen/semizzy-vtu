@@ -42,7 +42,10 @@ class InstallationGuardTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        User::factory()->create([
+        User::create([
+            'name' => 'Installation Admin',
+            'email' => 'installation-admin@example.test',
+            'password' => 'StrongPassword123!',
             'role' => 'ADMIN',
             'status' => 'active',
         ]);
