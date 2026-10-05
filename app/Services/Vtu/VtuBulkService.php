@@ -233,9 +233,13 @@ class VtuBulkService
 
                 if (!$transaction) {
                     if ($item->status === 'processing') {
+                        // A worker can die after the durable item row is created but
+                        // before VtuTransaction::create() commits. Keep the item
+                        // resumable; marking it terminal would make an idempotent
+                        // replay skip it permanently.
                         $item->update([
-                            'status' => 'failed',
-                            'error_message' => 'Bulk worker stopped before this transaction was created. The item is safe to retry using its idempotency key.',
+                            'status' => 'pending',
+                            'error_message' => 'Bulk worker stopped before this transaction was created. The item is queued for safe resume using its idempotency key.',
                         ]);
                         $recovered++;
                     }
@@ -256,6 +260,11 @@ class VtuBulkService
                 $recovered++;
             }
 
+            $metadata = array_merge((array) $bulk->metadata, [
+                'last_recovery_at' => now()->toIso8601String(),
+            ]);
+            $bulk->metadata = $metadata;
+            $bulk->save();
             $this->recalculate($bulk->fresh('items'));
         }
 
