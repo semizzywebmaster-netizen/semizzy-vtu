@@ -46,6 +46,9 @@ class ProviderManager
     }
     public function executeProvider(ApiProvider $provider,string $serviceKey,string $operation,array $payload=[],?string $idempotencyKey=null): ProviderResult
     {
+        if(!$this->mappingSupportsOperation($provider,$serviceKey,$operation)) {
+            return new ProviderResult(false,'UNSUPPORTED',message:'Provider service mapping does not permit this operation.',providerId:$provider->id);
+        }
         if(!$this->registry->supports($provider,$operation)) return new ProviderResult(false,'UNSUPPORTED',message:'Provider capability is not enabled.');
         try{$this->registry->validate($provider);}catch(\Throwable $e){return new ProviderResult(false,'UNSUPPORTED',message:'Provider configuration is invalid.');}
         $started=microtime(true);
@@ -74,6 +77,21 @@ class ProviderManager
         );
     }
 
+
+    private function mappingSupportsOperation(ApiProvider $provider,string $serviceKey,string $operation): bool
+    {
+        $mapping=$provider->serviceMappings()
+            ->where('enabled',true)
+            ->where(function($query)use($serviceKey):void{
+                $query->whereHas('service',fn($service)=>$service->where('key',$serviceKey))
+                    ->orWhere(fn($legacy)=>$legacy->whereNull('service_id')->where('service_key',$serviceKey));
+            })
+            ->first();
+
+        if(!$mapping) return false;
+        $capabilities=$mapping->capabilities;
+        return !is_array($capabilities) || $capabilities===[] || in_array($operation,$capabilities,true);
+    }
 
     public function execute(string $serviceKey,string $operation,array $payload=[],?string $idempotencyKey=null): ProviderResult
     {
