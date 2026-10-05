@@ -98,11 +98,6 @@ export default function Addons({ addons }: Props) {
     router.post(url, undefined, { onFinish: () => setProcessing(null) });
   };
 
-  const vtuAction = vtuAddon
-    ? vtuAddon.status === 'active' ? { label: 'Open VTU Dashboard', url: '/admin/vtu', key: 'vtu-open', className: 'bg-emerald-600' }
-    : ['installed', 'inactive'].includes(vtuAddon.status) ? { label: 'Activate VTU', url: `/admin/addons/${vtuAddon.id}/activate`, key: `activate:${vtuAddon.id}`, className: 'bg-emerald-600' } : null
-    : { label: 'Install VTU', url: '/admin/addons/install-vtu', key: 'vtu-install', className: 'bg-indigo-600' };
-
   return (
     <>
       <Head title="Addon Manager" />
