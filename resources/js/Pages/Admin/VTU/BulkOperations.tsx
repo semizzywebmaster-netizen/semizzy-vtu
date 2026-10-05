@@ -25,6 +25,7 @@ export default function BulkOperations({
   const [openId, setOpenId] = useState<number | null>(null);
   const [status, setStatus] = useState('');
   const [reference, setReference] = useState('');
+  const [reconcilingId, setReconcilingId] = useState<number | null>(null);
 
   const submitFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -32,6 +33,14 @@ export default function BulkOperations({
     if (status) params.status = status;
     if (reference.trim()) params.reference = reference.trim();
     router.get('/admin/vtu/bulk', params, { preserveState: true, replace: true });
+  };
+
+  const reconcile = (id: number) => {
+    setReconcilingId(id);
+    router.post(`/admin/vtu/bulk/${id}/reconcile`, {}, {
+      preserveScroll: true,
+      onFinish: () => setReconcilingId(null),
+    });
   };
 
   const resetFilters = () => {
@@ -147,6 +156,18 @@ export default function BulkOperations({
                             <span className="font-bold">Idempotency:</span>{' '}
                             <span className="font-mono">{operation.idempotency_key ?? '—'}</span>
                           </div>
+                          {pending > 0 && (
+                            <div className="mt-4">
+                              <button
+                                type="button"
+                                onClick={() => reconcile(operation.id)}
+                                disabled={reconcilingId === operation.id}
+                                className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50"
+                              >
+                                {reconcilingId === operation.id ? 'Reconciling…' : 'Reconcile Pending'}
+                              </button>
+                            </div>
+                          )}
                           {operation.created_at && (
                             <div className="mt-2">
                               <span className="font-bold">Created:</span> {operation.created_at}
