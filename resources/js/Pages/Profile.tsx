@@ -1,4 +1,4 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import CoreMobileNav from '../Components/CoreMobileNav';
 
 type SharedProps = { navigation?: { unreadNotifications?: number } };
@@ -32,7 +32,7 @@ export default function Profile({ user }: Props) {
   return (
     <main className="min-h-screen bg-slate-50 p-4 pb-24 md:p-8">
       <Head title="Profile" />
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-3xl"><div className="mb-4 flex justify-end"><button type="button" onClick={() => router.post('/logout')} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white">Logout</button></div>
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-semibold text-slate-500">SEMIZZY ONE</p>
           <h1 className="mt-1 text-2xl font-extrabold text-slate-900">Profile</h1>
