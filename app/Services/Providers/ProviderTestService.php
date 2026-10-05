@@ -12,7 +12,33 @@ class ProviderTestService
     {
         $this->guard->validate($provider->base_url);
         $started=microtime(true);
-        $result=$this->adapter->execute($provider,'health_check');
+        $endpoints=$provider->endpoints ?? [];
+        $capabilities=$provider->capabilities ?? [];
+        $operation=null;
+
+        foreach(['health_check','balance_inquiry','catalogue_retrieval'] as $candidate){
+            if(isset($endpoints[$candidate]) && is_string($endpoints[$candidate]) && $endpoints[$candidate] !== ''
+                && ($candidate === 'health_check' || in_array($candidate,$capabilities,true))){
+                $operation=$candidate;
+                break;
+            }
+        }
+
+        if($operation===null){
+            $provider->forceFill([
+                'last_tested_at'=>now(),
+                'last_test_status'=>'FAILED',
+                'last_test_summary'=>'No safe read-only verification endpoint is configured.',
+            ])->save();
+
+            return [
+                'result'=>new ProviderResult(false,'FAILED',message:'No safe read-only verification endpoint is configured.'),
+                'duration_ms'=>0,
+                'operation'=>null,
+            ];
+        }
+
+        $result=$this->adapter->execute($provider,$operation);
         $ms=(int)round((microtime(true)-$started)*1000);
         $provider->forceFill([
             'last_tested_at'=>now(),
@@ -20,6 +46,6 @@ class ProviderTestService
             'last_test_summary'=>$result->message ?: 'Health check completed.',
             'last_successful_request_at'=>$result->accepted ? now() : $provider->last_successful_request_at,
         ])->save();
-        return ['result'=>$result,'duration_ms'=>$ms];
+        return ['result'=>$result,'duration_ms'=>$ms,'operation'=>$operation];
     }
 }
