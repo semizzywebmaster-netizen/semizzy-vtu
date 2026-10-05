@@ -160,7 +160,7 @@ class AddonController extends Controller
                 'vtu.mappings.manage','vtu.transactions.view','vtu.transactions.manage',
                 'vtu.bulk.manage','vtu.requery','vtu.refunds.manage','vtu.settings.manage',
             ],
-            'navigation' => [['label' => 'VTU', 'url' => '/vtu', 'permission' => 'vtu.view']],
+            'navigation' => [['id' => 'vtu', 'label' => 'VTU', 'url' => '/admin/vtu', 'icon' => 'server', 'permission' => 'vtu.view', 'section' => 'addons', 'order' => 10]],
             'settings' => [],
             'migrations' => [
                 '2026_10_05_000026_create_vtu_addon_tables.php',
