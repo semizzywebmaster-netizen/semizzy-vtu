@@ -49,9 +49,17 @@ class AddonController extends Controller
 
         if (!$addon) {
             $lifecycle->register($manifest, auth()->id());
+
+            return back()->with('success', 'VTU & Digital Services addon registered. Install it before activation.');
         }
 
-        return back()->with('success', 'VTU & Digital Services addon registered. Install it before activation.');
+        if ($addon->status === 'archived') {
+            return back()->withErrors([
+                'addon' => 'The VTU & Digital Services addon is archived. Use the explicit addon update/restore lifecycle before registering it again.',
+            ]);
+        }
+
+        return back()->with('success', 'VTU & Digital Services addon is already registered. Install it before activation.');
     }
 
     public function installVtu(AddonLifecycleService $lifecycle): RedirectResponse
@@ -63,11 +71,31 @@ class AddonController extends Controller
             $addon = $lifecycle->register($manifest, auth()->id());
         }
 
-        if (in_array($addon->status, ['draft','failed','inactive'], true)) {
-            $lifecycle->install($addon, auth()->id());
+        if ($addon->status === 'archived') {
+            return back()->withErrors([
+                'addon' => 'The VTU & Digital Services addon is archived. Restore or explicitly update its lifecycle before installation.',
+            ]);
         }
 
-        return back()->with('success', 'VTU & Digital Services addon installed. Activate it to expose its services.');
+        if (in_array($addon->status, ['draft','failed','inactive'], true)) {
+            $installed = $lifecycle->install($addon, auth()->id());
+
+            return back()->with('success', $installed->status === 'installed'
+                ? 'VTU & Digital Services addon installed. Activate it to expose its services.'
+                : 'VTU & Digital Services addon installation did not complete.');
+        }
+
+        if ($addon->status === 'installed') {
+            return back()->with('success', 'VTU & Digital Services addon is already installed. Activate it to expose its services.');
+        }
+
+        if ($addon->status === 'active') {
+            return back()->with('success', 'VTU & Digital Services addon is already active.');
+        }
+
+        return back()->withErrors([
+            'addon' => "VTU & Digital Services addon cannot be installed from its current lifecycle state [{$addon->status}].",
+        ]);
     }
 
     public function register(Request $request, AddonLifecycleService $lifecycle): RedirectResponse
