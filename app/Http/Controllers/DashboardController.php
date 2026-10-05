@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Addon;
 use App\Models\ApiProvider;
 use App\Models\Service;
+use App\Models\ServiceCategory;
 use App\Models\ServiceProduct;
 use App\Models\SupportTicket;
 use App\Models\User;
 use App\Models\VtuTransaction;
+use App\Models\WalletAccount;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -64,7 +66,6 @@ class DashboardController extends Controller
         }
 
         $quickLinks = [];
-
         if ($isAdmin) {
             $quickLinks = [
                 ['label' => 'Users & staff', 'url' => '/admin/users'],
@@ -85,18 +86,10 @@ class DashboardController extends Controller
                 ['label' => 'Support desk', 'url' => '/support'],
             ];
         } elseif ($isStaff) {
-            if ($can('users.view')) {
-                $quickLinks[] = ['label' => 'Users & staff', 'url' => '/admin/users'];
-            }
-            if ($can('providers.view')) {
-                $quickLinks[] = ['label' => 'API providers', 'url' => '/admin/providers'];
-            }
-            if ($can('catalogue.view')) {
-                $quickLinks[] = ['label' => 'Service catalogue', 'url' => '/admin/catalogue'];
-            }
-            if ($can('vtu.transactions.view')) {
-                $quickLinks[] = ['label' => 'VTU transactions', 'url' => '/admin/vtu/transactions'];
-            }
+            if ($can('users.view')) $quickLinks[] = ['label' => 'Users & staff', 'url' => '/admin/users'];
+            if ($can('providers.view')) $quickLinks[] = ['label' => 'API providers', 'url' => '/admin/providers'];
+            if ($can('catalogue.view')) $quickLinks[] = ['label' => 'Service catalogue', 'url' => '/admin/catalogue'];
+            if ($can('vtu.transactions.view')) $quickLinks[] = ['label' => 'VTU transactions', 'url' => '/admin/vtu/transactions'];
             $quickLinks[] = ['label' => 'Support desk', 'url' => '/support'];
             $quickLinks[] = ['label' => 'Notifications', 'url' => '/notifications'];
             $quickLinks[] = ['label' => 'My profile', 'url' => '/profile'];
@@ -115,10 +108,47 @@ class DashboardController extends Controller
             ];
         }
 
+        $serviceCategories = [];
+        if (!$isOperations) {
+            $serviceCategories = ServiceCategory::query()
+                ->where('enabled', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->with(['services' => fn ($q) => $q->where('enabled', true)->orderBy('name')])
+                ->get()
+                ->map(fn (ServiceCategory $category) => [
+                    'key' => $category->key,
+                    'name' => $category->name,
+                    'description' => $category->description,
+                    'services' => $category->services->map(fn (Service $service) => [
+                        'key' => $service->key,
+                        'name' => $service->name,
+                        'description' => $service->description,
+                        'url' => '/vtu?service=' . urlencode($service->key),
+                    ])->values()->all(),
+                ])->values()->all();
+        }
+
+        $wallet = null;
+        if (!$isOperations) {
+            $wallet = WalletAccount::query()->where('user_id', $user->id)->where('status', '!=', 'closed')->first();
+        }
+
         return Inertia::render('Dashboard', [
             'role' => $role,
+            'user' => [
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
             'metrics' => $metrics,
             'quickLinks' => $quickLinks,
+            'serviceCategories' => $serviceCategories,
+            'wallet' => $wallet ? [
+                'available_minor' => $wallet->available_minor,
+                'held_minor' => $wallet->held_minor,
+                'currency' => $wallet->currency,
+                'status' => $wallet->status,
+            ] : null,
             'workspace' => [
                 'operations' => $isOperations,
                 'staff' => $isStaff,
