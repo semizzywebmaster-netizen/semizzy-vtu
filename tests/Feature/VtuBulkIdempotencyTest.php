@@ -12,6 +12,7 @@ use App\Services\Vtu\VtuPayloadValidator;
 use App\Services\Vtu\VtuTransactionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
+use Mockery;
 use Tests\TestCase;
 
 class VtuBulkIdempotencyTest extends TestCase
@@ -74,7 +75,7 @@ class VtuBulkIdempotencyTest extends TestCase
         $this->mock(VtuTransactionService::class, function ($mock) use ($product, $tx, $user): void {
             $mock->shouldReceive('create')
                 ->once()
-                ->with($user->id, $product, ['phone' => '08000000000'], 'USER', 'item-1')
+                ->with($user->id, Mockery::on(fn (ServiceProduct $candidate): bool => $candidate->id === $product->id), ['phone' => '08000000000'], 'USER', 'item-1')
                 ->andReturn($tx);
             $mock->shouldReceive('process')->once()->with($tx)->andReturn($tx);
         });
