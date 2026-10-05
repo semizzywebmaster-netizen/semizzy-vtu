@@ -22,7 +22,7 @@ export default function Notifications({ notifications, unreadCount }: Props) {
       <Head title="Notifications" />
       <main className="min-h-screen bg-slate-50 p-4 pb-24 md:p-8">
         <div className="mx-auto max-w-3xl">
-          <header className="flex items-start justify-between gap-4">
+          <header className="flex items-start justify-between gap-4"><button type="button" onClick={() => router.post('/logout')} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white">Logout</button>
             <div>
               <p className="text-sm font-semibold text-indigo-700">SEMIZZY ONE</p>
               <h1 className="mt-1 text-2xl font-extrabold text-slate-900">Notifications</h1>
