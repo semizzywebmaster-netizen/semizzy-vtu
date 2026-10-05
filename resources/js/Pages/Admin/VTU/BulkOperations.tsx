@@ -13,14 +13,18 @@ type Operation = {
 };
 
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { FormEvent, useState } from 'react';
 
 export default function BulkOperations({ operations }: { operations: { data: Operation[]; links?: { url: string | null; label: string; active: boolean }[] } }) {
   const [openId, setOpenId] = useState<number | null>(null);
   const [status, setStatus] = useState('');
-  const submitFilters = (event: React.FormEvent<HTMLFormElement>) => {
+  const [reference, setReference] = useState('');
+  const submitFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    router.get('/admin/vtu/bulk', status ? { status } : {}, { preserveState: true, replace: true });
+    const params: Record<string, string> = {};
+    if (status) params.status = status;
+    if (reference.trim()) params.reference = reference.trim();
+    router.get('/admin/vtu/bulk', params, { preserveState: true, replace: true });
   };
   return (
     <>
@@ -34,8 +38,9 @@ export default function BulkOperations({ operations }: { operations: { data: Ope
             <option value="">All statuses</option><option value="processing">Processing</option><option value="pending">Pending</option><option value="partial">Partial</option><option value="successful">Successful</option><option value="failed">Failed</option>
           </select>
         </label>
+        <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Reference" className="rounded-lg border px-3 py-2 text-sm" />
         <button type="submit" className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white">Filter</button>
-        <button type="button" onClick={() => { setStatus(''); router.get('/admin/vtu/bulk', {}, { preserveState: true, replace: true }); }} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">Reset</button>
+        <button type="button" onClick={() => { setStatus(''); setReference(''); router.get('/admin/vtu/bulk', {}, { preserveState: true, replace: true }); }} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">Reset</button>
       </form>
       <div className="mt-4 overflow-x-auto rounded-xl border bg-white">
         <table className="w-full text-left text-sm">
