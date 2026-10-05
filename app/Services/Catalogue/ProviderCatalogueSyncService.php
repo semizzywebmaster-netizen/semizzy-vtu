@@ -40,9 +40,12 @@ final class ProviderCatalogueSyncService
 
         $this->registry->validate($provider);
         $started = microtime(true);
-        $result = $this->adapter->execute($provider, 'catalogue_retrieval', [
-            'service' => $service->key,
-        ]);
+        $catalogueRequest = $service->metadata['catalogue_request'] ?? ['service' => $service->key];
+        if (!is_array($catalogueRequest)) {
+            throw new InvalidArgumentException('Service catalogue request configuration is invalid.');
+        }
+
+        $result = $this->adapter->execute($provider, 'catalogue_retrieval', $catalogueRequest);
         $this->logger->record(
             $provider,
             'catalogue_retrieval',
