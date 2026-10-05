@@ -34,6 +34,8 @@ type FormData = {
   auth_type: 'custom' | 'bearer' | 'basic' | 'api_key_header';
   priority: number;
   integration_config: string;
+  credentials_json: string;
+  credentials_touched: boolean;
 };
 
 const emptyForm: FormData = {
@@ -45,7 +47,9 @@ const emptyForm: FormData = {
   environment: 'sandbox',
   auth_type: 'bearer',
   priority: 100,
-  integration_config: JSON.stringify({ capabilities: ['health'], endpoints: {}, service_categories: [], credentials: {} }, null, 2),
+  integration_config: JSON.stringify({ capabilities: ['health'], endpoints: {}, service_categories: [] }, null, 2),
+  credentials_json: JSON.stringify({ headers_get: {}, headers_post: {} }, null, 2),
+  credentials_touched: false,
 };
 
 export default function Providers({ providers }: { providers: Provider[] }) {
@@ -68,6 +72,8 @@ export default function Providers({ providers }: { providers: Provider[] }) {
         endpoints: provider.endpoints,
         service_categories: provider.service_categories,
       }, null, 2),
+      credentials_json: JSON.stringify({ headers_get: {}, headers_post: {} }, null, 2),
+      credentials_touched: false,
     });
     form.clearErrors();
   };
@@ -81,6 +87,17 @@ export default function Providers({ providers }: { providers: Provider[] }) {
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     let config: Record<string, unknown>;
+    let credentials: Record<string, unknown> | undefined;
+    if (form.data.credentials_touched) {
+      try {
+        const parsedCredentials: unknown = JSON.parse(form.data.credentials_json || '{}');
+        if (!parsedCredentials || typeof parsedCredentials !== 'object' || Array.isArray(parsedCredentials)) throw new Error('Credentials must be a JSON object.');
+        credentials = parsedCredentials as Record<string, unknown>;
+      } catch (error) {
+        form.setError('credentials_json', error instanceof Error ? error.message : 'Invalid credentials JSON.');
+        return;
+      }
+    }
     try {
       const parsed: unknown = JSON.parse(form.data.integration_config || '{}');
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Configuration must be a JSON object.');
@@ -105,6 +122,7 @@ export default function Providers({ providers }: { providers: Provider[] }) {
       auth_type: form.data.auth_type,
       priority: Number(form.data.priority),
       ...config,
+      ...(credentials !== undefined ? { credentials } : {}),
     };
 
     if (editingId) {
@@ -136,7 +154,13 @@ export default function Providers({ providers }: { providers: Provider[] }) {
         <label className="block text-sm font-semibold">Authentication type<select className="mt-1 w-full rounded-xl border border-slate-300 p-3 font-normal" value={form.data.auth_type} onChange={e=>form.setData('auth_type',e.target.value as FormData['auth_type'])}><option value="bearer">Bearer token</option><option value="api_key_header">API key header</option><option value="basic">HTTP Basic</option><option value="custom">Custom</option></select></label>
         <label className="block text-sm font-semibold">Priority (lower is earlier)<input type="number" min={0} max={100000} className="mt-1 w-full rounded-xl border border-slate-300 p-3 font-normal" value={form.data.priority} onChange={e=>form.setData('priority',Number(e.target.value))} /></label>
       </div>
-      <label className="block text-sm font-semibold">Capabilities, endpoints, service categories and credentials (JSON)<textarea rows={8} spellCheck={false} className="mt-1 w-full rounded-xl border border-slate-300 p-3 font-mono text-xs font-normal" value={form.data.integration_config} onChange={e=>form.setData('integration_config',e.target.value)} />{form.errors.integration_config && <span className="mt-1 block text-red-600">{form.errors.integration_config}</span>}<span className="mt-1 block text-xs font-normal text-slate-500">Use only verified provider documentation. Credentials are encrypted at rest and never shown again in this form. When editing, existing credentials are intentionally omitted from the prefilled JSON; add a credentials object only when rotating them.</span></label>
+      <label className="block text-sm font-semibold">Integration configuration (JSON)<textarea rows={8} spellCheck={false} className="mt-1 w-full rounded-xl border border-slate-300 p-3 font-mono text-xs font-normal" value={form.data.integration_config} onChange={e=>form.setData('integration_config',e.target.value)} />{form.errors.integration_config && <span className="mt-1 block text-red-600">{form.errors.integration_config}</span>}<span className="mt-1 block text-xs font-normal text-slate-500">Capabilities, operation endpoints and service categories. Credentials are configured separately and stored encrypted.</span></label>
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="flex items-start justify-between gap-3"><div><h3 className="text-base font-bold text-slate-900">Provider credentials</h3><p className="mt-1 text-xs text-slate-600">Add only the credentials required by the provider. Values are encrypted at rest and masked after saving.</p></div><span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600">Secret</span></div>
+        <textarea rows={7} spellCheck={false} className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 font-mono text-xs" value={form.data.credentials_json} onChange={e=>{form.setData('credentials_json',e.target.value); form.setData('credentials_touched',true)}} placeholder={JSON.stringify({token:'', key:'', header:'X-API-Key', username:'', password:'', headers_get:{'api-key':'','public-key':''}, headers_post:{'api-key':'','secret-key':''}}, null, 2)} />
+        {form.errors.credentials_json && <span className="mt-1 block text-red-600">{form.errors.credentials_json}</span>}
+        <p className="mt-2 text-xs text-slate-500">For providers with different GET/POST authentication, use <code>headers_get</code> and <code>headers_post</code>. Example: VTpass can use <code>headers_get</code> for <code>api-key</code> + <code>public-key</code> and <code>headers_post</code> for <code>api-key</code> + <code>secret-key</code>. Do not paste credentials into the integration configuration.</p>
+      </div>
       <div className="flex flex-wrap gap-3"><button disabled={form.processing} className="rounded-xl bg-indigo-700 px-5 py-3 font-semibold text-white disabled:opacity-50">{form.processing ? 'Saving…' : editingId ? 'Save changes' : 'Add provider'}</button>{editingId && <button type="button" onClick={cancelEdit} className="rounded-xl border border-slate-300 px-5 py-3 font-semibold">Cancel edit</button>}</div>
     </form>
 
