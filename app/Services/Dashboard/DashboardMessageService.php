@@ -47,7 +47,8 @@ class DashboardMessageService
     {
         if ($messages->isEmpty()) return null;
         $ordered = $messages->sortByDesc('priority')->values();
-        $item = $ordered[$userId % $ordered->count()];
+        $rotationSeed = $userId + (int) now()->format('z');
+        $item = $ordered[$rotationSeed % $ordered->count()];
         return ['id'=>$item->id, 'title'=>$item->title, 'message'=>$this->render($item->message, $userId)];
     }
 
