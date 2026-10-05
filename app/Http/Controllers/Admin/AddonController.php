@@ -119,22 +119,22 @@ class AddonController extends Controller
 
     public function activate(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        try { $lifecycle->activate($addon, auth()->id()); return back()->with('success', 'Addon activated.'); } catch (\\Throwable $e) { report($e); return back()->with('error', 'Addon activate failed safely.'); }
+        try { $lifecycle->activate($addon, auth()->id()); return back()->with('success', 'Addon activated.'); } catch (\Throwable $e) { report($e); return back()->with('error', 'Addon activate failed safely.'); }
     }
 
     public function disable(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        try { $lifecycle->disable($addon, auth()->id()); return back()->with('success', 'Addon disabled.'); } catch (\\Throwable $e) { report($e); return back()->with('error', 'Addon disable failed safely.'); }
+        try { $lifecycle->disable($addon, auth()->id()); return back()->with('success', 'Addon disabled.'); } catch (\Throwable $e) { report($e); return back()->with('error', 'Addon disable failed safely.'); }
     }
 
     public function uninstall(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        try { $lifecycle->uninstall($addon, auth()->id()); return back()->with('success', 'Addon uninstalled and archived.'); } catch (\\Throwable $e) { report($e); return back()->with('error', 'Addon uninstall failed safely.'); }
+        try { $lifecycle->uninstall($addon, auth()->id()); return back()->with('success', 'Addon uninstalled and archived.'); } catch (\Throwable $e) { report($e); return back()->with('error', 'Addon uninstall failed safely.'); }
     }
 
     public function archive(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        try { $lifecycle->archive($addon, auth()->id()); return back()->with('success', 'Addon archived.'); } catch (\\Throwable $e) { report($e); return back()->with('error', 'Addon archive failed safely.'); }
+        try { $lifecycle->archive($addon, auth()->id()); return back()->with('success', 'Addon archived.'); } catch (\Throwable $e) { report($e); return back()->with('error', 'Addon archive failed safely.'); }
     }
 
     private function vtuManifest(): array
