@@ -40,6 +40,7 @@ class SemizzyCreateAdminCommandTest extends TestCase
         ]);
 
         $this->artisan('semizzy:admin:create')
+            ->expectsOutputToContain('An initial administrator has already been created')
             ->assertExitCode(1);
 
         $this->assertSame(1, User::query()->where('role', 'ADMIN')->count());
