@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { FormEvent, useState } from 'react';
+import { Fragment, FormEvent, useState } from 'react';
 
 type Operation = {
   id: number;
@@ -114,7 +114,7 @@ export default function BulkOperations({
 
                 return (
                   <>
-                    <tr key={operation.id} className="border-b last:border-0">
+                    <tr className="border-b last:border-0">
                       <td className="p-4 font-mono text-xs">{operation.reference}</td>
                       <td className="p-4">
                         {operation.user?.name ?? operation.user?.email ?? '—'}
@@ -136,7 +136,7 @@ export default function BulkOperations({
                       </td>
                     </tr>
                     {expanded && (
-                      <tr key={`${operation.id}-details`} className="border-b bg-slate-50">
+                      <tr className="border-b bg-slate-50">
                         <td colSpan={7} className="p-4 text-xs text-slate-600">
                           <div className="grid gap-3 sm:grid-cols-3">
                             <div><span className="font-bold">Items:</span> {operation.total_items}</div>
