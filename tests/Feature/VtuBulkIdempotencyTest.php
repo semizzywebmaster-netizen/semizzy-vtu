@@ -75,7 +75,7 @@ class VtuBulkIdempotencyTest extends TestCase
         $this->mock(VtuTransactionService::class, function ($mock) use ($product, $tx): void {
             $mock->shouldReceive('create')
                 ->once()
-                ->with($userId = 1, $product, ['phone' => '08000000000'], 'USER', 'item-1')
+                ->with($user->id, $product, ['phone' => '08000000000'], 'USER', 'item-1')
                 ->andReturn($tx);
             $mock->shouldReceive('process')->once()->with($tx)->andReturn($tx);
         });
