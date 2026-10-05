@@ -140,7 +140,25 @@ class VtuTransactionService{
    ]);
 
    if($r->accepted){
-    $this->wallet->creditRefund($locked);
+    try {
+     $this->wallet->creditRefund($locked);
+    } catch (\Throwable $e) {
+     // The provider has already accepted the refund. Never release the claim
+     // or allow an automatic second refund when local wallet settlement fails.
+     $metadata['refund_provider_accepted']=true;
+     $metadata['refund_provider_accepted_at']=now()->toIso8601String();
+     $metadata['refund_provider_reference']=$r->providerReference;
+     $metadata['refund_settlement_pending']=true;
+     $metadata['refund_manual_resolution_required']=true;
+     $metadata['refund_settlement_error']=$e->getMessage();
+     unset($metadata['refund_claim_token'],$metadata['refund_claimed_at']);
+     $locked->metadata=$metadata;
+     $locked->provider_status=$r->status;
+     $locked->failure_code='REFUND_SETTLEMENT_PENDING';
+     $locked->failure_message='Provider accepted the refund, but local wallet settlement failed. Manual reconciliation is required; automatic retry is blocked.';
+     $locked->save();
+     return $locked->fresh();
+    }
     $metadata['refund_settlement_applied']=true;
     $metadata['refund_settlement_applied_at']=now()->toIso8601String();
     $metadata['refund_provider_reference']=$r->providerReference;
