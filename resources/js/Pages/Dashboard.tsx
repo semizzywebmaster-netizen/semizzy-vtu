@@ -5,6 +5,8 @@ type QuickLink = { label: string; url: string };
 type ServiceItem = { key: string; name: string; description?: string | null; url: string };
 type ServiceCategory = { key: string; name: string; description?: string | null; services: ServiceItem[] };
 type Wallet = { available_minor: string; held_minor: string; currency: string; status: string };
+type Tier = { id: number; name: string };
+type TierLimit = { id: number; name: string; dailyLimitMinor: string; balanceLimitMinor: string | null; upgradeLabel: string | null };
 
 const iconFor = (value: string) => {
   const key = value.toLowerCase();
@@ -18,6 +20,8 @@ const iconFor = (value: string) => {
   return '✦';
 };
 
+const limitMoney = (minor: string | null, currency = 'NGN') => minor === null ? 'Unlimited' : money(minor, currency);
+
 const money = (minor: string | undefined, currency = 'NGN') => {
   if (!minor) return '—';
   try {
@@ -29,9 +33,9 @@ const money = (minor: string | undefined, currency = 'NGN') => {
   } catch { return '—'; }
 };
 
-export default function Dashboard({ role, user, metrics = [], quickLinks = [], serviceCategories = [], wallet = null }: {
-  role: string; user?: { name?: string; email?: string }; metrics?: Metric[]; quickLinks?: QuickLink[];
-  serviceCategories?: ServiceCategory[]; wallet?: Wallet | null;
+export default function Dashboard({ role, user, metrics = [], quickLinks = [], serviceCategories = [], wallet = null, tier = null, tierLimits = [] }: {
+  role: string; user?: { name?: string; email?: string; username?: string }; metrics?: Metric[]; quickLinks?: QuickLink[];
+  serviceCategories?: ServiceCategory[]; wallet?: Wallet | null; tier?: Tier | null; tierLimits?: TierLimit[];
 }) {
   const isUser = !['ADMIN', 'STAFF', 'SUPPORT'].includes(role);
 
@@ -51,6 +55,19 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
         </div></div></section>
       <div className="mx-auto max-w-6xl px-4 sm:px-8">
         <section className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><div className="grid grid-cols-4 gap-2">{[['Services','/vtu','✦'],['Notifications','/notifications','♧'],['Support','/support','?'],['Profile','/profile','●']].map(([label,url,icon]) => <Link key={label} href={url} className="flex flex-col items-center gap-2 rounded-2xl px-2 py-3 text-center hover:bg-slate-50"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-lg font-black text-indigo-700">{icon}</span><span className="text-xs font-semibold text-slate-700">{label}</span></Link>)}</div></section>
+        <section className="mt-6 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <div className="flex items-start justify-between gap-4">
+            <div><p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Account level</p><h2 className="mt-1 text-2xl font-black">{tier?.name || 'Tier 1'}</h2><p className="mt-1 text-sm text-slate-500">Higher tiers unlock higher transaction capacity after the required verification.</p></div>
+            {tier && tier.id < 3 && <Link href="/support?subject=Tier%20Upgrade" className="shrink-0 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">{tierLimits.find(item => item.id === tier.id)?.upgradeLabel || 'Upgrade tier'}</Link>}
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            {tierLimits.map(item => <article key={item.id} className={`rounded-2xl border p-4 ${tier?.id === item.id ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200 bg-slate-50'}`}>
+              <div className="flex items-center justify-between"><span className="font-black">{item.name}</span>{tier?.id === item.id && <span className="rounded-full bg-indigo-600 px-2.5 py-1 text-[10px] font-bold text-white">CURRENT</span>}</div>
+              <div className="mt-4 grid grid-cols-2 gap-3"><div><p className="text-[11px] font-semibold uppercase text-slate-500">Daily limit</p><p className="mt-1 font-extrabold">{limitMoney(item.dailyLimitMinor)}</p></div><div><p className="text-[11px] font-semibold uppercase text-slate-500">Overall balance</p><p className="mt-1 font-extrabold">{limitMoney(item.balanceLimitMinor)}</p></div></div>
+            </article>)}
+          </div>
+          <p className="mt-4 text-[11px] text-slate-400">Limits are configurable in Core and should be aligned with the applicable regulatory/product rules before production financial activation.</p>
+        </section>
         <section className="mt-6"><div className="flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Services</p><h2 className="mt-1 text-2xl font-black">What do you need today?</h2></div><Link href="/vtu" className="text-sm font-bold text-indigo-700">View all</Link></div>
           {visibleCategories.length === 0 ? <div className="mt-5 rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-2xl">✦</div><h3 className="mt-3 font-bold">Services are being prepared</h3><p className="mt-1 text-sm text-slate-500">Available services will appear here automatically when enabled in the catalogue.</p></div> :
           <div className="mt-5 space-y-6">{visibleCategories.map(category => <section key={category.key} className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
