@@ -12,7 +12,7 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, Notifiable;
 
-    protected $fillable = ['name', 'email', 'phone', 'password', 'role', 'status'];
+    protected $fillable = ['name', 'username', 'email', 'phone', 'password', 'role', 'status', 'referral_code', 'referred_by_id'];
     protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
@@ -27,13 +27,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isAdmin(): bool { return $this->role === 'ADMIN'; }
     public function hasRole(string|array $roles): bool { return in_array($this->role, (array) $roles, true); }
 
-    public function devices(): HasMany
-    {
-        return $this->hasMany(UserDevice::class);
-    }
-
-    public function securityEvents(): HasMany
-    {
-        return $this->hasMany(SecurityEvent::class);
-    }
+    public function devices(): HasMany { return $this->hasMany(UserDevice::class); }
+    public function securityEvents(): HasMany { return $this->hasMany(SecurityEvent::class); }
+    public function referrals(): HasMany { return $this->hasMany(self::class, 'referred_by_id'); }
 }
