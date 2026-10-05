@@ -122,7 +122,16 @@ class UserController extends Controller
                 'You cannot deactivate, demote, or change the email of your own administrator account.'
             );
 
+            if ((int) $data['tier'] === 4 && trim((string) ($data['business_name'] ?? '')) === '') {
+                throw new \RuntimeException('Tier 4 Merchant requires a business/company name.');
+            }
+
             $data['username'] = strtolower(trim($data['username']));
+            $reserved = collect(config('semizzy.username_policy.reserved', []))->map(fn ($value) => strtolower((string) $value));
+            $protected = collect(config('semizzy.username_policy.protected_terms', []))->map(fn ($value) => strtolower((string) $value));
+            if ($reserved->contains($data['username']) || $protected->contains(fn ($term) => $term !== '' && str_contains($data['username'], $term))) {
+                throw new \RuntimeException('That username is reserved or protected.');
+            }
             $data['phone'] = $data['phone'] !== null
                 ? preg_replace('/[^0-9+]/', '', $data['phone'])
                 : null;
