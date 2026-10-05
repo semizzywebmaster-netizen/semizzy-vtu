@@ -320,34 +320,18 @@ class ProviderController extends Controller
 
     public function destroy(int $provider, AuditLogger $audit, Request $request): RedirectResponse
     {
-        DB::transaction(function () use ($provider, $audit, $request): void {
-            $provider = ApiProvider::query()->lockForUpdate()->findOrFail($provider);
-
-            $provider->serviceMappings()->lockForUpdate()->get()->each(function ($mapping): void {
-                $mapping->forceFill(['enabled' => false])->save();
+        try {
+            $result=DB::transaction(function() use($provider): array {
+                $model=ApiProvider::query()->lockForUpdate()->findOrFail($provider);
+                $model->serviceMappings()->lockForUpdate()->get()->each(fn($mapping)=>$mapping->forceFill(['enabled'=>false])->saveOrFail());
+                $productMappings=ProviderServiceProduct::query()->where('api_provider_id',$model->id)->lockForUpdate()->get();
+                $productMappings->each(fn(ProviderServiceProduct $mapping)=>$mapping->forceFill(['enabled'=>false])->saveOrFail());
+                $model->forceFill(['enabled'=>false,'paused'=>true])->saveOrFail();
+                return ['provider_id'=>$model->id,'identifier'=>$model->identifier,'mapping_count'=>$productMappings->count()];
             });
-
-            $providerProductMappings = ProviderServiceProduct::query()
-                ->where('api_provider_id', $provider->id)
-                ->lockForUpdate()
-                ->get();
-            $providerProductMappings->each(function (ProviderServiceProduct $mapping): void {
-                $mapping->forceFill(['enabled' => false])->save();
-            });
-
-            // Safe archive: preserve provider identity and history so foreign-key
-            // references and preset reconciliation cannot break future operations.
-            $provider->forceFill(['enabled' => false, 'paused' => true])->save();
-            $audit->record('provider.removed', $provider, [
-                'identifier' => $provider->identifier,
-                'history_preserved' => true,
-                'archived' => true,
-                'mappings_disabled' => true,
-                'provider_product_mappings_disabled' => $providerProductMappings->count(),
-            ], $request);
-        });
-
-        return back()->with('success', 'Provider removed from the active registry. Historical records are retained.');
+            try { $audit->record('provider.removed',ApiProvider::find($result['provider_id']),['identifier'=>$result['identifier'],'history_preserved'=>true,'archived'=>true,'mappings_disabled'=>true,'provider_product_mappings_disabled'=>$result['mapping_count']],$request); } catch(\Throwable $auditException){report($auditException);}
+            return back()->with('success','Provider removed from the active registry. Historical records are retained.');
+        } catch(\Throwable $e){report($e);return back()->with('error','Provider could not be removed safely.');}
     }
 
     private function validatedProvider(Request $request, bool $creating): array
