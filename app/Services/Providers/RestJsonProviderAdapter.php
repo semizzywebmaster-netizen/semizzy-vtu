@@ -161,43 +161,94 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
     private function normalizeStatus(mixed $body, string $operation): string
     {
-        $value = is_array($body)
-            ? ($body['status'] ?? $body['data']['status'] ?? null)
-            : null;
-
-        if ($value === null || $value === '') {
-            // Read-only/catalogue-style endpoints commonly return data without a status.
-            // A transaction initiation must never be inferred as accepted from HTTP 2xx alone.
-            return in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval'], true)
-                ? 'ACCEPTED'
-                : 'UNKNOWN';
+        if (!is_array($body)) {
+            return 'UNKNOWN';
         }
 
-        $normalized = strtolower(trim((string) $value));
+        $candidates = [
+            $body['status'] ?? null,
+            $body['data']['status'] ?? null,
+            $body['data']['transaction_status'] ?? null,
+            $body['transaction_status'] ?? null,
+            $body['data']['state'] ?? null,
+            $body['state'] ?? null,
+        ];
 
-        if (in_array($normalized, ['success','successful','completed','accepted','ok'], true)) {
-            return 'ACCEPTED';
+        foreach ($candidates as $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $normalized = strtolower(trim((string) $value));
+
+            if (in_array($normalized, ['success','successful','completed','complete','accepted','approved','ok','done'], true)) {
+                return 'ACCEPTED';
+            }
+
+            if (in_array($normalized, ['pending','processing','queued','in_progress','in-progress','initiated','submitted'], true)) {
+                return 'PENDING';
+            }
+
+            if (in_array($normalized, ['failed','failure','error','rejected','declined','cancelled','canceled','denied'], true)) {
+                return 'FAILED';
+            }
         }
 
-        if (in_array($normalized, ['pending','processing','queued','in_progress'], true)) {
-            return 'PENDING';
+        foreach ([$body['success'] ?? null, $body['data']['success'] ?? null] as $success) {
+            if ($success === true || $success === 1 || $success === '1' || $success === 'true') {
+                return in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval','transaction_initiation'], true)
+                    ? 'ACCEPTED'
+                    : 'UNKNOWN';
+            }
+            if ($success === false || $success === 0 || $success === '0' || $success === 'false') {
+                return 'FAILED';
+            }
         }
 
-        if (in_array($normalized, ['failed','failure','error','rejected','declined','cancelled','canceled'], true)) {
-            return 'FAILED';
-        }
-
-        return strtoupper($normalized);
+        // Read-only/catalogue endpoints commonly return data without a status.
+        // A transaction initiation must never be inferred as accepted from HTTP 2xx alone.
+        return in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval'], true)
+            ? 'ACCEPTED'
+            : 'UNKNOWN';
     }
-
     private function providerReference(mixed $body): ?string
     {
         if (!is_array($body)) {
             return null;
         }
 
-        return isset($body['reference'])
-            ? (string) $body['reference']
-            : (isset($body['data']['reference']) ? (string) $body['data']['reference'] : null);
+        $paths = [
+            ['reference'],
+            ['transaction_reference'],
+            ['transactionReference'],
+            ['request_id'],
+            ['requestId'],
+            ['order_id'],
+            ['orderId'],
+            ['data','reference'],
+            ['data','transaction_reference'],
+            ['data','transactionReference'],
+            ['data','request_id'],
+            ['data','requestId'],
+            ['data','order_id'],
+            ['data','orderId'],
+        ];
+
+        foreach ($paths as $path) {
+            $value = $body;
+            foreach ($path as $key) {
+                if (!is_array($value) || !array_key_exists($key, $value)) {
+                    $value = null;
+                    break;
+                }
+                $value = $value[$key];
+            }
+
+            if (is_scalar($value) && trim((string) $value) !== '') {
+                return (string) $value;
+            }
+        }
+
+        return null;
     }
 }
