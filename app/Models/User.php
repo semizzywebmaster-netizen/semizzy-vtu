@@ -6,6 +6,8 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements MustVerifyEmail
@@ -14,6 +16,42 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $fillable = ['name', 'username', 'email', 'phone', 'password', 'role', 'status', 'tier', 'account_type', 'business_name', 'business_registration_number', 'business_type', 'business_address', 'business_state', 'business_country', 'merchant_verified_at', 'tier_upgrade_status', 'two_factor_enabled', 'two_factor_secret', 'transaction_pin_hash', 'security_lock_until', 'onboarding_completed_at', 'last_login_at', 'last_login_ip', 'referral_code', 'referred_by_id'];
     protected $hidden = ['password', 'remember_token'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $user): void {
+            if (! filled($user->username)) {
+                $local = Str::before((string) $user->email, '@');
+                $base = Str::lower(preg_replace('/[^a-z0-9]+/i', '', $local) ?: 'user');
+                $base = substr($base, 0, 30);
+                $candidate = $base;
+                $suffix = 1;
+
+                while (DB::table('users')->where('username', $candidate)->exists()) {
+                    $suffixText = (string) $suffix++;
+                    $candidate = substr($base, 0, max(1, 30 - strlen($suffixText))) . $suffixText;
+                }
+
+                $user->username = $candidate;
+            }
+        });
+
+        static::created(function (self $user): void {
+            if (filled($user->referral_code)) {
+                return;
+            }
+
+            $base = 'SEM' . strtoupper(base_convert((string) $user->id, 10, 36));
+            $candidate = $base;
+            $suffix = 1;
+
+            while (DB::table('users')->where('referral_code', $candidate)->where('id', '!=', $user->id)->exists()) {
+                $candidate = $base . $suffix++;
+            }
+
+            $user->forceFill(['referral_code' => $candidate])->saveQuietly();
+        });
+    }
 
     protected function casts(): array
     {
