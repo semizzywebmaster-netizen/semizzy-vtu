@@ -1,10 +1,10 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 type Article = { id:number; type:string; title:string; slug:string; excerpt:string|null; content:string; category:string|null; contextKey:string|null; tags:string[]|null; views:number };
 type Props = { query:string; context:string|null; articles:Article[]; categories:string[] };
 
-export default function HelpCenter({query, context, articles, categories}:Props) {
+export default function HelpCenter({query, context, articles}:Props) {
   const [q,setQ]=useState(query);
   const [question,setQuestion]=useState('');
   const [answer,setAnswer]=useState<{answer:string;sources:{id:number;title:string;slug:string}[]}|null>(null);
