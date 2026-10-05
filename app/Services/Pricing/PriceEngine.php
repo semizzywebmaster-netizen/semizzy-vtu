@@ -127,10 +127,7 @@ class PriceEngine
                         $nested->where('service_id', $product->service_id)
                             ->orWhere(fn ($legacy) => $legacy->whereNull('service_id')->where('service_key', $product->service->key));
                     })
-                    ->where(function ($capability) : void {
-                        $capability->whereJsonContains('capabilities', 'transaction_initiation')
-                            ->orWhereNull('capabilities');
-                    });
+                    ->whereJsonContains('capabilities', 'transaction_initiation');
             });
 
         if ($provider !== null) {
