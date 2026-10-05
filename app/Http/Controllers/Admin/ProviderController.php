@@ -237,22 +237,49 @@ class ProviderController extends Controller
 
     public function bulkDestroy(Request $request, AuditLogger $audit): RedirectResponse
     {
-        $ids = $request->validate(['provider_ids' => 'required|array|max:50', 'provider_ids.*' => 'integer|distinct'])['provider_ids'];
+        $ids = $request->validate([
+            'provider_ids' => ['required', 'array', 'min:1', 'max:50'],
+            'provider_ids.*' => ['integer', 'distinct', 'exists:api_providers,id'],
+        ])['provider_ids'];
+
         $removed = 0;
 
         DB::transaction(function () use ($ids, $audit, $request, &$removed): void {
             foreach (ApiProvider::query()->whereIn('id', $ids)->lockForUpdate()->get() as $provider) {
-                $provider->serviceMappings()->lockForUpdate()->get()->each(fn ($mapping) => $mapping->forceFill(['enabled'=>false])->save());
-                $providerProductMappings = ProviderServiceProduct::query()->where('api_provider_id',$provider->id)->lockForUpdate()->get();
-                $providerProductMappings->each(fn (ProviderServiceProduct $mapping) => $mapping->forceFill(['enabled'=>false])->save());
-                $provider->forceFill(['enabled'=>false,'paused'=>true])->save();
-                $audit->record('provider.removed', $provider, ['bulk'=>true,'history_preserved'=>true,'mappings_disabled'=>true,'provider_product_mappings_disabled'=>$providerProductMappings->count()], $request);
-                $provider->delete();
+                $provider->serviceMappings()->lockForUpdate()->get()->each(
+                    fn ($mapping) => $mapping->forceFill(['enabled' => false])->save()
+                );
+
+                $providerProductMappings = ProviderServiceProduct::query()
+                    ->where('api_provider_id', $provider->id)
+                    ->lockForUpdate()
+                    ->get();
+
+                $providerProductMappings->each(
+                    fn (ProviderServiceProduct $mapping) => $mapping->forceFill(['enabled' => false])->save()
+                );
+
+                // Providers are financial/integration history, so "Remove" is a safe
+                // archive operation rather than a hard delete that can violate FKs.
+                // The row remains available for audit/history and can be reconfigured.
+                $provider->forceFill([
+                    'enabled' => false,
+                    'paused' => true,
+                ])->save();
+
+                $audit->record('provider.removed', $provider, [
+                    'bulk' => true,
+                    'history_preserved' => true,
+                    'archived' => true,
+                    'mappings_disabled' => true,
+                    'provider_product_mappings_disabled' => $providerProductMappings->count(),
+                ], $request);
+
                 $removed++;
             }
         });
 
-        return back()->with('success', "Bulk provider removal completed: {$removed} removed. Historical records are retained.");
+        return back()->with('success', "Bulk provider removal completed: {$removed} provider(s) safely archived and disabled.");
     }
 
     public function toggle(ApiProvider $provider, AuditLogger $audit, Request $request): RedirectResponse
