@@ -28,49 +28,34 @@ class CatalogueController extends Controller
 
     public function storeCategory(Request $request, AuditLogger $audit): RedirectResponse
     {
-        $data=$request->validate([
-            'key'=>'required|string|max:100|alpha_dash|unique:service_categories,key',
-            'name'=>'required|string|max:160',
-            'description'=>'nullable|string|max:5000',
-            'sort_order'=>'nullable|integer|min:0|max:100000',
-            'enabled'=>'nullable|boolean',
-        ]);
-        $category = ServiceCategory::create($data+['enabled'=>$data['enabled']??true]);
-        $audit->record('catalogue.category.created', $category, ['key' => $category->key], $request);
-        return back()->with('success','Service category created.');
+        $data=$request->validate(['key'=>'required|string|max:100|alpha_dash|unique:service_categories,key','name'=>'required|string|max:160','description'=>'nullable|string|max:5000','sort_order'=>'nullable|integer|min:0|max:100000','enabled'=>'nullable|boolean']);
+        try {
+            $category=ServiceCategory::create($data+['enabled'=>$data['enabled']??true]);
+            try { $audit->record('catalogue.category.created',$category,['key'=>$category->key],$request); } catch (\Throwable $auditException) { report($auditException); }
+            return back()->with('success','Service category created.');
+        } catch (\Throwable $e) { report($e); return back()->with('error','Service category could not be created safely.'); }
     }
 
     public function storeService(Request $request, AuditLogger $audit): RedirectResponse
     {
-        $data=$request->validate([
-            'category_id'=>'required|integer|exists:service_categories,id',
-            'key'=>'required|string|max:100|alpha_dash|unique:services,key',
-            'name'=>'required|string|max:160',
-            'description'=>'nullable|string|max:5000',
-            'metadata'=>'nullable|array',
-            'enabled'=>'nullable|boolean',
-        ]);
-        $service = Service::create($data+['enabled'=>$data['enabled']??true]);
-        $audit->record('catalogue.service.created', $service, ['key' => $service->key], $request);
-        return back()->with('success','Service created.');
+        $data=$request->validate(['category_id'=>'required|integer|exists:service_categories,id','key'=>'required|string|max:100|alpha_dash|unique:services,key','name'=>'required|string|max:160','description'=>'nullable|string|max:5000','metadata'=>'nullable|array','enabled'=>'nullable|boolean']);
+        try {
+            $service=Service::create($data+['enabled'=>$data['enabled']??true]);
+            try { $audit->record('catalogue.service.created',$service,['key'=>$service->key],$request); } catch (\Throwable $auditException) { report($auditException); }
+            return back()->with('success','Service created.');
+        } catch (\Throwable $e) { report($e); return back()->with('error','Service could not be created safely.'); }
     }
 
     public function storeProduct(Request $request, AuditLogger $audit): RedirectResponse
     {
-        $data=$request->validate([
-            'service_id'=>'required|integer|exists:services,id',
-            'key'=>'required|string|max:120',
-            'name'=>'required|string|max:200',
-            'currency'=>'required|string|size:3|regex:/^[A-Za-z]{3}$/',
-            'metadata'=>'nullable|array',
-            'enabled'=>'nullable|boolean',
-        ]);
-        if(ServiceProduct::query()->where('service_id',$data['service_id'])->where('key',$data['key'])->exists())
-            return back()->with('error','A product with this key already exists under this service.');
-        $data['currency'] = strtoupper($data['currency']);
-        $product = ServiceProduct::create($data+['enabled'=>$data['enabled']??false]);
-        $audit->record('catalogue.product.created', $product, ['service_id' => $product->service_id, 'key' => $product->key], $request);
-        return back()->with('success','Service product created.');
+        $data=$request->validate(['service_id'=>'required|integer|exists:services,id','key'=>'required|string|max:120','name'=>'required|string|max:200','currency'=>'required|string|size:3|regex:/^[A-Za-z]{3}$/','metadata'=>'nullable|array','enabled'=>'nullable|boolean']);
+        try {
+            if(ServiceProduct::query()->where('service_id',$data['service_id'])->where('key',$data['key'])->exists()) return back()->with('error','A product with this key already exists under this service.');
+            $data['currency']=strtoupper($data['currency']);
+            $product=ServiceProduct::create($data+['enabled'=>$data['enabled']??false]);
+            try { $audit->record('catalogue.product.created',$product,['service_id'=>$product->service_id,'key'=>$product->key],$request); } catch (\Throwable $auditException) { report($auditException); }
+            return back()->with('success','Service product created.');
+        } catch (\Throwable $e) { report($e); return back()->with('error','Service product could not be created safely.'); }
     }
 
     public function syncProvider(Request $request, ProviderCatalogueSyncService $sync): RedirectResponse
@@ -144,23 +129,19 @@ class CatalogueController extends Controller
 
     public function toggleMapping(ProviderServiceMapping $mapping, AuditLogger $audit, Request $request): RedirectResponse
     {
-        try { return DB::transaction(function () use ($mapping, $audit, $request): RedirectResponse {
-            $mapping = ProviderServiceMapping::query()->lockForUpdate()->findOrFail($mapping->id);
-            $provider = ApiProvider::query()->lockForUpdate()->findOrFail($mapping->api_provider_id);
-
-            if (!$mapping->enabled && (! $provider->enabled || $provider->paused || $provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified')) {
-                return back()->with('error','A provider service mapping can only be enabled for an enabled, unpaused, live-verified provider.');
-            }
-
-            $enabled = ! $mapping->enabled;
-            $mapping->update(['enabled' => $enabled]);
-            $audit->record($enabled ? 'catalogue.mapping.enabled' : 'catalogue.mapping.disabled', $mapping, [
-                'provider_id' => $mapping->api_provider_id,
-                'service_id' => $mapping->service_id,
-            ], $request);
-
+        try {
+            $result=DB::transaction(function() use($mapping): array {
+                $mapping=ProviderServiceMapping::query()->lockForUpdate()->findOrFail($mapping->id);
+                $provider=ApiProvider::query()->lockForUpdate()->findOrFail($mapping->api_provider_id);
+                if(!$mapping->enabled && (!$provider->enabled||$provider->paused||$provider->verification_status!=='live_verified'||$provider->integration_status!=='live_verified')) return ['ok'=>false,'message'=>'A provider service mapping can only be enabled for an enabled, unpaused, live-verified provider.'];
+                $enabled=!$mapping->enabled;
+                $mapping->updateOrFail(['enabled'=>$enabled]);
+                return ['ok'=>true,'enabled'=>$enabled,'mapping_id'=>$mapping->id,'provider_id'=>$mapping->api_provider_id,'service_id'=>$mapping->service_id];
+            });
+            if(!$result['ok']) return back()->with('error',$result['message']);
+            try { $audit->record($result['enabled']?'catalogue.mapping.enabled':'catalogue.mapping.disabled',ProviderServiceMapping::find($result['mapping_id']),['provider_id'=>$result['provider_id'],'service_id'=>$result['service_id']],$request); } catch(\Throwable $auditException){report($auditException);}
             return back()->with('success','Provider service mapping status updated.');
-        }); } catch (\Throwable $e) { report($e); return back()->with('error','Provider service mapping update failed safely.'); }
+        } catch(\Throwable $e){report($e);return back()->with('error','Provider service mapping update failed safely.');}
     }
 
     public function disableProduct(ServiceProduct $product, AuditLogger $audit, Request $request): RedirectResponse
