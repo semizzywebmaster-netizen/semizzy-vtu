@@ -140,7 +140,7 @@ export default function Providers({ providers }: { providers: Provider[] }) {
 
   return <><Head title="API Providers" /><main className="min-h-screen bg-slate-50 p-4 md:p-8"><div className="mx-auto max-w-6xl">
     <Link href="/dashboard" className="text-sm font-semibold text-indigo-700">← Dashboard</Link>
-    <header className="mt-3"><h1 className="text-3xl font-extrabold text-slate-900">API Providers</h1><p className="mt-2 text-slate-600">Add as many providers as needed. New providers are always saved disabled and unverified; test and verify real credentials before enabling.</p></header>
+    <header className="mt-3 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><h1 className="text-3xl font-extrabold text-slate-900">API Providers</h1><p className="mt-2 text-slate-600">Add as many providers as needed. New providers are always saved disabled and unverified; test and verify real credentials before enabling.</p></div><button type="button" onClick={()=>{if(window.confirm('Install the built-in provider catalogue and service mappings? Existing provider credentials will not be overwritten.')) router.post('/admin/providers/install-presets', {}, {preserveScroll:true})}} className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white">Install provider catalogue</button></header>
 
     <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 className="text-lg font-bold">{editingId ? 'Edit provider configuration' : 'Add provider'}</h2>
