@@ -42,7 +42,7 @@ class ProviderManager
             });
             if (! $mapping) return false;
             $capabilities = $mapping->capabilities;
-            return ! is_array($capabilities) || $capabilities === [] || in_array($operation, $capabilities, true);
+            return is_array($capabilities) && in_array($operation, $capabilities, true);
         })->values();
     }
     public function executeProvider(ApiProvider $provider,string $serviceKey,string $operation,array $payload=[],?string $idempotencyKey=null): ProviderResult
@@ -91,7 +91,7 @@ class ProviderManager
 
         if(!$mapping) return false;
         $capabilities=$mapping->capabilities;
-        return !is_array($capabilities) || $capabilities===[] || in_array($operation,$capabilities,true);
+        return is_array($capabilities) && in_array($operation,$capabilities,true);
     }
 
     public function execute(string $serviceKey,string $operation,array $payload=[],?string $idempotencyKey=null): ProviderResult
