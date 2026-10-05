@@ -46,8 +46,8 @@ class VtuAdminController extends Controller{
   return back()->with('success','Provider service mapping saved.');
  }
  public function products(){return Inertia::render('Admin/VTU/Products',['products'=>ServiceProduct::whereHas('service.category',fn($q)=>$q->where('key','vtu-digital-services'))->with('service')->latest()->paginate(50)]);}
- public function enableProduct(ServiceProduct $product){$product->update(['enabled'=>true]);return back()->with('success','Product enabled.');}
- public function disableProduct(ServiceProduct $product){$product->update(['enabled'=>false]);return back()->with('success','Product disabled.');}
+ public function enableProduct(ServiceProduct $product){if(!$product->service || !$product->service->category || $product->service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU products can be managed here.');if(!$product->service->enabled)return back()->with('error','Enable the VTU service before enabling its product.');$product->update(['enabled'=>true]);return back()->with('success','Product enabled.');}
+ public function disableProduct(ServiceProduct $product){if(!$product->service || !$product->service->category || $product->service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU products can be managed here.');$product->update(['enabled'=>false]);return back()->with('success','Product disabled.');}
  public function bulkOperations(Request $r){
   $q=VtuBulkOperation::with(['user','service'])->latest();
   if($r->filled('status')){
@@ -73,7 +73,7 @@ class VtuAdminController extends Controller{
  }
  public function transactions(Request $r){$q=VtuTransaction::with(['user','service','product','provider'])->latest();foreach(['status','service_id','api_provider_id','user_id'] as $f)if($r->filled($f))$q->where($f,$r->input($f));return Inertia::render('Admin/VTU/Transactions',['transactions'=>$q->paginate(50)->withQueryString()]);}
  public function requery(VtuTransaction $t,VtuTransactionService $s){$s->requery($t);return back()->with('success','Transaction requery completed.');}
- public function enableService(Service $s){$s->update(['enabled'=>true]);return back()->with('success','Service enabled.');}
- public function disableService(Service $s){$s->update(['enabled'=>false]);return back()->with('success','Service disabled.');}
+ public function enableService(Service $s){if(!$s->category || $s->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');$s->update(['enabled'=>true]);return back()->with('success','Service enabled.');}
+ public function disableService(Service $s){if(!$s->category || $s->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');$s->update(['enabled'=>false]);return back()->with('success','Service disabled.');}
  public function bootstrap(VtuServiceRegistry $r){$r->bootstrapCatalogue();return back()->with('success','VTU service registry synchronized.');}
 }
