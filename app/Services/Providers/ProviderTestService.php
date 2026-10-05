@@ -18,7 +18,7 @@ class ProviderTestService
 
         foreach(['health_check','balance_inquiry','catalogue_retrieval'] as $candidate){
             if(isset($endpoints[$candidate]) && is_string($endpoints[$candidate]) && $endpoints[$candidate] !== ''
-                && ($candidate === 'health_check' || in_array($candidate,$capabilities,true))){
+                && in_array($candidate,$capabilities,true)){
                 $operation=$candidate;
                 break;
             }
