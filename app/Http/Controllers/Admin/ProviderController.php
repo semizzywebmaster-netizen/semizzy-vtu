@@ -343,7 +343,7 @@ class ProviderController extends Controller
                 'success',
                 $result['enabled'] ? 'Provider enabled successfully.' : 'Provider disabled successfully.'
             );
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             report($e);
 
             return back()->with(
