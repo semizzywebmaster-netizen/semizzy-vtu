@@ -50,9 +50,26 @@ class VtuAdminController extends Controller{
  public function disableProduct(ServiceProduct $product){$product->update(['enabled'=>false]);return back()->with('success','Product disabled.');}
  public function bulkOperations(Request $r){
   $q=VtuBulkOperation::with(['user','service'])->latest();
-  if($r->filled('status'))$q->whereIn('status',array_values(array_intersect([(string)$r->input('status')],['processing','pending','partial','successful','failed'])));
+  if($r->filled('status')){
+   $allowed=['processing','pending','partial','successful','failed'];
+   $status=(string)$r->input('status');
+   if(in_array($status,$allowed,true))$q->where('status',$status);else$q->whereRaw('1=0');
+  }
   if($r->filled('reference'))$q->where('reference','like','%'.addcslashes((string)$r->input('reference'),'\\%_').'%');
   return Inertia::render('Admin/VTU/BulkOperations',['operations'=>$q->paginate(50)->withQueryString()]);
+ }
+ public function reconcileBulk(VtuBulkOperation $bulk, VtuTransactionService $service){
+  $items=$bulk->items()->with('transaction')->whereIn('status',['pending','processing'])->whereNotNull('vtu_transaction_id')->limit(50)->get();
+  $attempted=0;$reconciled=0;
+  foreach($items as $item){
+   if(!$item->transaction || !$item->transaction->provider_reference)continue;
+   $attempted++;
+   try{
+    $tx=$service->requery($item->transaction);
+    if($tx->status!==$item->status)$reconciled++;
+   }catch(\Throwable $e){}
+  }
+  return back()->with('success',"Bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
  }
  public function transactions(Request $r){$q=VtuTransaction::with(['user','service','product','provider'])->latest();foreach(['status','service_id','api_provider_id','user_id'] as $f)if($r->filled($f))$q->where($f,$r->input($f));return Inertia::render('Admin/VTU/Transactions',['transactions'=>$q->paginate(50)->withQueryString()]);}
  public function requery(VtuTransaction $t,VtuTransactionService $s){$s->requery($t);return back()->with('success','Transaction requery completed.');}
