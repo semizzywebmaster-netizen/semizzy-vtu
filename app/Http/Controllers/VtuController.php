@@ -29,30 +29,86 @@ class VtuController extends Controller
     public function bulk(Request $r,VtuBulkService $b){$d=$r->validate(['items'=>['required','array','min:1','max:500'],'items.*.product_id'=>['required','integer','exists:service_products,id'],'items.*.payload'=>['required','array'],'items.*.idempotency_key'=>['nullable','string','max:120'],'idempotency_key'=>['nullable','string','max:160']]);return response()->json(['data'=>$b->execute($r->user()->id,$d['items'],$r->user()->role,$d['idempotency_key']??null)],201);}
     public function history(Request $r){return response()->json(['data'=>VtuTransaction::with('service','product')->where('user_id',$r->user()->id)->latest()->paginate(25)]);}
     public function show(Request $r,VtuTransaction $t){abort_unless($t->user_id===$r->user()->id,404);return response()->json(['data'=>$this->present($t->load('service','product'))]);}
-    public function webhook(Request $r,ApiProvider $provider,VtuTransactionService $service,WebhookSignatureService $signatures,WebhookReplayGuard $replays){abort_unless(\App\Models\Addon::query()->where('identifier','vtu.digital-services')->where('status','active')->exists(),404,'VTU & Digital Services addon is not active.');
-        abort_unless($provider->enabled && !$provider->paused,404,'Provider is unavailable.');
-        $secret=(string)($provider->credentials['webhook_secret']??'');
-        abort_unless($secret!=='',401);
-        $raw=$r->getContent();
-        $signature=(string)$r->header('X-Webhook-Signature','');
-        $signatures->assertValid($raw,$signature,$secret);
-        $eventId=(string)($r->header('X-Webhook-Event-Id')??$r->input('event_id')??$r->input('id')??'');
-        if(trim($eventId)==='')return response()->json(['message'=>'Webhook event ID is required.'],422);
-        $receipt=$replays->claim($provider,$eventId,$raw,$signature);
-        if(!$replays->beginProcessing($receipt))return response()->json(['status'=>'accepted']);
-        try{
-            $body=$r->all();
-            $reference=$body['provider_reference']??$body['reference']??$body['data']['reference']??null;
-            if(!$reference){$replays->markProcessed($receipt);return response()->json(['status'=>'ignored']);}
-            $tx=VtuTransaction::query()->where('api_provider_id',$provider->id)->where('provider_reference',(string)$reference)->first();
-            if($tx)$service->requery($tx);
-            $replays->markProcessed($receipt);
-            return response()->json(['status'=>'accepted']);
-        }catch(\Throwable $e){
-            $replays->markFailed($receipt,$e->getMessage());
+    public function webhook(Request $r, ApiProvider $provider, VtuTransactionService $service, WebhookSignatureService $signatures, WebhookReplayGuard $replays)
+    {
+        abort_unless(\App\Models\Addon::query()->where('identifier', 'vtu.digital-services')->where('status', 'active')->exists(), 404, 'VTU & Digital Services addon is not active.');
+        abort_unless($provider->enabled && ! $provider->paused, 404, 'Provider is unavailable.');
+        abort_unless($provider->verification_status === 'live_verified' && $provider->integration_status === 'live_verified', 404, 'Provider is not verified for live webhooks.');
+
+        $secret = (string) ($provider->credentials['webhook_secret']
+            ?? $provider->credentials['signing_secret']
+            ?? $provider->credentials['secret']
+            ?? '');
+        abort_unless($secret !== '', 401);
+
+        $raw = $r->getContent();
+        $signature = trim((string) (
+            $r->header('X-Webhook-Signature')
+            ?? $r->header('X-Signature')
+            ?? ''
+        ));
+        $signatures->assertValid($raw, $signature, $secret);
+
+        $eventId = trim((string) (
+            $r->header('X-Webhook-Event-Id')
+            ?? $r->header('X-Event-Id')
+            ?? $r->header('X-Webhook-Event-ID')
+            ?? $r->input('event_id')
+            ?? $r->input('eventId')
+            ?? $r->input('id')
+            ?? ''
+        ));
+        if ($eventId === '') {
+            return response()->json(['message' => 'Webhook event ID is required.'], 422);
+        }
+
+        $receipt = $replays->claim($provider, $eventId, $raw, $signature);
+        if (! $replays->beginProcessing($receipt)) {
+            return response()->json(['status' => 'accepted']);
+        }
+
+        $receipt = $receipt->fresh();
+        $processingToken = $replays->processingToken($receipt);
+
+        try {
+            $body = $r->all();
+            $reference = $body['provider_reference']
+                ?? $body['providerReference']
+                ?? $body['transaction_reference']
+                ?? $body['transactionReference']
+                ?? $body['reference']
+                ?? $body['data']['provider_reference']
+                ?? $body['data']['providerReference']
+                ?? $body['data']['transaction_reference']
+                ?? $body['data']['transactionReference']
+                ?? $body['data']['reference']
+                ?? null;
+
+            if (! $reference) {
+                $replays->markProcessed($receipt, $processingToken);
+                return response()->json(['status' => 'ignored']);
+            }
+
+            $tx = VtuTransaction::query()
+                ->where('api_provider_id', $provider->id)
+                ->where('provider_reference', (string) $reference)
+                ->first();
+
+            if ($tx) {
+                $service->requery($tx);
+            }
+
+            $replays->markProcessed($receipt, $processingToken);
+
+            return response()->json([
+                'status' => $tx ? 'accepted' : 'ignored',
+            ]);
+        } catch (\Throwable $e) {
+            $replays->markFailed($receipt->fresh(), $e->getMessage(), $processingToken);
             throw $e;
         }
     }
+
     public function requery(Request $r,VtuTransaction $t,VtuTransactionService $s){abort_unless($t->user_id===$r->user()->id,404);return response()->json(['data'=>$this->present($s->requery($t))]);}
     private function present(VtuTransaction $t):array{return ['id'=>$t->id,'reference'=>$t->reference,'service'=>$t->service?->name,'product'=>$t->product?->name,'status'=>$t->status,'amount_minor'=>$t->amount_minor,'fee_minor'=>$t->fee_minor,'total_minor'=>$t->total_minor,'currency'=>$t->currency,'recipient'=>$t->recipient,'provider_reference'=>$t->provider_reference,'failure_message'=>$t->failure_message,'created_at'=>$t->created_at?->toIso8601String(),'completed_at'=>$t->completed_at?->toIso8601String()];}
 }
