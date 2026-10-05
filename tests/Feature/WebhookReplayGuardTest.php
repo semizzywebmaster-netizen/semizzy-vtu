@@ -132,7 +132,9 @@ class WebhookReplayGuardTest extends TestCase
         $guard = app(WebhookReplayGuard::class);
 
         $receipt = $guard->claim($provider, 'evt_status', '{"ok":true}');
-        $guard->markProcessed($receipt->fresh());
+        $this->assertTrue($guard->beginProcessing($receipt));
+        $processing = $receipt->fresh();
+        $guard->markProcessed($processing, $guard->processingToken($processing));
 
         $this->assertDatabaseHas('webhook_receipts', [
             'id' => $receipt->id,
@@ -140,7 +142,9 @@ class WebhookReplayGuardTest extends TestCase
         ]);
 
         $failed = $guard->claim($provider, 'evt_failed', '{"ok":false}');
-        $guard->markFailed($failed, 'Authorization: Bearer provider-secret-123; api_key=provider-secret-123');
+        $this->assertTrue($guard->beginProcessing($failed));
+        $failedProcessing = $failed->fresh();
+        $guard->markFailed($failedProcessing, 'Authorization: Bearer provider-secret-123; api_key=provider-secret-123', $guard->processingToken($failedProcessing));
 
         $this->assertDatabaseHas('webhook_receipts', [
             'id' => $failed->id,
