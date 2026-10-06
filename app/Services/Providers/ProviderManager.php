@@ -229,11 +229,13 @@ class ProviderManager
                 return $result;
             }
 
-            if ($result->duplicateRisk || in_array($result->status, ['UNKNOWN', 'PENDING'], true)) {
+            $normalizedStatus = strtoupper((string) $result->status);
+
+            if ($result->duplicateRisk || in_array($normalizedStatus, ['UNKNOWN', 'PENDING', 'PROCESSING', 'UNKNOWN_PROCESSING_STATE'], true)) {
                 return $result;
             }
         }
 
-        return new ProviderResult(false, 'FAILED', message: 'All eligible providers failed.');
+        return new ProviderResult(false, 'FAILED', message: 'All eligible providers failed safely.');
     }
 }
