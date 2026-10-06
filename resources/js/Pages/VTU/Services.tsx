@@ -107,5 +107,5 @@ export default function Services({ services = [] }: { services: Service[] }) {
         </div><p className='mt-5 rounded-2xl bg-amber-50 p-3 text-xs leading-5 text-amber-800'>Prices and transaction options are shown only when the product is fully configured and available. No provider cost is exposed here.</p>
       </section>
     </div>}
-  </main>;
+  <CoreMobileNav /></main>;
 }
