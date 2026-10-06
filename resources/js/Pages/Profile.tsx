@@ -1,9 +1,11 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import CoreMobileNav from '../Components/CoreMobileNav';
 
 type SharedProps = { navigation?: { unreadNotifications?: number } };
 
 type Props = {
+  tier: number;
+  tiers: { id: number; name: string; requirements: string[]; upgradeLabel: string | null; current: boolean }[];
   user: {
     name: string;
     username: string;
@@ -44,6 +46,19 @@ export default function Profile({ user }: Props) {
         </div>
         <div className="mt-5 grid gap-2 text-sm"><p className="rounded-xl bg-slate-50 p-3">Email verification: <strong>{user.emailVerifiedAt ? 'Verified' : 'Not verified'}</strong></p><p className="rounded-xl bg-slate-50 p-3">Phone verification: <strong>{user.phoneVerifiedAt ? 'Verified' : 'Not verified'}</strong></p></div>
       </div>
+
+      <section className="mt-5 rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Account tier</p>
+        <div className="mt-1 flex items-center justify-between gap-4"><div><h2 className="text-xl font-black text-slate-900">Tier {tier}</h2><p className="mt-1 text-sm text-slate-600">Your account tier and verification requirements belong here, not on the dashboard.</p></div><span className="rounded-full bg-amber-400 px-3 py-1.5 text-xs font-black text-amber-950">TIER {tier}</span></div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {tiers.map(item => <article key={item.id} className={'rounded-2xl border p-4 ' + (item.current ? 'border-amber-300 bg-white' : 'border-slate-200 bg-white/70')}>
+            <div className="flex items-center justify-between gap-3"><h3 className="font-black">{item.name}</h3>{item.current && <span className="rounded-full bg-amber-400 px-2 py-1 text-[10px] font-black text-amber-950">CURRENT</span>}</div>
+            <p className="mt-2 text-xs font-semibold uppercase text-slate-400">Requirements</p>
+            <ul className="mt-1 space-y-1 text-sm text-slate-600">{item.requirements.map(requirement => <li key={requirement}>• {requirement}</li>)}</ul>
+            {!item.current && item.id > tier && item.upgradeLabel && <Link href="/support?subject=Tier%20Upgrade" className="mt-3 inline-flex rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">{item.upgradeLabel} →</Link>}
+          </article>)}
+        </div>
+      </section>
 
       <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Referral</p>
