@@ -164,7 +164,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::put('/settings', [SystemSettingsController::class, 'update'])->middleware(['permission:system.manage', 'throttle:20,1'])->name('admin.settings.update');
         Route::post('/settings/asset', [SystemSettingsController::class, 'upload'])->middleware(['permission:system.manage', 'throttle:20,1'])->name('admin.settings.asset');
         Route::post('/settings/smtp-test', [SystemSettingsController::class, 'testSmtp'])->middleware(['permission:system.manage', 'throttle:5,10'])->name('admin.settings.smtp-test');
-        Route::post('/maintenance/backup', [SystemMaintenanceController::class, 'backup'])->middleware(['permission:system.manage','throttle:2,10'])->name('admin.maintenance.backup');
+        Route::get('/maintenance/backup', [SystemMaintenanceController::class, 'backup'])->middleware(['permission:system.manage','throttle:2,10'])->name('admin.maintenance.backup');
         Route::post('/maintenance/restore', [SystemMaintenanceController::class, 'restore'])->middleware(['permission:system.manage','throttle:2,10'])->name('admin.maintenance.restore');
         Route::post('/maintenance/cache-clear', [SystemMaintenanceController::class, 'clearCache'])->middleware(['permission:system.manage','throttle:5,10'])->name('admin.maintenance.cache-clear');
         Route::get('/security-events', [SecurityEventController::class, 'index'])->middleware('permission:security.view')->name('admin.security-events.index');
