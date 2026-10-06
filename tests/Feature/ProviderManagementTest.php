@@ -38,6 +38,67 @@ class ProviderManagementTest extends TestCase
         $this->assertStringNotContainsString('never-log-this', json_encode(AuditEvent::query()->where('event', 'provider.created')->firstOrFail()->context));
     }
 
+    public function test_provider_connection_and_endpoint_secret_configuration_is_encrypted_and_masked(): void
+    {
+        $admin = $this->makeAdmin();
+        $provider = ApiProvider::create([
+            'identifier' => 'secret-provider',
+            'display_name' => 'Secret Provider',
+            'environment' => 'production',
+            'verification_status' => 'unverified',
+            'integration_status' => 'draft',
+            'enabled' => false,
+            'paused' => true,
+        ]);
+
+        $connectionResponse = $this->actingAs($admin)->postJson('/admin/providers/'.$provider->id.'/connections', [
+            'name' => 'Production',
+            'environment' => 'production',
+            'base_url' => 'https://example.test/api',
+            'auth_type' => 'api_key',
+            'headers' => ['Authorization' => 'Bearer SUPER-CONNECTION-SECRET'],
+            'query_params' => ['api_key' => 'SUPER-QUERY-SECRET'],
+            'proxy' => ['password' => 'SUPER-PROXY-SECRET'],
+            'auth_options' => ['client_secret' => 'SUPER-AUTH-SECRET'],
+        ])->assertCreated();
+
+        $connection = \App\Models\ProviderConnection::query()->where('api_provider_id', $provider->id)->firstOrFail();
+        $raw = \DB::table('provider_connections')->where('id', $connection->id)->first();
+
+        $this->assertStringNotContainsString('SUPER-CONNECTION-SECRET', (string) $raw->headers);
+        $this->assertStringNotContainsString('SUPER-QUERY-SECRET', (string) $raw->query_params);
+        $this->assertStringNotContainsString('SUPER-PROXY-SECRET', (string) $raw->proxy);
+        $this->assertStringNotContainsString('SUPER-AUTH-SECRET', (string) $raw->auth_options);
+
+        $connectionResponse->assertJsonPath('data.headers.Authorization', '[CONFIGURED]');
+        $connectionResponse->assertJsonPath('data.query_params.api_key', '[CONFIGURED]');
+        $connectionResponse->assertJsonPath('data.proxy.password', '[CONFIGURED]');
+        $connectionResponse->assertJsonPath('data.auth_options.client_secret', '[REDACTED]');
+
+        $endpointResponse = $this->actingAs($admin)->postJson('/admin/providers/'.$provider->id.'/endpoints', [
+            'name' => 'Health',
+            'operation' => 'health',
+            'method' => 'GET',
+            'path' => '/health',
+            'content_type' => 'json',
+            'auth_mode' => 'connection',
+            'headers' => ['X-Provider-Secret' => 'SUPER-ENDPOINT-SECRET'],
+            'query_params' => ['token' => 'SUPER-ENDPOINT-TOKEN'],
+            'webhook_config' => ['webhook_secret' => 'SUPER-WEBHOOK-SECRET'],
+        ])->assertCreated();
+
+        $endpoint = \App\Models\ProviderEndpoint::query()->where('api_provider_id', $provider->id)->firstOrFail();
+        $rawEndpoint = \DB::table('provider_endpoints')->where('id', $endpoint->id)->first();
+
+        $this->assertStringNotContainsString('SUPER-ENDPOINT-SECRET', (string) $rawEndpoint->headers);
+        $this->assertStringNotContainsString('SUPER-ENDPOINT-TOKEN', (string) $rawEndpoint->query_params);
+        $this->assertStringNotContainsString('SUPER-WEBHOOK-SECRET', (string) $rawEndpoint->webhook_config);
+
+        $endpointResponse->assertJsonPath('data.headers.X-Provider-Secret', '[CONFIGURED]');
+        $endpointResponse->assertJsonPath('data.query_params.token', '[CONFIGURED]');
+        $endpointResponse->assertJsonPath('data.webhook_config.webhook_secret', '[REDACTED]');
+    }
+
     public function test_admin_can_remove_provider_without_hard_deleting_history_record(): void
     {
         $admin = $this->makeAdmin();
