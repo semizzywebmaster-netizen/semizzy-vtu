@@ -139,7 +139,7 @@ class AddonLifecycleTest extends TestCase
         ]);
         $this->assertDatabaseHas('addon_lifecycle_events', [
             'addon_id' => $addon->id,
-            'event' => 'step_migration_' . sha1('2026_10_02_000002_upgrade'),
+            'event' => 'step_migration_' . sha1('2026_10_02_000002_upgrade.php'),
         ]);
     }
 
