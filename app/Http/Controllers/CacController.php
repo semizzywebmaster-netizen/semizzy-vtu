@@ -43,7 +43,7 @@ class CacController extends Controller
             ], fn ($v) => $v !== null)
         );
 
-        $key = $data['idempotency_key'] ?? hash('sha256', $request->user()->id . '|' . $product->id . '|' . $request->session()->getId() . '|' . (string) $request->header('X-Idempotency-Key', ''));
+        $key = $data['idempotency_key'] ?? hash('sha256', $request->user()->id . '|' . $product->id . '|' . $request->session()->getId() . '|' . hash('sha256', json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)));
         $order = $orders->create((int) $request->user()->id, $product, $payload, $key);
 
         return redirect()->route('cac.orders.show', $order)
