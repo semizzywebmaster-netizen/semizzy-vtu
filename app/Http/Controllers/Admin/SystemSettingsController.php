@@ -9,6 +9,7 @@ use App\Services\System\SystemSettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -101,6 +102,7 @@ class SystemSettingsController extends Controller
             if(is_array($old) && !empty($old['password'])) $smtp['password']=$old['password'];
         }
         $data['smtp']=array_intersect_key($smtp,array_flip(['enabled','provider','host','port','encryption','username','password','from_address','from_name']));
+        if (!empty($data['smtp']['password'])) $data['smtp']['password'] = Crypt::encryptString($data['smtp']['password']);
 
         try {
             foreach(['platform_name','support_email','support_notice','default_timezone','theme_key','theme_primary','skin_default'] as $key){
@@ -147,6 +149,7 @@ class SystemSettingsController extends Controller
         $data=$request->validate(['email'=>['required','email','max:254']]);
         $stored=SystemSetting::query()->where('key','smtp')->value('value');
         $smtp=is_string($stored)?(json_decode($stored,true)?:[]):[];
+        try { if (!empty($smtp['password'])) $smtp['password'] = Crypt::decryptString($smtp['password']); } catch (\Throwable) { return back()->with('error','Stored SMTP credentials could not be decrypted. Please save the SMTP password again.'); }
         if(empty($smtp['enabled']) || empty($smtp['host']) || empty($smtp['username']) || empty($smtp['password'])){
             return back()->with('error','SMTP is not fully configured. Add the SMTP credentials first.');
         }
