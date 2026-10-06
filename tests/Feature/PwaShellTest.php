@@ -11,7 +11,7 @@ class PwaShellTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('manifest.webmanifest', false)
-            ->assertSee('name="theme-color" content="#4338ca"', false)
+            ->assertSee('name="theme-color" content="#2563EB"', false)
             ->assertSee('href="/icons/semizzy-one.svg"', false)
             ->assertDontSee('\\n', false);
     }
