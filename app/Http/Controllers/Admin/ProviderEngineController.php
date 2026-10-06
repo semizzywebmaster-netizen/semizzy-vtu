@@ -18,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ProviderEngineController extends Controller
@@ -225,7 +226,7 @@ class ProviderEngineController extends Controller
             $this->writeOperationLog($provider, $connection, 'connection_test', $endpoint->method, $url, $status, $response->status(), $duration, null, $status==='SUCCESS'?'Connection test succeeded.':'Connection test failed.');
             return response()->json(['status'=>$status,'http_status'=>$response->status(),'response_time_ms'=>$duration,'message'=>$status==='SUCCESS'?'Connection test succeeded.':'Connection test failed.']);
         }catch(\Throwable $e){
-            report($e);
+            Log::warning('Provider operation failed.', ['exception_class' => get_class($e)]);
             $duration=(int)((microtime(true)-$started)*1000);
             ProviderHealthCheck::create(['api_provider_id'=>$provider->id,'provider_connection_id'=>$connection->id,'status'=>'FAILED','response_time_ms'=>$duration,'message'=>'Connection test failed safely.','checked_at'=>now()]);
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Connection test failed safely.']);
@@ -302,7 +303,7 @@ class ProviderEngineController extends Controller
             ]);
             return response()->json(['status'=>'success','sync_id'=>$syncId,'summary'=>$summary,'discovery_status'=>$resultData['status']??'success']);
         } catch(\Throwable $e) {
-            report($e);
+            Log::warning('Provider operation failed.', ['exception_class' => get_class($e)]);
             DB::table('provider_syncs')->where('id',$syncId)->update(['status'=>'failed','failed_count'=>1,'error_message'=>'Provider sync failed safely.','finished_at'=>now(),'updated_at'=>now()]);
             return response()->json(['status'=>'failed','sync_id'=>$syncId,'message'=>'Provider sync failed safely. Review server-side diagnostics.'],502);
         }
@@ -456,7 +457,7 @@ class ProviderEngineController extends Controller
                 'mapped_error'=>$response->successful()?null:$this->redactForLog($this->mapResponse($payload,(array)($endpoint->error_mapping ?? []))),
             ],$response->successful()?200:502);
         } catch (\Throwable $e) {
-            report($e);
+            Log::warning('Provider operation failed.', ['exception_class' => get_class($e)]);
             $this->writeOperationLog($provider, $connection, 'endpoint_test', $endpoint->method, $safeUrl, 'FAILED', null, (int)((microtime(true)-$started)*1000), get_class($e), 'Endpoint request failed safely.');
             return response()->json(['status'=>'FAILED','message'=>'Endpoint request failed safely. Review server-side diagnostics.'],502);
         }
@@ -560,7 +561,7 @@ class ProviderEngineController extends Controller
                 'services'=>$provider->providerServices()->count(),
             ]);
         } catch (\Throwable $e) {
-            report($e);
+            Log::warning('Provider operation failed.', ['exception_class' => get_class($e)]);
             $duration=(int)((microtime(true)-$started)*1000);
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Service discovery failed safely.']);
             $this->writeOperationLog($provider,$connection,'service_discovery',$endpoint->method,$safeUrl,'FAILED',null,$duration,get_class($e),'Service discovery failed safely.');
@@ -801,7 +802,7 @@ class ProviderEngineController extends Controller
                 'safe_metadata' => $this->redactForLog($safeMetadata),
             ]);
         } catch (\Throwable $e) {
-            report($e);
+            Log::warning('Provider operation failed.', ['exception_class' => get_class($e)]);
         }
     }
 
