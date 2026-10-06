@@ -14,7 +14,7 @@ class SystemSettingsSmtpTest extends TestCase
 
     public function test_admin_can_store_multiple_smtp_profiles_with_encrypted_passwords(): void
     {
-        $admin = User::factory()->create(['tier'=>5]);
+        $admin = User::factory()->create(['tier'=>5,'role'=>'ADMIN']);
 
         $this->actingAs($admin)->put('/admin/settings', [
             'platform_name'=>'Test Platform',
