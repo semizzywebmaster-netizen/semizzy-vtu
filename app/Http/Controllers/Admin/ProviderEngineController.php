@@ -214,6 +214,55 @@ class ProviderEngineController extends Controller
         }
     }
 
+    public function sync(Request $request, ApiProvider $provider): JsonResponse
+    {
+        $started=now();
+        $syncId=DB::table('provider_syncs')->insertGetId([
+            'api_provider_id'=>$provider->id,'trigger'=>'manual','status'=>'running',
+            'discovered_count'=>0,'new_count'=>0,'updated_count'=>0,'removed_count'=>0,
+            'price_changed_count'=>0,'failed_count'=>0,'summary'=>json_encode([]),'started_at'=>$started,
+            'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        try {
+            $before=$provider->providerServices()->get()->keyBy('external_service_id');
+            $result=$this->discovery($request,$provider);
+            $after=$provider->providerServices()->get()->keyBy('external_service_id');
+            $new=0;$updated=0;$priceChanged=0;$removed=0;
+            foreach($after as $key=>$service){
+                if(!$before->has($key)){ $new++; continue; }
+                $old=$before->get($key);
+                $changed=($old->name!==$service->name)||($old->description!==$service->description)||($old->status!==$service->status)||((string)$old->provider_price!==(string)$service->provider_price)||($old->currency!==$service->currency)||($old->network!==$service->network)||($old->provider_category_id!==$service->provider_category_id)||($old->provider_subcategory_id!==$service->provider_subcategory_id);
+                if($changed) $updated++;
+                if((string)$old->provider_price!==(string)$service->provider_price) $priceChanged++;
+                if($changed){
+                    $import=ProviderServiceImport::where('api_provider_id',$provider->id)->where('provider_service_id',$service->id)->first();
+                    if($import && $import->approved && $import->imported && $import->auto_sync_allowed){
+                        $import->update(['state'=>'imported','last_imported_at'=>now()]);
+                    }
+                }
+            }
+            foreach($before as $key=>$old){
+                if(!$after->has($key)){
+                    $old->update(['status'=>'removed']);
+                    $import=ProviderServiceImport::where('api_provider_id',$provider->id)->where('provider_service_id',$old->id)->first();
+                    if($import) $import->update(['state'=>'removed','auto_sync_allowed'=>false]);
+                    $removed++;
+                }
+            }
+            $summary=['discovered'=>$after->count(),'new'=>$new,'updated'=>$updated,'removed'=>$removed,'price_changed'=>$priceChanged,'pending_approval'=>ProviderServiceImport::where('api_provider_id',$provider->id)->where('approved',false)->count()];
+            DB::table('provider_syncs')->where('id',$syncId)->update([
+                'status'=>'completed','discovered_count'=>$after->count(),'new_count'=>$new,'updated_count'=>$updated,
+                'removed_count'=>$removed,'price_changed_count'=>$priceChanged,'summary'=>json_encode($summary),
+                'finished_at'=>now(),'updated_at'=>now()
+            ]);
+            return response()->json(['status'=>'success','sync_id'=>$syncId,'summary'=>$summary,'discovery_status'=>$result->getData(true)['status']??'success']);
+        } catch(\Throwable $e) {
+            report($e);
+            DB::table('provider_syncs')->where('id',$syncId)->update(['status'=>'failed','failed_count'=>1,'error_message'=>'Provider sync failed safely.','finished_at'=>now(),'updated_at'=>now()]);
+            return response()->json(['status'=>'failed','sync_id'=>$syncId,'message'=>'Provider sync failed safely. Review server-side diagnostics.'],502);
+        }
+    }
+
     public function syncHistory(ApiProvider $provider): JsonResponse
     {
         $rows = DB::table('provider_syncs')->where('api_provider_id',$provider->id)->latest('id')->limit(50)->get();
