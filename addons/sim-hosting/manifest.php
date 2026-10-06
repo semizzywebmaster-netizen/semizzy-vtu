@@ -49,5 +49,6 @@ return [
     'api_routes' => ['/api/v1/sim-hosting'],
     'provider_integrations' => ['Core ProviderManager'],
     'scheduled_tasks' => ['SIM rental expiry and provider reconciliation'],
+    'service_provider' => 'Semizzy\\Addons\\SimHosting\\Providers\\SimHostingServiceProvider',
     'events' => ['sim_hosting.rental.created','sim_hosting.rental.renewed','sim_hosting.rental.expired','sim_hosting.number.status_changed'],
 ];
