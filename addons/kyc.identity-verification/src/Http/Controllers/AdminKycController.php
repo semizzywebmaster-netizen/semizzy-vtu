@@ -7,6 +7,7 @@ use App\Services\Audit\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Semizzy\Addons\Kyc\Models\KycApplication;
@@ -50,12 +51,23 @@ class AdminKycController extends Controller
             return back()->with('error', 'This KYC application is not awaiting review.');
         }
 
-        $application->forceFill([
-            'status' => $data['decision'],
-            'reviewed_at' => now(),
-            'reviewed_by' => $request->user()->id,
-            'rejection_reason' => $data['decision'] === 'rejected' ? trim((string) ($data['reason'] ?? '')) : null,
-        ])->saveOrFail();
+        DB::transaction(function () use ($application, $data, $request): void {
+            $application->forceFill([
+                'status' => $data['decision'],
+                'reviewed_at' => now(),
+                'reviewed_by' => $request->user()->id,
+                'rejection_reason' => $data['decision'] === 'rejected' ? trim((string) ($data['reason'] ?? '')) : null,
+            ])->saveOrFail();
+
+            // KYC approval satisfies the Core Tier 2 identity-verification requirement,
+            // but never silently upgrades users beyond Tier 2.
+            if ($data['decision'] === 'approved' && (int) $application->user->tier < 2) {
+                $application->user->forceFill([
+                    'tier' => 2,
+                    'tier_upgrade_status' => 'approved',
+                ])->saveOrFail();
+            }
+        });
 
         try {
             $audit->record('kyc.application.reviewed', $application->fresh(), [
