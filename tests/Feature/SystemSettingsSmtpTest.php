@@ -59,7 +59,7 @@ class SystemSettingsSmtpTest extends TestCase
 
     public function test_frontend_settings_do_not_expose_smtp_passwords(): void
     {
-        $admin = User::factory()->create(['tier'=>5,'role'=>'ADMIN']);
+        $admin = User::factory()->create(['tier'=>5,'role'=>'ADMIN','email_verified_at'=>now()]);
 
         SystemSetting::query()->create([
             'key'=>'smtp',
