@@ -50,13 +50,7 @@ class SystemSettingsService
         $allowed = ['opay-inspired','palmpay-inspired','kuda-inspired','moniepoint-inspired','stripe-inspired','premium-fintech','modern-corporate','clean-saas','vibrant-tech','luxury-executive','custom'];
         if (! in_array($settings['theme_key'], $allowed, true)) $settings['theme_key'] = 'modern-corporate';
         if (! in_array($settings['skin_default'], ['light','dark'], true)) $settings['skin_default'] = 'light';
-
-        if (isset($stored['smtp']) && is_string($stored['smtp'])) {
-                $decoded = json_decode($stored['smtp'], true);
-                if (is_array($decoded)) {
-                    $settings['smtp'] = array_replace($settings['smtp'], $decoded);
-                }
-            }
+ 
 
         return $this->resolved = $settings;
     }
