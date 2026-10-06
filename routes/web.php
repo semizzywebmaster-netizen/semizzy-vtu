@@ -22,6 +22,8 @@ use App\Http\Controllers\RealtimeController;
 use App\Http\Controllers\HelpCenterController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\VtuController;
+use App\Http\Controllers\UserTransactionController;
+use App\Http\Controllers\WalletFundingController;
 use App\Http\Controllers\Admin\VtuAdminController;
 use App\Http\Controllers\Admin\CommunicationController;
 use App\Http\Controllers\SetupController;
@@ -70,6 +72,8 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->middleware('verified')->name('dashboard');
     Route::middleware(['verified','ensure.vtu'])->group(function (): void { Route::get('/vtu', [VtuController::class, 'index'])->middleware('permission:vtu.view')->name('vtu.services'); });
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::get('/transactions', [UserTransactionController::class, 'index'])->name('transactions.index');
+    Route::get('/wallet/fund', [WalletFundingController::class, 'index'])->name('wallet.fund');
     Route::get('/analytics', [FinancialAnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/analytics/export', [FinancialAnalyticsController::class, 'export'])->middleware('throttle:10,1')->name('analytics.export');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
