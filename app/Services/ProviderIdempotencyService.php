@@ -100,11 +100,13 @@ class ProviderIdempotencyService
         return $record->refresh();
     }
 
-    public function fail(ProviderIdempotencyRecord $record, string $transactionStatus, string $safeError, bool $retryable = true): ProviderIdempotencyRecord
+    public function fail(ProviderIdempotencyRecord $record, string $transactionStatus, string $safeError, bool $retryable = true, ?string $providerReference = null, ?array $safeResponse = null): ProviderIdempotencyRecord
     {
         $record->forceFill([
             'state' => $retryable ? 'FAILED_RETRYABLE' : 'UNKNOWN_PROCESSING_STATE',
             'transaction_status' => strtoupper($transactionStatus),
+            'provider_reference' => $providerReference ?? $record->provider_reference,
+            'safe_response' => $safeResponse ?? $record->safe_response,
             'safe_error' => $safeError,
             'locked_until' => $retryable ? null : now()->addDay(),
             'completed_at' => $retryable ? now() : null,
