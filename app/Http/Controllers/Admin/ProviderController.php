@@ -155,7 +155,7 @@ class ProviderController extends Controller
         }
     }
 
-    public function bulkTest(Request $request, ProviderTestService $tester, AuditLogger $audit): RedirectResponse
+    public function bulkTest(Request $request, ProviderTestService $tester, AuditLogger $audit): \Illuminate\Http\JsonResponse|RedirectResponse
     {
         $ids = $request->validate(['provider_ids' => 'required|array|max:50', 'provider_ids.*' => 'integer|distinct'])['provider_ids'];
         $tested = $succeeded = $failed = 0;
@@ -188,10 +188,11 @@ class ProviderController extends Controller
             }
         }
 
+        if ($request->expectsJson()) return response()->json(['status'=>'completed','tested'=>$tested,'succeeded'=>$succeeded,'failed'=>$failed,'message'=>"Bulk provider test completed: {$tested} tested, {$succeeded} passed, {$failed} failed."]);
         return back()->with('success', "Bulk provider test completed: {$tested} tested, {$succeeded} passed, {$failed} failed.");
     }
 
-    public function bulkToggle(Request $request, AuditLogger $audit): RedirectResponse
+    public function bulkToggle(Request $request, AuditLogger $audit): \Illuminate\Http\JsonResponse|RedirectResponse
     {
         $data = $request->validate([
             'provider_ids' => 'required|array|max:50',
@@ -223,10 +224,11 @@ class ProviderController extends Controller
             }
         }
 
+        if ($request->expectsJson()) return response()->json(['status'=>'completed','changed'=>$changed,'skipped'=>$skipped,'message'=>"Bulk provider status update completed: {$changed} changed, {$skipped} skipped."]);
         return back()->with('success', "Bulk provider status update completed: {$changed} changed, {$skipped} skipped.");
     }
 
-    public function bulkDestroy(Request $request, AuditLogger $audit): RedirectResponse
+    public function bulkDestroy(Request $request, AuditLogger $audit): \Illuminate\Http\JsonResponse|RedirectResponse
     {
         $ids = $request->validate([
             'provider_ids' => ['required', 'array', 'min:1', 'max:50'],
@@ -256,6 +258,7 @@ class ProviderController extends Controller
             }
         }
 
+        if ($request->expectsJson()) return response()->json(['status'=>'completed','removed'=>$removed,'message'=>"Bulk provider removal completed: {$removed} provider(s) safely archived and disabled."]);
         return back()->with('success', "Bulk provider removal completed: {$removed} provider(s) safely archived and disabled.");
     }
 
