@@ -7,13 +7,13 @@ use App\Services\Audit\AuditLogger;
 use App\Services\System\WebsiteBackupService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\Support\Facades\Artisan;
 use RuntimeException;
 
 class SystemMaintenanceController extends Controller
 {
-    public function backup(Request $request, WebsiteBackupService $backups, AuditLogger $audit): Response|RedirectResponse
+    public function backup(Request $request, WebsiteBackupService $backups, AuditLogger $audit): BinaryFileResponse|RedirectResponse
     {
         try {
             $path=$backups->create();
