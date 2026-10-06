@@ -38,6 +38,7 @@ class ProfileController extends Controller
 
         $data = $request->validate([
             'email' => ['required','email','max:255',Rule::unique('users','email')->ignore($user->id)],
+            'phone' => ['nullable','string','max:30'],
             'avatar' => ['nullable','image','mimes:jpg,jpeg,png,webp','max:5120'],
             'address' => ['nullable','string','max:1000'],
             'city' => ['nullable','string','max:100'],
@@ -54,6 +55,9 @@ class ProfileController extends Controller
 
         // Confidential identity fields are intentionally write-once.
         if (filled($user->phone)) {
+            if (array_key_exists('phone', $data) && preg_replace('/[^0-9+]/', '', (string) $data['phone']) !== preg_replace('/[^0-9+]/', '', (string) $user->phone)) {
+                return back()->withErrors(['phone' => 'Your phone number is confidential and cannot be edited after it has been saved.'])->withInput();
+            }
             unset($data['phone']);
         }
         if (filled($user->identity_number)) {
@@ -62,7 +66,10 @@ class ProfileController extends Controller
             }
             unset($data['identity_number']);
         }
-        unset($data['name'], $data['username'], $data['phone']);
+        unset($data['name'], $data['username']);
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = filled($data['phone']) ? preg_replace('/[^0-9+]/', '', (string) $data['phone']) : null;
+        }
 
         $emailChanged = strcasecmp((string) $user->email, (string) $data['email']) !== 0;
         $identityNumberAdded = ! filled($user->identity_number) && filled($data['identity_number'] ?? null);
@@ -70,6 +77,7 @@ class ProfileController extends Controller
         try {
             $payload = [
                 'email' => strtolower(trim($data['email'])),
+                'phone' => array_key_exists('phone', $data) ? $data['phone'] : $user->phone,
                 'address' => filled($data['address'] ?? null) ? trim($data['address']) : null,
                 'city' => filled($data['city'] ?? null) ? trim($data['city']) : null,
                 'state' => filled($data['state'] ?? null) ? trim($data['state']) : null,
