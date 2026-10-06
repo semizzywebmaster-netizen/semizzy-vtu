@@ -26,7 +26,7 @@ class UserController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'role' => ['nullable', 'in:ADMIN,STAFF,SUPPORT,USER'],
             'status' => ['nullable', 'in:active,suspended,disabled'],
-            'tier' => ['nullable', 'integer', 'in:1,2,3,4'],
+            'tier' => ['nullable', 'integer', 'in:1,2,3,4,5'],
         ]);
 
         $users = User::query()
@@ -56,7 +56,7 @@ class UserController extends Controller
                 'phone' => $user->phone,
                 'role' => $user->role,
                 'status' => $user->status,
-                'tier' => max(1, min(4, (int) $user->tier)),
+                'tier' => max(1, min(5, (int) $user->tier)),
                 'emailVerified' => $user->email_verified_at !== null,
                 'phoneVerified' => $user->phone_verified_at !== null,
                 'accountType' => $user->account_type,
@@ -102,7 +102,7 @@ class UserController extends Controller
             'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
             'role' => ['sometimes', 'required', 'in:ADMIN,STAFF,SUPPORT,USER'],
             'status' => ['sometimes', 'required', 'in:active,suspended,disabled'],
-            'tier' => ['sometimes', 'required', 'integer', 'in:1,2,3,4'],
+            'tier' => ['sometimes', 'required', 'integer', 'in:1,2,3,4,5'],
             'account_type' => ['sometimes', 'required', 'in:personal,merchant'],
             'business_name' => ['sometimes', 'nullable', 'string', 'max:180'],
             'business_registration_number' => ['sometimes', 'nullable', 'string', 'max:100'],
@@ -120,7 +120,7 @@ class UserController extends Controller
             'phone' => $user->phone,
             'role' => $user->role,
             'status' => $user->status,
-            'tier' => max(1, min(4, (int) $user->tier)),
+            'tier' => max(1, min(5, (int) $user->tier)),
             'account_type' => $user->account_type ?? 'personal',
             'business_name' => $user->business_name,
             'business_registration_number' => $user->business_registration_number,
@@ -186,7 +186,7 @@ class UserController extends Controller
                     'role' => $data['role'],
                     'status' => $data['status'],
                     'tier' => (int) $data['tier'],
-                    'account_type' => (int) $data['tier'] === 4 ? 'merchant' : 'personal',
+                    'account_type' => (int) $data['tier'] === 5 ? 'api' : ((int) $data['tier'] === 4 ? 'merchant' : 'personal'),
                     'business_name' => trim((string) ($data['business_name'] ?? '')) ?: null,
                     'business_registration_number' => trim((string) ($data['business_registration_number'] ?? '')) ?: null,
                     'business_type' => trim((string) ($data['business_type'] ?? '')) ?: null,
@@ -194,7 +194,7 @@ class UserController extends Controller
                     'business_state' => trim((string) ($data['business_state'] ?? '')) ?: null,
                     'business_country' => trim((string) ($data['business_country'] ?? '')) ?: null,
                     'merchant_verified_at' => (int) $data['tier'] === 4 ? now() : null,
-                    'tier_upgrade_status' => (int) $data['tier'] === 4 ? 'approved' : 'none',
+                    'tier_upgrade_status' => in_array((int) $data['tier'], [4,5], true) ? 'approved' : 'none',
                 ];
 
                 if ($emailChanged) {
