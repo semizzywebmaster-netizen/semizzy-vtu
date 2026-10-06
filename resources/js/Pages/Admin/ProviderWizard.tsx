@@ -1,7 +1,12 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 
-const csrfToken = () => document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
+const csrfToken = () => {
+ const meta = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+ if (meta) return meta;
+ const cookie = document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='));
+ return cookie ? decodeURIComponent(cookie.slice('XSRF-TOKEN='.length)) : '';
+};
 const postJson = async (url: string, data: Record<string, unknown> = {}) => {
  const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrfToken() }, credentials: 'same-origin', body: JSON.stringify(data) });
  const payload = await response.json().catch(() => ({}));
