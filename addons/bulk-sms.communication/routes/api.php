@@ -1,0 +1,3 @@
+<?php
+use Illuminate\Support\Facades\Route; use Semizzy\Addons\BulkSms\Http\Controllers\BulkSmsController;
+Route::middleware(['auth:sanctum','ensure.addon:bulk-sms.communication'])->prefix('api/v1/bulk-sms')->group(function(){Route::post('/send',[BulkSmsController::class,'send'])->middleware(['permission:bulk_sms.send','transaction.pin','throttle:10,1']);Route::post('/contacts',[BulkSmsController::class,'contact'])->middleware(['permission:bulk_sms.contacts.manage','throttle:30,1']);});
