@@ -12,6 +12,7 @@ use App\Services\Providers\ProviderUrlGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -29,7 +30,7 @@ class ProviderController extends Controller
 
             return back()->with('success', "Provider catalogue installed: {$result['providers']} providers, {$result['services']} services and {$result['mappings']} provider mappings. Credentials remain blank and providers remain disabled until configured and verified.");
         } catch (\Throwable $e) {
-            report($e);
+            Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);
             return back()->with('error', 'Provider preset installation failed safely. No provider credentials were changed.');
         }
     }
@@ -98,10 +99,10 @@ class ProviderController extends Controller
             $data['integration_status'] = 'draft';
             $provider = ApiProvider::create($data);
             try { $audit->record('provider.created', $provider, ['identifier'=>$provider->identifier,'environment'=>$provider->environment,'enabled'=>false], $request); }
-            catch (\Throwable $auditException) { report($auditException); }
+            catch (\Throwable $auditException) { Log::warning('Provider audit logging failed.', ['exception_class' => get_class($auditException)]); }
             return back()->with('success', 'Provider saved as unverified and disabled.');
         } catch (\Throwable $e) {
-            report($e);
+            Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);
             return back()->with('error', 'Provider could not be created safely.');
         }
     }
@@ -120,10 +121,10 @@ class ProviderController extends Controller
             }
             $model->saveOrFail();
             try { $audit->record('provider.updated', $model, ['identifier'=>$model->identifier,'updated_fields'=>array_keys($data)], $request); }
-            catch (\Throwable $auditException) { report($auditException); }
+            catch (\Throwable $auditException) { Log::warning('Provider audit logging failed.', ['exception_class' => get_class($auditException)]); }
             return back()->with('success', 'Provider updated. Re-test it before enabling.');
         } catch (\Throwable $e) {
-            report($e);
+            Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);
             return back()->with('error', 'Provider could not be updated safely.');
         }
     }
@@ -135,22 +136,22 @@ class ProviderController extends Controller
             try {
                 $result = $tester->test($model);
             } catch (\Throwable $e) {
-                report($e);
+                Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);
                 $model->forceFill(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_summary'=>'Provider test failed safely.','enabled'=>false,'paused'=>true,'verification_status'=>'test_failed','integration_status'=>'test_failed'])->saveOrFail();
-                try { $audit->record('provider.test.failed',$model,['reason'=>'transport_or_adapter_exception'],$request); } catch (\Throwable $auditException) { report($auditException); }
+                try { $audit->record('provider.test.failed',$model,['reason'=>'transport_or_adapter_exception'],$request); } catch (\Throwable $auditException) { Log::warning('Provider audit logging failed.', ['exception_class' => get_class($auditException)]); }
                 return $request->expectsJson() ? response()->json(['status'=>'FAILED','message'=>'Provider test failed safely. Review the server-side diagnostic log.'],502) : back()->with('error','Provider test failed safely. Review the server-side diagnostic log.');
             }
             if ($result['result']->accepted) {
                 $verified=$model->environment==='production';
                 $model->updateOrFail(['verification_status'=>$verified?'live_verified':'sandbox_verified','integration_status'=>$verified?'live_verified':'sandbox_verified','enabled'=>false,'paused'=>true]);
-                try { $audit->record('provider.test.succeeded',$model,['environment'=>$model->environment,'status'=>$result['result']->status],$request); } catch (\Throwable $auditException) { report($auditException); }
+                try { $audit->record('provider.test.succeeded',$model,['environment'=>$model->environment,'status'=>$result['result']->status],$request); } catch (\Throwable $auditException) { Log::warning('Provider audit logging failed.', ['exception_class' => get_class($auditException)]); }
                 return $request->expectsJson() ? response()->json(['status'=>'SUCCESS','message'=>'Provider health check succeeded. Provider remains disabled until explicitly enabled.','verification_status'=>$model->verification_status,'enabled'=>false],200) : back()->with('success','Provider health check succeeded. Provider remains disabled until explicitly enabled.');
             }
             $model->updateOrFail(['enabled'=>false,'paused'=>true,'verification_status'=>'test_failed','integration_status'=>'test_failed']);
-            try { $audit->record('provider.test.failed',$model,['environment'=>$model->environment,'status'=>$result['result']->status],$request); } catch (\Throwable $auditException) { report($auditException); }
+            try { $audit->record('provider.test.failed',$model,['environment'=>$model->environment,'status'=>$result['result']->status],$request); } catch (\Throwable $auditException) { Log::warning('Provider audit logging failed.', ['exception_class' => get_class($auditException)]); }
             return $request->expectsJson() ? response()->json(['status'=>'FAILED','message'=>'Provider test did not succeed. Review server-side diagnostics.'],502) : back()->with('error','Provider test did not succeed. Review server-side diagnostics.');
         } catch (\Throwable $e) {
-            report($e);
+            Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);
             return $request->expectsJson() ? response()->json(['status'=>'FAILED','message'=>'Provider test action failed safely.'],500) : back()->with('error','Provider test action failed safely.');
         }
     }
@@ -180,11 +181,11 @@ class ProviderController extends Controller
                     $audit->record('provider.test.failed', $provider, ['bulk'=>true,'status'=>$result['result']->status], $request);
                 }
             } catch (\Throwable $e) {
-                report($e);
+                Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);
                 $provider->forceFill(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_summary'=>'Provider test failed safely.','enabled'=>false,'paused'=>true,'verification_status'=>'test_failed','integration_status'=>'test_failed'])->save();
                 $failed++;
                 try { $audit->record('provider.test.failed', $provider, ['bulk'=>true,'reason'=>'transport_or_adapter_exception'], $request); }
-                catch (\Throwable $auditException) { report($auditException); }
+                catch (\Throwable $auditException) { Log::warning('Provider audit logging failed.', ['exception_class' => get_class($auditException)]); }
             }
         }
 
@@ -217,9 +218,9 @@ class ProviderController extends Controller
                 if ($result['skipped']) { $skipped++; continue; }
                 $changed++;
                 try { $audit->record($data['enabled'] ? 'provider.enabled' : 'provider.disabled', $result['provider'], ['bulk'=>true], $request); }
-                catch (\Throwable $auditException) { report($auditException); }
+                catch (\Throwable $auditException) { Log::warning('Provider audit logging failed.', ['exception_class' => get_class($auditException)]); }
             } catch (\Throwable $e) {
-                report($e);
+                Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);
                 $skipped++;
             }
         }
@@ -251,10 +252,10 @@ class ProviderController extends Controller
                 if (!$result['removed']) { continue; }
                 try {
                     $audit->record('provider.removed', $result['provider'], ['bulk'=>true,'history_preserved'=>true,'archived'=>true,'mappings_disabled'=>true,'provider_product_mappings_disabled'=>$result['mapping_count']], $request);
-                } catch (\Throwable $auditException) { report($auditException); }
+                } catch (\Throwable $auditException) { Log::warning('Provider audit logging failed.', ['exception_class' => get_class($auditException)]); }
                 $removed++;
             } catch (\Throwable $e) {
-                report($e);
+                Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);
             }
         }
 
@@ -314,7 +315,7 @@ class ProviderController extends Controller
                     $request
                 );
             } catch (\Throwable $auditException) {
-                report($auditException);
+                Log::warning('Provider audit logging failed.', ['exception_class' => get_class($auditException)]);
             }
 
             return $request->expectsJson() ? response()->json(['status'=>'updated','enabled'=>$result['enabled'],'message'=>$result['enabled'] ? 'Provider enabled successfully.' : 'Provider disabled successfully.']) : back()->with(
@@ -322,7 +323,7 @@ class ProviderController extends Controller
                 $result['enabled'] ? 'Provider enabled successfully.' : 'Provider disabled successfully.'
             );
         } catch (\Throwable $e) {
-            report($e);
+            Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);
 
             return back()->with(
                 'error',
@@ -343,9 +344,9 @@ class ProviderController extends Controller
                 $model->delete();
                 return ['provider_id'=>$model->id,'identifier'=>$model->identifier,'mapping_count'=>$productMappings->count()];
             });
-            try { $audit->record('provider.removed',ApiProvider::withTrashed()->find($result['provider_id']),['identifier'=>$result['identifier'],'history_preserved'=>true,'archived'=>true,'mappings_disabled'=>true,'provider_product_mappings_disabled'=>$result['mapping_count']],$request); } catch(\Throwable $auditException){report($auditException);}
+            try { $audit->record('provider.removed',ApiProvider::withTrashed()->find($result['provider_id']),['identifier'=>$result['identifier'],'history_preserved'=>true,'archived'=>true,'mappings_disabled'=>true,'provider_product_mappings_disabled'=>$result['mapping_count']],$request); } catch(\Throwable $auditException){Log::warning('Provider audit logging failed.', ['exception_class' => get_class($auditException)]);}
             return back()->with('success','Provider removed from the active registry. Historical records are retained.');
-        } catch(\Throwable $e){report($e);return back()->with('error','Provider could not be removed safely.');}
+        } catch(\Throwable $e){Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);return back()->with('error','Provider could not be removed safely.');}
     }
 
     private function validatedProvider(Request $request, bool $creating): array
