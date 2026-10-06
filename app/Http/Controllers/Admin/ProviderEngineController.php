@@ -228,6 +228,10 @@ class ProviderEngineController extends Controller
         try {
             $before=$provider->providerServices()->get()->keyBy('external_service_id');
             $result=$this->discovery($request,$provider);
+            $resultData=$result->getData(true);
+            if (($resultData['status'] ?? null) !== 'success') {
+                throw new \RuntimeException('Provider discovery did not complete successfully.');
+            }
             $after=$provider->providerServices()->get()->keyBy('external_service_id');
             $new=0;$updated=0;$priceChanged=0;$removed=0;
             foreach($after as $key=>$service){
@@ -257,7 +261,7 @@ class ProviderEngineController extends Controller
                 'removed_count'=>$removed,'price_changed_count'=>$priceChanged,'summary'=>json_encode($summary),
                 'finished_at'=>now(),'updated_at'=>now()
             ]);
-            return response()->json(['status'=>'success','sync_id'=>$syncId,'summary'=>$summary,'discovery_status'=>$result->getData(true)['status']??'success']);
+            return response()->json(['status'=>'success','sync_id'=>$syncId,'summary'=>$summary,'discovery_status'=>$resultData['status']??'success']);
         } catch(\Throwable $e) {
             report($e);
             DB::table('provider_syncs')->where('id',$syncId)->update(['status'=>'failed','failed_count'=>1,'error_message'=>'Provider sync failed safely.','finished_at'=>now(),'updated_at'=>now()]);
