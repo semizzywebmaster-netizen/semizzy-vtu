@@ -333,6 +333,9 @@ class ProviderEngineController extends Controller
         if (blank($data['path'] ?? null) && blank($data['full_url'] ?? null)) {
             return response()->json(['message'=>'Provide either a relative path or a full URL.'],422);
         }
+        if (filled($data['full_url'] ?? null)) {
+            app(ProviderUrlGuard::class)->validate($data['full_url']);
+        }
         $saved = $provider->endpoints()->create($data);
         return response()->json(['data'=>$this->endpointSummary($saved->fresh())],201);
     }
@@ -362,6 +365,9 @@ class ProviderEngineController extends Controller
 
         if (blank($data['path'] ?? null) && blank($data['full_url'] ?? null)) {
             return response()->json(['message'=>'Provide either a relative path or a full URL.'], 422);
+        }
+        if (filled($data['full_url'] ?? null)) {
+            app(ProviderUrlGuard::class)->validate($data['full_url']);
         }
 
         $endpoint->update($data);
@@ -702,7 +708,12 @@ class ProviderEngineController extends Controller
 
     private function endpointUrl(ProviderConnection $connection, ProviderEndpoint $endpoint): string
     {
-        if (filled($endpoint->full_url)) return $endpoint->full_url;
+        if (filled($endpoint->full_url)) {
+            app(ProviderUrlGuard::class)->validate($endpoint->full_url);
+            return $endpoint->full_url;
+        }
+
+        app(ProviderUrlGuard::class)->validate($connection->base_url);
         $prefix=trim((string)$connection->api_prefix,'/');
         $path=trim((string)$endpoint->path,'/');
         return rtrim($connection->base_url,'/').($prefix?'/'.$prefix:'').($path?'/'.$path:'');
