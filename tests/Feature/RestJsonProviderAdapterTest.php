@@ -146,7 +146,7 @@ class RestJsonProviderAdapterTest extends TestCase
         $connection = $provider->connections()->create([
             'name' => 'Live',
             'environment' => 'live',
-            'base_url' => 'https://api.example.test',
+            'base_url' => 'https://8.8.8.8',
             'api_prefix' => 'v1',
             'auth_type' => 'token',
             'request_timeout_seconds' => 10,
@@ -179,7 +179,7 @@ class RestJsonProviderAdapterTest extends TestCase
         ]);
 
         Http::fake([
-            'https://api.example.test/v1/purchase*' => Http::response([
+            'https://8.8.8.8/v1/purchase*' => Http::response([
                 'status' => 'success',
                 'reference' => 'CFG-1',
             ], 200),
@@ -196,7 +196,7 @@ class RestJsonProviderAdapterTest extends TestCase
         $this->assertSame('CFG-1', $result->providerReference);
 
         Http::assertSent(function ($request): bool {
-            return $request->url() === 'https://api.example.test/v1/purchase?tenant=semizzy' &&
+            return $request->url() === 'https://8.8.8.8/v1/purchase?tenant=semizzy' &&
                 $request->method() === 'POST' &&
                 $request->hasHeader('Authorization', 'Bearer configured-secret') &&
                 $request->hasHeader('Idempotency-Key', 'configured-idem-1') &&
@@ -220,10 +220,10 @@ class RestJsonProviderAdapterTest extends TestCase
         $connection = $provider->connections()->create([
             'name' => 'Default',
             'environment' => 'live',
-            'base_url' => 'https://api.example.test',
+            'base_url' => 'https://8.8.8.8',
             'api_prefix' => 'v2',
             'auth_type' => 'token',
-            'query_params' => ['api_key' => 'connection-secret'],
+            'query_params' => ['tenant' => 'semizzy'],
             'request_timeout_seconds' => 10,
             'connect_timeout_seconds' => 3,
             'verify_ssl' => true,
@@ -253,7 +253,7 @@ class RestJsonProviderAdapterTest extends TestCase
         ]);
 
         Http::fake([
-            'https://api.example.test/v2/status*' => Http::response([
+            'https://8.8.8.8/v2/status*' => Http::response([
                 'status' => 'pending',
             ], 200),
         ]);
@@ -267,7 +267,7 @@ class RestJsonProviderAdapterTest extends TestCase
         $this->assertSame('PENDING', $result->status);
 
         Http::assertSent(function ($request): bool {
-            return $request->url() === 'https://api.example.test/v2/status?api_key=connection-secret&reference=REF-1' &&
+            return $request->url() === 'https://8.8.8.8/v2/status?tenant=semizzy&reference=REF-1' &&
                 $request->method() === 'PUT' &&
                 !$request->hasHeader('Authorization');
         });
