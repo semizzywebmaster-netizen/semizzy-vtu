@@ -62,6 +62,16 @@ final class PaymentWebhookService
                 return;
             }
 
+            $payloadCurrency = strtoupper((string) data_get($payload, $config['currency_path'] ?? 'currency', data_get($payload, 'data.currency', '')));
+            if ($payloadCurrency !== '' && $payloadCurrency !== strtoupper((string) $payment->currency)) {
+                throw new RuntimeException('Payment currency does not match the payment intent.');
+            }
+
+            $payloadAmount = data_get($payload, $config['amount_path'] ?? 'amount_minor', data_get($payload, 'data.amount_minor'));
+            if ($payloadAmount !== null && (string) $payloadAmount !== (string) $payment->amount_minor) {
+                throw new RuntimeException('Payment amount does not match the payment intent.');
+            }
+
             $wallet = WalletAccount::query()->whereKey($payment->wallet_account_id)->lockForUpdate()->first();
             if (!$wallet || $wallet->status !== 'active') throw new RuntimeException('Payment wallet is unavailable.');
             if (strtoupper($wallet->currency) !== strtoupper($payment->currency)) throw new RuntimeException('Payment currency does not match wallet currency.');
