@@ -184,8 +184,24 @@ class ProviderEngineController extends Controller
         $connection=$provider->connections()->where('enabled',true)->orderByDesc('is_default')->first();
         if(!$connection) return response()->json(['status'=>'configuration_required','message'=>'Configure an enabled connection first.'],422);
 
-        $endpoint=$provider->endpoints()->where('enabled',true)->orderByRaw("CASE WHEN operation = 'health' THEN 0 WHEN operation = 'services' THEN 1 ELSE 2 END")->first();
-        if(!$endpoint) return response()->json(['status'=>'configuration_required','message'=>'Configure an enabled endpoint for connection testing.'],422);
+        $readOnlyOperations = ['health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories'];
+        $endpoint=$provider->endpoints()
+            ->where('enabled',true)
+            ->whereIn('operation',$readOnlyOperations)
+            ->orderByRaw("CASE
+                WHEN operation = 'health_check' THEN 0
+                WHEN operation = 'health' THEN 1
+                WHEN operation = 'status' THEN 2
+                WHEN operation = 'balance_inquiry' THEN 3
+                WHEN operation = 'catalogue_retrieval' THEN 4
+                WHEN operation = 'catalogue' THEN 5
+                WHEN operation = 'services' THEN 6
+                WHEN operation = 'products' THEN 7
+                WHEN operation = 'categories' THEN 8
+                ELSE 99 END")
+            ->orderBy('id')
+            ->first();
+        if(!$endpoint) return response()->json(['status'=>'configuration_required','message'=>'Configure an enabled read-only health, status, balance, or catalogue endpoint for connection testing.'],422);
 
         $started=microtime(true);
         $safeUrl = null;
