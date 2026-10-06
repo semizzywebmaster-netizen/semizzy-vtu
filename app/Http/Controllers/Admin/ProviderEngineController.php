@@ -436,8 +436,8 @@ class ProviderEngineController extends Controller
             return response()->json([
                 'status'=>$safeStatus,'http_status'=>$response->status(),'duration_ms'=>$duration,
                 'message'=>$response->successful()?'Endpoint request succeeded.':'Endpoint request returned an error.',
-                'mapped_response'=>$this->mapResponse($payload,(array)($endpoint->response_mapping ?? [])),
-                'mapped_error'=>$response->successful()?null:$this->mapResponse($payload,(array)($endpoint->error_mapping ?? [])),
+                'mapped_response'=>$this->redactForLog($this->mapResponse($payload,(array)($endpoint->response_mapping ?? []))),
+                'mapped_error'=>$response->successful()?null:$this->redactForLog($this->mapResponse($payload,(array)($endpoint->error_mapping ?? []))),
             ],$response->successful()?200:502);
         } catch (\Throwable $e) {
             report($e);
