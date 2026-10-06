@@ -1,21 +1,37 @@
 import '../css/app.css';
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, usePage } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
-import type { ComponentType } from 'react';
+import type { ComponentType, PropsWithChildren } from 'react';
 import AdminLayout from './Layouts/AdminLayout';
 
 type PageModule = { default: ComponentType<Record<string, unknown>> };
+type ViteImportMeta = ImportMeta & { env: { PROD: boolean }; glob: (pattern: string) => Record<string, () => Promise<unknown>> };
 
-type ViteImportMeta = ImportMeta & {
-  env: { PROD: boolean };
-  glob: (pattern: string) => Record<string, () => Promise<unknown>>;
+const themePresets: Record<string, string> = {
+  'ocean-blue': '#2563EB',
+  emerald: '#059669',
+  'royal-purple': '#7C3AED',
+  crimson: '#DC2626',
+  'sunset-orange': '#EA580C',
 };
+
+function applyTheme(primary: string) {
+  const safe = /^#[0-9A-Fa-f]{6}$/.test(primary) ? primary : '#2563EB';
+  document.documentElement.style.setProperty('--brand-primary', safe);
+  document.documentElement.style.setProperty('--brand-primary-soft', 'color-mix(in srgb, ' + safe + ' 10%, white)');
+  document.documentElement.style.setProperty('--brand-primary-medium', 'color-mix(in srgb, ' + safe + ' 18%, white)');
+  document.documentElement.style.setProperty('--brand-primary-dark', 'color-mix(in srgb, ' + safe + ' 82%, black)');
+}
+
+function ThemeBridge({ children }: PropsWithChildren) {
+  const page = usePage<{ platform?: { theme_primary?: string } }>();
+  applyTheme(page.props.platform?.theme_primary ?? '#2563EB');
+  return <>{children}</>;
+}
 
 if ((import.meta as ViteImportMeta).env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
-      // Offline support is optional; a failed registration must not block the app.
-    });
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
   });
 }
 
@@ -29,15 +45,13 @@ createInertiaApp({
     const ResolvedPage = module.default;
     const isAdminPage = name === 'Dashboard' || name.startsWith('Admin/');
 
-    if (!isAdminPage) {
-      return ResolvedPage;
-    }
-
-    return (pageProps: Record<string, unknown>) => (
-      <AdminLayout>
-        <ResolvedPage {...pageProps} />
-      </AdminLayout>
+    const themed = (pageProps: Record<string, unknown>) => (
+      <ThemeBridge>
+        {isAdminPage ? <AdminLayout><ResolvedPage {...pageProps} /></AdminLayout> : <ResolvedPage {...pageProps} />}
+      </ThemeBridge>
     );
+
+    return themed;
   },
   setup({ el, App, props }) {
     createRoot(el).render(<App {...props} />);
