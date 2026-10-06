@@ -156,6 +156,17 @@ class ProviderManager
                     $result->providerReference,
                     $this->safeReplayResponse($result)
                 );
+            } elseif (strtoupper($result->status) === 'FAILED') {
+                // A definitive failure is safe to fail over. Keep the key retryable
+                // instead of marking the failed provider attempt as completed.
+                $this->idempotency->fail(
+                    $reservation['record'],
+                    'FAILED',
+                    $result->message ?: 'Provider rejected the transaction.',
+                    true,
+                    $result->providerReference,
+                    $this->safeReplayResponse($result)
+                );
             } else {
                 $this->idempotency->complete(
                     $reservation['record'],
