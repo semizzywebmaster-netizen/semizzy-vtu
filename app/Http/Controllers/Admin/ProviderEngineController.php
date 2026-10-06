@@ -758,7 +758,7 @@ class ProviderEngineController extends Controller
                 'provider_connection_id' => $connection?->id,
                 'operation' => $operation,
                 'method' => $method,
-                'endpoint' => $endpoint ? preg_replace('/([?&])(token|secret|password|pin|api[_-]?key)=[^&]*/i', '$1$2=[REDACTED]', $endpoint) : null,
+                'endpoint' => $endpoint ? $this->safeUrlForDisplay($endpoint) : null,
                 'internal_reference' => (string) Str::uuid(),
                 'http_status' => $httpStatus,
                 'duration_ms' => $durationMs,
