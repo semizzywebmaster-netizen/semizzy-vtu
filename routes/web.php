@@ -183,6 +183,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/providers/{provider}/toggle', [ProviderController::class, 'toggle'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.toggle');
         Route::delete('/providers/{provider}', [ProviderController::class, 'destroy'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.destroy');
         // Self-service provider engine
+        Route::get('/providers/{provider}/setup', [ProviderController::class, 'wizard'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.setup');
         Route::post('/providers/{provider}/connections', [ProviderEngineController::class, 'storeConnection'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.connections.store');
         Route::post('/provider-connections/{connection}/credentials', [ProviderEngineController::class, 'storeCredential'])->whereNumber('connection')->middleware('permission:providers.manage')->name('admin.provider-connections.credentials.store');
         Route::post('/providers/{provider}/endpoints', [ProviderEngineController::class, 'storeEndpoint'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.endpoints.store');
