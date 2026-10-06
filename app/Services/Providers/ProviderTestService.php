@@ -32,13 +32,13 @@ class ProviderTestService
             }
         }
 
-        $rawEndpoints=$provider->getRawOriginal('endpoints');
-        $endpoints=is_array($rawEndpoints) ? $rawEndpoints : (is_string($rawEndpoints) ? (json_decode($rawEndpoints,true) ?: []) : []);
+        $legacyEndpoints = $provider->getAttribute('endpoints');
+        $legacyEndpoints = is_array($legacyEndpoints) ? $legacyEndpoints : [];
         $capabilities=$provider->capabilities ?? [];
         $operation=null;
 
         foreach(['health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories'] as $candidate){
-            if(isset($endpoints[$candidate]) && is_string($endpoints[$candidate]) && $endpoints[$candidate] !== ''
+            if(isset($legacyEndpoints[$candidate]) && is_string($legacyEndpoints[$candidate]) && $legacyEndpoints[$candidate] !== ''
                 && in_array($candidate,$capabilities,true)){
                 $operation=$candidate;
                 break;
