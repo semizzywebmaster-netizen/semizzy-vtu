@@ -74,6 +74,8 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::get('/transactions', [UserTransactionController::class, 'index'])->name('transactions.index');
     Route::get('/wallet/fund', [WalletFundingController::class, 'index'])->name('wallet.fund');
+    Route::get('/send-money', fn () => Inertia::render('SendMoney'))->name('send-money.index');
+    Route::get('/withdraw', fn () => Inertia::render('Withdraw'))->name('withdraw.index');
     Route::get('/analytics', [FinancialAnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/analytics/export', [FinancialAnalyticsController::class, 'export'])->middleware('throttle:10,1')->name('analytics.export');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
