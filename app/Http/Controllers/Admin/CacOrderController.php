@@ -27,7 +27,16 @@ class CacOrderController extends Controller
         ]);
     }
 
-    public function review(Request $request, CacOrder $order, AuditLogger $audit)
+    public function documentReview(Request $request, CacOrder $order, int $document, AuditLogger $audit)
+    {
+        $data = $request->validate(['status' => ['required','in:accepted,rejected'], 'note' => ['nullable','string','max:2000']]);
+        $record = $order->documents()->findOrFail($document);
+        $record->update(['status' => $data['status']]);
+        $audit->record('cac.document.reviewed', $record, ['order_id'=>$order->id,'status'=>$data['status'],'note'=>$data['note'] ?? null], $request);
+        return back()->with('success', 'CAC document review updated.');
+    }
+
+    public function review(Request $request, CacOrder $order, AuditLogger $audit, \App\Services\Cac\CacDocumentService $documents)
     {
         $data = $request->validate([
             'action' => ['required','in:approve,reject,request_documents'],
@@ -41,8 +50,8 @@ class CacOrderController extends Controller
         if (!$status) {
             return back()->withErrors(['action' => 'This CAC order cannot be reviewed from its current status.']);
         }
-        if ($data['action'] === 'approve' && $order->documents()->count() === 0) {
-            return back()->withErrors(['documents' => 'At least one supporting document is required before approval.']);
+        if ($data['action'] === 'approve' && $documents->missingRequiredTypes($order->load('product'))) {
+            return back()->withErrors(['documents' => 'All required CAC documents must be uploaded before approval.']);
         }
         $order->update([
             'status' => $status,
