@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Services\Providers\ProviderPresetRegistry;
 use App\Http\Controllers\Controller;
 use App\Models\ApiProvider;
 use App\Models\ProviderServiceProduct;
