@@ -161,6 +161,7 @@ class ProviderEngineController extends Controller
     }
 
     public function endpoint(Request $request, ApiProvider $provider, ?ProviderEndpoint $endpoint = null): JsonResponse
+    public function storeEndpoint(Request $request, ApiProvider $provider): JsonResponse
     {
         $data=$request->validate([
             'name'=>'required|string|max:160',
@@ -236,7 +237,7 @@ class ProviderEngineController extends Controller
                 'mapped_response'=>$this->mapResponse($payload,(array)($endpoint->response_mapping ?? [])),
                 'mapped_error'=>$response->successful()?null:$this->mapResponse($payload,(array)($endpoint->error_mapping ?? [])),
             ],$response->successful()?200:502);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             report($e);
             return response()->json(['status'=>'FAILED','message'=>'Endpoint request failed safely. Review server-side diagnostics.'],502);
         }
@@ -338,7 +339,7 @@ class ProviderEngineController extends Controller
 
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'SUCCESS','last_test_message'=>'Service discovery succeeded.']);
             return response()->json(['status'=>'success','discovered'=>$stored,'duration_ms'=>(int)((microtime(true)-$started)*1000)]);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             report($e);
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Service discovery failed safely.']);
             return response()->json(['status'=>'failed','message'=>'Service discovery failed safely. Review server-side diagnostics.'],502);
