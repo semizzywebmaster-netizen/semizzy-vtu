@@ -44,6 +44,7 @@ Route::middleware(['auth:sanctum','ensure.api.user','ensure.active.api','api.tok
 Route::middleware(['auth:sanctum','ensure.api.user','ensure.active.api','api.token:cac.read'])->prefix('/v1/cac')->group(function (): void {
     Route::get('/products', [\App\Http\Controllers\Api\CacOrderController::class, 'products'])->name('api.v1.cac.products');
     Route::get('/orders/{order}', [\App\Http\Controllers\Api\CacOrderController::class, 'show'])->name('api.v1.cac.orders.show');
+    Route::get('/orders/{order}/status-history', [\App\Http\Controllers\Api\CacOrderController::class, 'statusHistory'])->name('api.v1.cac.orders.status-history');
 });
 Route::middleware(['auth:sanctum','ensure.api.user','ensure.active.api','api.token:cac.transact'])->prefix('/v1/cac')->group(function (): void {
     Route::post('/orders/{order}/documents', [\App\Http\Controllers\Api\CacDocumentController::class, 'store'])->middleware('throttle:20,1')->name('api.v1.cac.documents.store');
