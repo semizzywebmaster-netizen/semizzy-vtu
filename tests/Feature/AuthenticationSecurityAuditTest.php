@@ -54,7 +54,7 @@ class AuthenticationSecurityAuditTest extends TestCase
             'email' => 'unknown@example.test',
         ])->assertSessionHas('otp_sent');
 
-        $event = SecurityEvent::where('event', 'auth.password_recovery.otp_sent')->latest('id')->firstOrFail();
+        $event = SecurityEvent::where('event', 'auth.password_recovery.otp_requested')->latest('id')->firstOrFail();
 
         $this->assertArrayNotHasKey('email', $event->context);
     }
