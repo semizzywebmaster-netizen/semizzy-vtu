@@ -12,7 +12,7 @@ const validHex=(v:string)=>/^#[0-9A-Fa-f]{6}$/.test(v);
 function CustomBuilder({skin,value,onChange}:{skin:Skin;value:Partial<Palette>;onChange:(key:keyof Palette,value:string)=>void}){
   const fallback=DEFAULT_CUSTOM[skin];
   return <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-    <div className="mb-4"><h3 className="font-extrabold text-slate-900">Custom {skin==='light'?'Light':'Dark'} palette</h3><p className="mt-1 text-sm text-slate-500">Choose the colour tokens used globally by SEMIZZY ONE. HEX values are validated before publishing.</p></div>
+    <div className="mb-4"><h3 className="font-extrabold text-slate-900">Custom {skin==='light'?'Light':'Dark'} palette</h3><p className="mt-1 text-sm text-slate-500">Choose the colour tokens used globally by {settings.platform_name}. HEX values are validated before publishing.</p></div>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {fields.map(field=>{const current=(value[field.key] as string)||fallback[field.key];return <label key={String(field.key)} className="rounded-xl border border-slate-200 bg-white p-3">
         <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">{field.label}</span>
@@ -35,7 +35,7 @@ export default function SettingsPage({settings}:Props){
   };
   const submit=(e:React.FormEvent)=>{e.preventDefault();form.put('/admin/settings',{preserveScroll:true});};
   return <><Head title="System settings" /><main className="min-h-screen bg-slate-50 p-4 md:p-8"><div className="mx-auto max-w-6xl">
-    <header><p className="text-sm font-semibold text-indigo-700">SEMIZZY ONE · ADMIN</p><h1 className="mt-1 text-2xl font-extrabold text-slate-900">System settings</h1><p className="mt-2 max-w-3xl text-sm text-slate-600">Configure the global professional design system. Preset themes are original design directions inspired by leading fintech/SaaS patterns, not interface copies. Skin has exactly two options: Light and Dark.</p></header>
+    <header><p className="text-sm font-semibold text-indigo-700">{settings.platform_name} · ADMIN</p><h1 className="mt-1 text-2xl font-extrabold text-slate-900">System settings</h1><p className="mt-2 max-w-3xl text-sm text-slate-600">Configure the global professional design system. Preset themes are original design directions inspired by leading fintech/SaaS patterns, not interface copies. Skin has exactly two options: Light and Dark.</p></header>
     <form onSubmit={submit} className="mt-6 space-y-6">
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-5"><h2 className="text-lg font-extrabold text-slate-900">Global Theme · 11 options</h2><p className="mt-1 text-sm text-slate-500">Choose one theme for the whole website. It is applied to public pages, user dashboards, admin pages and mobile/PWA surfaces.</p></div>
@@ -56,7 +56,7 @@ export default function SettingsPage({settings}:Props){
         <div className="grid gap-3 sm:grid-cols-2">{(['light','dark'] as Skin[]).map(skin=><button type="button" key={skin} onClick={()=>form.setData('skin_default',skin)} className={'rounded-2xl border-2 p-4 text-left '+(form.data.skin_default===skin?'border-indigo-600 bg-indigo-50':'border-slate-200')}><span className="text-2xl">{skin==='light'?'☀':'☾'}</span><span className="ml-3 font-extrabold text-slate-900">{skin==='light'?'Light':'Dark'}</span><span className="mt-1 block text-xs text-slate-500">Default {skin} skin</span></button>)}</div>
       </section>
       <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <label className="block"><span className="text-sm font-semibold text-slate-800">Platform name</span><input className="mt-1 w-full rounded-xl border p-3" value={form.data.platform_name} onChange={e=>form.setData('platform_name',e.target.value)} maxLength={80} required /></label>
+        <label className="block"><span className="text-sm font-semibold text-slate-800">Site identity</span><p className="mt-1 text-xs text-slate-500">Change this once and the new identity is published across the public site, user area, admin area, browser title and PWA metadata.</p><input className="mt-2 w-full rounded-xl border p-3" value={form.data.platform_name} onChange={e=>form.setData('platform_name',e.target.value)} maxLength={80} required /></label>
         <label className="block"><span className="text-sm font-semibold text-slate-800">Support email</span><input type="email" className="mt-1 w-full rounded-xl border p-3" value={form.data.support_email} onChange={e=>form.setData('support_email',e.target.value)} maxLength={254} /></label>
         <label className="block"><span className="text-sm font-semibold text-slate-800">Support notice</span><textarea className="mt-1 min-h-24 w-full rounded-xl border p-3" value={form.data.support_notice} onChange={e=>form.setData('support_notice',e.target.value)} maxLength={500} /></label>
         <label className="block"><span className="text-sm font-semibold text-slate-800">Default timezone</span><input className="mt-1 w-full rounded-xl border p-3" value={form.data.default_timezone} onChange={e=>form.setData('default_timezone',e.target.value)} placeholder="Africa/Lagos" required /></label>
