@@ -87,6 +87,24 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function hasPermission(string $permission): bool
     {
+        // Addon permissions are authoritative only while the owning addon is
+        // active. This prevents stale/removed addon permissions from granting
+        // access to Core routes and keeps addon authorization isolated.
+        $declaredByAddon = Addon::query()
+            ->where('status', 'active')
+            ->whereJsonContains('permissions', $permission)
+            ->exists();
+
+        if (!$declaredByAddon && str_contains($permission, '.')) {
+            $knownAddonPermission = Addon::query()
+                ->whereJsonContains('permissions', $permission)
+                ->exists();
+
+            if ($knownAddonPermission) {
+                return false;
+            }
+        }
+
         $override = $this->permissionOverrides()->where('permission', $permission)->value('allowed');
 
         return $override !== null
