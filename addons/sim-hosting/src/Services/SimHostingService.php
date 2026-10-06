@@ -125,4 +125,23 @@ class SimHostingService
         });
         return $count;
     }
+    public function reconcile(int $limit = 100): int
+    {
+        $rows = SimHostingRental::where('status', 'active')->whereNotNull('provider_reference')->with(['product.provider', 'number'])->orderBy('id')->limit(max(1, min($limit, 500)))->get();
+        $count = 0;
+        foreach ($rows as $rental) {
+            if (!$rental->product?->provider_id || !$rental->number?->provider_reference) continue;
+            try {
+                $result = $this->providers->executeProvider($rental->product->provider, 'sim-hosting', 'inventory_sync', ['number'=>$rental->number->number,'provider_reference'=>$rental->number->provider_reference,'country'=>$rental->product->country,'network'=>$rental->product->network], 'sim-hosting:sync:'.$rental->id);
+                $rental->provider_status = $result->status;
+                $rental->provider_checked_at = now();
+                if ($result->providerReference) $rental->provider_reference = $result->providerReference;
+                $rental->save();
+                $rental->number->update(['provider_status'=>$result->status,'last_checked_at'=>now()]);
+                $count++;
+            } catch (\\Throwable $e) { report($e); }
+        }
+        return $count;
+    }
+
 }
