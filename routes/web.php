@@ -201,6 +201,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/providers/{provider}/discover-services', [ProviderEngineController::class, 'discovery'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.discover-services');
         Route::get('/providers/{provider}/provider-services', [ProviderEngineController::class, 'services'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.provider-services');
         Route::get('/providers/{provider}/mappings', [ProviderEngineController::class, 'providerMappings'])->whereNumber('provider')->middleware('permission:providers.view');
+        Route::get('/catalogue/products', [ProviderEngineController::class, 'catalogueProducts'])->middleware('permission:catalogue.view');
         Route::post('/providers/{provider}/mappings', [ProviderEngineController::class, 'createMapping'])->whereNumber('provider')->middleware('permission:providers.manage');
         Route::get('/providers/{provider}/provider-services/import-preview', [ProviderEngineController::class, 'importPreview'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.import-preview');
         Route::post('/providers/{provider}/provider-services/approve', [ProviderEngineController::class, 'approveImport'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.approve-import');
