@@ -17,6 +17,8 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\UpdatePasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\KycController;
+use App\Http\Controllers\Admin\KycController as AdminKycController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RealtimeController;
 use App\Http\Controllers\HelpCenterController;
@@ -72,6 +74,9 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->middleware('verified')->name('dashboard');
     Route::middleware(['verified','ensure.vtu'])->group(function (): void { Route::get('/vtu', [VtuController::class, 'index'])->middleware('permission:vtu.view')->name('vtu.services'); });
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::get('/kyc', [KycController::class, 'index'])->name('kyc.index');
+    Route::post('/kyc', [KycController::class, 'submit'])->middleware('throttle:5,1')->name('kyc.submit');
+    Route::get('/kyc/document', [KycController::class, 'document'])->name('kyc.document');
     Route::get('/profile/identity-document', [ProfileController::class, 'identityDocument'])->name('profile.identity-document');
     Route::post('/profile', [ProfileController::class, 'update'])->middleware('throttle:10,1')->name('profile.update');
     Route::get('/transactions', [UserTransactionController::class, 'index'])->name('transactions.index');
@@ -98,9 +103,14 @@ Route::middleware(['auth'])->group(function (): void {
     Route::prefix('admin')->middleware(['role:ADMIN,STAFF,SUPPORT', 'verified'])->group(function (): void {
         Route::get('/audit-events', [AuditEventController::class, 'index'])->middleware('permission:audit.view')->name('admin.audit-events.index');
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view')->name('admin.users.index');
+        Route::get('/kyc', [AdminKycController::class, 'index'])->middleware('permission:users.verify')->name('admin.kyc.index');
+        Route::post('/users/{user}/kyc/review', [AdminKycController::class, 'review'])->whereNumber('user')->middleware('permission:users.verify')->name('admin.users.kyc.review');
+        Route::get('/users/{user}/kyc/document', [AdminKycController::class, 'document'])->whereNumber('user')->middleware('permission:users.verify')->name('admin.users.kyc.document');
         Route::patch('/users/{user}', [UserController::class, 'update'])->whereNumber('user')->middleware('permission:users.manage')->name('admin.users.update');
         Route::post('/users/{user}/verify', [UserController::class, 'verify'])->whereNumber('user')->middleware('permission:users.verify')->name('admin.users.verify');
         Route::post('/users/{user}/fund', [UserController::class, 'fund'])->whereNumber('user')->middleware('permission:users.fund')->name('admin.users.fund');
+        Route::post('/users/{user}/debit', [UserController::class, 'debit'])->whereNumber('user')->middleware('permission:users.fund')->name('admin.users.debit');
+        Route::post('/users/{user}/freeze', [UserController::class, 'freeze'])->whereNumber('user')->middleware('permission:users.security.manage')->name('admin.users.freeze');
         Route::put('/users/{user}/permissions', [UserController::class, 'permissions'])->whereNumber('user')->middleware('permission:users.manage')->name('admin.users.permissions');
         Route::post('/users/{user}/wallet-status', [UserController::class, 'walletStatus'])->whereNumber('user')->middleware('permission:users.fund')->name('admin.users.wallet-status');
         Route::get('/health', SystemHealthController::class)->middleware('permission:system.view')->name('admin.health');
