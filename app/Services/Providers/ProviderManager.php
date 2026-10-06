@@ -135,7 +135,9 @@ class ProviderManager
                     $reservation['record'],
                     'UNKNOWN_PROCESSING_STATE',
                     'Provider state is uncertain; requery is required before retry or reversal.',
-                    false
+                    false,
+                    $result->providerReference,
+                    $this->safeReplayResponse($result)
                 );
             } else {
                 $this->idempotency->complete(
