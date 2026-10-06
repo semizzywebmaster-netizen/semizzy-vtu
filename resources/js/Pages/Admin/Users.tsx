@@ -23,7 +23,7 @@ export default function Users({ users, filters, tiers, permissions }: Props) {
   const [debiting, setDebiting] = useState<UserRow | null>(null);
   const [permissionUser, setPermissionUser] = useState<UserRow | null>(null);
   const [permissionState, setPermissionState] = useState<Record<string, boolean>>({});
-  const editForm = useForm({ username: '', role: 'USER', status: 'active', tier: 1, password: '' });
+  const editForm = useForm({ username: '', role: 'USER', status: 'active', tier: 1 });
   const fundForm = useForm({ amount: '', note: '' });
   const debitForm = useForm({ amount: '', note: '' });
 
@@ -34,7 +34,7 @@ export default function Users({ users, filters, tiers, permissions }: Props) {
 
   const openEdit = (user: UserRow) => {
     setEditing(user);
-    editForm.setData({ username: user.username, role: user.role, status: user.status, tier: user.tier, password: '' });
+    editForm.setData({ username: user.username, role: user.role, status: user.status, tier: user.tier });
   };
 
   const saveEdit = (event: React.FormEvent) => {
@@ -128,8 +128,7 @@ export default function Users({ users, filters, tiers, permissions }: Props) {
         <label className="text-sm font-semibold">Role<select className="mt-1 w-full rounded-xl border p-3 font-normal" value={editForm.data.role} onChange={e=>editForm.setData('role',e.target.value)}>{['ADMIN','STAFF','SUPPORT','USER'].map(role=><option key={role}>{role}</option>)}</select></label>
         <label className="text-sm font-semibold">Status<select className="mt-1 w-full rounded-xl border p-3 font-normal" value={editForm.data.status} onChange={e=>editForm.setData('status',e.target.value)}>{['active','suspended','disabled'].map(status=><option key={status}>{status}</option>)}</select></label>
         <label className="text-sm font-semibold">Account tier<select className="mt-1 w-full rounded-xl border p-3 font-normal" value={editForm.data.tier} onChange={e=>editForm.setData('tier',Number(e.target.value))}>{tiers.map(tier=><option key={tier.id} value={tier.id}>{tier.name}</option>)}</select></label>
-        <label className="text-sm font-semibold">New password (optional)<input type="password" className="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="Leave blank to keep current" value={editForm.data.password} onChange={e=>editForm.setData('password',e.target.value)} /></label>
-        <div className="sm:col-span-2 rounded-2xl bg-amber-50 p-4 text-xs text-amber-800">Password can be reset by an administrator here. Sensitive profile changes require the user to submit a request with a reason, then an administrator must approve it.</div>
+        <div className="sm:col-span-2 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 text-xs text-indigo-800">Administrators cannot change or reset a user password. The account owner must change their password from Profile and complete email OTP verification.</div>
         <button disabled={editForm.processing} className="sm:col-span-2 rounded-xl bg-slate-900 p-3 font-bold text-white disabled:opacity-50">{editForm.processing ? 'Saving…' : 'Save account changes'}</button>
       </form>
     </div></div>}
