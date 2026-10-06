@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\CacDocumentController;
 use App\Http\Controllers\Api\CacOrderController;
+use App\Http\Controllers\Api\CacWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/v1/cac/webhooks/{provider:identifier}', [CacWebhookController::class, 'handle'])
