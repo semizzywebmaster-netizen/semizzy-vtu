@@ -23,3 +23,5 @@ Schedule::command('cac:reconcile-pending', ['--limit' => 50, '--min-age' => 1])-
 Schedule::command('payments:expire-pending', ['--limit' => 100])->everyMinute()->withoutOverlapping(2)->onOneServer();
 
 Schedule::command('savings:process-maturity', ['--limit' => 100])->everyMinute()->withoutOverlapping(2)->onOneServer();
+
+Schedule::command('loans:process-overdue', ['--limit'=>100])->everyMinute()->withoutOverlapping(2)->onOneServer();
