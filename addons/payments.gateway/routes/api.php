@@ -1,7 +1,7 @@
 <?php
 
-use IlluminateSupportFacadesRoute;
-use AppHttpMiddlewareEnsureAddonActive;
+use Illuminate\Support\Facades\Route;
+
 
 Route::middleware(['auth:sanctum', 'ensure.addon:payments.gateway'])
     ->prefix('api/v1/payments')->group(function (): void {
