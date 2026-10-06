@@ -332,10 +332,10 @@ class ProviderController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);
 
-            return back()->with(
-                'error',
-                'Provider status update failed safely. Check the provider record and server error log.'
-            );
+            $message = 'Provider status update failed safely. Check the provider record and server error log.';
+            return $request->expectsJson()
+                ? response()->json(['status' => 'FAILED', 'message' => $message], 500)
+                : back()->with('error', $message);
         }
     }
 
