@@ -46,5 +46,7 @@ Route::middleware(['auth:sanctum','ensure.api.user','ensure.active.api','api.tok
     Route::get('/orders/{order}', [\App\Http\Controllers\Api\CacOrderController::class, 'show'])->name('api.v1.cac.orders.show');
 });
 Route::middleware(['auth:sanctum','ensure.api.user','ensure.active.api','api.token:cac.transact'])->prefix('/v1/cac')->group(function (): void {
+    Route::post('/orders/{order}/documents', [\App\Http\Controllers\Api\CacDocumentController::class, 'store'])->middleware('throttle:20,1')->name('api.v1.cac.documents.store');
+    Route::delete('/orders/{order}/documents/{document}', [\App\Http\Controllers\Api\CacDocumentController::class, 'destroy'])->name('api.v1.cac.documents.destroy');
     Route::post('/orders', [\App\Http\Controllers\Api\CacOrderController::class, 'store'])->middleware('throttle:20,1')->name('api.v1.cac.orders.store');
 });
