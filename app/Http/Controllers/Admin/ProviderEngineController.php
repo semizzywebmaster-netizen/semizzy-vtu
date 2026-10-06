@@ -684,12 +684,23 @@ class ProviderEngineController extends Controller
         return $mapped;
     }
 
-    private function writeOperationLog(ApiProvider $provider, ProviderConnection $connection, string $operation, string $method, ?string $endpoint, string $result, ?int $httpStatus, ?int $durationMs, ?string $errorCode = null, ?string $message = null): void
-    {
+    private function writeOperationLog(
+        ApiProvider $provider,
+        ?ProviderConnection $connection,
+        string $operation,
+        ?string $method,
+        ?string $endpoint,
+        string $result,
+        ?int $httpStatus,
+        ?int $durationMs,
+        ?string $errorCode = null,
+        ?string $message = null,
+        ?array $safeMetadata = null
+    ): void {
         try {
             ProviderOperationLog::create([
                 'api_provider_id' => $provider->id,
-                'provider_connection_id' => $connection->id,
+                'provider_connection_id' => $connection?->id,
                 'operation' => $operation,
                 'method' => $method,
                 'endpoint' => $endpoint ? preg_replace('/([?&])(token|secret|password|pin|api[_-]?key)=[^&]*/i', '$1$2=[REDACTED]', $endpoint) : null,
@@ -699,7 +710,7 @@ class ProviderEngineController extends Controller
                 'result' => $result,
                 'error_code' => $errorCode,
                 'safe_message' => $message,
-                'safe_metadata' => null,
+                'safe_metadata' => $this->redactForLog($safeMetadata),
             ]);
         } catch (\Throwable $e) {
             report($e);
