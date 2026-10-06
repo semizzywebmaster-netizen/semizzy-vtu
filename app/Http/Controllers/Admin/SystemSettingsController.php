@@ -8,8 +8,8 @@ use App\Services\Audit\AuditLogger;
 use App\Services\System\SystemSettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,13 +24,10 @@ class SystemSettingsController extends Controller
     public function index(): Response
     {
         $settings = app(SystemSettingsService::class)->all();
-        $smtp = $settings['smtp'];
-        unset($smtp['password']);
 
         return Inertia::render('Admin/Settings', [
             'settings' => [
                 ...$settings,
-                'smtp' => $smtp,
                 'smtp_env' => [
                     'mailer' => env('MAIL_MAILER', 'log'),
                     'host' => env('MAIL_HOST', ''),
@@ -40,11 +37,46 @@ class SystemSettingsController extends Controller
                     'from_name' => env('MAIL_FROM_NAME', env('APP_NAME', 'SEMIZZY ONE')),
                 ],
                 'smtp_providers' => [
-                    ['key'=>'brevo','name'=>'Brevo','host'=>'smtp-relay.brevo.com','port'=>587,'encryption'=>'tls','limit'=>'300 emails/day'],
-                    ['key'=>'smtp2go','name'=>'SMTP2GO','host'=>'mail.smtp2go.com','port'=>2525,'encryption'=>'tls','limit'=>'1,000 emails/month'],
-                    ['key'=>'mailjet','name'=>'Mailjet','host'=>'in-v3.mailjet.com','port'=>587,'encryption'=>'tls','limit'=>'6,000 emails/month'],
-                    ['key'=>'resend','name'=>'Resend SMTP','host'=>'smtp.resend.com','port'=>587,'encryption'=>'tls','limit'=>'3,000 emails/month'],
-                    ['key'=>'mailersend','name'=>'MailerSend','host'=>'smtp.mailersend.net','port'=>587,'encryption'=>'tls','limit'=>'free allowance varies'],
+                    [
+                        'key'=>'sendpulse','name'=>'SendPulse','host'=>'smtp-pulse.com','port'=>587,'encryption'=>'tls',
+                        'limit'=>'Free plan: up to 12,000/month',
+                        'setup'=>'Create/activate SMTP in SendPulse, verify your domain/sender, then copy SMTP server, port, login and password from SMTP Settings > General.',
+                    ],
+                    [
+                        'key'=>'gmail','name'=>'Google / Gmail','host'=>'smtp.gmail.com','port'=>587,'encryption'=>'tls',
+                        'limit'=>'Best for testing / low-volume',
+                        'setup'=>'Enable Google 2-Step Verification, create a Google App Password, then use the Gmail address as username and the 16-character App Password as SMTP password.',
+                    ],
+                    [
+                        'key'=>'brevo','name'=>'Brevo','host'=>'smtp-relay.brevo.com','port'=>587,'encryption'=>'tls',
+                        'limit'=>'300 emails/day',
+                        'setup'=>'Create a Brevo SMTP key, verify your sender/domain, then enter the SMTP relay host, port, login and SMTP key.',
+                    ],
+                    [
+                        'key'=>'smtp2go','name'=>'SMTP2GO','host'=>'mail.smtp2go.com','port'=>2525,'encryption'=>'tls',
+                        'limit'=>'Free allowance varies by current plan',
+                        'setup'=>'Create an SMTP user in SMTP2GO, verify your sender/domain and copy the SMTP credentials into this profile.',
+                    ],
+                    [
+                        'key'=>'mailjet','name'=>'Mailjet','host'=>'in-v3.mailjet.com','port'=>587,'encryption'=>'tls',
+                        'limit'=>'Free allowance varies by current plan',
+                        'setup'=>'Verify your sender/domain, create/use the Mailjet API key and secret as SMTP username/password, then use the displayed SMTP host and port.',
+                    ],
+                    [
+                        'key'=>'resend','name'=>'Resend SMTP','host'=>'smtp.resend.com','port'=>587,'encryption'=>'tls',
+                        'limit'=>'Free allowance varies by current plan',
+                        'setup'=>'Verify your sending domain in Resend and use an SMTP/API credential supported by your Resend account; username is typically resend and password is the API key.',
+                    ],
+                    [
+                        'key'=>'mailersend','name'=>'MailerSend','host'=>'smtp.mailersend.net','port'=>587,'encryption'=>'tls',
+                        'limit'=>'Free allowance varies by current plan',
+                        'setup'=>'Verify your sending domain, create an SMTP token/credential in MailerSend and enter its host, port, username and password here.',
+                    ],
+                    [
+                        'key'=>'cpanel','name'=>'Custom / cPanel SMTP','host'=>'mail.yourdomain.com','port'=>465,'encryption'=>'ssl',
+                        'limit'=>'Depends on your hosting provider',
+                        'setup'=>'In cPanel create an Email Account, open Connect Devices, choose Secure SSL/TLS settings and copy the outgoing SMTP server, port, email username and mailbox password.',
+                    ],
                 ],
             ],
         ]);
@@ -72,14 +104,21 @@ class SystemSettingsController extends Controller
             'social.*'=>['nullable','url','max:255'],
             'smtp'=>['nullable','array'],
             'smtp.enabled'=>['nullable','boolean'],
-            'smtp.provider'=>['nullable','string','max:40'],
-            'smtp.host'=>['nullable','string','max:255'],
-            'smtp.port'=>['nullable','integer','between:1,65535'],
-            'smtp.encryption'=>['nullable','in:tls,ssl,null'],
-            'smtp.username'=>['nullable','string','max:255'],
-            'smtp.password'=>['nullable','string','max:500'],
-            'smtp.from_address'=>['nullable','email','max:254'],
-            'smtp.from_name'=>['nullable','string','max:120'],
+            'smtp.strategy'=>['nullable','in:failover,roundrobin'],
+            'smtp.profiles'=>['nullable','array','max:20'],
+            'smtp.profiles.*.key'=>['required','string','regex:/^[a-z0-9_-]{2,40}$/'],
+            'smtp.profiles.*.name'=>['required','string','max:80'],
+            'smtp.profiles.*.provider'=>['required','string','max:40'],
+            'smtp.profiles.*.enabled'=>['nullable','boolean'],
+            'smtp.profiles.*.priority'=>['nullable','integer','min:1','max:999'],
+            'smtp.profiles.*.weight'=>['nullable','integer','min:1','max:100'],
+            'smtp.profiles.*.host'=>['required','string','max:255'],
+            'smtp.profiles.*.port'=>['required','integer','between:1,65535'],
+            'smtp.profiles.*.encryption'=>['required','in:tls,ssl,null'],
+            'smtp.profiles.*.username'=>['nullable','string','max:255'],
+            'smtp.profiles.*.password'=>['nullable','string','max:1000'],
+            'smtp.profiles.*.from_address'=>['nullable','email','max:254'],
+            'smtp.profiles.*.from_name'=>['nullable','string','max:120'],
         ]);
 
         $paletteKeys=['primary','secondary','accent','background','surface','text','muted','border','success','warning','danger'];
@@ -95,15 +134,7 @@ class SystemSettingsController extends Controller
 
         $data['business']=$data['business']??[];
         $data['social']=$data['social']??[];
-        $smtp=$data['smtp']??[];
-        $existing=SystemSetting::query()->where('key','smtp')->value('value');
-        $passwordSupplied = !empty($smtp['password']);
-        if(!$passwordSupplied && is_string($existing)){
-            $old=json_decode($existing,true);
-            if(is_array($old) && !empty($old['password'])) $smtp['password']=$old['password'];
-        }
-        $data['smtp']=array_intersect_key($smtp,array_flip(['enabled','provider','host','port','encryption','username','password','from_address','from_name']));
-        if ($passwordSupplied) $data['smtp']['password'] = Crypt::encryptString($data['smtp']['password']);
+        $data['smtp']=$this->prepareSmtp($data['smtp']??[]);
 
         try {
             foreach(['platform_name','support_email','support_notice','default_timezone','theme_key','theme_primary','skin_default'] as $key){
@@ -116,12 +147,74 @@ class SystemSettingsController extends Controller
                     'is_secret'=>$key==='smtp',
                 ]);
             }
-            $audit->record('admin.system_settings.updated',null,['setting_keys'=>self::KEYS],$request);
+            $audit->record('admin.system_settings.updated',null,['setting_keys'=>self::KEYS,'smtp_strategy'=>$data['smtp']['strategy']??'failover'], $request);
             return back()->with('success','System settings saved and published globally.');
         }catch(\Throwable $e){
             report($e);
             return back()->with('error','System settings could not be saved safely.');
         }
+    }
+
+    private function prepareSmtp(array $smtp): array
+    {
+        $existingRaw = SystemSetting::query()->where('key','smtp')->value('value');
+        $existing = is_string($existingRaw) ? (json_decode($existingRaw,true) ?: []) : [];
+        $existingProfiles = [];
+
+        if (isset($existing['profiles']) && is_array($existing['profiles'])) {
+            $existingProfiles = $existing['profiles'];
+        } elseif (isset($existing['host'])) {
+            $existingProfiles = [[
+                'key'=>'legacy',
+                'name'=>(string)($existing['provider']??'Existing SMTP'),
+                'provider'=>(string)($existing['provider']??'custom'),
+                'enabled'=>(bool)($existing['enabled']??false),
+                'priority'=>1,'weight'=>1,
+                'host'=>(string)($existing['host']??''),
+                'port'=>(int)($existing['port']??587),
+                'encryption'=>(string)($existing['encryption']??'tls'),
+                'username'=>(string)($existing['username']??''),
+                'password'=>(string)($existing['password']??''),
+                'from_address'=>(string)($existing['from_address']??''),
+                'from_name'=>(string)($existing['from_name']??''),
+            ]];
+        }
+
+        $oldByKey = [];
+        foreach ($existingProfiles as $profile) if (is_array($profile) && !empty($profile['key'])) $oldByKey[(string)$profile['key']]=$profile;
+
+        $clean=[];
+        foreach (($smtp['profiles']??[]) as $profile) {
+            $key=(string)$profile['key'];
+            $old=$oldByKey[$key]??[];
+            $password=(string)($profile['password']??'');
+            if ($password==='') $password=(string)($old['password']??'');
+            elseif (!empty($password)) {
+                try { $password=Crypt::encryptString($password); } catch (\Throwable) {}
+            }
+
+            $clean[]=[
+                'key'=>$key,
+                'name'=>(string)$profile['name'],
+                'provider'=>(string)$profile['provider'],
+                'enabled'=>(bool)($profile['enabled']??false),
+                'priority'=>(int)($profile['priority']??1),
+                'weight'=>(int)($profile['weight']??1),
+                'host'=>(string)$profile['host'],
+                'port'=>(int)$profile['port'],
+                'encryption'=>(string)$profile['encryption'],
+                'username'=>(string)($profile['username']??''),
+                'password'=>$password,
+                'from_address'=>(string)($profile['from_address']??''),
+                'from_name'=>(string)($profile['from_name']??''),
+            ];
+        }
+
+        return [
+            'enabled'=>(bool)($smtp['enabled']??false),
+            'strategy'=>(string)($smtp['strategy']??'failover'),
+            'profiles'=>$clean,
+        ];
     }
 
     public function upload(Request $request, AuditLogger $audit): RedirectResponse
@@ -147,27 +240,46 @@ class SystemSettingsController extends Controller
 
     public function testSmtp(Request $request): RedirectResponse
     {
-        $data=$request->validate(['email'=>['required','email','max:254']]);
+        $data=$request->validate([
+            'email'=>['required','email','max:254'],
+            'profile_key'=>['required','string','max:40'],
+        ]);
+
         $stored=SystemSetting::query()->where('key','smtp')->value('value');
         $smtp=is_string($stored)?(json_decode($stored,true)?:[]):[];
-        try { if (!empty($smtp['password'])) $smtp['password'] = Crypt::decryptString($smtp['password']); } catch (\Throwable) { return back()->with('error','Stored SMTP credentials could not be decrypted. Please save the SMTP password again.'); }
-        if(empty($smtp['enabled']) || empty($smtp['host']) || empty($smtp['username']) || empty($smtp['password'])){
-            return back()->with('error','SMTP is not fully configured. Add the SMTP credentials first.');
+        $profile=collect($smtp['profiles']??[])->firstWhere('key',$data['profile_key']);
+
+        if (!is_array($profile)) return back()->with('error','SMTP profile was not found.');
+        try { $profile['password']=Crypt::decryptString((string)($profile['password']??'')); }
+        catch (\Throwable) { return back()->with('error','Stored SMTP credentials could not be decrypted. Save the SMTP password again.'); }
+
+        if(empty($profile['host']) || empty($profile['username']) || empty($profile['password'])){
+            return back()->with('error','SMTP profile is not fully configured.');
         }
-        config(['mail.mailers.platform_smtp'=>[
-            'transport'=>'smtp','host'=>$smtp['host'],'port'=>(int)($smtp['port']??587),
-            'encryption'=>($smtp['encryption']??'tls')==='null'?null:($smtp['encryption']??'tls'),
-            'username'=>$smtp['username'],'password'=>$smtp['password'],'timeout'=>15,
+
+        config(['mail.mailers.smtp_test'=>[
+            'transport'=>'smtp',
+            'host'=>$profile['host'],
+            'port'=>(int)$profile['port'],
+            'encryption'=>$profile['encryption']==='null'?null:$profile['encryption'],
+            'username'=>$profile['username'],
+            'password'=>$profile['password'],
+            'timeout'=>15,
         ]]);
+
         try{
-            Mail::mailer('platform_smtp')->raw('SMTP test from '.($smtp['from_name']??config('app.name','platform')),function($message)use($data,$smtp){
-                $message->to($data['email'])->from($smtp['from_address']??config('mail.from.address'),$smtp['from_name']??config('mail.from.name'));
-                $message->subject('SMTP connection test');
-            });
-            return back()->with('success','SMTP test email sent successfully.');
+            Mail::mailer('smtp_test')->raw(
+                'SMTP test from '.($profile['from_name']??config('app.name','platform')),
+                function($message)use($data,$profile){
+                    $message->to($data['email'])
+                        ->from($profile['from_address']??config('mail.from.address'),$profile['from_name']??config('mail.from.name'))
+                        ->subject('SMTP connection test — '.($profile['name']??'SMTP'));
+                }
+            );
+            return back()->with('success','SMTP test email sent successfully through '.($profile['name']??'selected provider').'.');
         }catch(\Throwable $e){
             report($e);
-            return back()->with('error','SMTP test failed. Check host, port, encryption, username, password and DNS sender verification.');
+            return back()->with('error','SMTP test failed. Check credentials, sender verification, host, port, encryption and DNS.');
         }
     }
 }
