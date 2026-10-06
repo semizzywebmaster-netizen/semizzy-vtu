@@ -880,7 +880,7 @@ class ProviderEngineController extends Controller
         $safe = [];
         foreach ($options as $key => $value) {
             $name = strtolower((string) $key);
-            $safe[$key] = preg_match('/token|secret|password|passwd|pin|api[_-]?key|authorization|credential/i', $name)
+            $safe[$key] = preg_match('/token|secret|password|passwd|pin|api[_-]?key|authorization|auth|credential|private[_-]?key|signature|cookie|session|jwt|webhook|client[_-]?id|username/i', $name)
                 ? '[REDACTED]'
                 : (is_scalar($value) || $value === null ? $value : '[CONFIGURED]');
         }
