@@ -47,9 +47,11 @@ const statusClass: Record<string, string> = {
 
 export default function Addons({ addons }: Props) {
   const [showRegister, setShowRegister] = useState(false);
+  const [showCacRegister, setShowCacRegister] = useState(false);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
   const vtuAddon = useMemo(() => addons.find((addon) => addon.identifier === 'vtu.digital-services'), [addons]);
+  const cacAddon = useMemo(() => addons.find((addon) => addon.identifier === 'cac.business-services'), [addons]);
 
   const submitRegister = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -60,6 +62,15 @@ export default function Addons({ addons }: Props) {
         setShowRegister(false);
         event.currentTarget.reset();
       },
+      onFinish: () => setProcessing(null),
+    });
+  };
+
+  const submitCacRegister = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setProcessing('register-cac');
+    router.post('/admin/addons/register-cac', undefined, {
+      onSuccess: () => setShowCacRegister(false),
       onFinish: () => setProcessing(null),
     });
   };
@@ -102,10 +113,54 @@ export default function Addons({ addons }: Props) {
               <p className="mt-2 text-sm text-slate-600">Register, validate, install, activate, disable, and archive Core addons.</p>
             </div>
             {vtuAddon?.status === 'active' && <Link href="/admin/vtu" className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Open VTU Dashboard</Link>}
+            {cacAddon?.status === 'active' && <Link href="/admin/cac/orders" className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white">Open CAC Services</Link>}
             {!vtuAddon && <button disabled={Boolean(processing)} onClick={() => setShowRegister((v) => !v)} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">
               {showRegister ? 'Close VTU Registration' : 'Register VTU Addon'}
             </button>}
           </div>
+
+          {!cacAddon && (
+            <section className="mt-6 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Available built-in addon</p>
+                  <h2 className="mt-1 text-xl font-extrabold text-slate-900">CAC Business Services</h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">CAC business-name/company registration, CAC search and verification, document workflow, orders and provider routing.</p>
+                  <p className="mt-2 text-xs font-mono text-slate-500">cac.business-services · v1.0.0 · Core >=2.0.0 · Dependencies: None</p>
+                </div>
+                <button disabled={Boolean(processing)} onClick={() => setShowCacRegister((v) => !v)} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+                  {showCacRegister ? 'Close CAC Registration' : 'Register CAC Addon'}
+                </button>
+              </div>
+              {showCacRegister && (
+                <form onSubmit={submitCacRegister} className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                  <p className="text-sm font-bold text-slate-900">Register CAC Business Services</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">Registration only creates the lifecycle record. You will still need to install and then activate the addon.</p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                      ['Identifier', 'cac.business-services'],
+                      ['Version', '1.0.0'],
+                      ['Compatibility', '>=2.0.0'],
+                      ['Dependencies', 'None'],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-lg bg-white p-3">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
+                        <p className="mt-1 break-words text-sm font-semibold text-slate-800">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    {['cac.view','cac.orders.manage','cac.products.manage','cac.providers.manage','cac.documents.manage','cac.settings.manage','cac.transactions.view'].map((permission) => (
+                      <span key={permission} className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-700">{permission}</span>
+                    ))}
+                  </div>
+                  <button type="submit" disabled={processing === 'register-cac'} className="mt-4 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+                    {processing === 'register-cac' ? 'Registering…' : 'Register CAC Addon'}
+                  </button>
+                </form>
+              )}
+            </section>
+          )}
 
           <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
             <p className="font-bold text-slate-900">Activation safety</p>
