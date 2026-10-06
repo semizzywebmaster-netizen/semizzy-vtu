@@ -9,7 +9,7 @@ type Props = {
     name:string; username:string; email:string; phone:string; avatarUrl:string|null; address:string|null; city:string|null; state:string|null;
     country:string|null; postalCode:string|null; dateOfBirth:string|null; gender:string|null; occupation:string|null;
     identityType:string|null; identityNumber:string|null; identityDocumentUrl:string|null; kycStatus:string;
-    role:string; status:string; emailVerifiedAt:string|null; phoneVerifiedAt:string|null; referralCode:string; referralLink:string;
+    role:string; status:string; emailVerifiedAt:string|null; phoneVerifiedAt:string|null; referralCode:string; referralLink:string; hasTransactionPin:boolean; isApiUser:boolean;
   };
 };
 
@@ -18,14 +18,14 @@ const kycLabel=(v:string)=>v==='pending'?'Pending review':v==='verified'?'Verifi
 
 export default function Profile({user,tier,tiers}:Props){
   const unreadCount=usePage<SharedProps>().props.navigation?.unreadNotifications??0;
-  const passwordForm=useForm({current_password:'',password:'',password_confirmation:''});
+  const passwordForm=useForm({current_password:'',password:'',password_confirmation:'',transaction_pin:''});
   const profileForm=useForm<{
     email:string; phone:string; avatar:File|null; address:string; city:string; state:string; country:string; postal_code:string; date_of_birth:string;
-    gender:string; occupation:string; identity_type:string; identity_number:string; identity_document:File|null;
+    gender:string; occupation:string; identity_type:string; identity_number:string; identity_document:File|null; transaction_pin:string;
   }>({
     email:user.email,phone:user.phone??'',avatar:null,address:user.address??'',city:user.city??'',state:user.state??'',country:user.country??'Nigeria',
     postal_code:user.postalCode??'',date_of_birth:user.dateOfBirth??'',gender:user.gender??'',occupation:user.occupation??'',
-    identity_type:user.identityType??'',identity_number:user.identityNumber??'',identity_document:null,
+    identity_type:user.identityType??'',identity_number:user.identityNumber??'',identity_document:null,transaction_pin:'',
   });
 
   const submitProfile=(event:React.FormEvent)=>{
@@ -92,7 +92,7 @@ export default function Profile({user,tier,tiers}:Props){
             </div>
           </div>
 
-          {Object.values(profileForm.errors).length>0&&<div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">Please correct the highlighted profile fields and try again.</div>}
+          <label className="block"><span className="text-xs font-bold uppercase tracking-wide text-slate-500">Transaction PIN</span><input required inputMode="numeric" pattern="\\d{4}" maxLength={4} type="password" className="field mt-1" placeholder="4-digit PIN" value={profileForm.data.transaction_pin} onChange={e=>profileForm.setData('transaction_pin',e.target.value.replace(/\\D/g,'').slice(0,4))}/><span className="mt-1 block text-xs text-slate-500">Required to save protected profile changes.</span></label>{Object.values(profileForm.errors).length>0&&<div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">Please correct the highlighted profile fields and try again.</div>}
           <button disabled={profileForm.processing} className="w-full rounded-xl bg-indigo-600 p-3.5 font-black text-white disabled:opacity-50">{profileForm.processing?'Saving profile…':'Save profile changes'}</button>
           {profileForm.recentlySuccessful&&<p className="text-center text-sm font-bold text-emerald-700">Profile updated successfully.</p>}
         </form>
@@ -109,7 +109,7 @@ export default function Profile({user,tier,tiers}:Props){
 
       <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Security PIN</p><h2 className="mt-1 text-lg font-black">Transaction PIN</h2><p className="mt-1 text-sm text-slate-600">{user.hasTransactionPin?'Your 4-digit transaction PIN is active.':'Set a 4-digit transaction PIN before transactions or protected profile changes.'}</p><Link href="/profile/transaction-pin" className="mt-4 inline-flex rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">{user.hasTransactionPin?'Change transaction PIN':'Set transaction PIN'} →</Link></section>
 
-<form onSubmit={submitPassword} className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold text-slate-900">Change password</h2><p className="mt-1 text-sm text-slate-600">Enter your current password before choosing a new password.</p><div className="mt-5 space-y-3"><input className="w-full rounded-xl border border-slate-300 p-3" type="password" autoComplete="current-password" placeholder="Current password" value={passwordForm.data.current_password} onChange={e=>passwordForm.setData('current_password',e.target.value)} />{passwordForm.errors.current_password&&<p className="text-sm text-red-600">{passwordForm.errors.current_password}</p>}<input className="w-full rounded-xl border border-slate-300 p-3" type="password" autoComplete="new-password" placeholder="New password" value={passwordForm.data.password} onChange={e=>passwordForm.setData('password',e.target.value)} />{passwordForm.errors.password&&<p className="text-sm text-red-600">{passwordForm.errors.password}</p>}<input className="w-full rounded-xl border border-slate-300 p-3" type="password" autoComplete="new-password" placeholder="Confirm new password" value={passwordForm.data.password_confirmation} onChange={e=>passwordForm.setData('password_confirmation',e.target.value)} /></div><button disabled={passwordForm.processing} className="mt-5 w-full rounded-xl bg-slate-900 p-3 font-semibold text-white disabled:opacity-50">{passwordForm.processing?'Updating…':'Change password'}</button></form>
+<form onSubmit={submitPassword} className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold text-slate-900">Change password</h2><p className="mt-1 text-sm text-slate-600">Enter your current password before choosing a new password.</p><div className="mt-5 space-y-3"><input className="w-full rounded-xl border border-slate-300 p-3" type="password" autoComplete="current-password" placeholder="Current password" value={passwordForm.data.current_password} onChange={e=>passwordForm.setData('current_password',e.target.value)} />{passwordForm.errors.current_password&&<p className="text-sm text-red-600">{passwordForm.errors.current_password}</p>}<input className="w-full rounded-xl border border-slate-300 p-3" type="password" autoComplete="new-password" placeholder="New password" value={passwordForm.data.password} onChange={e=>passwordForm.setData('password',e.target.value)} />{passwordForm.errors.password&&<p className="text-sm text-red-600">{passwordForm.errors.password}</p>}<input className="w-full rounded-xl border border-slate-300 p-3" type="password" autoComplete="new-password" placeholder="Confirm new password" value={passwordForm.data.password_confirmation} onChange={e=>passwordForm.setData('password_confirmation',e.target.value)} /></div><input required inputMode="numeric" pattern="\\d{4}" maxLength={4} type="password" className="w-full rounded-xl border border-slate-300 p-3" placeholder="Transaction PIN" value={passwordForm.data.transaction_pin} onChange={e=>passwordForm.setData('transaction_pin',e.target.value.replace(/\\D/g,'').slice(0,4))}/><button disabled={passwordForm.processing} className="mt-5 w-full rounded-xl bg-slate-900 p-3 font-semibold text-white disabled:opacity-50">{passwordForm.processing?'Updating…':'Change password'}</button></form>
       <CoreMobileNav active="profile" unreadCount={unreadCount} />
     </div>
   </main>;
