@@ -235,6 +235,9 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/addons/install-vtu', [AddonController::class, 'installVtu'])->middleware('permission:addons.manage')->name('admin.addons.install-vtu');
         Route::post('/addons/register-cac', [AddonController::class, 'registerCac'])->middleware('permission:addons.manage')->name('admin.addons.register-cac');
         Route::post('/addons/install-cac', [AddonController::class, 'installCac'])->middleware('permission:addons.manage')->name('admin.addons.install-cac');
+        Route::get('/cac/products', [\App\Http\Controllers\Admin\CacServiceProductController::class, 'index'])->middleware('permission:cac.products.manage')->name('admin.cac.products');
+        Route::post('/cac/products', [\App\Http\Controllers\Admin\CacServiceProductController::class, 'store'])->middleware('permission:cac.products.manage')->name('admin.cac.products.store');
+        Route::put('/cac/products/{product}', [\App\Http\Controllers\Admin\CacServiceProductController::class, 'update'])->middleware('permission:cac.products.manage')->name('admin.cac.products.update');
         Route::middleware('ensure.vtu')->prefix('vtu')->group(function (): void {
             Route::get('/', [VtuAdminController::class, 'dashboard'])->middleware('permission:vtu.view')->name('admin.vtu.dashboard');
             Route::get('/services', [VtuAdminController::class, 'services'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services');
