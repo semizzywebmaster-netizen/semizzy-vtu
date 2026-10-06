@@ -124,6 +124,16 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
         </section>}
       </div>
 
+      <section className="mt-5 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <div className="flex items-center justify-between gap-3">
+          <div><p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Everything in one place</p><h2 className="mt-1 text-xl font-black">All available features</h2><p className="mt-1 text-sm text-slate-500">Core account, wallet, security, support and service actions.</p></div>
+          <Link href="/help" className="text-sm font-bold text-indigo-700">Help</Link>
+        </div>
+        <div className="mt-4 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+          {quickLinks.map(link => <Link key={link.url + link.label} href={link.url} className="rounded-2xl border border-slate-200 p-3 text-sm font-bold hover:border-indigo-200 hover:bg-indigo-50">{link.label}</Link>)}
+        </div>
+      </section>
+
       <CoreMobileNav active="home" unreadCount={unreadNotifications || 0} />
     </main>;
   }
