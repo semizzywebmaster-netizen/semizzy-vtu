@@ -3,6 +3,7 @@
 namespace App\Services\Communication;
 
 use App\Models\CommunicationCampaign;
+use App\Models\CommunicationDeliveryLog;
 use App\Models\User;
 use App\Notifications\CoreNotification;
 use Illuminate\Support\Facades\DB;
@@ -66,6 +67,24 @@ class CommunicationCenterService
             ->orderBy('id')
             ->chunkById(250, function ($users) use ($campaign, $supported, &$queued): void {
                 foreach ($users as $user) {
+                    CommunicationDeliveryLog::create([
+                        'campaign_id' => $campaign->id,
+                        'user_id' => $user->id,
+                        'channel' => 'web_push',
+                        'status' => 'queued',
+                        'attempts' => 0,
+                        'queued_at' => now(),
+                    ]);
+                    if (in_array('email', $supported, true)) {
+                        CommunicationDeliveryLog::create([
+                            'campaign_id' => $campaign->id,
+                            'user_id' => $user->id,
+                            'channel' => 'email',
+                            'status' => filled($user->email) ? 'queued' : 'skipped',
+                            'attempts' => 0,
+                            'queued_at' => filled($user->email) ? now() : null,
+                        ]);
+                    }
                     $user->notify(new CoreNotification(
                         $campaign->title,
                         $campaign->message,
