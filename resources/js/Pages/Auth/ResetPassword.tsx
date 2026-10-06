@@ -1,7 +1,7 @@
 import { Head } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 
-export default function ResetPassword() {
+export default function ResetPassword({ platform }: { platform?: { platform_name?: string } }) {
   return <main className="mx-auto flex min-h-screen max-w-md items-center px-6 py-10">
     <Head title="Set new password" />
     <section className="w-full rounded-2xl border bg-white p-6 shadow-sm">
