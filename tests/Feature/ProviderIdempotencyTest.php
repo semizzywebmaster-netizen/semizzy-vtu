@@ -94,6 +94,31 @@ class ProviderIdempotencyTest extends TestCase
         $this->assertSame('PROVIDER-UNKNOWN', $second->providerReference);
     }
 
+    public function test_same_key_while_request_is_in_progress_does_not_call_provider_again(): void
+    {
+        [$service, $provider] = $this->providerFor('idempotent-in-progress');
+
+        $idempotency = app(ProviderIdempotencyService::class);
+        $idempotency->reserve($provider, 'idem-in-progress', ['recipient' => '08000000000'], 60);
+
+        $adapter = $this->mock(RestJsonProviderAdapter::class);
+        $adapter->shouldReceive('execute')->never();
+        $this->mock(ProviderRequestLogger::class, function ($mock): void {
+            $mock->shouldReceive('record')->zeroOrMoreTimes();
+        });
+
+        $result = app(ProviderManager::class)->executeProvider(
+            $provider,
+            $service->key,
+            'transaction_initiation',
+            ['recipient' => '08000000000'],
+            'idem-in-progress'
+        );
+
+        $this->assertSame('PENDING', $result->status);
+        $this->assertTrue($result->duplicateRisk);
+    }
+
     public function test_expired_in_progress_record_can_be_reclaimed(): void
     {
         [$service, $provider] = $this->providerFor('idempotent-reclaim');
