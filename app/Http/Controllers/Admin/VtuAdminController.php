@@ -67,7 +67,7 @@ class VtuAdminController extends Controller
   $message="Bulk mapping update completed: {$changed} changed, {$skipped} skipped."; return $r->expectsJson()?response()->json(['status'=>'completed','changed'=>$changed,'skipped'=>$skipped,'message'=>$message]):back()->with('success',$message);
  }
 
- public function saveMapping(Request $r, AuditLogger $audit){
+ public function saveMapping(Request $r, AuditLogger $audit): JsonResponse|\Illuminate\Http\RedirectResponse{
   $data=$r->validate([
    'api_provider_id'=>'required|integer|exists:api_providers,id',
    'service_id'=>'required|integer|exists:services,id',
@@ -78,17 +78,18 @@ class VtuAdminController extends Controller
   ]);
   $provider=ApiProvider::findOrFail($data['api_provider_id']);
   $service=Service::with('category')->findOrFail($data['service_id']);
-  if(!$service->category || $service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can have VTU provider mappings.');
+  if(!$service->category || $service->category->key!=='vtu-digital-services'){ $message='Only VTU services can have VTU provider mappings.'; return $r->expectsJson()?response()->json(['message'=>$message],422):back()->with('error',$message); }
   if($data['enabled']??false){
-   if(!$provider->enabled || $provider->paused || $provider->verification_status!=='live_verified' || $provider->integration_status!=='live_verified') return back()->with('error','A mapping can only be enabled for an enabled, unpaused, live-verified provider.');
-   if(!$service->enabled)return back()->with('error','The VTU service must be enabled before its provider mapping can be enabled.');
+   if(!$provider->enabled || $provider->paused || $provider->verification_status!=='live_verified' || $provider->integration_status!=='live_verified'){ $message='A mapping can only be enabled for an enabled, unpaused, live-verified provider.'; return $r->expectsJson()?response()->json(['message'=>$message],422):back()->with('error',$message); }
+   if(!$service->enabled){ $message='The VTU service must be enabled before its provider mapping can be enabled.'; return $r->expectsJson()?response()->json(['message'=>$message],422):back()->with('error',$message); }
   }
   $mapping=ProviderServiceMapping::updateOrCreate(
    ['api_provider_id'=>$provider->id,'service_key'=>$service->key],
    ['service_id'=>$service->id,'provider_service_id'=>$data['provider_service_id']??null,'capabilities'=>$data['capabilities']??[],'enabled'=>$data['enabled']??false]
   );
   $audit->record('vtu.provider_mapping.saved',$mapping,['provider_id'=>$provider->id,'service_id'=>$service->id,'enabled'=>(bool)$mapping->enabled],$r);
-  return back()->with('success','Provider service mapping saved.');
+  $message='Provider service mapping saved.';
+  return $r->expectsJson()?response()->json(['status'=>'completed','message'=>$message,'mapping_id'=>$mapping->id]):back()->with('success',$message);
  }
 
  public function products(){return Inertia::render('Admin/VTU/Products',['products'=>ServiceProduct::whereHas('service.category',fn($q)=>$q->where('key','vtu-digital-services'))->with('service')->latest()->paginate(50)]);}
@@ -155,12 +156,12 @@ class VtuAdminController extends Controller
   $message="Bulk transaction requery checked {$checked}; {$changed} state change(s), {$skipped} skipped/failed."; return $r->expectsJson()?response()->json(['status'=>'completed','checked'=>$checked,'changed'=>$changed,'skipped'=>$skipped,'message'=>$message]):back()->with('success',$message);
  }
 
- public function requery(VtuTransaction $transaction,VtuTransactionService $s){try{$s->requery($transaction);return back()->with('success','Transaction requery completed.');}catch(\Throwable $e){report($e);return back()->with('error','Transaction requery failed safely.');}}
+ public function requery(Request $r,VtuTransaction $transaction,VtuTransactionService $s): JsonResponse|\Illuminate\Http\RedirectResponse{try{$s->requery($transaction);$message='Transaction requery completed.';return $r->expectsJson()?response()->json(['status'=>'completed','message'=>$message]):back()->with('success',$message);}catch(\Throwable $e){report($e);$message='Transaction requery failed safely.';return $r->expectsJson()?response()->json(['message'=>$message],500):back()->with('error',$message);}}
  public function refund(Request $r,VtuTransaction $transaction,VtuTransactionService $s){
   $data=$r->validate(['reason'=>['nullable','string','max:500']]);try{$transaction=$s->refund($transaction,(string)($data['reason']??'Administrative refund'));}catch(\Throwable $e){report($e);return back()->with('error','Refund could not be completed safely. Check reconciliation state.');}
   return back()->with($transaction->status==='reversed'?'success':'error',$transaction->status==='reversed'?'Transaction refunded successfully.':($transaction->failure_message??'Refund requires provider reconciliation.'));
  }
- public function enableService(Service $service){$service->loadMissing('category');if(!$service->category||$service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');try{$service->updateOrFail(['enabled'=>true]);return back()->with('success','Service enabled.');}catch(\Throwable $e){report($e);return back()->with('error','Service could not be enabled safely.');}}
- public function disableService(Service $service){$service->loadMissing('category');if(!$service->category||$service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU services can be managed here.');try{$service->updateOrFail(['enabled'=>false]);return back()->with('success','Service disabled.');}catch(\Throwable $e){report($e);return back()->with('error','Service could not be disabled safely.');}}
- public function bootstrap(VtuServiceRegistry $r){try{$r->bootstrapCatalogue();return back()->with('success','VTU service registry synchronized.');}catch(\Throwable $e){report($e);return back()->with('error','VTU service registry synchronization failed safely.');}}
+ public function enableService(Request $r, Service $service): JsonResponse|\Illuminate\Http\RedirectResponse{$service->loadMissing('category');if(!$service->category||$service->category->key!=='vtu-digital-services'){ $message='Only VTU services can be managed here.'; return $r->expectsJson()?response()->json(['message'=>$message],422):back()->with('error',$message);}try{$service->updateOrFail(['enabled'=>true]);$message='Service enabled.';return $r->expectsJson()?response()->json(['status'=>'completed','message'=>$message]):back()->with('success',$message);}catch(\Throwable $e){report($e);$message='Service could not be enabled safely.';return $r->expectsJson()?response()->json(['message'=>$message],500):back()->with('error',$message);}}
+ public function disableService(Request $r, Service $service): JsonResponse|\Illuminate\Http\RedirectResponse{$service->loadMissing('category');if(!$service->category||$service->category->key!=='vtu-digital-services'){ $message='Only VTU services can be managed here.'; return $r->expectsJson()?response()->json(['message'=>$message],422):back()->with('error',$message);}try{$service->updateOrFail(['enabled'=>false]);$message='Service disabled.';return $r->expectsJson()?response()->json(['status'=>'completed','message'=>$message]):back()->with('success',$message);}catch(\Throwable $e){report($e);$message='Service could not be disabled safely.';return $r->expectsJson()?response()->json(['message'=>$message],500):back()->with('error',$message);}}
+ public function bootstrap(Request $r, VtuServiceRegistry $rService): JsonResponse|\Illuminate\Http\RedirectResponse{try{$rService->bootstrapCatalogue();$message='VTU service registry synchronized.';return $r->expectsJson()?response()->json(['status'=>'completed','message'=>$message]):back()->with('success',$message);}catch(\Throwable $e){report($e);$message='VTU service registry synchronization failed safely.';return $r->expectsJson()?response()->json(['message'=>$message],500):back()->with('error',$message);}}
 }
