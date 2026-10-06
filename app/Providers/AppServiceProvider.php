@@ -3,9 +3,9 @@
 namespace App\Providers;
 
 use App\Models\SystemSetting;
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,25 +15,66 @@ class AppServiceProvider extends ServiceProvider
     {
         try {
             if (! Schema::hasTable('system_settings')) return;
+
             $raw = SystemSetting::query()->where('key','smtp')->value('value');
             $smtp = is_string($raw) ? json_decode($raw, true) : null;
-            if (!is_array($smtp) || empty($smtp['enabled']) || empty($smtp['host']) || empty($smtp['username']) || empty($smtp['password'])) return;
-            try { $smtp['password'] = Crypt::decryptString($smtp['password']); } catch (\Throwable) { return; }
+            if (!is_array($smtp) || empty($smtp['enabled']) || !is_array($smtp['profiles'] ?? null)) return;
+
+            $profiles = collect($smtp['profiles'])
+                ->filter(fn ($p) => is_array($p) && !empty($p['enabled']) && !empty($p['host']))
+                ->sortBy(fn ($p) => (int)($p['priority'] ?? 1))
+                ->values();
+
+            $mailers = [];
+            $names = [];
+
+            foreach ($profiles as $profile) {
+                $key = preg_replace('/[^a-zA-Z0-9_-]/', '_', (string)($profile['key'] ?? 'smtp'));
+                $name = 'platform_smtp_'.$key;
+                $password = (string)($profile['password'] ?? '');
+
+                try {
+                    if ($password !== '') $password = Crypt::decryptString($password);
+                } catch (\Throwable) {
+                    continue;
+                }
+
+                if ($password === '' || empty($profile['username'])) continue;
+
+                $mailers[$name] = [
+                    'transport'=>'smtp',
+                    'host'=>(string)$profile['host'],
+                    'port'=>(int)($profile['port'] ?? 587),
+                    'encryption'=>($profile['encryption'] ?? 'tls') === 'null' ? null : ($profile['encryption'] ?? 'tls'),
+                    'username'=>(string)$profile['username'],
+                    'password'=>$password,
+                    'timeout'=>15,
+                ];
+                $names[] = $name;
+            }
+
+            if (!$names) return;
+
+            $strategy = ($smtp['strategy'] ?? 'failover') === 'roundrobin' ? 'roundrobin' : 'failover';
 
             config([
-                'mail.default' => 'platform_smtp',
-                'mail.mailers.platform_smtp' => [
-                    'transport' => 'smtp',
-                    'host' => $smtp['host'],
-                    'port' => (int) ($smtp['port'] ?? 587),
-                    'encryption' => ($smtp['encryption'] ?? 'tls') === 'null' ? null : ($smtp['encryption'] ?? 'tls'),
-                    'username' => $smtp['username'],
-                    'password' => $smtp['password'],
-                    'timeout' => 15,
-                ],
-                'mail.from.address' => $smtp['from_address'] ?? config('mail.from.address'),
-                'mail.from.name' => $smtp['from_name'] ?? config('mail.from.name'),
+                'mail.mailers' => array_merge(config('mail.mailers', []), $mailers, [
+                    'platform_multi_smtp' => [
+                        'transport'=>$strategy,
+                        'mailers'=>$names,
+                        'retry_after'=>60,
+                    ],
+                ]),
+                'mail.default' => 'platform_multi_smtp',
             ]);
+
+            $first = $profiles->first();
+            if (is_array($first)) {
+                config([
+                    'mail.from.address' => $first['from_address'] ?? config('mail.from.address'),
+                    'mail.from.name' => $first['from_name'] ?? config('mail.from.name'),
+                ]);
+            }
         } catch (\Throwable) {
             // Keep .env/cPanel mail configuration as the safe fallback.
         }
