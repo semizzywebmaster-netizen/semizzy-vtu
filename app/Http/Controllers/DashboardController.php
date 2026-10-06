@@ -186,7 +186,7 @@ class DashboardController extends Controller
                 ];
             }
 
-            if (!$user->transaction_pin_hash) { $requiredActions[] = ['key'=>'transaction-pin','title'=>'Set your transaction PIN','message'=>'Create your 4-digit PIN before protected actions.','url'=>'/profile/transaction-pin','label'=>'Set transaction PIN','priority'=>'high']; }\n\n            if (!$user->phone_verified_at) {
+            if (!$user->transaction_pin_hash) {\n                $requiredActions[] = [\n                    'key' => 'transaction-pin',\n                    'title' => 'Set your transaction PIN',\n                    'message' => 'Create your 4-digit PIN before protected actions.',\n                    'url' => '/profile/transaction-pin',\n                    'label' => 'Set transaction PIN',\n                    'priority' => 'high',\n                ];\n            }\n\n            if (!$user->phone_verified_at) {
                 $requiredActions[] = [
                     'key' => 'phone-verification',
                     'title' => 'Verify your phone number',
