@@ -66,13 +66,13 @@ class CacOrderProcessor
                 'status' => $result->status,
                 'provider_reference' => $result->providerReference,
                 'request_payload' => $locked->request_payload,
-                'response_payload' => is_array($result->data) ? $result->data : null,
+                'response_payload' => $this->safeProviderData($result->data),
                 'error_message' => $result->message,
             ]);
 
             $locked->api_provider_id = $result->providerId ?: $locked->api_provider_id;
             $locked->provider_reference = $result->providerReference ?: $locked->provider_reference;
-            $locked->response_payload = is_array($result->data) ? $result->data : null;
+            $locked->response_payload = $this->safeProviderData($result->data);
 
             $meta = (array) $locked->metadata;
             unset($meta['provider_claimed'], $meta['provider_claimed_at']);
@@ -112,6 +112,29 @@ class CacOrderProcessor
 
             return $locked->fresh();
         });
+    }
+
+    private function safeProviderData(mixed $data): ?array
+    {
+        if (!is_array($data)) {
+            return null;
+        }
+
+        $redact = function (mixed $value, string $key = '') use (&$redact): mixed {
+            if (preg_match('/token|secret|password|authorization|credential|api[_-]?key/i', $key)) {
+                return '[REDACTED]';
+            }
+            if (is_array($value)) {
+                $out = [];
+                foreach ($value as $childKey => $childValue) {
+                    $out[$childKey] = $redact($childValue, (string) $childKey);
+                }
+                return $out;
+            }
+            return is_scalar($value) || $value === null ? $value : null;
+        };
+
+        return $redact($data);
     }
 
     private function markUnknownAfterProviderException(CacOrder $order, \Throwable $exception): CacOrder
