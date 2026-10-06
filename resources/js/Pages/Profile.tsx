@@ -20,10 +20,10 @@ export default function Profile({user,tier,tiers}:Props){
   const unreadCount=usePage<SharedProps>().props.navigation?.unreadNotifications??0;
   const passwordForm=useForm({current_password:'',password:'',password_confirmation:''});
   const profileForm=useForm<{
-    email:string; avatar:File|null; address:string; city:string; state:string; country:string; postal_code:string; date_of_birth:string;
+    email:string; phone:string; avatar:File|null; address:string; city:string; state:string; country:string; postal_code:string; date_of_birth:string;
     gender:string; occupation:string; identity_type:string; identity_number:string; identity_document:File|null;
   }>({
-    email:user.email,avatar:null,address:user.address??'',city:user.city??'',state:user.state??'',country:user.country??'Nigeria',
+    email:user.email,phone:user.phone??'',avatar:null,address:user.address??'',city:user.city??'',state:user.state??'',country:user.country??'Nigeria',
     postal_code:user.postalCode??'',date_of_birth:user.dateOfBirth??'',gender:user.gender??'',occupation:user.occupation??'',
     identity_type:user.identityType??'',identity_number:user.identityNumber??'',identity_document:null,
   });
@@ -63,7 +63,7 @@ export default function Profile({user,tier,tiers}:Props){
           <div className="grid gap-4 md:grid-cols-2">
             <LockedField label="Full name" value={user.name} />
             <LockedField label="Username" value={'@'+user.username} />
-            <LockedField label="Phone number" value={user.phone||'Not provided — you can set it once'} locked={phoneLocked} />
+            {phoneLocked ? <LockedField label="Phone number" value={user.phone} /> : <div><label className="text-xs font-bold uppercase tracking-wide text-slate-500">Phone number <span className="normal-case font-medium">(set once)</span></label><input type="tel" className="field mt-1" value={profileForm.data.phone} onChange={e=>profileForm.setData('phone',e.target.value)} placeholder="Phone number" />{profileForm.errors.phone&&<p className="mt-1 text-sm text-red-600">{profileForm.errors.phone}</p>}</div>}
             <div><label className="text-xs font-bold uppercase tracking-wide text-slate-500">Email address <span className="normal-case font-medium">(editable)</span></label><input type="email" className="mt-1 w-full rounded-xl border border-slate-300 p-3" value={profileForm.data.email} onChange={e=>profileForm.setData('email',e.target.value)} required />{profileForm.errors.email&&<p className="mt-1 text-sm text-red-600">{profileForm.errors.email}</p>}</div>
           </div>
 
