@@ -97,12 +97,13 @@ class SystemSettingsController extends Controller
         $data['social']=$data['social']??[];
         $smtp=$data['smtp']??[];
         $existing=SystemSetting::query()->where('key','smtp')->value('value');
-        if(empty($smtp['password']) && is_string($existing)){
+        $passwordSupplied = !empty($smtp['password']);
+        if(!$passwordSupplied && is_string($existing)){
             $old=json_decode($existing,true);
             if(is_array($old) && !empty($old['password'])) $smtp['password']=$old['password'];
         }
         $data['smtp']=array_intersect_key($smtp,array_flip(['enabled','provider','host','port','encryption','username','password','from_address','from_name']));
-        if (!empty($data['smtp']['password'])) $data['smtp']['password'] = Crypt::encryptString($data['smtp']['password']);
+        if ($passwordSupplied) $data['smtp']['password'] = Crypt::encryptString($data['smtp']['password']);
 
         try {
             foreach(['platform_name','support_email','support_notice','default_timezone','theme_key','theme_primary','skin_default'] as $key){
