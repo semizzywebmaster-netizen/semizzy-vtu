@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\WalletAccount;
 use App\Models\WalletMovement;
 use Illuminate\Support\Facades\DB;
+use App\Services\Platform\TierLimitService;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -36,8 +37,8 @@ class AdminWalletFundingService
                 throw new RuntimeException('The user wallet must be active before it can be funded.');
             }
 
-            $tier = max(1, min(3, (int) $user->tier));
-            $limit = config("semizzy.user_tiers.{$tier}.balance_limit_minor");
+            $tier = max(1, min(4, (int) $user->tier));
+            $limit = app(TierLimitService::class)->get($tier)['balance_limit_minor'];
             $before = (string) $wallet->available_minor;
             $after = $this->add($before, $minor);
 
