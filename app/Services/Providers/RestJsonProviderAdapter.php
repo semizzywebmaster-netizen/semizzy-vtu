@@ -30,9 +30,21 @@ class RestJsonProviderAdapter implements ProviderAdapter
             ->orderByDesc('is_default')
             ->first();
 
+        $operationAliases = match ($operation) {
+            'health_check' => ['health_check', 'health', 'status'],
+            'health' => ['health', 'health_check', 'status'],
+            'status' => ['status', 'health_check', 'health'],
+            'catalogue_retrieval' => ['catalogue_retrieval', 'catalogue', 'services', 'products', 'categories'],
+            'catalogue' => ['catalogue', 'catalogue_retrieval', 'services', 'products', 'categories'],
+            'services' => ['services', 'catalogue_retrieval', 'catalogue'],
+            'products' => ['products', 'catalogue_retrieval', 'catalogue'],
+            'categories' => ['categories', 'catalogue_retrieval', 'catalogue'],
+            default => [$operation],
+        };
+
         $configuredEndpoint = $connection
             ? $connection->provider()->exists()
-                ? $provider->endpoints()->where('enabled', true)->where('operation', $operation)->latest('id')->first()
+                ? $provider->endpoints()->where('enabled', true)->whereIn('operation', $operationAliases)->latest('id')->first()
                 : null
             : null;
 
