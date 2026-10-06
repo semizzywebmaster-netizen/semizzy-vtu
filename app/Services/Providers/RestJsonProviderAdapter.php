@@ -149,11 +149,11 @@ class RestJsonProviderAdapter implements ProviderAdapter
             }
 
             $response = match ($endpoint->content_type) {
-                'query' => $request->withOptions(['query' => array_merge($query, $body)])->request($endpoint->method, $url),
-                'form-data' => $request->asMultipart()->request($endpoint->method, $url, $body),
-                'x-www-form-urlencoded' => $request->asForm()->request($endpoint->method, $url, $body),
-                'raw' => $request->withBody((string) ($body['raw'] ?? ''), 'text/plain')->request($endpoint->method, $url),
-                default => $request->request($endpoint->method, $url, $body),
+                'query' => $request->withOptions(['query' => array_merge($query, $body)])->send($endpoint->method, $url),
+                'form-data' => $request->asMultipart()->send($endpoint->method, $url, $body),
+                'x-www-form-urlencoded' => $request->asForm()->send($endpoint->method, $url, $body),
+                'raw' => $request->withBody((string) ($body['raw'] ?? ''), 'text/plain')->send($endpoint->method, $url),
+                default => $request->send($endpoint->method, $url, $body),
             };
 
             $bodyResponse = $response->json();
@@ -182,15 +182,6 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 providerId: $provider->id,
             );
         } catch (\Throwable $e) {
-            // Never expose provider credentials, URLs with query strings, or raw
-            // transport details to callers. Tests may still surface the exception
-            // class/message so configuration regressions are diagnosable without
-            // weakening production error responses.
-            $message = 'Provider request failed; provider state must be rechecked before retry.';
-            if (app()->environment('testing')) {
-                $message .= ' [' . get_class($e) . ': ' . $e->getMessage() . ']';
-            }
-
             return new ProviderResult(
                 false,
                 'UNKNOWN',
