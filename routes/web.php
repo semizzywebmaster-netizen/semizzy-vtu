@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\AuditEventController;
 use App\Http\Controllers\Admin\CatalogueController;
 use App\Http\Controllers\Admin\ProviderController;
+use App\Http\Controllers\Admin\ProviderEngineController;
 use App\Http\Controllers\Admin\SystemHealthController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\SystemMaintenanceController;
@@ -181,6 +182,13 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.test');
         Route::post('/providers/{provider}/toggle', [ProviderController::class, 'toggle'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.toggle');
         Route::delete('/providers/{provider}', [ProviderController::class, 'destroy'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.destroy');
+        // Self-service provider engine
+        Route::post('/providers/{provider}/connections', [ProviderEngineController::class, 'storeConnection'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.connections.store');
+        Route::post('/provider-connections/{connection}/credentials', [ProviderEngineController::class, 'storeCredential'])->whereNumber('connection')->middleware('permission:providers.manage')->name('admin.provider-connections.credentials.store');
+        Route::post('/providers/{provider}/endpoints', [ProviderEngineController::class, 'storeEndpoint'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.endpoints.store');
+        Route::post('/providers/{provider}/discover-services', [ProviderEngineController::class, 'discovery'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.discover-services');
+        Route::get('/providers/{provider}/provider-services', [ProviderEngineController::class, 'services'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.provider-services');
+        Route::post('/providers/{provider}/provider-services/import', [ProviderEngineController::class, 'importSelected'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.provider-services.import');
 
         Route::get('/catalogue', [CatalogueController::class, 'index'])->middleware('permission:catalogue.view')->name('admin.catalogue.index');
         Route::post('/catalogue/categories', [CatalogueController::class, 'storeCategory'])->middleware('permission:catalogue.manage')->name('admin.catalogue.categories.store');
