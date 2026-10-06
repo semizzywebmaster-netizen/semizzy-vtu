@@ -17,7 +17,7 @@ class PlatformControlController extends Controller
 
     public function index(TierLimitService $tiers): Response
     {
-        $keys=array_merge(self::FEATURES,collect(range(1,4))->flatMap(fn($t)=>['tier_'.$t.'_daily_limit_minor','tier_'.$t.'_balance_limit_minor'])->all());
+        $keys=array_merge(self::FEATURES,collect(range(1,5))->flatMap(fn($t)=>['tier_'.$t.'_daily_limit_minor','tier_'.$t.'_balance_limit_minor'])->all());
         $stored=SystemSetting::query()->whereIn('key',$keys)->pluck('value','key');
         $features=[];
         foreach(self::FEATURES as $key) $features[$key]=filter_var($stored->get($key, $key==='maintenance_mode'?'0':'1'),FILTER_VALIDATE_BOOL);
@@ -28,14 +28,14 @@ class PlatformControlController extends Controller
     {
         $rules=['features'=>'nullable|array'];
         foreach(self::FEATURES as $key) $rules['features.'.$key]='boolean';
-        foreach(range(1,4) as $t){
+        foreach(range(1,5) as $t){
             $rules["tiers.$t.daily_limit_minor"]=['nullable','string','regex:/^\d+$/'];
             $rules["tiers.$t.balance_limit_minor"]=['nullable','string','regex:/^\d+$/'];
         }
         $data=$request->validate($rules);
         try{
             foreach(self::FEATURES as $key) SystemSetting::query()->updateOrCreate(['key'=>$key],['value'=>!empty($data['features'][$key])?'1':'0','type'=>'boolean','is_secret'=>false]);
-            foreach(range(1,4) as $t){
+            foreach(range(1,5) as $t){
                 foreach(['daily_limit_minor','balance_limit_minor'] as $field){
                     $value=$data['tiers'][$t][$field]??null;
                     if($value!==null) SystemSetting::query()->updateOrCreate(['key'=>"tier_{$t}_{$field}"],['value'=>$value,'type'=>'string','is_secret'=>false]);
