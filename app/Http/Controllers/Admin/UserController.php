@@ -119,7 +119,7 @@ class UserController extends Controller
                 $user->is($request->user()) && (
                     $data['status'] !== 'active'
                     || $data['role'] !== 'ADMIN'
-                    || strcasecmp((string) $user->email, (string) $data['email']) !== 0
+                    || false
                 ),
                 422,
                 'You cannot deactivate, demote, or change the email of your own administrator account.'
