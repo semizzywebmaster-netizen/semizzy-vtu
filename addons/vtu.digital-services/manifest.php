@@ -7,6 +7,7 @@ return [
     'navigation'=>[['id'=>'vtu','label'=>'VTU','url'=>'/admin/vtu','icon'=>'server','permission'=>'vtu.view','section'=>'addons','order'=>10]],
     'settings'=>[],
     'migrations'=>['2026_10_05_000026_create_vtu_addon_tables.php','2026_10_05_000027_add_vtu_bulk_idempotency.php'],
+    'installer'=>'App\\Services\\Vtu\\VtuAddonInstaller',
     'routes'=>['/vtu'],'api_routes'=>['/api/v1/vtu'],'services'=>['provider-driven digital services'],
     'provider_integrations'=>['Core ProviderManager'],'scheduled_tasks'=>['pending transaction reconciliation'],'events'=>[],
 ];
