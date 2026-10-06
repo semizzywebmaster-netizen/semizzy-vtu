@@ -125,8 +125,151 @@ class RestJsonProviderAdapterTest extends TestCase
 
         $this->assertFalse($result->accepted);
         $this->assertSame('UNKNOWN', $result->status);
-        $this->assertSame('Provider request failed. Check the provider configuration and server logs.', $result->message);
+        $this->assertSame('Provider request failed; provider state must be rechecked before retry.', $result->message);
         $this->assertStringNotContainsString('provider-token-secret', $result->message);
         $this->assertStringNotContainsString('private-db', $result->message);
+    }
+
+    public function test_configured_endpoint_uses_connection_credentials_query_parameters_and_idempotency(): void
+    {
+        $provider = ApiProvider::create([
+            'identifier' => 'configured-endpoint-auth',
+            'display_name' => 'Configured Endpoint Auth',
+            'base_url' => 'https://legacy.example.test',
+            'capabilities' => ['transaction_initiation', 'transaction_status'],
+            'verification_status' => 'live_verified',
+            'integration_status' => 'live_verified',
+            'enabled' => true,
+            'paused' => false,
+        ]);
+
+        $connection = $provider->connections()->create([
+            'name' => 'Live',
+            'environment' => 'live',
+            'base_url' => 'https://api.example.test',
+            'api_prefix' => 'v1',
+            'auth_type' => 'token',
+            'request_timeout_seconds' => 10,
+            'connect_timeout_seconds' => 3,
+            'verify_ssl' => true,
+            'query_params' => ['tenant' => 'semizzy'],
+            'enabled' => true,
+            'is_default' => true,
+        ]);
+
+        $connection->credentials()->create([
+            'field_key' => 'token',
+            'label' => 'API Token',
+            'field_type' => 'password',
+            'required' => true,
+            'secret' => true,
+            'placement' => 'authorization',
+            'prefix' => 'Bearer',
+            'value' => 'configured-secret',
+        ]);
+
+        $provider->endpoints()->create([
+            'name' => 'Purchase',
+            'operation' => 'transaction_initiation',
+            'method' => 'POST',
+            'path' => 'purchase',
+            'content_type' => 'json',
+            'auth_mode' => 'connection',
+            'enabled' => true,
+        ]);
+
+        Http::fake([
+            'https://api.example.test/v1/purchase*' => Http::response([
+                'status' => 'success',
+                'reference' => 'CFG-1',
+            ], 200),
+        ]);
+
+        $result = app(RestJsonProviderAdapter::class)->execute(
+            $provider,
+            'transaction_initiation',
+            ['recipient' => '08000000000'],
+            'configured-idem-1'
+        );
+
+        $this->assertTrue($result->accepted);
+        $this->assertSame('CFG-1', $result->providerReference);
+
+        Http::assertSent(function ($request): bool {
+            return $request->url() === 'https://api.example.test/v1/purchase?tenant=semizzy' &&
+                $request->method() === 'POST' &&
+                $request->hasHeader('Authorization', 'Bearer configured-secret') &&
+                $request->hasHeader('Idempotency-Key', 'configured-idem-1') &&
+                $request['recipient'] === '08000000000';
+        });
+    }
+
+    public function test_configured_endpoint_honors_put_and_query_content_type_without_injecting_credentials_when_auth_is_none(): void
+    {
+        $provider = ApiProvider::create([
+            'identifier' => 'configured-endpoint-none',
+            'display_name' => 'Configured Endpoint None',
+            'base_url' => 'https://legacy.example.test',
+            'capabilities' => ['transaction_status'],
+            'verification_status' => 'live_verified',
+            'integration_status' => 'live_verified',
+            'enabled' => true,
+            'paused' => false,
+        ]);
+
+        $connection = $provider->connections()->create([
+            'name' => 'Default',
+            'environment' => 'live',
+            'base_url' => 'https://api.example.test',
+            'api_prefix' => 'v2',
+            'auth_type' => 'token',
+            'query_params' => ['api_key' => 'connection-secret'],
+            'request_timeout_seconds' => 10,
+            'connect_timeout_seconds' => 3,
+            'verify_ssl' => true,
+            'enabled' => true,
+            'is_default' => true,
+        ]);
+
+        $connection->credentials()->create([
+            'field_key' => 'token',
+            'label' => 'API Token',
+            'field_type' => 'password',
+            'required' => true,
+            'secret' => true,
+            'placement' => 'authorization',
+            'prefix' => 'Bearer',
+            'value' => 'connection-secret',
+        ]);
+
+        $provider->endpoints()->create([
+            'name' => 'Status',
+            'operation' => 'transaction_status',
+            'method' => 'PUT',
+            'path' => 'status',
+            'content_type' => 'query',
+            'auth_mode' => 'none',
+            'enabled' => true,
+        ]);
+
+        Http::fake([
+            'https://api.example.test/v2/status*' => Http::response([
+                'status' => 'pending',
+            ], 200),
+        ]);
+
+        $result = app(RestJsonProviderAdapter::class)->execute(
+            $provider,
+            'transaction_status',
+            ['reference' => 'REF-1']
+        );
+
+        $this->assertSame('PENDING', $result->status);
+
+        Http::assertSent(function ($request): bool {
+            return $request->url() === 'https://api.example.test/v2/status?api_key=connection-secret&reference=REF-1' &&
+                $request->method() === 'PUT' &&
+                !$request->hasHeader('Authorization');
+        });
     }
 }
