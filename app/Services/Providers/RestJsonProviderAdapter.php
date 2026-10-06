@@ -142,6 +142,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
         try {
             $url = $this->configuredEndpointUrl($connection, $endpoint);
             [$headers, $query, $body] = $this->configuredAuthentication($connection, $endpoint, $payload);
+            $body = $this->mapRequestPayload($payload, (array) ($endpoint->request_mapping ?? []), $body);
             $headers = array_merge($headers, (array) ($endpoint->headers ?? []));
             $query = array_merge($query, (array) ($endpoint->query_params ?? []));
 
@@ -172,25 +173,32 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
             $bodyResponse = $response->json();
             if ($response->successful()) {
-                $status = $this->normalizeStatus($bodyResponse, $operation);
+                $mappedResponse = $this->mapResponsePayload($bodyResponse, (array) ($endpoint->response_mapping ?? []));
+                $status = $this->normalizeStatus($mappedResponse, $operation);
+                if ($status === 'UNKNOWN' && $mappedResponse !== $bodyResponse) {
+                    $status = $this->normalizeStatus($bodyResponse, $operation);
+                }
                 $accepted = $status === 'ACCEPTED';
                 return new ProviderResult(
                     $accepted,
                     $status,
-                    $this->providerReference($bodyResponse),
-                    $bodyResponse,
+                    $this->providerReference($mappedResponse) ?? $this->providerReference($bodyResponse),
+                    $mappedResponse,
                     $accepted ? 'Provider request accepted.' : 'Provider returned a non-success status.',
                     retryable: false,
-                    duplicateRisk: $operation === 'transaction_initiation' && $status === 'UNKNOWN'
+                    duplicateRisk: $operation === 'transaction_initiation' && $status === 'UNKNOWN',
+                    providerId: $provider->id,
                 );
             }
 
+            $mappedError = $this->mapResponsePayload($bodyResponse, (array) ($endpoint->error_mapping ?? []));
             $httpStatus = $response->status();
             $uncertain = $httpStatus === 408 || $httpStatus === 429 || $httpStatus >= 500;
             return new ProviderResult(
                 false,
                 $uncertain ? 'UNKNOWN' : 'FAILED',
-                message: 'Provider request failed.',
+                message: $this->safeProviderMessage($mappedError),
+                data: $mappedError !== [] ? $mappedError : null,
                 retryable: false,
                 duplicateRisk: $operation === 'transaction_initiation' && $uncertain,
                 providerId: $provider->id,
@@ -205,6 +213,67 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 providerId: $provider->id,
             );
         }
+    }
+
+    /**
+     * Apply an endpoint request mapping without breaking literal/template values.
+     * Mapping format is target.path => source.path. If the source does not exist in
+     * the internal payload, the configured value is retained as a literal.
+     */
+    private function mapRequestPayload(array $payload, array $mapping, array $fallbackBody): array
+    {
+        if ($mapping === []) {
+            return $fallbackBody;
+        }
+
+        $mapped = [];
+        foreach ($mapping as $target => $source) {
+            if (!is_string($target) || $target === '') {
+                continue;
+            }
+
+            if (is_string($source) && data_has($payload, $source)) {
+                data_set($mapped, $target, data_get($payload, $source));
+            } else {
+                data_set($mapped, $target, $source);
+            }
+        }
+
+        return $mapped !== [] ? $mapped : $fallbackBody;
+    }
+
+    private function mapResponsePayload(mixed $payload, array $mapping): mixed
+    {
+        if ($mapping === [] || !is_array($payload)) {
+            return $payload;
+        }
+
+        $mapped = [];
+        foreach ($mapping as $target => $source) {
+            if (!is_string($target) || $target === '' || !is_string($source)) {
+                continue;
+            }
+            $value = data_get($payload, $source);
+            if ($value !== null) {
+                data_set($mapped, $target, $value);
+            }
+        }
+
+        return $mapped !== [] ? $mapped : $payload;
+    }
+
+    private function safeProviderMessage(mixed $mappedError): string
+    {
+        if (is_array($mappedError)) {
+            foreach (['message', 'error', 'detail', 'description'] as $key) {
+                $value = data_get($mappedError, $key);
+                if (is_scalar($value) && trim((string) $value) !== '') {
+                    return mb_substr(trim((string) $value), 0, 500);
+                }
+            }
+        }
+
+        return 'Provider request failed.';
     }
 
     private function configuredEndpointUrl(ProviderConnection $connection, ProviderEndpoint $endpoint): string
