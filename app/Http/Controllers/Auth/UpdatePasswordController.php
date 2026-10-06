@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\CredentialHistory;
 use App\Services\Security\OtpChallengeService;
 use App\Services\Security\SecurityEventLogger;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +23,7 @@ class UpdatePasswordController extends Controller
 
         $data = $request->validate([
             'current_password' => ['required', 'current_password:web'],
-            'password' => ['required', 'confirmed', Password::defaults()],
+            'password' => ['required', 'confirmed', Password::min(12)->mixedCase()->numbers()->symbols()->uncompromised()],
             'otp_code' => ['required', 'digits:6'],
         ]);
 
