@@ -27,9 +27,8 @@ class SystemSettingsController extends Controller
         $settings = app(SystemSettingsService::class)->all();
 
         return Inertia::render('Admin/Settings', [
-            'settings' => [
-                ...$settings,
-                'smtp_env' => [
+            'settings' => $settings,
+            'smtp_env' => [
                     'mailer' => env('MAIL_MAILER', 'log'),
                     'host' => env('MAIL_HOST', ''),
                     'port' => (int) env('MAIL_PORT', 587),
