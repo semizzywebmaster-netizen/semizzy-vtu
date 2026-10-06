@@ -22,6 +22,7 @@ class SecurityFoundationTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'USER',
             'status' => 'active',
+            'tier' => 5,
             ]);
         $user->forceFill(['email_verified_at' => now()])->save();
 
