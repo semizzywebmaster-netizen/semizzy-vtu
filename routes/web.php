@@ -72,6 +72,7 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->middleware('verified')->name('dashboard');
     Route::middleware(['verified','ensure.vtu'])->group(function (): void { Route::get('/vtu', [VtuController::class, 'index'])->middleware('permission:vtu.view')->name('vtu.services'); });
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::get('/profile/identity-document', [ProfileController::class, 'identityDocument'])->name('profile.identity-document');
     Route::post('/profile', [ProfileController::class, 'update'])->middleware('throttle:10,1')->name('profile.update');
     Route::get('/transactions', [UserTransactionController::class, 'index'])->name('transactions.index');
     Route::get('/wallet/fund', [WalletFundingController::class, 'index'])->name('wallet.fund');
