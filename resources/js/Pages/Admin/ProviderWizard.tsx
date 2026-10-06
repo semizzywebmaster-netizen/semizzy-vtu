@@ -31,7 +31,7 @@ export default function ProviderWizard({provider}:{provider:Provider}){
  };
  const discover=()=>{setDiscovering(true);router.post('/admin/providers/'+provider.id+'/discover-services',{}, {preserveScroll:true,onFinish:()=>setDiscovering(false),onSuccess:()=>fetch('/admin/providers/'+provider.id+'/provider-services').then(r=>r.json()).then(x=>setServices(x.data||[]))});};
  const importSelected=()=>{setImporting(true);router.post('/admin/providers/'+provider.id+'/provider-services/import',{provider_service_ids:selected},{preserveScroll:true,onFinish:()=>setImporting(false)});};
- const groups=useMemo(()=>Object.entries(services.reduce((a,s)=>{const k=s.category||'Uncategorized';(a[k]||(a[k]=[])).push(s);return a},{} as Record<string,Service[]>)),[services]);
+ const groups=useMemo(()=>Object.entries(services.reduce((a,s)=>{const k=[s.category||'Uncategorized',s.subcategory||''].filter(Boolean).join(' / ');(a[k]||(a[k]=[])).push(s);return a},{} as Record<string,Service[]>)),[services]);
  const toggle=(id:number)=>setSelected(x=>x.includes(id)?x.filter(i=>i!==id):[...x,id]);
  const saveConnection=()=>connection.post('/admin/providers/'+provider.id+'/connections',{onSuccess:()=>{loadConnection();setStep(3)}} as any);
 
