@@ -383,6 +383,11 @@ class ProviderEngineController extends Controller
         }
     }
 
+    public function catalogueProducts(): JsonResponse
+    {
+        return response()->json(['data'=>\App\Models\ServiceProduct::query()->with(['service.category'])->get()]);
+    }
+
     public function services(ApiProvider $provider): JsonResponse
     {
         $services=$provider->providerServices()->with(['category','subcategory'])->latest()->get()->map(fn(ProviderService $s)=>[
