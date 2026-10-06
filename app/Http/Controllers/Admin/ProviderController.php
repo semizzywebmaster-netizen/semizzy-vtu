@@ -75,7 +75,8 @@ class ProviderController extends Controller
                 },
                 'credentials' => $p->maskedCredentials(),
                 'capabilities' => $p->capabilities ?? [],
-                'endpoints' => $p->endpoints ?? [],
+                'endpoint_count' => is_array($p->endpoints) ? count($p->endpoints) : 0,
+                'endpoint_operations' => is_array($p->endpoints) ? array_values(array_filter(array_keys($p->endpoints), 'is_string')) : [],
                 'service_categories' => $p->service_categories ?? [],
             ]),
         ]);
