@@ -221,6 +221,10 @@ class ProviderManager
         return is_array($capabilities) && in_array($operation, $capabilities, true);
     }
 
+    /**
+     * Execute against the ordered provider candidates. Definitive failures may fail over;
+     * ambiguous provider state must stop immediately to prevent duplicate transactions.
+     */
     public function execute(string $serviceKey, string $operation, array $payload = [], ?string $idempotencyKey = null): ProviderResult
     {
         $providers = $this->eligible($serviceKey, $operation);
