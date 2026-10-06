@@ -140,12 +140,20 @@ export default function Providers({ providers }: { providers: Provider[] }) {
   const toggleSelected = (id: number) => setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
   const toggleAll = () => setSelectedIds(allSelected ? [] : selectableIds);
 
-  const runBulk = (url: string, method: 'post' | 'delete', confirmText: string, data: Record<string, unknown> = {}) => {
+  const csrfToken = () => document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
+  const runJson = async (url: string, data: Record<string, unknown> = {}, method = 'POST') => {
+    const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrfToken() }, credentials: 'same-origin', body: method === 'GET' ? undefined : JSON.stringify(data) });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.message || `Request failed (${response.status})`);
+    return payload;
+  };
+
+  const runBulk = async (url: string, method: 'post' | 'delete', confirmText: string, data: Record<string, unknown> = {}) => {
     if (!selectedIds.length || !window.confirm(confirmText)) return;
     setBulkBusy(true);
-    const options = { preserveScroll: true, onFinish: () => setBulkBusy(false), onSuccess: () => setSelectedIds([]) };
-    if (method === 'delete') router.delete(url, { ...options, data: { provider_ids: selectedIds } });
-    else router.post(url, { provider_ids: selectedIds, ...data }, options);
+    try { await runJson(url, { provider_ids: selectedIds, ...data }, method === 'delete' ? 'DELETE' : 'POST'); setSelectedIds([]); window.location.reload(); }
+    catch (error) { window.alert(error instanceof Error ? error.message : 'Provider bulk action failed.'); }
+    finally { setBulkBusy(false); }
   };
 
   const remove = (provider: Provider) => {
