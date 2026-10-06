@@ -37,9 +37,10 @@ const money = (minor: string | undefined, currency = 'NGN') => {
 };
 
 export default function Dashboard({ role, user, metrics = [], quickLinks = [], serviceCategories = [], wallet = null, tier = null, dashboardMessages = {}, recentTransactions = [], requiredActions = [], unreadNotifications = 0 }: {
-  role: string; user?: { name?: string; email?: string; username?: string; initials?: string }; metrics?: Metric[]; quickLinks?: QuickLink[];
+  role: string; user?: { name?: string; email?: string; username?: string; initials?: string }; platform?: { platform_name?: string }; metrics?: Metric[]; quickLinks?: QuickLink[];
   serviceCategories?: ServiceCategory[]; wallet?: Wallet | null; tier?: Tier | null; tierLimits?: TierLimit[]; dashboardMessages?: DashboardMessages; recentTransactions?: RecentTransaction[]; requiredActions?: RequiredAction[]; unreadNotifications?: number;
 }) {
+  const siteName = platform?.platform_name || 'SEMIZZY ONE';
   const isUser = !['ADMIN', 'STAFF', 'SUPPORT'].includes(role);
 
   if (isUser) {
@@ -74,7 +75,7 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
     const isCredit = (value: string) => ['admin_fund','funding','wallet_funding','deposit','credit','refund'].some(key => value.toLowerCase().includes(key));
 
     return <main className="min-h-screen bg-slate-50 pb-24 text-slate-900">
-      <Head title="Home" />
+      <Head title={`Home · ${siteName}`} />
       <header className="bg-white px-4 pb-4 pt-4 shadow-sm sm:px-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <Link href="/profile" className="flex min-w-0 items-center gap-3" aria-label="Open profile">
@@ -141,8 +142,8 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
     </main>;
   }
 
-  return <main className="min-h-screen bg-slate-50 p-4 text-slate-900 sm:p-8"><Head title="Dashboard" /><div className="mx-auto max-w-7xl">
-    <header className="relative rounded-3xl bg-slate-900 p-6 text-white shadow-xl"><button type="button" onClick={() => router.post('/logout')} className="absolute right-5 top-5 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20">Logout</button><p className="text-xs font-semibold uppercase tracking-wider text-slate-300">SEMIZZY ONE</p><h1 className="mt-2 text-3xl font-black">Dashboard</h1><p className="mt-2 text-sm text-slate-300">Role: {role}</p></header>
+  return <main className="min-h-screen bg-slate-50 p-4 text-slate-900 sm:p-8"><Head title={`Dashboard · ${siteName}`} /><div className="mx-auto max-w-7xl">
+    <header className="relative rounded-3xl bg-slate-900 p-6 text-white shadow-xl"><button type="button" onClick={() => router.post('/logout')} className="absolute right-5 top-5 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20">Logout</button><p className="text-xs font-semibold uppercase tracking-wider text-slate-300">{siteName}</p><h1 className="mt-2 text-3xl font-black">Dashboard</h1><p className="mt-2 text-sm text-slate-300">Role: {role}</p></header>
     {metrics.length > 0 && <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{metrics.map(metric => <article key={metric.label} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{metric.label}</p><p className="mt-2 text-3xl font-black">{metric.value}</p><p className="mt-1 text-sm text-slate-500">{metric.description}</p></article>)}</section>}
     <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Workspace</p><h2 className="mt-1 text-xl font-black">Quick actions</h2></div><Link href="/profile" className="text-sm font-bold text-indigo-700">Profile</Link></div><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{quickLinks.map(link => <Link key={link.url + link.label} href={link.url} className="rounded-2xl border border-slate-200 p-4 font-semibold hover:border-indigo-200 hover:bg-indigo-50">{link.label}</Link>)}</div></section>
   </div></main>;
