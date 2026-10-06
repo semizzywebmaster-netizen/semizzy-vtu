@@ -207,6 +207,7 @@ class ProviderEngineController extends Controller
         $services=$provider->providerServices()->get();
         $pending=ProviderServiceImport::where('api_provider_id',$provider->id)->where('approved',false)->count();
         $approvedNotImported=ProviderServiceImport::where('api_provider_id',$provider->id)->where('approved',true)->where('imported',false)->count();
+        $latestSync=DB::table('provider_syncs')->where('api_provider_id',$provider->id)->latest('id')->first();
         return response()->json(['data'=>[
             'provider_id'=>$provider->id,
             'services'=>$services->count(),
@@ -215,6 +216,7 @@ class ProviderEngineController extends Controller
             'last_tested_at'=>$provider->last_tested_at,
             'last_test_status'=>$provider->last_test_status,
             'last_successful_request_at'=>$provider->last_successful_request_at,
+            'latest_sync'=>$latestSync,
         ]]);
     }
 
