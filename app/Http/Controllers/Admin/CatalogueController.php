@@ -11,6 +11,7 @@ use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\ServiceProduct;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
@@ -97,7 +98,7 @@ class CatalogueController extends Controller
         } catch (\Throwable $e) { report($e); return back()->with('error','Service product could not be created safely.'); }
     }
 
-    public function syncProvider(Request $request, ProviderCatalogueSyncService $sync): RedirectResponse
+    public function syncProvider(Request $request, ProviderCatalogueSyncService $sync): RedirectResponse|JsonResponse
     {
         $data=$request->validate([
             'api_provider_id'=>'required|integer|exists:api_providers,id',
@@ -109,12 +110,16 @@ class CatalogueController extends Controller
             $count=$sync->sync($provider,$service);
         } catch (\Throwable $e) {
             report($e);
-            return back()->with('error','Catalogue sync failed safely. Review the server-side diagnostics.');
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => 'Catalogue sync failed safely. Review the server-side diagnostics.'], 422)
+                : back()->with('error','Catalogue sync failed safely. Review the server-side diagnostics.');
         }
-        return back()->with('success',"Catalogue sync completed. {$count} product record(s) processed.");
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => "Catalogue sync completed. {$count} product record(s) processed.", 'products_processed' => $count])
+            : back()->with('success',"Catalogue sync completed. {$count} product record(s) processed.");
     }
 
-    public function syncAllVerified(Request $request, ProviderCatalogueSyncService $sync, AuditLogger $audit): RedirectResponse
+    public function syncAllVerified(Request $request, ProviderCatalogueSyncService $sync, AuditLogger $audit): RedirectResponse|JsonResponse
     {
         $providers = ApiProvider::query()
             ->where('enabled', true)
@@ -155,14 +160,20 @@ class CatalogueController extends Controller
         ], $request); } catch (\Throwable $auditException) { report($auditException); }
 
         if ($providers->isEmpty()) {
-            return back()->with('error', 'No enabled, verified provider with catalogue retrieval capability is ready for sync.');
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => 'No enabled, verified provider with catalogue retrieval capability is ready for sync.', 'providers_considered' => 0, 'service_syncs_completed' => 0, 'products_processed' => 0], 422)
+                : back()->with('error', 'No enabled, verified provider with catalogue retrieval capability is ready for sync.');
         }
 
         if ($failures) {
-            return back()->with('error', "Catalogue sync completed with {$processed} successful service sync(s), {$products} product record(s), and ".count($failures)." failure(s).");
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => "Catalogue sync completed with {$processed} successful service sync(s), {$products} product record(s), and ".count($failures)." failure(s).", 'providers_considered' => $providers->count(), 'service_syncs_completed' => $processed, 'products_processed' => $products, 'failures' => $failures], 207)
+                : back()->with('error', "Catalogue sync completed with {$processed} successful service sync(s), {$products} product record(s), and ".count($failures)." failure(s).");
         }
 
-        return back()->with('success', "Catalogue sync completed successfully: {$processed} service sync(s), {$products} product record(s) processed.");
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => "Catalogue sync completed successfully: {$processed} service sync(s), {$products} product record(s) processed.", 'providers_considered' => $providers->count(), 'service_syncs_completed' => $processed, 'products_processed' => $products, 'failures' => []])
+            : back()->with('success', "Catalogue sync completed successfully: {$processed} service sync(s), {$products} product record(s) processed.");
     }
 
 
