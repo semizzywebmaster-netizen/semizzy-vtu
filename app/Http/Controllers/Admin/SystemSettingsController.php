@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -236,6 +237,76 @@ class SystemSettingsController extends Controller
         }
         $audit->record('admin.platform_asset.updated',null,['asset'=>$key],$request);
         return back()->with('success',ucfirst($key).' updated globally.');
+    }
+
+    public function smtpHealth(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'email'=>['required','email','max:254'],
+        ]);
+
+        $stored = SystemSetting::query()->where('key','smtp')->value('value');
+        $smtp = is_string($stored) ? (json_decode($stored,true) ?: []) : [];
+        $profiles = $smtp['profiles'] ?? [];
+        $health = is_array($smtp['health'] ?? null) ? $smtp['health'] : [];
+        $results = [];
+
+        foreach ($profiles as $profile) {
+            if (!is_array($profile) || empty($profile['key'])) continue;
+            $key = (string)$profile['key'];
+            $started = microtime(true);
+            $ok = false;
+            $error = null;
+            try {
+                $password = Crypt::decryptString((string)($profile['password'] ?? ''));
+                if (empty($profile['host']) || empty($profile['username']) || $password === '') {
+                    throw new \RuntimeException('Incomplete SMTP credentials.');
+                }
+                $mailer = 'smtp_health_'.$key;
+                config(['mail.mailers.'.$mailer => [
+                    'transport'=>'smtp',
+                    'host'=>(string)$profile['host'],
+                    'port'=>(int)($profile['port'] ?? 587),
+                    'encryption'=>($profile['encryption'] ?? 'tls') === 'null' ? null : ($profile['encryption'] ?? 'tls'),
+                    'username'=>(string)$profile['username'],
+                    'password'=>$password,
+                    'timeout'=>15,
+                ]]);
+                Mail::mailer($mailer)->raw(
+                    'SMTP health test from '.($profile['from_name'] ?? config('app.name','platform')),
+                    function($message) use ($data,$profile) {
+                        $message->to($data['email'])
+                            ->from($profile['from_address'] ?? config('mail.from.address'), $profile['from_name'] ?? config('mail.from.name'))
+                            ->subject('SMTP health test — '.($profile['name'] ?? 'SMTP'));
+                    }
+                );
+                $ok = true;
+            } catch (\Throwable $e) {
+                report($e);
+                $error = 'SMTP connection/delivery test failed.';
+            }
+
+            $health[$key] = [
+                'status'=>$ok ? 'healthy' : 'failed',
+                'last_test_at'=>now()->toISOString(),
+                'last_success_at'=>$ok ? now()->toISOString() : ($health[$key]['last_success_at'] ?? null),
+                'last_failure_at'=>$ok ? ($health[$key]['last_failure_at'] ?? null) : now()->toISOString(),
+                'failure_count'=>$ok ? 0 : ((int)($health[$key]['failure_count'] ?? 0) + 1),
+                'latency_ms'=>(int)round((microtime(true)-$started)*1000),
+                'last_error'=>$error,
+            ];
+            $results[] = ['key'=>$key,'name'=>$profile['name'] ?? $key,'status'=>$health[$key]['status'],'latency_ms'=>$health[$key]['latency_ms']];
+        }
+
+        $smtp['health'] = $health;
+        SystemSetting::query()->updateOrCreate(['key'=>'smtp'],[
+            'value'=>json_encode($smtp,JSON_UNESCAPED_SLASHES),
+            'type'=>'json','is_secret'=>true,
+        ]);
+
+        $failed = collect($results)->where('status','failed')->count();
+        return back()->with($failed ? 'error' : 'success',
+            $failed ? "{$failed} SMTP profile(s) failed the health test." : 'All configured SMTP profiles passed the health test.');
     }
 
     public function testSmtp(Request $request): RedirectResponse
