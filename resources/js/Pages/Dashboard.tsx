@@ -36,7 +36,7 @@ const money = (minor: string | undefined, currency = 'NGN') => {
   } catch { return '—'; }
 };
 
-export default function Dashboard({ role, user, metrics = [], quickLinks = [], serviceCategories = [], wallet = null, tier = null, dashboardMessages = {}, recentTransactions = [], requiredActions = [], unreadNotifications = 0 }: {
+export default function Dashboard({ role, user, metrics = [], quickLinks = [], serviceCategories = [], wallet = null, tier = null, dashboardMessages = {}, recentTransactions = [], requiredActions = [], unreadNotifications = 0, platform }: {
   role: string; user?: { name?: string; email?: string; username?: string; initials?: string }; platform?: { platform_name?: string }; metrics?: Metric[]; quickLinks?: QuickLink[];
   serviceCategories?: ServiceCategory[]; wallet?: Wallet | null; tier?: Tier | null; tierLimits?: TierLimit[]; dashboardMessages?: DashboardMessages; recentTransactions?: RecentTransaction[]; requiredActions?: RequiredAction[]; unreadNotifications?: number;
 }) {
