@@ -47,8 +47,10 @@ class SavingsController extends Controller
             throw new RuntimeException('This savings release currently supports NGN wallet accounts only.');
         }
 
-        if (isset($data['target_amount_minor']) && (int) $data['target_amount_minor'] < (int) $plan->minimum_amount_minor) {
-            throw new RuntimeException('The target amount is below the selected plan minimum.');
+        if (isset($data['target_amount_minor'])) {
+            $target = (int) $data['target_amount_minor'];
+            if ($target < (int) $plan->minimum_amount_minor) throw new RuntimeException('The target amount is below the selected plan minimum.');
+            if ($plan->maximum_amount_minor !== null && $target > (int) $plan->maximum_amount_minor) throw new RuntimeException('The target amount exceeds the selected plan maximum.');
         }
 
         $account = SavingsAccount::create([
@@ -83,6 +85,11 @@ class SavingsController extends Controller
             if ($account->status !== 'active') {
                 throw new RuntimeException('Savings account is not active.');
             }
+            $plan = $account->plan;
+            $amountInt = (int) $data['amount_minor'];
+            if ($amountInt < (int) $plan->minimum_amount_minor || ($plan->maximum_amount_minor !== null && $amountInt > (int) $plan->maximum_amount_minor)) {
+                throw new RuntimeException('Contribution amount is outside the selected plan limits.');
+            }
 
             $operationKey = 'savings:contribution:'.$reference.':'.$idempotency;
             $existing = SavingsMovement::where('operation_key', $operationKey)->first();
@@ -111,7 +118,7 @@ class SavingsController extends Controller
                 'operation_key' => $operationKey,
                 'reference' => 'SAV-DEBIT-'.strtoupper(Str::random(12)),
                 'type' => 'savings_contribution',
-                'amount_minor' => $amount,
+                'amount_minor' => $netAmount,
                 'currency' => $wallet->currency,
                 'available_before_minor' => $before,
                 'available_after_minor' => $after,
@@ -168,6 +175,11 @@ class SavingsController extends Controller
                 throw new RuntimeException('Savings is locked until maturity.');
             }
 
+            $penalty = '0';
+            if ($account->matures_at && now()->lt($account->matures_at) && $account->plan->allow_early_withdrawal && (float) $account->plan->early_withdrawal_penalty > 0) {
+                $penalty = $this->percentage($amount, (string) $account->plan->early_withdrawal_penalty);
+            }
+
             $operationKey = 'savings:withdrawal:'.$reference.':'.$idempotency;
             $existing = SavingsMovement::where('operation_key', $operationKey)->first();
             if ($existing) {
@@ -181,7 +193,8 @@ class SavingsController extends Controller
                 ->firstOrFail();
 
             $before = (string) $wallet->available_minor;
-            $after = $this->add($before, $amount);
+            $netAmount = $this->subtract($amount, $penalty);
+            $after = $this->add($before, $netAmount);
             $wallet->available_minor = $after;
             $wallet->saveOrFail();
 
@@ -196,7 +209,7 @@ class SavingsController extends Controller
                 'available_after_minor' => $after,
                 'held_before_minor' => (string) $wallet->held_minor,
                 'held_after_minor' => (string) $wallet->held_minor,
-                'metadata' => ['savings_reference' => $reference],
+                'metadata' => ['savings_reference' => $reference, 'gross_amount_minor' => $amount, 'penalty_minor' => $penalty],
             ]);
 
             $account->balance_minor = $this->subtract((string) $account->balance_minor, $amount);
@@ -230,6 +243,12 @@ class SavingsController extends Controller
         if (function_exists('bcsub')) return bcsub($a, $b, 0);
         if (!$this->fitsNativeInteger($a) || !$this->fitsNativeInteger($b)) throw new RuntimeException('Large savings amounts require BCMath.');
         return (string) ((int) $a - (int) $b);
+    }
+
+    private function percentage(string $amount, string $rate): string
+    {
+        if (function_exists('bcmul') && function_exists('bcdiv')) return bcdiv(bcmul($amount, $rate, 8), '100', 0);
+        return (string) floor(((float) $amount * (float) $rate) / 100);
     }
 
     private function compare(string $a, string $b): int
