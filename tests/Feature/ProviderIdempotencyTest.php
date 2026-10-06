@@ -29,7 +29,9 @@ class ProviderIdempotencyTest extends TestCase
             providerReference: 'PROVIDER-1',
             message: 'Accepted',
         ));
-        $this->mock(ProviderRequestLogger::class);
+        $this->mock(ProviderRequestLogger::class, function ($mock): void {
+            $mock->shouldReceive('record')->zeroOrMoreTimes();
+        });
 
         $manager = app(ProviderManager::class);
 
