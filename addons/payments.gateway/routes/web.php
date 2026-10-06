@@ -1,7 +1,8 @@
 <?php
 
-use IlluminateSupportFacadesRoute;
-use AppHttpMiddlewareEnsureAddonActive;
+use Illuminate\Support\Facades\Route;
+use App\Http\Middleware\EnsureAddonActive;
+use App\Http\Middleware\EnsureAddonActive;
 
 Route::middleware(['auth', 'verified', EnsureAddonActive::class.':payments.gateway'])
     ->prefix('payments')->name('payments.')
