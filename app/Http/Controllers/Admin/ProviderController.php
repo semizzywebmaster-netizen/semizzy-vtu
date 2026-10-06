@@ -339,21 +339,65 @@ class ProviderController extends Controller
         }
     }
 
-    public function destroy(int $provider, AuditLogger $audit, Request $request): RedirectResponse
+    public function destroy(int $provider, AuditLogger $audit, Request $request): \Illuminate\Http\JsonResponse|RedirectResponse
     {
         try {
-            $result=DB::transaction(function() use($provider): array {
-                $model=ApiProvider::query()->lockForUpdate()->findOrFail($provider);
-                $model->serviceMappings()->lockForUpdate()->get()->each(fn($mapping)=>$mapping->forceFill(['enabled'=>false])->saveOrFail());
-                $productMappings=ProviderServiceProduct::query()->where('api_provider_id',$model->id)->lockForUpdate()->get();
-                $productMappings->each(fn(ProviderServiceProduct $mapping)=>$mapping->forceFill(['enabled'=>false])->saveOrFail());
-                $model->forceFill(['enabled'=>false,'paused'=>true])->saveOrFail();
+            $result = DB::transaction(function () use ($provider): array {
+                $model = ApiProvider::query()->lockForUpdate()->findOrFail($provider);
+                $model->serviceMappings()->lockForUpdate()->get()->each(
+                    fn ($mapping) => $mapping->forceFill(['enabled' => false])->saveOrFail()
+                );
+                $productMappings = ProviderServiceProduct::query()
+                    ->where('api_provider_id', $model->id)
+                    ->lockForUpdate()
+                    ->get();
+                $productMappings->each(
+                    fn (ProviderServiceProduct $mapping) => $mapping->forceFill(['enabled' => false])->saveOrFail()
+                );
+                $model->forceFill(['enabled' => false, 'paused' => true])->saveOrFail();
                 $model->delete();
-                return ['provider_id'=>$model->id,'identifier'=>$model->identifier,'mapping_count'=>$productMappings->count()];
+                return [
+                    'provider_id' => $model->id,
+                    'identifier' => $model->identifier,
+                    'mapping_count' => $productMappings->count(),
+                ];
             });
-            try { $audit->record('provider.removed',ApiProvider::withTrashed()->find($result['provider_id']),['identifier'=>$result['identifier'],'history_preserved'=>true,'archived'=>true,'mappings_disabled'=>true,'provider_product_mappings_disabled'=>$result['mapping_count']],$request); } catch(\Throwable $auditException){Log::warning('Provider audit logging failed.', ['exception_class' => get_class($auditException)]);}
-            return back()->with('success','Provider removed from the active registry. Historical records are retained.');
-        } catch(\Throwable $e){Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);return back()->with('error','Provider could not be removed safely.');}
+
+            try {
+                $audit->record(
+                    'provider.removed',
+                    ApiProvider::withTrashed()->find($result['provider_id']),
+                    [
+                        'identifier' => $result['identifier'],
+                        'history_preserved' => true,
+                        'archived' => true,
+                        'mappings_disabled' => true,
+                        'provider_product_mappings_disabled' => $result['mapping_count'],
+                    ],
+                    $request
+                );
+            } catch (\Throwable $auditException) {
+                Log::warning('Provider audit logging failed.', ['exception_class' => get_class($auditException)]);
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => 'SUCCESS',
+                    'message' => 'Provider removed from the active registry. Historical records are retained.',
+                ]);
+            }
+
+            return back()->with('success', 'Provider removed from the active registry. Historical records are retained.');
+        } catch (\Throwable $e) {
+            Log::warning('Provider management operation failed.', ['exception_class' => get_class($e)]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => 'FAILED',
+                    'message' => 'Provider could not be removed safely.',
+                ], 500);
+            }
+            return back()->with('error', 'Provider could not be removed safely.');
+        }
     }
 
     private function validatedProvider(Request $request, bool $creating): array
