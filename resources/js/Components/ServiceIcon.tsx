@@ -1,5 +1,3 @@
-import React from 'react';
-
 export const SERVICE_ICONS: Record<string,string> = {
   phone:'📱', data:'📶', airtime:'☎️', electricity:'⚡', cable:'📺', tv:'📺',
   exam:'🎓', education:'🎓', sms:'💬', whatsapp:'🟢', payment:'💳', wallet:'💰',
@@ -19,5 +17,5 @@ export default function ServiceIcon({name,icon,iconUrl,size='md'}:{name:string;i
   const sizes={sm:'h-9 w-9 text-lg',md:'h-12 w-12 text-2xl',lg:'h-16 w-16 text-3xl'};
   return iconUrl
     ? <img src={iconUrl} alt="" className={sizes[size]+' rounded-2xl object-cover'} />
-    : <span aria-hidden="true" className={sizes[size]+' flex shrink-0 items-center justify-center rounded-2xl bg-indigo-50 ring-1 ring-indigo-100'}>{SERVICE_ICONS[icon||'']||iconForService(name,icon)}</span>;
+    : <span aria-hidden="true" className={sizes[size]+' flex shrink-0 items-center justify-center rounded-2xl bg-indigo-50 ring-1 ring-indigo-100'}>{SERVICE_ICONS[icon||'']||iconForService(name,icon||undefined)}</span>;
 }
