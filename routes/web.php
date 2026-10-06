@@ -32,6 +32,9 @@ use App\Http\Controllers\WalletFundingController;
 use App\Http\Controllers\Admin\VtuAdminController;
 use App\Http\Controllers\Admin\CommunicationController;
 use App\Http\Controllers\SetupController;
+use App\Http\Controllers\SecurityOtpController;
+use App\Http\Controllers\TransactionPinController;
+use App\Http\Controllers\ApiAccessController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -83,9 +86,10 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/profile/identity-document', [ProfileController::class, 'identityDocument'])->name('profile.identity-document');
     Route::post('/profile', [ProfileController::class, 'update'])->middleware(['throttle:10,1','transaction.pin'])->name('profile.update');
     Route::get('/profile/transaction-pin', [TransactionPinController::class, 'index'])->name('profile.transaction-pin');
+    Route::post('/security/otp/request', [SecurityOtpController::class, 'request'])->middleware('throttle:3,10')->name('security.otp.request');
     Route::get('/profile/change-requests', [ProfileChangeRequestController::class, 'index'])->name('profile.change-requests.index');
     Route::post('/profile/change-requests', [ProfileChangeRequestController::class, 'store'])->middleware(['throttle:5,1','transaction.pin'])->name('profile.change-requests.store');
-    Route::post('/profile/transaction-pin', [TransactionPinController::class, 'store'])->middleware('throttle:5,1')->name('profile.transaction-pin.store');
+    Route::post('/profile/transaction-pin', [TransactionPinController::class, 'store'])->middleware('throttle:5,10')->name('profile.transaction-pin.store');
     Route::get('/api-access', [ApiAccessController::class, 'index'])->name('api.access');
     Route::post('/api-access', [ApiAccessController::class, 'store'])->middleware(['throttle:5,1','transaction.pin'])->name('api.access.store');
     Route::delete('/api-access/{token}', [ApiAccessController::class, 'destroy'])->whereNumber('token')->middleware(['throttle:10,1','transaction.pin'])->name('api.access.destroy');
@@ -99,7 +103,7 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/realtime/snapshot', [RealtimeController::class, 'snapshot'])->middleware('throttle:120,1')->name('realtime.snapshot');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->middleware('throttle:30,1')->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->middleware('throttle:60,1')->name('notifications.read');
-    Route::post('/profile/password', [UpdatePasswordController::class, 'store'])->middleware(['throttle:5,1','transaction.pin'])->name('profile.password.update');
+    Route::post('/profile/password', [UpdatePasswordController::class, 'store'])->middleware('throttle:5,10')->name('profile.password.update');
     Route::get('/help', [HelpCenterController::class, 'index'])->name('help.index');
     Route::get('/help/articles/{article:slug}', [HelpCenterController::class, 'show'])->name('help.article');
     Route::post('/help/articles/{article:slug}/feedback', [HelpCenterController::class, 'feedback'])->middleware('throttle:20,1')->name('help.feedback');
