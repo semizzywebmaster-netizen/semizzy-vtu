@@ -39,28 +39,11 @@ class ProviderEngineController extends Controller
 
     public function connections(ApiProvider $provider): JsonResponse
     {
-        $connections=$provider->connections()->with('credentials')->orderByDesc('is_default')->latest()->get()->map(fn(ProviderConnection $connection)=>[
-            'id'=>$connection->id,
-            'name'=>$connection->name,
-            'environment'=>$connection->environment,
-            'base_url'=>$connection->base_url,
-            'api_version'=>$connection->api_version,
-            'api_prefix'=>$connection->api_prefix,
-            'auth_type'=>$connection->auth_type,
-            'auth_options'=>$this->safeAuthOptions((array)($connection->auth_options ?? [])),
-            'verify_ssl'=>$connection->verify_ssl,
-            'enabled'=>$connection->enabled,
-            'is_default'=>$connection->is_default,
-            'credentials'=>$connection->credentials->map(fn(ProviderCredential $credential)=>[
-                'id'=>$credential->id,'field_key'=>$credential->field_key,'label'=>$credential->label,
-                'field_type'=>$credential->field_type,'required'=>$credential->required,'secret'=>$credential->secret,
-                'placement'=>$credential->placement,'header_name'=>$credential->header_name,
-                'query_name'=>$credential->query_name,'body_path'=>$credential->body_path,
-                'prefix'=>$credential->prefix,'has_value'=>filled($credential->value),
-                'value'=>filled($credential->value) ? '••••••••' : null,
-            ])->values(),
-        ])->values();
-        return response()->json(['data'=>$connections]);
+        return response()->json([
+            'data'=>$provider->connections()->with('credentials')->orderByDesc('is_default')->latest()->get()
+                ->map(fn(ProviderConnection $connection)=>$this->connectionSummary($connection))
+                ->values(),
+        ]);
     }
 
     public function authSchema(): JsonResponse
@@ -99,12 +82,14 @@ class ProviderEngineController extends Controller
             'is_default'=>'nullable|boolean',
         ]);
 
-        return response()->json(['data'=>DB::transaction(function() use ($provider,$data){
+        $connection = DB::transaction(function() use ($provider,$data) {
             if (($data['is_default'] ?? false)) {
                 $provider->connections()->update(['is_default'=>false]);
             }
             return $provider->connections()->create($data);
-        })],201);
+        });
+
+        return response()->json(['data'=>$this->connectionSummary($connection->fresh('credentials'))],201);
     }
 
     public function storeAuthentication(Request $request, ProviderConnection $connection): JsonResponse
@@ -771,6 +756,34 @@ class ProviderEngineController extends Controller
         } catch (\Throwable $e) {
             report($e);
         }
+    }
+
+    private function connectionSummary(ProviderConnection $connection): array
+    {
+        return [
+            'id'=>$connection->id,
+            'name'=>$connection->name,
+            'environment'=>$connection->environment,
+            'base_url'=>$this->safeUrlForDisplay($connection->base_url),
+            'api_version'=>$connection->api_version,
+            'api_prefix'=>$connection->api_prefix,
+            'auth_type'=>$connection->auth_type,
+            'auth_options'=>$this->safeAuthOptions((array)($connection->auth_options ?? [])),
+            'verify_ssl'=>$connection->verify_ssl,
+            'enabled'=>$connection->enabled,
+            'is_default'=>$connection->is_default,
+            'headers'=>$this->safeKeyValueMap((array)($connection->headers ?? [])),
+            'query_params'=>$this->safeKeyValueMap((array)($connection->query_params ?? [])),
+            'proxy'=>$this->safeKeyValueMap((array)($connection->proxy ?? [])),
+            'credentials'=>$connection->credentials->map(fn(ProviderCredential $credential)=>[
+                'id'=>$credential->id,'field_key'=>$credential->field_key,'label'=>$credential->label,
+                'field_type'=>$credential->field_type,'required'=>$credential->required,'secret'=>$credential->secret,
+                'placement'=>$credential->placement,'header_name'=>$credential->header_name,
+                'query_name'=>$credential->query_name,'body_path'=>$credential->body_path,
+                'prefix'=>$credential->prefix,'has_value'=>filled($credential->value),
+                'value'=>filled($credential->value) ? '••••••••' : null,
+            ])->values(),
+        ];
     }
 
     private function endpointSummary(ProviderEndpoint $endpoint): array
