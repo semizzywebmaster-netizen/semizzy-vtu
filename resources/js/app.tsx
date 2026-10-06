@@ -7,14 +7,6 @@ import AdminLayout from './Layouts/AdminLayout';
 type PageModule = { default: ComponentType<Record<string, unknown>> };
 type ViteImportMeta = ImportMeta & { env: { PROD: boolean }; glob: (pattern: string) => Record<string, () => Promise<unknown>> };
 
-const themePresets: Record<string, string> = {
-  'ocean-blue': '#2563EB',
-  emerald: '#059669',
-  'royal-purple': '#7C3AED',
-  crimson: '#DC2626',
-  'sunset-orange': '#EA580C',
-};
-
 function applyTheme(primary: string) {
   const safe = /^#[0-9A-Fa-f]{6}$/.test(primary) ? primary : '#2563EB';
   document.documentElement.style.setProperty('--brand-primary', safe);
