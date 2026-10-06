@@ -8,7 +8,8 @@ type SmtpProfile = {
   key:string; name:string; provider:string; enabled:boolean; priority:number; weight:number;
   host:string; port:number; encryption:string; username:string; password:string; from_address:string; from_name:string;
 };
-type Props = { settings:any; smtp_env:{mailer:string;host:string;port:number;encryption:string;from_address:string;from_name:string}; smtp_providers:ProviderPreset[] };
+type SmtpEnv = { mailer:string; host:string; port:number; encryption:string; from_address:string; from_name:string };
+type Props = { settings?:any; smtp_env?:SmtpEnv; smtp_providers?:ProviderPreset[] };
 
 const fields:{key:keyof Palette;label:string}[]=[
   {key:'primary',label:'Primary'},{key:'secondary',label:'Secondary'},{key:'accent',label:'Accent'},{key:'background',label:'Background'},
@@ -36,6 +37,8 @@ function setupText(p:ProviderPreset){
 }
 
 export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
+  const safeSmtpEnv:SmtpEnv = smtp_env && typeof smtp_env === 'object' ? smtp_env : {mailer:'log',host:'',port:587,encryption:'tls',from_address:'',from_name:'SEMIZZY ONE'};
+  const safeProviders:ProviderPreset[] = Array.isArray(smtp_providers) ? smtp_providers.filter((p):p is ProviderPreset => !!p && typeof p === 'object') : [];
   const safeSettings = settings && typeof settings === 'object' ? settings : {};
   const safeBusiness = safeSettings.business && typeof safeSettings.business === 'object' && !Array.isArray(safeSettings.business) ? safeSettings.business : {phone:'',whatsapp:'',email:'',address:'',website:''};
   const safeSocial = safeSettings.social && typeof safeSettings.social === 'object' && !Array.isArray(safeSettings.social) ? safeSettings.social : {facebook:'',instagram:'',x:'',youtube:'',tiktok:'',linkedin:''};
@@ -69,7 +72,7 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
   const profiles:SmtpProfile[]=Array.isArray(form.data.smtp?.profiles) ? form.data.smtp.profiles : [];
   const addProfile=(preset?:ProviderPreset)=>{
     const key=(preset?.key||'custom')+'_'+Date.now().toString().slice(-6);
-    const p:SmtpProfile={key,name:preset?.name||'Custom SMTP',provider:preset?.key||'custom',enabled:true,priority:profiles.length+1,weight:1,host:preset?.host||'',port:preset?.port||587,encryption:preset?.encryption||'tls',username:'',password:'',from_address:'',from_name:settings.platform_name};
+    const p:SmtpProfile={key,name:preset?.name||'Custom SMTP',provider:preset?.key||'custom',enabled:true,priority:profiles.length+1,weight:1,host:preset?.host||'',port:preset?.port||587,encryption:preset?.encryption||'tls',username:'',password:'',from_address:'',from_name:safeSettings.platform_name || 'SEMIZZY ONE'};
     form.setData('smtp',{...form.data.smtp,profiles:[...profiles,p]});
   };
   const patchProfile=(index:number,patch:Partial<SmtpProfile>)=>form.setData('smtp',{...form.data.smtp,profiles:profiles.map((p,i)=>i===index?{...p,...patch}:p)});
@@ -110,15 +113,15 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
         <div className="grid gap-4 md:grid-cols-3">
           <label className="flex items-center gap-3 rounded-xl border p-4 md:col-span-1"><input type="checkbox" checked={!!form.data.smtp.enabled} onChange={e=>form.setData('smtp',{...form.data.smtp,enabled:e.target.checked})}/><span><b>Enable SMTP pool</b><span className="block text-xs text-slate-500">Disabled = use .env/cPanel mail.</span></span></label>
           <label className="rounded-xl border p-4"><b className="text-sm">Delivery strategy</b><select className="mt-2 w-full rounded-xl border p-3" value={form.data.smtp.strategy} onChange={e=>form.setData('smtp',{...form.data.smtp,strategy:e.target.value})}><option value="failover">Failover — priority first, next provider only if sending fails</option><option value="roundrobin">Round-robin — actively distribute mail across all enabled providers</option></select></label>
-          <div className="rounded-xl border bg-slate-50 p-4 text-sm"><b>.env / cPanel fallback</b><div className="mt-1">{smtp_env.mailer} · {smtp_env.host||'not configured'}:{smtp_env.port}</div></div>
+          <div className="rounded-xl border bg-slate-50 p-4 text-sm"><b>.env / cPanel fallback</b><div className="mt-1">{safeSmtpEnv.mailer} · {safeSmtpEnv.host||'not configured'}:{safeSmtpEnv.port}</div></div>
         </div>
 
         <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900"><b>How it works:</b> Failover tries enabled profiles by priority and moves to the next profile after a transport failure. Round-robin uses every enabled profile over successive sends and can retry another profile when one fails. This uses Laravel/Symfony's native failover and round-robin mail transports.</div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{smtp_providers.map(p=><button type="button" key={p.key} onClick={()=>addProfile(p)} className="rounded-xl border p-4 text-left hover:border-indigo-400"><b>{p.name}</b><span className="mt-1 block text-xs text-slate-500">{p.host}:{p.port} · {p.encryption.toUpperCase()}</span><span className="mt-1 block text-xs font-semibold text-indigo-700">+ Add provider</span></button>)}</div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{safeProviders.map(p=><button type="button" key={p.key} onClick={()=>addProfile(p)} className="rounded-xl border p-4 text-left hover:border-indigo-400"><b>{p.name}</b><span className="mt-1 block text-xs text-slate-500">{p.host}:{p.port} · {p.encryption.toUpperCase()}</span><span className="mt-1 block text-xs font-semibold text-indigo-700">+ Add provider</span></button>)}</div>
 
         <div className="space-y-4">{profiles.length===0&&<div className="rounded-xl border border-dashed p-6 text-center text-sm text-slate-500">No SMTP profiles yet. Add SendPulse, Gmail, cPanel or another provider above.</div>}
-          {profiles.map((p,i)=>{const preset=smtp_providers.find(x=>x.key===p.provider);return <div key={p.key} className="rounded-2xl border p-4">
+          {profiles.map((p,i)=>{const preset=safeProviders.find(x=>x.key===p.provider);return <div key={p.key} className="rounded-2xl border p-4">
             <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex items-center gap-2"><b className="text-lg">{p.name}</b>{p.enabled?<span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700">ENABLED</span>:<span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-500">DISABLED</span>}</div><span className="text-xs text-slate-500">{p.provider} · priority {p.priority}</span></div><div className="flex gap-2"><button type="button" onClick={()=>moveProfile(i,-1)} className="rounded-lg border px-3 py-2 text-xs">↑</button><button type="button" onClick={()=>moveProfile(i,1)} className="rounded-lg border px-3 py-2 text-xs">↓</button><button type="button" onClick={()=>removeProfile(i)} className="rounded-lg border border-red-200 px-3 py-2 text-xs text-red-600">Remove</button></div></div>
             <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
               <input className="rounded-xl border p-3" placeholder="Profile name" value={p.name} onChange={e=>patchProfile(i,{name:e.target.value})}/>
