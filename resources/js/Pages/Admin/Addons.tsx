@@ -126,7 +126,7 @@ export default function Addons({ addons }: Props) {
                   <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Available built-in addon</p>
                   <h2 className="mt-1 text-xl font-extrabold text-slate-900">CAC Business Services</h2>
                   <p className="mt-1 text-sm leading-6 text-slate-600">CAC business-name/company registration, CAC search and verification, document workflow, orders and provider routing.</p>
-                  <p className="mt-2 text-xs font-mono text-slate-500">cac.business-services · v1.0.0 · Core >=2.0.0 · Dependencies: None</p>
+                  <p className="mt-2 text-xs font-mono text-slate-500">cac.business-services · v1.0.0 · Core ≥2.0.0 · Dependencies: None</p>
                 </div>
                 <button disabled={Boolean(processing)} onClick={() => setShowCacRegister((v) => !v)} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
                   {showCacRegister ? 'Close CAC Registration' : 'Register CAC Addon'}
