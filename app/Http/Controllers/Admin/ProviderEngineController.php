@@ -47,7 +47,7 @@ class ProviderEngineController extends Controller
             'api_version'=>$connection->api_version,
             'api_prefix'=>$connection->api_prefix,
             'auth_type'=>$connection->auth_type,
-            'auth_options'=>$connection->auth_options ?? [],
+            'auth_options'=>$this->safeAuthOptions((array)($connection->auth_options ?? [])),
             'verify_ssl'=>$connection->verify_ssl,
             'enabled'=>$connection->enabled,
             'is_default'=>$connection->is_default,
@@ -658,6 +658,18 @@ class ProviderEngineController extends Controller
             $mapped[$target]=data_get($payload,$source);
         }
         return $mapped;
+    }
+
+    private function safeAuthOptions(array $options): array
+    {
+        $safe = [];
+        foreach ($options as $key => $value) {
+            $name = strtolower((string) $key);
+            $safe[$key] = preg_match('/token|secret|password|passwd|pin|api[_-]?key|authorization|credential/i', $name)
+                ? '[REDACTED]'
+                : (is_scalar($value) || $value === null ? $value : '[CONFIGURED]');
+        }
+        return $safe;
     }
 
     private function credentialSummary(ProviderConnection $connection): JsonResponse
