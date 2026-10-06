@@ -25,7 +25,7 @@ export const THEMES: ThemeDefinition[] = [
   { ...p('#2563EB','#1D4ED8','#38BDF8',commonLight,{...commonDark,background:'#08152C',surface:'#102140'}), key:'modern-corporate', name:'Modern Corporate', description:'Confident enterprise interface for serious business platforms' },
   { ...p('#4F46E5','#3730A3','#06B6D4',commonLight,{...commonDark,background:'#0D1024',surface:'#161A35'}), key:'clean-saas', name:'Clean SaaS', description:'Modern software dashboard with calm, scalable component styling' },
   { ...p('#0891B2','#0E7490','#F59E0B',commonLight,{...commonDark,background:'#07151A',surface:'#10252C'}), key:'vibrant-tech', name:'Vibrant Tech', description:'Advanced technology look with controlled, professional colour energy' },
-  { ...p('#111827','#1F2937','#D4AF37',{...commonLight,background:'#FAF9F6',surface:'#FFFFFF',text:'#111827',muted:'#6B7280',border:'#E5E7EB'}, {...commonDark,background:'#090A0D',surface:'#141519',text:'#F9FAFB',accent:'#E8C96A'}), key:'luxury-executive', name:'Luxury Executive', description:'Sophisticated high-end business aesthetic with restrained accents' },
+  { ...p('#111827','#1F2937','#D4AF37',{...commonLight,background:'#FAF9F6',surface:'#FFFFFF',text:'#111827',muted:'#6B7280',border:'#E5E7EB'}, {...commonDark,background:'#090A0D',surface:'#141519',text:'#F9FAFB'}), key:'luxury-executive', name:'Luxury Executive', description:'Sophisticated high-end business aesthetic with restrained accents' },
 ];
 
 export const DEFAULT_CUSTOM: Record<Skin, Palette> = {
