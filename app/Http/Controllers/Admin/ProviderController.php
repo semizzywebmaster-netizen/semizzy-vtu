@@ -34,6 +34,21 @@ class ProviderController extends Controller
         }
     }
 
+    public function wizard(int $provider): Response
+    {
+        $model = ApiProvider::query()->findOrFail($provider);
+        return Inertia::render('Admin/ProviderWizard', [
+            'provider' => [
+                'id' => $model->id,
+                'display_name' => $model->display_name,
+                'environment' => $model->environment,
+                'enabled' => (bool) $model->enabled,
+                'verification_status' => $model->verification_status,
+                'integration_status' => $model->integration_status,
+            ],
+        ]);
+    }
+
     public function index(ProviderPresetRegistry $registry): Response
     {
         // Always reconcile the built-in registry before rendering. The installer is
