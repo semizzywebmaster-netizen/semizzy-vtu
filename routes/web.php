@@ -107,6 +107,9 @@ Route::middleware(['auth'])->group(function (): void {
     Route::post('/cac/orders', [\App\Http\Controllers\CacController::class, 'store'])->name('cac.orders.store');
     Route::get('/cac/orders', [\App\Http\Controllers\CacController::class, 'orders'])->name('cac.orders');
     Route::get('/cac/orders/{order}', [\App\Http\Controllers\CacController::class, 'show'])->name('cac.orders.show');
+    Route::post('/cac/orders/{order}/documents', [\App\Http\Controllers\CacController::class, 'uploadDocument'])->middleware('throttle:20,1')->name('cac.orders.documents.store');
+    Route::delete('/cac/orders/{order}/documents/{document}', [\App\Http\Controllers\CacController::class, 'deleteDocument'])->whereNumber('document')->middleware('throttle:20,1')->name('cac.orders.documents.destroy');
+    Route::get('/cac/orders/{order}/documents/{document}', [\App\Http\Controllers\CacController::class, 'downloadDocument'])->whereNumber('document')->name('cac.orders.documents.show');
 
     Route::get('/admin/communications', [CommunicationController::class, 'index'])->middleware('permission:communications.manage')->name('admin.communications');
     Route::post('/admin/communications', [CommunicationController::class, 'store'])->middleware('permission:communications.manage')->name('admin.communications.store');
@@ -245,6 +248,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/cac/orders/{order}', [\App\Http\Controllers\Admin\CacOrderController::class, 'show'])->middleware('permission:cac.orders.manage')->name('admin.cac.orders.show');
         Route::post('/cac/orders/{order}/review', [\App\Http\Controllers\Admin\CacOrderController::class, 'review'])->middleware('permission:cac.orders.manage')->name('admin.cac.orders.review');
         Route::post('/cac/orders/{order}/documents/{document}/review', [\App\Http\Controllers\Admin\CacOrderController::class, 'documentReview'])->middleware('permission:cac.documents.manage')->name('admin.cac.documents.review');
+        Route::get('/cac/orders/{order}/documents/{document}', [\App\Http\Controllers\Admin\CacOrderController::class, 'downloadDocument'])->whereNumber('document')->middleware('permission:cac.documents.manage')->name('admin.cac.documents.show');
         Route::post('/cac/products', [\App\Http\Controllers\Admin\CacServiceProductController::class, 'store'])->middleware('permission:cac.products.manage')->name('admin.cac.products.store');
         Route::put('/cac/products/{product}', [\App\Http\Controllers\Admin\CacServiceProductController::class, 'update'])->middleware('permission:cac.products.manage')->name('admin.cac.products.update');
         Route::middleware('ensure.vtu')->prefix('vtu')->group(function (): void {
