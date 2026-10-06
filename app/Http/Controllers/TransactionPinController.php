@@ -57,8 +57,6 @@ class TransactionPinController extends Controller
 
         $user->forceFill(['transaction_pin_hash' => Hash::make($data['pin'])])->saveOrFail();
 
-        $history->prunePin($user);
-
         return back()->with('success', $hadPin
             ? 'Transaction PIN changed successfully after OTP verification.'
             : 'Transaction PIN set successfully after OTP verification.');
