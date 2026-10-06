@@ -45,25 +45,15 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
 
   if (isUser) {
     const [showBalance, setShowBalance] = useState(true);
-    const [greetingSlide, setGreetingSlide] = useState(0);
-    const [promotionSlide, setPromotionSlide] = useState(0);
+      const [promotionSlide, setPromotionSlide] = useState(0);
     const firstName = (user?.name || user?.username || 'there').trim().split(/\s+/)[0];
     const visibleCategories = serviceCategories.filter(category => category.services.length > 0);
-    const seasonalSlides = dashboardMessages.seasonalSlides?.length
-      ? dashboardMessages.seasonalSlides
-      : [dashboardMessages.seasonal, dashboardMessages.quote].filter(Boolean) as { message: string; title?: string }[];
     const promotionSlides = dashboardMessages.promotionSlides?.length
       ? dashboardMessages.promotionSlides
       : [dashboardMessages.promotional].filter(Boolean) as { message: string; title?: string }[];
     const initials = user?.initials || firstName.charAt(0).toUpperCase();
     const recent = recentTransactions || [];
     const required = requiredActions || [];
-
-    useEffect(() => {
-      if (seasonalSlides.length < 2) return;
-      const timer = window.setInterval(() => setGreetingSlide(value => (value + 1) % seasonalSlides.length), 5000);
-      return () => window.clearInterval(timer);
-    }, [seasonalSlides.length]);
 
     useEffect(() => {
       if (promotionSlides.length < 2) return;
@@ -117,10 +107,6 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
           <Link href="/wallet/fund" className="rounded-2xl bg-white p-4 text-center shadow-sm ring-1 ring-slate-200"><span className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-lg">₦</span><span className="mt-2 block text-xs font-black">Fund Wallet</span></Link>
           <Link href="/send-money" className="rounded-2xl bg-white p-4 text-center shadow-sm ring-1 ring-slate-200"><span className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-lg">↔</span><span className="mt-2 block text-xs font-black">Send Money</span></Link>
         </section>
-
-        {seasonalSlides.length > 0 && <section className="mt-5 overflow-hidden rounded-3xl bg-amber-50 ring-1 ring-amber-100">
-          <div className="p-5"><p className="text-xs font-black uppercase tracking-wider text-amber-700">Seasonal greetings & daily inspiration</p><p className="mt-2 min-h-14 text-lg font-black leading-7 text-slate-900">“{seasonalSlides[greetingSlide]?.message}”</p><div className="mt-4 flex items-center justify-between"><button type="button" onClick={() => setGreetingSlide(value => (value - 1 + seasonalSlides.length) % seasonalSlides.length)} className="rounded-full bg-white px-3 py-1 text-xs font-bold ring-1 ring-amber-100">←</button><div className="flex gap-1.5">{seasonalSlides.map((_, index) => <button key={index} type="button" onClick={() => setGreetingSlide(index)} className={'h-1.5 rounded-full ' + (index === greetingSlide ? 'w-5 bg-amber-600' : 'w-1.5 bg-amber-200')} aria-label={'Slide ' + (index + 1)} />)}</div><button type="button" onClick={() => setGreetingSlide(value => (value + 1) % seasonalSlides.length)} className="rounded-full bg-white px-3 py-1 text-xs font-bold ring-1 ring-amber-100">→</button></div></div>
-        </section>}
 
         {required.length > 0 && <section className="mt-5 rounded-3xl border border-amber-200 bg-amber-50 p-5">
           <div className="flex items-start gap-3"><span className="text-xl">⚠️</span><div className="min-w-0 flex-1"><p className="text-xs font-black uppercase tracking-wider text-amber-800">Important action required</p><h2 className="mt-1 text-lg font-black text-slate-900">{required[0].title}</h2><p className="mt-1 text-sm text-slate-600">{required[0].message}</p><Link href={required[0].url} className="mt-3 inline-flex rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-black text-white">{required[0].label} →</Link></div></div>
