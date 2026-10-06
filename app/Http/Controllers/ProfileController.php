@@ -17,7 +17,7 @@ class ProfileController extends Controller
     public function show(Request $request): Response
     {
         $user = $request->user();
-        $tierNumber = max(1, min(4, (int) $user->tier));
+        $tierNumber = max(1, min(5, (int) $user->tier));
         $tiers = collect(config('semizzy.user_tiers', []))->map(fn (array $definition, $key) => [
             'id' => (int) $key,
             'name' => $definition['name'],
@@ -163,12 +163,14 @@ class ProfileController extends Controller
             'gender' => $user->gender,
             'occupation' => $user->occupation,
             'identityType' => $user->identity_type,
-            'identityNumber' => $user->identity_number,
+            'identityNumber' => $user->identity_number ? '••••••••' . substr((string) $user->identity_number, -4) : null,
             'identityDocumentUrl' => $user->identity_document_path ? route('profile.identity-document') : null,
             'kycStatus' => $user->kyc_status ?? 'not_started',
             'emailVerifiedAt' => $user->email_verified_at?->toISOString(),
             'phoneVerifiedAt' => $user->phone_verified_at?->toISOString(),
             'role' => $user->role,
+            'hasTransactionPin' => filled($user->transaction_pin_hash),
+            'isApiUser' => (int) $user->tier === 5,
             'status' => $user->status,
             'referralCode' => $user->referral_code,
             'referralLink' => url('/register?ref=' . urlencode((string) $user->referral_code)),
