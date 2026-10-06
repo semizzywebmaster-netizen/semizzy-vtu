@@ -104,6 +104,7 @@ Route::post('/'.$adminLoginPath, [AuthenticatedSessionController::class, 'storeA
 
 Route::middleware(['auth'])->group(function (): void {
     Route::get('/cac', [\App\Http\Controllers\CacController::class, 'index'])->name('cac.index');
+    Route::post('/cac/orders', [\App\Http\Controllers\CacController::class, 'store'])->name('cac.orders.store');
     Route::get('/cac/orders', [\App\Http\Controllers\CacController::class, 'orders'])->name('cac.orders');
     Route::get('/cac/orders/{order}', [\App\Http\Controllers\CacController::class, 'show'])->name('cac.orders.show');
 
