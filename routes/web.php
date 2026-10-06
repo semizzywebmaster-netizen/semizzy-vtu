@@ -114,6 +114,9 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/audit-events', [AuditEventController::class, 'index'])->middleware('permission:audit.view')->name('admin.audit-events.index');
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view')->name('admin.users.index');
         Route::get('/kyc', [AdminKycController::class, 'index'])->middleware('permission:users.verify')->name('admin.kyc.index');
+        Route::get('/profile-change-requests', [AdminProfileChangeRequestController::class, 'index'])->middleware('permission:users.verify')->name('admin.profile-change-requests.index');
+        Route::get('/profile-change-requests/{profileChangeRequest}/documents/{index}', [AdminProfileChangeRequestController::class, 'document'])->whereNumber('profileChangeRequest')->whereNumber('index')->middleware('permission:users.verify')->name('admin.profile-change-requests.document');
+        Route::post('/profile-change-requests/{profileChangeRequest}/review', [AdminProfileChangeRequestController::class, 'review'])->whereNumber('profileChangeRequest')->middleware('permission:users.verify')->name('admin.profile-change-requests.review');
         Route::post('/users/{user}/kyc/review', [AdminKycController::class, 'review'])->whereNumber('user')->middleware('permission:users.verify')->name('admin.users.kyc.review');
         Route::get('/users/{user}/kyc/document', [AdminKycController::class, 'document'])->whereNumber('user')->middleware('permission:users.verify')->name('admin.users.kyc.document');
         Route::patch('/users/{user}', [UserController::class, 'update'])->whereNumber('user')->middleware('permission:users.manage')->name('admin.users.update');
