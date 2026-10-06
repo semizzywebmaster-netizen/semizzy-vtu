@@ -84,6 +84,20 @@ class ProviderManager
 
             if (($reservation['replay'] ?? false) === true) {
                 $record = $reservation['record'];
+
+                if (($reservation['in_progress'] ?? false) === true) {
+                    return new ProviderResult(
+                        false,
+                        'PENDING',
+                        providerReference: $record->provider_reference,
+                        data: $record->safe_response,
+                        message: 'An identical transaction is already in progress.',
+                        retryable: false,
+                        duplicateRisk: true,
+                        providerId: $provider->id,
+                    );
+                }
+
                 if (($reservation['unknown_processing_state'] ?? false) === true) {
                     return new ProviderResult(
                         false,
