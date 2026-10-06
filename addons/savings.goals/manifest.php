@@ -56,7 +56,6 @@ return [
         '2026_10_06_000401_create_savings_accounts.php',
         '2026_10_06_000402_create_savings_movements.php',
         '2026_10_06_000403_seed_default_savings_plans.php',
-        '2026_10_06_000403_seed_default_savings_plans.php',
     ],
     'web_route_files' => [
         'addons/savings.goals/routes/web.php',
@@ -67,7 +66,7 @@ return [
     ],
     'provider_integration' => [
         'type' => 'core',
-        'manager' => 'App\Services\Providers\ProviderManager',
+        'manager' => 'App\\Services\\Providers\\ProviderManager',
         'capabilities' => [],
     ],
     'scheduled_tasks' => [
