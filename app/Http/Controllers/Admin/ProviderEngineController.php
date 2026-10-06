@@ -9,6 +9,8 @@ use App\\Models\\ProviderCredential;
 use App\\Models\\ProviderEndpoint;
 use App\\Models\\ProviderService;
 use App\\Models\\ProviderServiceImport;
+use App\\Models\\ProviderHealthCheck;
+use App\\Models\\ProviderOperationLog;
 use Illuminate\\Http\\JsonResponse;
 use Illuminate\\Http\\Request;
 use Illuminate\\Support\\Facades\\DB;
