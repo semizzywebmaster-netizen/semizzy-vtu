@@ -27,6 +27,4 @@ Route::middleware(['auth', 'role:ADMIN,STAFF,SUPPORT', 'verified', 'ensure.addon
                 Route::post('/transactions/bulk/requery', [VtuAdminController::class, 'bulkRequery'])->middleware('permission:vtu.requery')->name('admin.vtu.transactions.bulk-requery');
                 Route::post('/transactions/{transaction}/requery', [VtuAdminController::class, 'requery'])->whereNumber('transaction')->middleware('permission:vtu.requery')->name('admin.vtu.transactions.requery');
                 Route::post('/transactions/{transaction}/refund', [VtuAdminController::class, 'refund'])->whereNumber('transaction')->middleware(['permission:vtu.refunds.manage','throttle:10,1'])->name('admin.vtu.transactions.refund');
-            });
-    
 });
