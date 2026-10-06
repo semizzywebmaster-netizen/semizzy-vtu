@@ -6,9 +6,8 @@ export default function Login() {
   return <main className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
     <Head title="Login" />
     <form onSubmit={e => { e.preventDefault(); form.post('/login'); }} className="w-full max-w-md rounded-3xl bg-white p-7 shadow-xl">
-      <p className="text-sm font-semibold text-indigo-700">SEMIZZY ONE</p>
       <h1 className="mt-1 text-3xl font-black">Sign in</h1>
-      <p className="mt-2 text-sm text-slate-500">Use your username, email, or verified phone number.</p>
+      <p className="mt-2 text-sm text-slate-500">Enter your account credentials to continue.</p>
       <input autoComplete="username" className="mt-6 w-full rounded-xl border p-3" type="text" placeholder="Username, email or phone" value={form.data.login} onChange={e => form.setData('login', e.target.value)} />
       {form.errors.login && <p className="mt-1 text-sm text-red-600">{form.errors.login}</p>}
       <input autoComplete="current-password" className="mt-3 w-full rounded-xl border p-3" type="password" placeholder="Password" value={form.data.password} onChange={e => form.setData('password', e.target.value)} />
