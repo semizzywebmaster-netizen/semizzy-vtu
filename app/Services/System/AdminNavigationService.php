@@ -27,6 +27,12 @@ class AdminNavigationService
             ['id' => 'support', 'label' => 'Support', 'url' => '/support', 'icon' => 'support', 'section' => 'core', 'roles' => ['ADMIN', 'STAFF', 'SUPPORT'], 'order' => 80],
             ['id' => 'system', 'label' => 'System Health', 'url' => '/admin/health', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.view', 'order' => 90],
             ['id' => 'settings', 'label' => 'System Settings', 'url' => '/admin/settings', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.manage', 'order' => 100],
+            ['id' => 'smtp', 'label' => 'Email & SMTP', 'url' => '/admin/settings#smtp', 'icon' => 'bell', 'section' => 'core', 'permission' => 'system.manage', 'order' => 105],
+            ['id' => 'maintenance', 'label' => 'Backup & Maintenance', 'url' => '/admin/settings#maintenance', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.manage', 'order' => 106],
+            ['id' => 'platform-controls', 'label' => 'Platform Controls', 'url' => '/admin/platform-controls', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.manage', 'order' => 107],
+            ['id' => 'communications', 'label' => 'Communication Center', 'url' => '/admin/communications', 'icon' => 'bell', 'section' => 'core', 'permission' => 'communications.manage', 'roles' => ['ADMIN'], 'order' => 108],
+            ['id' => 'kyc', 'label' => 'KYC Verification', 'url' => '/admin/kyc', 'icon' => 'shield', 'section' => 'core', 'permission' => 'users.verify', 'roles' => ['ADMIN'], 'order' => 109],
+            ['id' => 'profile-change-requests', 'label' => 'Profile Change Requests', 'url' => '/admin/profile-change-requests', 'icon' => 'users', 'section' => 'core', 'permission' => 'users.verify', 'roles' => ['ADMIN'], 'order' => 109],
             ['id' => 'audit', 'label' => 'Audit Events', 'url' => '/admin/audit-events', 'icon' => 'audit', 'section' => 'core', 'permission' => 'audit.view', 'order' => 110],
             ['id' => 'profile', 'label' => 'Profile', 'url' => '/profile', 'icon' => 'profile', 'section' => 'account', 'order' => 1000],
         ];
