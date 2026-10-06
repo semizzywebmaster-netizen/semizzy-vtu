@@ -103,19 +103,20 @@ class RestJsonProviderAdapter implements ProviderAdapter
     private function request(ApiProvider $provider): PendingRequest
     {
         $credentials = $provider->credentials ?? [];
+        $request = Http::acceptJson();
 
         return match ($provider->auth_type) {
-            'bearer' => Http::acceptJson()->withToken((string) ($credentials['token'] ?? '')),
-            'basic' => Http::acceptJson()->withBasicAuth(
-                (string) ($credentials['username'] ?? ''),
-                (string) ($credentials['password'] ?? '')
-            ),
-            'api_key_header' => Http::acceptJson()->withHeaders([
-                (string) ($credentials['header'] ?? 'X-API-Key') => (string) ($credentials['key'] ?? ''),
+            'api_key' => $request->withHeaders([
+                (string)($credentials['api_key_name'] ?? 'X-API-Key') => (string)($credentials['api_key'] ?? ''),
             ]),
-            default => Http::acceptJson()->withHeaders($this->safeCredentialHeaders((array) ($credentials['headers'] ?? []))),
+            'bearer_token' => $request->withToken((string)($credentials['api_token'] ?? $credentials['token'] ?? '')),
+            'basic_auth' => $request->withBasicAuth((string)($credentials['username'] ?? ''), (string)($credentials['password'] ?? '')),
+            'oauth2' => $request->withToken((string)($credentials['access_token'] ?? $credentials['api_token'] ?? '')),
+            'custom' => $request->withHeaders($this->safeCredentialHeaders((array)($credentials['headers'] ?? []))),
+            default => $request,
         };
     }
+
 
     /**
      * Prevent accidental credential leakage through invalid/non-string header values.
