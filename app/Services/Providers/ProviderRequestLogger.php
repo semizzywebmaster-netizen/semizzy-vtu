@@ -20,7 +20,7 @@ class ProviderRequestLogger
             'service_key' => $serviceKey,
             'status' => $result->status,
             'provider_reference' => $result->providerReference,
-            'idempotency_key' => $idempotencyKey,
+            'idempotency_key' => $idempotencyKey !== null && $idempotencyKey !== '' ? hash('sha256', $idempotencyKey) : null,
             'duration_ms' => $durationMs,
             'request_summary' => '[REDACTED]',
             'response_summary' => $this->summary($result->data),
