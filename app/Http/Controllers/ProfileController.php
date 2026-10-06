@@ -18,7 +18,7 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $tierNumber = max(1, min(5, (int) $user->tier));
-        $tiers = collect(config('semizzy.user_tiers', []))->map(fn (array $definition, $key) => [
+        $tiers = collect(config('semizzy.user_tiers', []))->filter(fn (array $definition, $key) => (int) $key !== 5 || (int) $key === $tierNumber)->map(fn (array $definition, $key) => [
             'id' => (int) $key,
             'name' => $definition['name'],
             'requirements' => $definition['requirements'] ?? [],
