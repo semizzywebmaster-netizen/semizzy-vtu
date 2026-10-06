@@ -396,7 +396,7 @@ class ProviderEngineController extends Controller
 
         $started=microtime(true);
         try {
-            [$headers,$query,$body]=$this->authenticationPayload($connection,(array)($endpoint->request_mapping ?? []));
+            [$headers,$query,$body]=$this->authenticationPayload($connection,(array)($endpoint->request_mapping ?? []),(string)$endpoint->auth_mode);
             $headers=array_merge($headers,(array)($endpoint->headers ?? []));
             $query=array_merge($query,(array)($endpoint->query_params ?? []));
             $url=$this->endpointUrl($connection,$endpoint);
