@@ -76,10 +76,17 @@ class ProviderController extends Controller
                 },
                 'credentials' => $p->maskedCredentials(),
                 'capabilities' => $p->capabilities ?? [],
-                // ApiProvider has both a legacy JSON `endpoints` attribute and a new
-                // Eloquent `endpoints()` relation. Read the legacy value explicitly so
-                // the relation cannot shadow the configuration and make the UI appear empty.
-                'endpoints' => (json_decode((string) $p->getRawOriginal('endpoints'), true) ?: []),
+                // Never serialize legacy endpoint configuration: it may contain
+                // authentication headers, query parameters, webhook secrets, or URLs.
+                // The admin UI only needs safe endpoint metadata.
+                'endpoints' => $p->endpoints()->get(['id','name','operation','method','path','enabled'])->map(fn ($endpoint) => [
+                    'id' => $endpoint->id,
+                    'name' => $endpoint->name,
+                    'operation' => $endpoint->operation,
+                    'method' => $endpoint->method,
+                    'path' => $endpoint->path,
+                    'enabled' => (bool) $endpoint->enabled,
+                ])->values()->all(),
                 'endpoint_count' => $p->endpoints()->count(),
                 'endpoint_operations' => $p->endpoints()->pluck('operation')->filter()->values()->all(),
                 'service_categories' => $p->service_categories ?? [],
