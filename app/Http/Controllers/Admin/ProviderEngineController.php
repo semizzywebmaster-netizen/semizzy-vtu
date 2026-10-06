@@ -33,7 +33,7 @@ class ProviderEngineController extends Controller
             $out=[];
             foreach ($value as $key=>$item) {
                 $name=strtolower((string)$key);
-                $out[$key]=preg_match('/token|secret|password|passwd|pin|api[_-]?key|authorization|credential/i',$name) ? '[REDACTED]' : $this->redactForLog($item);
+                $out[$key]=preg_match('/token|secret|password|passwd|pin|api[_-]?key|authorization|auth|credential|private[_-]?key|signature|cookie|session|jwt|webhook|client[_-]?id|username/i',$name) ? '[REDACTED]' : $this->redactForLog($item);
             }
             return $out;
         }
