@@ -11,6 +11,7 @@ use App\Models\SupportTicket;
 use App\Models\User;
 use App\Models\VtuTransaction;
 use App\Models\WalletAccount;
+use App\Models\WalletMovement;
 use App\Services\Dashboard\DashboardMessageService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -152,6 +153,51 @@ class DashboardController extends Controller
 
         $dashboardMessages = app(DashboardMessageService::class)->compose($user);
 
+        $recentTransactions = [];
+        $requiredActions = [];
+        $unreadNotifications = $user->unreadNotifications()->count();
+
+        if (!$isOperations) {
+            $recentTransactions = $wallet
+                ? WalletMovement::query()
+                    ->where('wallet_account_id', $wallet->id)
+                    ->latest('created_at')
+                    ->latest('id')
+                    ->limit(2)
+                    ->get()
+                    ->map(fn (WalletMovement $movement) => [
+                        'id' => $movement->id,
+                        'reference' => $movement->reference,
+                        'type' => $movement->type,
+                        'amountMinor' => (string) $movement->amount_minor,
+                        'currency' => $movement->currency,
+                        'createdAt' => $movement->created_at?->toISOString(),
+                    ])->values()->all()
+                : [];
+
+            if (!$user->email_verified_at) {
+                $requiredActions[] = [
+                    'key' => 'email-verification',
+                    'title' => 'Verify your email address',
+                    'message' => 'Verify your email to keep your account secure.',
+                    'url' => '/email/verify',
+                    'label' => 'Verify email',
+                    'priority' => 'high',
+                ];
+            }
+
+            if (!$user->phone_verified_at) {
+                $requiredActions[] = [
+                    'key' => 'phone-verification',
+                    'title' => 'Verify your phone number',
+                    'message' => 'Complete phone verification for important account and transaction features.',
+                    'url' => '/profile',
+                    'label' => 'Verify phone',
+                    'priority' => 'high',
+                ];
+            }
+        }
+
         return Inertia::render('Dashboard', [
             'role' => $role,
             'user' => [
@@ -159,8 +205,12 @@ class DashboardController extends Controller
                 'email' => $user->email,
                 'username' => $user->username,
                 'business_name' => $user->business_name,
+                'initials' => collect(preg_split('/\\s+/', trim((string) $user->name)) ?: [])->filter()->map(fn ($part) => strtoupper(substr($part, 0, 1)))->take(2)->implode('') ?: 'U',
             ],
             'dashboardMessages' => $dashboardMessages,
+            'recentTransactions' => $recentTransactions,
+            'requiredActions' => $requiredActions,
+            'unreadNotifications' => $unreadNotifications,
             'metrics' => $metrics,
             'quickLinks' => $quickLinks,
             'serviceCategories' => $serviceCategories,
