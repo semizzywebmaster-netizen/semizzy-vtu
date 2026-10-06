@@ -4,6 +4,7 @@ namespace App\Services\Cac;
 use App\Models\CacOrder;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
+use App\Models\CacOrderStatusHistory;
 
 class CacOrderProcessor
 {
@@ -19,9 +20,11 @@ class CacOrderProcessor
             $meta['provider_claimed'] = true;
             $meta['provider_claimed_at'] = now()->toIso8601String();
             $locked->metadata = $meta;
+            $from = $locked->status;
             $locked->status = 'processing';
             $locked->submitted_at = now();
             $locked->save();
+            CacOrderStatusHistory::create(['cac_order_id'=>$locked->id,'from_status'=>$from,'to_status'=>'processing','source'=>'system','reason'=>'Provider execution claimed.']);
             return true;
         });
 
@@ -49,6 +52,7 @@ class CacOrderProcessor
             unset($meta['provider_claimed'], $meta['provider_claimed_at']);
             $locked->metadata = $meta;
 
+            $from = $locked->status;
             if ($result->accepted) {
                 $locked->status = 'completed';
                 $locked->completed_at = now();
@@ -63,6 +67,7 @@ class CacOrderProcessor
                 $locked->completed_at = now();
             }
             $locked->save();
+            CacOrderStatusHistory::create(['cac_order_id'=>$locked->id,'from_status'=>$from,'to_status'=>$locked->status,'source'=>'provider','reason'=>$result->message]);
             $this->audit->record('cac.order.provider_processed', $locked, [
                 'status'=>$locked->status,
                 'provider_id'=>$locked->api_provider_id,
