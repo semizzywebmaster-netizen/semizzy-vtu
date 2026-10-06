@@ -561,7 +561,7 @@ class AddonLifecycleService
             }
         }
 
-        foreach (['routes','api_routes','menus','widgets','services','provider_integrations','scheduled_tasks','events'] as $key) {
+        foreach (['routes','api_routes','web_route_files','api_route_files','menus','widgets','services','provider_integrations','scheduled_tasks','events'] as $key) {
             if (isset($manifest[$key]) && !is_array($manifest[$key])) throw ValidationException::withMessages([$key => "Addon manifest field [{$key}] must be an array."]);
         }
         if (isset($manifest['installer']) && (!is_string($manifest['installer']) || !preg_match('/^[A-Za-z_\\][A-Za-z0-9_\\]*$/', $manifest['installer']))) {
