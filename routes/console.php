@@ -35,3 +35,6 @@ Schedule::command('sim-hosting:expire', ['--limit'=>100])->everyMinute()->withou
 Artisan::command('sim-hosting:expire {--limit=100}', function (SimHostingService $service) {
     $this->info('Expired '.$service->expire((int) $this->option('limit')).' rentals.');
 });
+
+Schedule::command('sim-hosting:reconcile', ['--limit'=>100])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
+Artisan::command('sim-hosting:reconcile {--limit=100}', function (SimHostingService $service) { $this->info('Reconciled '.$service->reconcile((int)$this->option('limit')).' rentals.'); });
