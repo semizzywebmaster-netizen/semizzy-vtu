@@ -43,9 +43,11 @@ class RestJsonProviderAdapter implements ProviderAdapter
         };
 
         $configuredEndpoint = $connection
-            ? $connection->provider()->exists()
-                ? $provider->endpoints()->where('enabled', true)->whereIn('operation', $operationAliases)->latest('id')->first()
-                : null
+            ? $provider->endpoints()
+                ->where('enabled', true)
+                ->whereIn('operation', $operationAliases)
+                ->latest('id')
+                ->first()
             : null;
 
         if ($connection && $configuredEndpoint) {
