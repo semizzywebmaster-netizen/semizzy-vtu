@@ -348,7 +348,7 @@ class ProviderController extends Controller
             'documentation_url' => 'nullable|url:http,https|max:500',
             'official_website' => 'nullable|url:http,https|max:500',
             'environment' => ($creating ? 'required' : 'sometimes|required').'|in:sandbox,production',
-            'auth_type' => ($creating ? 'required' : 'sometimes|required').'|in:none,api_key,bearer_token,basic_auth,oauth2,custom,bearer,basic,api_key_header',
+            'auth_type' => ($creating ? 'required' : 'sometimes|required').'|string|max:80|regex:/^[A-Za-z0-9._:-]+$/',
             'capabilities' => 'nullable|array',
             'endpoints' => 'nullable|array',
             'service_categories' => 'nullable|array',
