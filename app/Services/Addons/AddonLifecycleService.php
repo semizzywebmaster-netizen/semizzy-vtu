@@ -272,6 +272,9 @@ class AddonLifecycleService
             }
 
             $migration = basename($migration);
+            if (!str_ends_with(strtolower($migration), '.php')) {
+                $migration .= '.php';
+            }
             if (!preg_match('/^\d{4}_\d{2}_\d{2}_\d{6}_[A-Za-z0-9_]+\.php$/', $migration)) {
                 throw ValidationException::withMessages(['migrations' => "Invalid addon migration filename [{$migration}]."]);
             }
@@ -442,7 +445,7 @@ class AddonLifecycleService
         if (!is_array($migrations)) throw ValidationException::withMessages(['migrations' => 'Addon migrations contract must be an array.']);
         foreach ($migrations as $migration) {
             if (!is_string($migration) || trim($migration) === '') throw ValidationException::withMessages(['migrations' => 'Each addon migration contract entry must be a non-empty string.']);
-            $this->recordStep($addon, 'migration_contract_'.sha1($migration), "Migration contract validated: {$migration}");
+            $this->recordStep($addon, 'migration_'.sha1($migration), "Migration contract validated: {$migration}");
         }
     }
 
@@ -542,6 +545,20 @@ class AddonLifecycleService
             if ($id==='' || strcasecmp($id,$manifest['identifier'])===0) throw ValidationException::withMessages(['dependencies' => 'Dependency identifiers must be non-empty and cannot self-reference.']);
             $manifest['dependencies'][$index]['identifier']=$id;
             if (isset($dependency['constraint']) && !is_string($dependency['constraint'])) throw ValidationException::withMessages(['dependencies' => 'Dependency constraints must be strings.']);
+        }
+
+        $dependencyIdentifiers = [];
+        foreach ($manifest['dependencies'] ?? [] as $dependency) {
+            $dependencyIdentifier = is_string($dependency)
+                ? $dependency
+                : ($dependency['identifier'] ?? null);
+            if (is_string($dependencyIdentifier)) {
+                $dependencyIdentifier = strtolower(trim($dependencyIdentifier));
+                if (isset($dependencyIdentifiers[$dependencyIdentifier])) {
+                    throw ValidationException::withMessages(['dependencies' => "Duplicate addon dependency [{$dependencyIdentifier}] is not allowed."]);
+                }
+                $dependencyIdentifiers[$dependencyIdentifier] = true;
+            }
         }
 
         foreach (['routes','api_routes','menus','widgets','services','provider_integrations','scheduled_tasks','events'] as $key) {
