@@ -17,7 +17,7 @@ class ProviderTestService
         $configuredConnection = $provider->connections()->where('enabled', true)->orderByDesc('is_default')->first();
         if ($configuredConnection) {
             $configuredOperations = $provider->endpoints()->where('enabled', true)->pluck('operation')->filter()->values()->all();
-            foreach (['health_check','balance_inquiry','catalogue_retrieval'] as $candidate) {
+            foreach (['health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories'] as $candidate) {
                 if (in_array($candidate, $configuredOperations, true)) {
                     $result = $this->adapter->execute($provider, $candidate);
                     $ms = (int) round((microtime(true) - $started) * 1000);
@@ -37,7 +37,7 @@ class ProviderTestService
         $capabilities=$provider->capabilities ?? [];
         $operation=null;
 
-        foreach(['health_check','balance_inquiry','catalogue_retrieval'] as $candidate){
+        foreach(['health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories'] as $candidate){
             if(isset($endpoints[$candidate]) && is_string($endpoints[$candidate]) && $endpoints[$candidate] !== ''
                 && in_array($candidate,$capabilities,true)){
                 $operation=$candidate;
