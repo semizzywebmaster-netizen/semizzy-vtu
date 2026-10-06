@@ -11,7 +11,6 @@ use App\Http\Middleware\RequirePermission;
 use App\Http\Middleware\RequireRole;
 use App\Http\Middleware\SecurityThrottle;
 use App\Http\Middleware\SecurityHeaders;
-use App\Http\Middleware\EnsureVtuAddonActive;
 use App\Http\Middleware\EnsureTransactionPin;
 use App\Http\Middleware\EnsureApiUser;
 use Illuminate\Foundation\Application;
@@ -35,7 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.token' => AuthenticateApiToken::class,
             'ensure.active.api' => EnsureActiveApiAccount::class,
             'security.throttle' => SecurityThrottle::class,
-            'ensure.vtu' => EnsureVtuAddonActive::class,
+            'ensure.addon' => \App\Http\Middleware\EnsureAddonActive::class,
             'transaction.pin' => EnsureTransactionPin::class,
             'ensure.api.user' => EnsureApiUser::class,
         ]);
