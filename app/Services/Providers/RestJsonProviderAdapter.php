@@ -145,11 +145,11 @@ class RestJsonProviderAdapter implements ProviderAdapter
             }
 
             if ($query !== []) {
-                $request = $request->withQueryParameters($query);
+                $request = $request->withOptions(['query' => $query]);
             }
 
             $response = match ($endpoint->content_type) {
-                'query' => $request->request($endpoint->method, $url, $body),
+                'query' => $request->withOptions(['query' => array_merge($query, $body)])->request($endpoint->method, $url),
                 'form-data' => $request->asMultipart()->request($endpoint->method, $url, $body),
                 'x-www-form-urlencoded' => $request->asForm()->request($endpoint->method, $url, $body),
                 'raw' => $request->withBody((string) ($body['raw'] ?? ''), 'text/plain')->request($endpoint->method, $url),
