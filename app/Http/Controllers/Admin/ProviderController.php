@@ -128,7 +128,7 @@ class ProviderController extends Controller
         }
     }
 
-    public function test(int $provider, ProviderTestService $tester, AuditLogger $audit, Request $request): RedirectResponse
+    public function test(int $provider, ProviderTestService $tester, AuditLogger $audit, Request $request): \Illuminate\Http\JsonResponse|RedirectResponse
     {
         try {
             $model = ApiProvider::query()->findOrFail($provider);
@@ -138,20 +138,20 @@ class ProviderController extends Controller
                 report($e);
                 $model->forceFill(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_summary'=>'Provider test failed safely.','enabled'=>false,'paused'=>true,'verification_status'=>'test_failed','integration_status'=>'test_failed'])->saveOrFail();
                 try { $audit->record('provider.test.failed',$model,['reason'=>'transport_or_adapter_exception'],$request); } catch (\Throwable $auditException) { report($auditException); }
-                return back()->with('error','Provider test failed safely. Review the server-side diagnostic log.');
+                return $request->expectsJson() ? response()->json(['status'=>'FAILED','message'=>'Provider test failed safely. Review the server-side diagnostic log.'],502) : back()->with('error','Provider test failed safely. Review the server-side diagnostic log.');
             }
             if ($result['result']->accepted) {
                 $verified=$model->environment==='production';
                 $model->updateOrFail(['verification_status'=>$verified?'live_verified':'sandbox_verified','integration_status'=>$verified?'live_verified':'sandbox_verified','enabled'=>false,'paused'=>true]);
                 try { $audit->record('provider.test.succeeded',$model,['environment'=>$model->environment,'status'=>$result['result']->status],$request); } catch (\Throwable $auditException) { report($auditException); }
-                return back()->with('success','Provider health check succeeded. Provider remains disabled until explicitly enabled.');
+                return $request->expectsJson() ? response()->json(['status'=>'SUCCESS','message'=>'Provider health check succeeded. Provider remains disabled until explicitly enabled.','verification_status'=>$model->verification_status,'enabled'=>false],200) : back()->with('success','Provider health check succeeded. Provider remains disabled until explicitly enabled.');
             }
             $model->updateOrFail(['enabled'=>false,'paused'=>true,'verification_status'=>'test_failed','integration_status'=>'test_failed']);
             try { $audit->record('provider.test.failed',$model,['environment'=>$model->environment,'status'=>$result['result']->status],$request); } catch (\Throwable $auditException) { report($auditException); }
-            return back()->with('error','Provider test did not succeed. Review server-side diagnostics.');
+            return $request->expectsJson() ? response()->json(['status'=>'FAILED','message'=>'Provider test did not succeed. Review server-side diagnostics.'],502) : back()->with('error','Provider test did not succeed. Review server-side diagnostics.');
         } catch (\Throwable $e) {
             report($e);
-            return back()->with('error','Provider test action failed safely.');
+            return $request->expectsJson() ? response()->json(['status'=>'FAILED','message'=>'Provider test action failed safely.'],500) : back()->with('error','Provider test action failed safely.');
         }
     }
 
@@ -262,7 +262,7 @@ class ProviderController extends Controller
         return back()->with('success', "Bulk provider removal completed: {$removed} provider(s) safely archived and disabled.");
     }
 
-    public function toggle(int $provider, AuditLogger $audit, Request $request): RedirectResponse
+    public function toggle(int $provider, AuditLogger $audit, Request $request): \Illuminate\Http\JsonResponse|RedirectResponse
     {
         try {
             $result = DB::transaction(function () use ($provider): array {
@@ -300,7 +300,7 @@ class ProviderController extends Controller
             });
 
             if (! $result['ok']) {
-                return back()->with('error', $result['message']);
+                return $request->expectsJson() ? response()->json(['status'=>'rejected','message'=>$result['message']],422) : back()->with('error', $result['message']);
             }
 
             // Audit after the state change commits. A logging/schema problem must
@@ -317,7 +317,7 @@ class ProviderController extends Controller
                 report($auditException);
             }
 
-            return back()->with(
+            return $request->expectsJson() ? response()->json(['status'=>'updated','enabled'=>$result['enabled'],'message'=>$result['enabled'] ? 'Provider enabled successfully.' : 'Provider disabled successfully.']) : back()->with(
                 'success',
                 $result['enabled'] ? 'Provider enabled successfully.' : 'Provider disabled successfully.'
             );
