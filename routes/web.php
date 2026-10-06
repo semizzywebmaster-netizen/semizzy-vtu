@@ -19,6 +19,7 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\Admin\KycController as AdminKycController;
+use App\Http\Controllers\Admin\PlatformControlController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RealtimeController;
 use App\Http\Controllers\HelpCenterController;
@@ -114,6 +115,8 @@ Route::middleware(['auth'])->group(function (): void {
         Route::put('/users/{user}/permissions', [UserController::class, 'permissions'])->whereNumber('user')->middleware('permission:users.manage')->name('admin.users.permissions');
         Route::post('/users/{user}/wallet-status', [UserController::class, 'walletStatus'])->whereNumber('user')->middleware('permission:users.fund')->name('admin.users.wallet-status');
         Route::get('/health', SystemHealthController::class)->middleware('permission:system.view')->name('admin.health');
+        Route::get('/platform-controls', [PlatformControlController::class, 'index'])->middleware('permission:system.manage')->name('admin.platform-controls.index');
+        Route::put('/platform-controls', [PlatformControlController::class, 'update'])->middleware(['permission:system.manage','throttle:20,1'])->name('admin.platform-controls.update');
         Route::get('/settings', [SystemSettingsController::class, 'index'])->middleware('permission:system.manage')->name('admin.settings.index');
         Route::put('/settings', [SystemSettingsController::class, 'update'])->middleware(['permission:system.manage', 'throttle:20,1'])->name('admin.settings.update');
         Route::get('/security-events', [SecurityEventController::class, 'index'])->middleware('permission:security.view')->name('admin.security-events.index');
