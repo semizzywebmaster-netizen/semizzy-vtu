@@ -10,7 +10,7 @@ class PwaShellTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('rel="manifest" href="/manifest.webmanifest"', false)
+            ->assertSee('<link rel="manifest" href="/manifest.webmanifest">', false)
             ->assertSee('name="theme-color" content="#4338ca"', false)
             ->assertSee('href="/icons/semizzy-one.svg"', false)
             ->assertDontSee('\\n', false);
@@ -18,15 +18,13 @@ class PwaShellTest extends TestCase
 
     public function test_pwa_manifest_and_offline_fallback_files_are_valid(): void
     {
-        $manifestPath = public_path('manifest.webmanifest');
+        $manifestResponse = $this->get('/manifest.webmanifest')->assertOk();
+        $manifest = json_decode($manifestResponse->getContent(), true, 512, JSON_THROW_ON_ERROR);
         $offlinePath = public_path('offline.html');
         $serviceWorkerPath = public_path('sw.js');
 
-        $this->assertFileExists($manifestPath);
         $this->assertFileExists($offlinePath);
         $this->assertFileExists($serviceWorkerPath);
-
-        $manifest = json_decode((string) file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
 
         $this->assertSame('SEMIZZY ONE', $manifest['name'] ?? null);
         $this->assertSame('standalone', $manifest['display'] ?? null);
