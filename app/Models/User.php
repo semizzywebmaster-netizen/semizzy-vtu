@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -12,7 +13,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasApiTokens, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = ['name', 'username', 'email', 'phone', 'avatar_path', 'address', 'city', 'state', 'country', 'postal_code', 'date_of_birth', 'gender', 'occupation', 'identity_type', 'identity_number', 'identity_document_path', 'kyc_status', 'kyc_submitted_at', 'kyc_reviewed_at', 'kyc_rejection_reason', 'password', 'role', 'status', 'tier', 'account_type', 'business_name', 'business_registration_number', 'business_type', 'business_address', 'business_state', 'business_country', 'merchant_verified_at', 'tier_upgrade_status', 'two_factor_enabled', 'two_factor_secret', 'transaction_pin_hash', 'security_lock_until', 'onboarding_completed_at', 'last_login_at', 'last_login_ip', 'referral_code', 'referred_by_id'];
     protected $hidden = ['password', 'remember_token'];
