@@ -76,6 +76,8 @@ class DashboardController extends Controller
                 ['label' => 'Addon manager', 'url' => '/admin/addons'],
                 ['label' => 'System health', 'url' => '/admin/health'],
                 ['label' => 'System settings', 'url' => '/admin/settings'],
+                ['label' => 'Platform controls & tier limits', 'url' => '/admin/platform-controls'],
+                ['label' => 'KYC verification', 'url' => '/admin/kyc'],
                 ['label' => 'Audit events', 'url' => '/admin/audit-events'],
                 ['label' => 'Security events', 'url' => '/admin/security-events'],
                 ['label' => 'VTU Control Center', 'url' => '/admin/vtu'],
