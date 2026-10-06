@@ -185,6 +185,9 @@ Route::middleware(['auth'])->group(function (): void {
         // Self-service provider engine
         Route::get('/providers/{provider}/setup', [ProviderController::class, 'wizard'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.setup');
         Route::post('/providers/{provider}/connections', [ProviderEngineController::class, 'storeConnection'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.connections.store');
+        Route::get('/provider-auth/schema', [ProviderEngineController::class, 'authSchema'])->middleware('permission:providers.view')->name('admin.provider-auth.schema');
+        Route::post('/provider-connections/{connection}/authentication', [ProviderEngineController::class, 'storeAuthentication'])->whereNumber('connection')->middleware('permission:providers.manage')->name('admin.provider-connections.authentication.store');
+        Route::get('/provider-connections/{connection}/credentials', [ProviderEngineController::class, 'credentials'])->whereNumber('connection')->middleware('permission:providers.view')->name('admin.provider-connections.credentials');
         Route::post('/provider-connections/{connection}/credentials', [ProviderEngineController::class, 'storeCredential'])->whereNumber('connection')->middleware('permission:providers.manage')->name('admin.provider-connections.credentials.store');
         Route::post('/providers/{provider}/endpoints', [ProviderEngineController::class, 'storeEndpoint'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.endpoints.store');
         Route::post('/providers/{provider}/discover-services', [ProviderEngineController::class, 'discovery'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.discover-services');
