@@ -65,7 +65,7 @@ return [
     ],
     'provider_integration' => [
         'type' => 'core',
-        'manager' => 'App\\Services\\Providers\\ProviderManager',
+        'manager' => 'App\Services\Providers\ProviderManager',
         'capabilities' => [],
     ],
     'scheduled_tasks' => [
