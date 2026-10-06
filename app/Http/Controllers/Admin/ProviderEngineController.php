@@ -188,7 +188,7 @@ class ProviderEngineController extends Controller
 
         $started=microtime(true);
         try{
-            [$headers,$query,$body]=$this->authenticationPayload($connection,(array)($endpoint->request_mapping ?? []));
+            [$headers,$query,$body]=$this->authenticationPayload($connection,(array)($endpoint->request_mapping ?? []),(string)$endpoint->auth_mode);
             $headers=array_merge($headers,(array)($endpoint->headers ?? []));
             $query=array_merge($query,(array)($endpoint->query_params ?? []));
             $url=$this->endpointUrl($connection,$endpoint);
@@ -270,7 +270,6 @@ class ProviderEngineController extends Controller
         }
         $saved = $provider->endpoints()->create($data);
         return response()->json(['data'=>$saved->fresh()],201);
-        return response()->json(['data'=>$saved->fresh()], $endpoint ? 200 : 201);
     }
 
     public function endpoints(ApiProvider $provider): JsonResponse
@@ -296,7 +295,7 @@ class ProviderEngineController extends Controller
         try {
             $body=(array)($endpoint->request_mapping ?? []);
             foreach(($input['variables'] ?? []) as $key=>$value) data_set($body,$key,$value);
-            [$headers,$query,$body]=$this->authenticationPayload($connection,$body);
+            [$headers,$query,$body]=$this->authenticationPayload($connection,$body,(string)$endpoint->auth_mode);
             $headers=array_merge($headers,(array)($endpoint->headers ?? []));
             $query=array_merge($query,(array)($endpoint->query_params ?? []));
             $url=$this->endpointUrl($connection,$endpoint);
@@ -520,7 +519,11 @@ class ProviderEngineController extends Controller
 
         $price=$item['price'] ?? $item['amount'] ?? $item['cost'] ?? $item['provider_price'] ?? $item['providerPrice'] ?? null;
         return [
-            'external_service_id'=>(string)($item['id'] ?? $item['service_id'] ?? $item['serviceId'] ?? $item['product_id'] ?? $item['productId'] ?? $item['code'] ?? Str::uuid()),
+            'external_service_id'=>(string)($item['id'] ?? $item['service_id'] ?? $item['serviceId'] ?? $item['product_id'] ?? $item['productId'] ?? $item['code'] ?? hash('sha256', json_encode([
+                $item['category'] ?? $item['category_name'] ?? $item['service_category'] ?? null,
+                $item['subcategory'] ?? $item['subcategory_name'] ?? $item['sub_category'] ?? null,
+                $item['name'] ?? $item['service_name'] ?? $item['serviceName'] ?? $item['product_name'] ?? $item['productName'] ?? $item['title'] ?? null,
+            ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))),
             'external_service_code'=>$this->normalizeScalar($item['code'] ?? $item['service_code'] ?? $item['serviceCode'] ?? $item['product_code'] ?? $item['productCode']),
             'name'=>$this->normalizeScalar($item['name'] ?? $item['service_name'] ?? $item['serviceName'] ?? $item['product_name'] ?? $item['productName'] ?? $item['title']) ?: 'Unnamed provider service',
             'description'=>$this->normalizeScalar($item['description'] ?? $item['details'] ?? $item['service_description']),
@@ -596,8 +599,14 @@ class ProviderEngineController extends Controller
         return response()->json(['data'=>$data]);
     }
 
-    private function authenticationPayload(ProviderConnection $connection, array $body): array
+    private function authenticationPayload(ProviderConnection $connection, array $body, string $authMode = 'connection'): array
     {
+        if ($authMode === 'none') {
+            return [[], [], $body];
+        }
+        if ($authMode === 'custom') {
+            return [[], [], $body];
+        }
         $headers=(array)($connection->headers ?? []);
         $query=(array)($connection->query_params ?? []);
 
