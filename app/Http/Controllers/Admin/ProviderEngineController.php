@@ -294,29 +294,6 @@ class ProviderEngineController extends Controller
         return response()->json(['status'=>'deleted']);
     }
 
-    {
-        $data=$request->validate([
-            'name'=>'required|string|max:160',
-            'operation'=>'nullable|string|max:100',
-            'method'=>'required|in:GET,POST,PUT,PATCH,DELETE',
-            'path'=>'nullable|string|max:2048',
-            'full_url'=>'nullable|url|max:2048',
-            'content_type'=>'required|in:json,form-data,x-www-form-urlencoded,query,raw',
-            'auth_mode'=>'required|in:connection,none,custom',
-            'headers'=>'nullable|array',
-            'query_params'=>'nullable|array',
-            'request_mapping'=>'nullable|array',
-            'response_mapping'=>'nullable|array',
-            'error_mapping'=>'nullable|array',
-            'webhook_config'=>'nullable|array',
-            'enabled'=>'nullable|boolean',
-        ]);
-        if (blank($data['path'] ?? null) && blank($data['full_url'] ?? null)) {
-            return response()->json(['message'=>'Provide either a relative path or a full URL.'],422);
-        }
-        return response()->json(['data'=>$provider->endpoints()->create($data)],201);
-    }
-
     public function discovery(Request $request, ApiProvider $provider): JsonResponse
     {
         $endpoint=$provider->endpoints()->where('enabled',true)
@@ -367,7 +344,7 @@ class ProviderEngineController extends Controller
                     );
                 }
 
-                ProviderService::updateOrCreate(
+                $service=ProviderService::updateOrCreate(
                     ['api_provider_id'=>$provider->id,'external_service_id'=>$normalized['external_service_id']],
                     [
                         'provider_category_id'=>$categoryRow?->id,
@@ -384,6 +361,10 @@ class ProviderEngineController extends Controller
                         'raw_provider_data'=>$item,
                         'last_synced_at'=>now(),
                     ]
+                );
+                ProviderServiceImport::firstOrCreate(
+                    ['api_provider_id'=>$provider->id,'provider_service_id'=>$service->id],
+                    ['selection_scope'=>'product','imported'=>false,'approved'=>false,'auto_sync_allowed'=>false,'state'=>'awaiting_approval']
                 );
                 $stored++;
             }
@@ -413,20 +394,52 @@ class ProviderEngineController extends Controller
         return response()->json(['data'=>$services]);
     }
 
+    public function importPreview(ApiProvider $provider): JsonResponse
+    {
+        $rows=ProviderServiceImport::query()
+            ->where('api_provider_id',$provider->id)
+            ->with(['service.category','service.subcategory'])
+            ->latest()
+            ->get()
+            ->map(fn(ProviderServiceImport $i)=>[
+                'id'=>$i->id,'provider_service_id'=>$i->provider_service_id,
+                'imported'=>$i->imported,'approved'=>$i->approved,'auto_sync_allowed'=>$i->auto_sync_allowed,'state'=>$i->state,
+                'service'=>$i->service?->only(['id','external_service_id','external_service_code','name','description','service_type','network','provider_price','currency','status']),
+                'category'=>$i->service?->category?->external_name,
+                'subcategory'=>$i->service?->subcategory?->external_name,
+            ]);
+        return response()->json(['data'=>$rows]);
+    }
+
+    public function approveImport(Request $request, ApiProvider $provider): JsonResponse
+    {
+        $data=$request->validate([
+            'provider_service_ids'=>'required|array|min:1',
+            'provider_service_ids.*'=>'integer',
+            'auto_sync_allowed'=>'nullable|boolean',
+        ]);
+        $ids=$provider->providerServices()->whereIn('id',$data['provider_service_ids'])->pluck('id');
+        $updated=ProviderServiceImport::where('api_provider_id',$provider->id)->whereIn('provider_service_id',$ids)->update([
+            'approved'=>true,
+            'state'=>'approved',
+            'auto_sync_allowed'=>(bool)($data['auto_sync_allowed'] ?? false),
+        ]);
+        return response()->json(['status'=>'approved','approved'=>$updated]);
+    }
+
     public function importSelected(Request $request, ApiProvider $provider): JsonResponse
     {
         $data=$request->validate(['provider_service_ids'=>'required|array|min:1','provider_service_ids.*'=>'integer']);
         $services=$provider->providerServices()->whereIn('id',$data['provider_service_ids'])->get();
         $imported=0;
         foreach($services as $service){
-            ProviderServiceImport::updateOrCreate(
-                ['api_provider_id'=>$provider->id,'provider_service_id'=>$service->id],
-                ['selection_scope'=>'product','imported'=>true,'approved'=>true,'auto_sync_allowed'=>true,'state'=>'imported','last_imported_at'=>now()]
-            );
+            $import=ProviderServiceImport::where('api_provider_id',$provider->id)->where('provider_service_id',$service->id)->first();
+            if(!$import || !$import->approved) continue;
+            $import->update(['imported'=>true,'state'=>'imported','last_imported_at'=>now()]);
             $service->update(['status'=>'imported']);
             $imported++;
         }
-        return response()->json(['status'=>'success','imported'=>$imported]);
+        return response()->json(['status'=>'success','imported'=>$imported,'skipped_unapproved'=>count($data['provider_service_ids'])-$imported]);
     }
 
     private function normalizeDiscoveredService(array $item): array
