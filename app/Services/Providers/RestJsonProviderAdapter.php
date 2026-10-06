@@ -80,14 +80,17 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
             $status = $response->status();
 
+            $uncertainHttp = $status === 408 || $status === 429 || $status >= 500;
+
             return new ProviderResult(
                 false,
-                $status >= 500 ? 'UNKNOWN' : 'FAILED',
-                message: 'Provider HTTP '.$status,
-                retryable: $status >= 500,
-                // Definitive 4xx rejections are safe to fail over. Only an
-                // uncertain 5xx response carries duplicate risk.
-                duplicateRisk: $operation === 'transaction_initiation' && $status >= 500
+                $uncertainHttp ? 'UNKNOWN' : 'FAILED',
+                message: 'Provider request failed.',
+                retryable: $uncertainHttp,
+                // Timeouts/rate limits/server failures may occur after a provider
+                // accepted the request, so transaction initiation must never fail
+                // over automatically from these responses.
+                duplicateRisk: $operation === 'transaction_initiation' && $uncertainHttp
             );
         } catch (\Throwable $e) {
             return new ProviderResult(
