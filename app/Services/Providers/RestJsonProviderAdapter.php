@@ -16,7 +16,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
     public function supports(string $operation): bool
     {
-        return in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status','refund','reversal','sms_send','whatsapp_send'], true);
+        return in_array($operation, ['health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories','transaction_initiation','transaction_status','refund','reversal','sms_send','whatsapp_send'], true);
     }
 
     public function execute(ApiProvider $provider, string $operation, array $payload = [], ?string $idempotencyKey = null): ProviderResult
@@ -60,7 +60,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 $request = $request->withHeaders(['Idempotency-Key' => $idempotencyKey]);
             }
 
-            $isGet = in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval'], true);
+            $isGet = in_array($operation, ['health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories'], true);
             if ($provider->auth_type === 'custom') {
                 $credentials = $provider->credentials ?? [];
                 $methodHeaders = $credentials[$isGet ? 'headers_get' : 'headers_post'] ?? null;
@@ -348,7 +348,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
         foreach ([$body['success'] ?? null, $body['data']['success'] ?? null] as $success) {
             if ($success === true || $success === 1 || $success === '1' || $success === 'true') {
-                return in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval','transaction_initiation'], true)
+                return in_array($operation, ['health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories','transaction_initiation'], true)
                     ? 'ACCEPTED'
                     : 'UNKNOWN';
             }
@@ -359,7 +359,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
         // Read-only/catalogue endpoints commonly return data without a status.
         // A transaction initiation must never be inferred as accepted from HTTP 2xx alone.
-        return in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval'], true)
+        return in_array($operation, ['health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories'], true)
             ? 'ACCEPTED'
             : 'UNKNOWN';
     }
