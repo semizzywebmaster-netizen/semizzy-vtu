@@ -1,0 +1,4 @@
+<?php
+use Illuminate\Support\Facades\Route;
+use Semizzy\Addons\Loans\Http\Controllers\AdminLoansController;
+Route::middleware(['auth','ensure.addon:loans.credit','permission:loans.manage'])->prefix('admin/loans')->group(function(){Route::get('/',[AdminLoansController::class,'index']);Route::post('/{reference}/approve',[AdminLoansController::class,'approve'])->middleware('permission:loans.approve');Route::post('/{reference}/reject',[AdminLoansController::class,'reject'])->middleware('permission:loans.approve');Route::post('/{reference}/disburse',[AdminLoansController::class,'disburse'])->middleware('permission:loans.manage');});
