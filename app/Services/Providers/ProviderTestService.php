@@ -12,7 +12,8 @@ class ProviderTestService
     {
         $this->guard->validate($provider->base_url);
         $started=microtime(true);
-        $endpoints=$provider->endpoints ?? [];
+        $rawEndpoints=$provider->getRawOriginal('endpoints');
+        $endpoints=is_array($rawEndpoints) ? $rawEndpoints : (is_string($rawEndpoints) ? (json_decode($rawEndpoints,true) ?: []) : []);
         $capabilities=$provider->capabilities ?? [];
         $operation=null;
 
