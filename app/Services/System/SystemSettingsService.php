@@ -31,6 +31,7 @@ class SystemSettingsService
                 'enabled'=>false,
                 'strategy'=>'failover',
                 'profiles'=>[],
+                'health'=>[],
             ],
         ];
 
@@ -72,6 +73,7 @@ class SystemSettingsService
                         } else {
                             foreach (($decoded['profiles'] ?? []) as $i => $profile) {
                                 if (is_array($profile)) unset($decoded['profiles'][$i]['password']);
+                                unset($decoded['profiles'][$i]['last_error']);
                             }
                         }
                     }
@@ -88,6 +90,7 @@ class SystemSettingsService
         if (!in_array($settings['theme_key'], $allowedThemes, true)) $settings['theme_key'] = 'modern-corporate';
         if (!in_array($settings['skin_default'], ['light','dark'], true)) $settings['skin_default'] = 'light';
         if (!in_array($settings['smtp']['strategy'] ?? 'failover', ['failover','roundrobin'], true)) $settings['smtp']['strategy'] = 'failover';
+        if (!is_array($settings['smtp']['health'] ?? null)) $settings['smtp']['health'] = [];
 
         return $this->resolved = $settings;
     }
