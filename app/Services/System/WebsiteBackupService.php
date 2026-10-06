@@ -11,6 +11,7 @@ use RuntimeException;
 class WebsiteBackupService
 {
     private string $backupDirectory;
+    private array $transientTables = ['migrations','jobs','failed_jobs','job_batches','cache','cache_locks','sessions'];
 
     public function __construct(private DatabaseManager $database, private Filesystem $files)
     {
@@ -99,7 +100,7 @@ class WebsiteBackupService
             while (($line = fgets($stream)) !== false) {
                 $record = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
                 $table = $record['table'] ?? null;
-                if (!is_string($table) || !isset($known[$table])) continue;
+                if (!is_string($table) || !isset($known[$table]) || in_array($table,$this->transientTables,true)) continue;
                 if (!isset($cleared[$table])) {
                     $connection->table($table)->delete();
                     $cleared[$table] = true;
