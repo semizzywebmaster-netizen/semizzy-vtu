@@ -1,3 +1,4 @@
+import CoreMobileNav from '../Components/CoreMobileNav';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 
