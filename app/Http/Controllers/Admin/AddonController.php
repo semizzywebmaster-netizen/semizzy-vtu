@@ -98,7 +98,6 @@ class AddonController extends Controller
         ]);
     }
 
-
     public function registerCac(AddonLifecycleService $lifecycle): RedirectResponse
     {
         $manifest = $this->cacManifest();
@@ -141,41 +140,75 @@ class AddonController extends Controller
 
     public function register(Request $request, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        try { $lifecycle->register($this->validatedManifest($request), $request->user()?->id); return back()->with('success', 'Addon manifest registered.'); }
-        catch (\Throwable $e) { report($e); return back()->with('error', 'Addon registration failed safely.'); }
+        try {
+            $lifecycle->register($this->validatedManifest($request), $request->user()?->id);
+            return back()->with('success', 'Addon manifest registered.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'Addon registration failed safely.');
+        }
     }
 
     public function install(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        try { $lifecycle->install($addon, auth()->id()); return back()->with('success', 'Addon installed and left inactive until explicitly enabled.'); }
-        catch (\Throwable $e) { report($e); return back()->with('error', 'Addon installation failed safely.'); }
+        try {
+            $lifecycle->install($addon, auth()->id());
+            return back()->with('success', 'Addon installed and left inactive until explicitly enabled.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'Addon installation failed safely.');
+        }
     }
 
     public function update(Request $request, Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
         $lifecycle->update($addon, $this->validatedManifest($request), auth()->id());
 
-        return back()->with('success', "Addon updated successfully to the requested version.");
+        return back()->with('success', 'Addon updated successfully to the requested version.');
     }
 
     public function activate(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        try { $lifecycle->activate($addon, auth()->id()); return back()->with('success', 'Addon activated.'); } catch (\Throwable $e) { report($e); return back()->with('error', 'Addon activate failed safely.'); }
+        try {
+            $lifecycle->activate($addon, auth()->id());
+            return back()->with('success', 'Addon activated.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'Addon activate failed safely.');
+        }
     }
 
     public function disable(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        try { $lifecycle->disable($addon, auth()->id()); return back()->with('success', 'Addon disabled.'); } catch (\Throwable $e) { report($e); return back()->with('error', 'Addon disable failed safely.'); }
+        try {
+            $lifecycle->disable($addon, auth()->id());
+            return back()->with('success', 'Addon disabled.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'Addon disable failed safely.');
+        }
     }
 
     public function uninstall(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        try { $lifecycle->uninstall($addon, auth()->id()); return back()->with('success', 'Addon uninstalled and archived.'); } catch (\Throwable $e) { report($e); return back()->with('error', 'Addon uninstall failed safely.'); }
+        try {
+            $lifecycle->uninstall($addon, auth()->id());
+            return back()->with('success', 'Addon uninstalled and archived.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'Addon uninstall failed safely.');
+        }
     }
 
     public function archive(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        try { $lifecycle->archive($addon, auth()->id()); return back()->with('success', 'Addon archived.'); } catch (\Throwable $e) { report($e); return back()->with('error', 'Addon archive failed safely.'); }
+        try {
+            $lifecycle->archive($addon, auth()->id());
+            return back()->with('success', 'Addon archived.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'Addon archive failed safely.');
+        }
     }
 
     private function vtuManifest(): array
@@ -206,7 +239,6 @@ class AddonController extends Controller
         ];
     }
 
-
     private function cacManifest(): array
     {
         return [
@@ -234,6 +266,12 @@ class AddonController extends Controller
             ],
             'migrations' => [
                 '2026_10_06_000100_create_cac_addon_tables.php',
+                '2026_10_06_000101_create_cac_catalogue_tables.php',
+                '2026_10_06_000102_add_cac_service_product_to_orders.php',
+                '2026_10_06_000103_create_cac_order_status_histories.php',
+                '2026_10_06_000104_harden_cac_document_review.php',
+                '2026_10_06_000105_create_cac_webhook_events.php',
+                '2026_10_06_000106_harden_cac_document_review.php',
             ],
             'routes' => ['/cac'],
             'api_routes' => ['/api/v1/cac'],
