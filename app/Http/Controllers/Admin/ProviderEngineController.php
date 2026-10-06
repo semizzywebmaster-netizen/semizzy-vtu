@@ -268,10 +268,8 @@ class ProviderEngineController extends Controller
         if (blank($data['path'] ?? null) && blank($data['full_url'] ?? null)) {
             return response()->json(['message'=>'Provide either a relative path or a full URL.'],422);
         }
-        if ($endpoint && $endpoint->api_provider_id !== $provider->id) {
-            return response()->json(['message'=>'Endpoint does not belong to this provider.'],404);
-        }
-        $saved=$endpoint ? tap($endpoint)->update($data) : $provider->endpoints()->create($data);
+        $saved = $provider->endpoints()->create($data);
+        return response()->json(['data'=>$saved->fresh()],201);
         return response()->json(['data'=>$saved->fresh()], $endpoint ? 200 : 201);
     }
 
