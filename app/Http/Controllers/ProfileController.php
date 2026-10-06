@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -109,12 +110,12 @@ class ProfileController extends Controller
 
             if ($request->hasFile('identity_document')) {
                 $old = $user->identity_document_path;
-                $payload['identity_document_path'] = $request->file('identity_document')->store('users/identity-documents', 'public');
+                $payload['identity_document_path'] = $request->file('identity_document')->store('users/identity-documents', 'local');
                 $payload['kyc_status'] = 'pending';
                 $payload['kyc_submitted_at'] = now();
                 $payload['kyc_reviewed_at'] = null;
                 $payload['kyc_rejection_reason'] = null;
-                if ($old) Storage::disk('public')->delete($old);
+                if ($old) Storage::disk('local')->delete($old);
             }
 
             $user->forceFill($payload)->saveOrFail();
@@ -138,6 +139,13 @@ class ProfileController extends Controller
         }
     }
 
+    public function identityDocument(Request $request): BinaryFileResponse
+    {
+        $user = $request->user();
+        abort_unless($user->identity_document_path && Storage::disk('local')->exists($user->identity_document_path), 404);
+        return response()->download(Storage::disk('local')->path($user->identity_document_path), 'identity-document');
+    }
+
     private function profilePayload(User $user): array
     {
         return [
@@ -156,7 +164,7 @@ class ProfileController extends Controller
             'occupation' => $user->occupation,
             'identityType' => $user->identity_type,
             'identityNumber' => $user->identity_number,
-            'identityDocumentUrl' => $user->identity_document_path ? Storage::disk('public')->url($user->identity_document_path) : null,
+            'identityDocumentUrl' => $user->identity_document_path ? route('profile.identity-document') : null,
             'kycStatus' => $user->kyc_status ?? 'not_started',
             'emailVerifiedAt' => $user->email_verified_at?->toISOString(),
             'phoneVerifiedAt' => $user->phone_verified_at?->toISOString(),
