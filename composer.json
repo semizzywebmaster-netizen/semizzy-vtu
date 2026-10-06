@@ -35,7 +35,7 @@
             "Semizzy\\Addons\\Payments\\": "addons/payments.gateway/src/",
             "Semizzy\\Addons\\Loans\\": "addons/loans.credit/src/",
             "Semizzy\\Addons\\Savings\\": "addons/savings.goals/src/",
-            "Semizzy\\\\Addons\\\\Investments\\\\": "addons/investments.wealth/src/"
+            "Semizzy\\Addons\\Investments\\": "addons/investments.wealth/src/"
         }
     },
     "autoload-dev": {
