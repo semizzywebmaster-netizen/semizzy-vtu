@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -38,12 +39,50 @@ class CatalogueController extends Controller
 
     public function storeService(Request $request, AuditLogger $audit): RedirectResponse
     {
-        $data=$request->validate(['category_id'=>'required|integer|exists:service_categories,id','key'=>'required|string|max:100|alpha_dash|unique:services,key','name'=>'required|string|max:160','description'=>'nullable|string|max:5000','metadata'=>'nullable|array','enabled'=>'nullable|boolean']);
+        $data=$request->validate(['category_id'=>'required|integer|exists:service_categories,id','key'=>'required|string|max:100|alpha_dash|unique:services,key','name'=>'required|string|max:160','description'=>'nullable|string|max:5000','metadata'=>'nullable|array','icon'=>'nullable|string|max:60','enabled'=>'nullable|boolean']);
         try {
-            $service=Service::create($data+['enabled'=>$data['enabled']??true]);
+            $metadata=$data['metadata']??[]; if(filled($data['icon']??null)) $metadata['icon']=$data['icon']; unset($data['icon']); $service=Service::create($data+['metadata'=>$metadata,'enabled'=>$data['enabled']??true]);
             try { $audit->record('catalogue.service.created',$service,['key'=>$service->key],$request); } catch (\Throwable $auditException) { report($auditException); }
             return back()->with('success','Service created.');
         } catch (\Throwable $e) { report($e); return back()->with('error','Service could not be created safely.'); }
+    }
+
+
+    public function generateServiceIcons(Request $request, AuditLogger $audit): RedirectResponse
+    {
+        $icons=['airtime'=>'airtime','data'=>'data','electricity'=>'electricity','cable'=>'cable','exam'=>'education','education'=>'education','sms'=>'sms','whatsapp'=>'whatsapp','payment'=>'payment','wallet'=>'wallet','bank'=>'banking','loan'=>'loan','savings'=>'savings','investment'=>'investment','market'=>'marketplace','shop'=>'shopping','gaming'=>'gaming','bet'=>'betting','internet'=>'internet','hosting'=>'hosting','domain'=>'domain','nin'=>'nin','bvn'=>'bvn','cac'=>'cac','identity'=>'identity'];
+        $count=0;
+        foreach(Service::query()->get() as $service){
+            $metadata=$service->metadata??[];
+            if(filled($metadata['icon']??null)) continue;
+            $haystack=strtolower($service->key.' '.$service->name);
+            $icon='default';
+            foreach($icons as $needle=>$value){if(str_contains($haystack,$needle)){$icon=$value;break;}}
+            $metadata['icon']=$icon;
+            $service->update(['metadata'=>$metadata]);
+            $count++;
+        }
+        $audit->record('catalogue.service_icons.generated',null,['updated'=>$count],$request);
+        return back()->with('success',"Service icon assignments generated for {$count} service(s).");
+    }
+
+    public function uploadServiceIcon(Request $request, Service $service, AuditLogger $audit): RedirectResponse
+    {
+        $request->validate(['icon'=>'required|file|mimes:svg|max:1024']);
+        $svg=(string) file_get_contents($request->file('icon')->getRealPath());
+        if($svg==='' || preg_match('/<\/?(script|iframe|object|embed|foreignObject)\b|\bon[a-z]+\s*=|javascript:/i',$svg)){
+            return back()->with('error','The SVG icon contains unsafe markup and was rejected.');
+        }
+        if(!str_contains(strtolower($svg),'<svg')) return back()->with('error','Only valid SVG icons are accepted.');
+        $old=($service->metadata??[])['icon_url']??null;
+        $path='service-icons/'.$service->id.'-'.bin2hex(random_bytes(8)).'.svg';
+        Storage::disk('public')->put($path,$svg);
+        $metadata=$service->metadata??[];
+        $metadata['icon_url']=Storage::disk('public')->url($path);
+        $service->update(['metadata'=>$metadata]);
+        if($old && str_contains($old,'/storage/')) Storage::disk('public')->delete(str_replace('/storage/','',$old));
+        $audit->record('catalogue.service_icon.imported',$service,['service_id'=>$service->id],$request);
+        return back()->with('success','Service SVG icon imported.');
     }
 
     public function storeProduct(Request $request, AuditLogger $audit): RedirectResponse
