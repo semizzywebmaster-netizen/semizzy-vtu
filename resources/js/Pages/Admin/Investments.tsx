@@ -1,4 +1,3 @@
-import React from 'react';
 type Product={id:number,name:string,key:string,active:boolean,profit_rate:string,term_days:number};
 type Investment={id:number,reference:string,status:string,principal_minor:number,profit_minor:number,product:Product};
 export default function AdminInvestments({products=[],investments}:{products?:Product[];investments:{data:Investment[]}}){return <div className="p-6 space-y-6"><h1 className="text-2xl font-bold">Investments</h1><div className="grid gap-3 md:grid-cols-3">{products.map(p=><div key={p.id} className="rounded-xl border p-4"><b>{p.name}</b><p>{p.profit_rate}% • {p.term_days} days • {p.active?'Active':'Disabled'}</p></div>)}</div><div className="rounded-xl border p-4"><h2 className="font-semibold mb-3">Investment accounts</h2>{investments?.data?.map(i=><div key={i.id} className="border-b py-2">{i.reference} — {i.status} — ₦{Number(i.principal_minor)/100}</div>)}</div></div>}
