@@ -55,6 +55,7 @@ return [
         '2026_10_06_000400_create_savings_plans.php',
         '2026_10_06_000401_create_savings_accounts.php',
         '2026_10_06_000402_create_savings_movements.php',
+        '2026_10_06_000403_seed_default_savings_plans.php',
     ],
     'web_route_files' => [
         'addons/savings.goals/routes/web.php',
