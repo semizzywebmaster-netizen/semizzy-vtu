@@ -10,7 +10,7 @@ class ProviderCapabilityRegistry
     public const SUPPORTED_CAPABILITIES = [
         'balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status',
         'refund','reversal','webhook','health_check','kyc_verification',
-        'number_reservation','number_release','inventory_sync',
+        'number_reservation','number_release','inventory_sync','sms_send','sms_status',
     ];
 
     public function validate(ApiProvider $provider): void
