@@ -190,6 +190,8 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/providers/{provider}/test-connection', [ProviderEngineController::class, 'testConnection'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.test-connection');
         Route::get('/providers/{provider}/health', [ProviderEngineController::class, 'health'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.health');
         Route::get('/providers/{provider}/sync-history', [ProviderEngineController::class, 'syncHistory'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.sync-history');
+        Route::get('/providers/{provider}/sync-summary', [ProviderEngineController::class, 'syncSummary'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.sync-summary');
+        Route::post('/providers/{provider}/sync', [ProviderEngineController::class, 'sync'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:10,1'])->name('admin.providers.sync');
         Route::get('/providers/{provider}/operation-logs', [ProviderEngineController::class, 'operationLogs'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.operation-logs');
         Route::get('/provider-auth/schema', [ProviderEngineController::class, 'authSchema'])->middleware('permission:providers.view')->name('admin.provider-auth.schema');
         Route::post('/provider-connections/{connection}/authentication', [ProviderEngineController::class, 'storeAuthentication'])->whereNumber('connection')->middleware('permission:providers.manage')->name('admin.provider-connections.authentication.store');
