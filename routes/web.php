@@ -239,10 +239,6 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/catalogue/mappings/{mapping}/toggle', [CatalogueController::class, 'toggleMapping'])->middleware('permission:catalogue.manage')->name('admin.catalogue.mappings.toggle');
 
         Route::get('/addons', [AddonController::class, 'index'])->middleware('permission:addons.view')->name('admin.addons.index');
-        Route::post('/addons/register-vtu', [AddonController::class, 'registerVtu'])->middleware('permission:addons.manage')->name('admin.addons.register-vtu');
-        Route::post('/addons/install-vtu', [AddonController::class, 'installVtu'])->middleware('permission:addons.manage')->name('admin.addons.install-vtu');
-        Route::post('/addons/register-cac', [AddonController::class, 'registerCac'])->middleware('permission:addons.manage')->name('admin.addons.register-cac');
-        Route::post('/addons/install-cac', [AddonController::class, 'installCac'])->middleware('permission:addons.manage')->name('admin.addons.install-cac');
         Route::get('/cac/products', [\App\Http\Controllers\Admin\CacServiceProductController::class, 'index'])->middleware('permission:cac.products.manage')->name('admin.cac.products');
         Route::get('/cac/orders', [\App\Http\Controllers\Admin\CacOrderController::class, 'index'])->middleware('permission:cac.orders.manage')->name('admin.cac.orders');
         Route::get('/cac/orders/{order}', [\App\Http\Controllers\Admin\CacOrderController::class, 'show'])->middleware('permission:cac.orders.manage')->name('admin.cac.orders.show');
