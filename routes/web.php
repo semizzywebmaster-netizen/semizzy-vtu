@@ -103,6 +103,10 @@ Route::get('/'.$adminLoginPath, [AuthenticatedSessionController::class, 'createA
 Route::post('/'.$adminLoginPath, [AuthenticatedSessionController::class, 'storeAdmin'])->middleware('guest')->name('admin.login.store');
 
 Route::middleware(['auth'])->group(function (): void {
+    Route::get('/cac', [\App\Http\Controllers\CacController::class, 'index'])->name('cac.index');
+    Route::get('/cac/orders', [\App\Http\Controllers\CacController::class, 'orders'])->name('cac.orders');
+    Route::get('/cac/orders/{order}', [\App\Http\Controllers\CacController::class, 'show'])->name('cac.orders.show');
+
     Route::get('/admin/communications', [CommunicationController::class, 'index'])->middleware('permission:communications.manage')->name('admin.communications');
     Route::post('/admin/communications', [CommunicationController::class, 'store'])->middleware('permission:communications.manage')->name('admin.communications.store');
     Route::post('/admin/communications/{campaign}/send', [CommunicationController::class, 'send'])->middleware('permission:communications.manage')->name('admin.communications.send');
