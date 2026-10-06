@@ -200,7 +200,7 @@ Route::middleware(['auth'])->group(function (): void {
 
         Route::get('/providers/{provider}/endpoints', [ProviderEngineController::class, 'endpoints'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.endpoints');
         Route::post('/providers/{provider}/endpoints', [ProviderEngineController::class, 'storeEndpoint'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.endpoints.store');
-        Route::put('/providers/{provider}/endpoints/{endpoint}', [ProviderEngineController::class, 'endpoint'])->whereNumber(['provider','endpoint'])->middleware('permission:providers.manage')->name('admin.providers.endpoints.update');
+        Route::put('/providers/{provider}/endpoints/{endpoint}', [ProviderEngineController::class, 'updateEndpoint'])->whereNumber(['provider','endpoint'])->middleware('permission:providers.manage')->name('admin.providers.endpoints.update');
         Route::post('/providers/{provider}/endpoints/{endpoint}/test', [ProviderEngineController::class, 'testEndpoint'])->whereNumber(['provider','endpoint'])->middleware(['permission:providers.manage','throttle:10,1'])->name('admin.providers.endpoints.test');
         Route::delete('/providers/{provider}/endpoints/{endpoint}', [ProviderEngineController::class, 'destroyEndpoint'])->whereNumber(['provider','endpoint'])->middleware('permission:providers.manage')->name('admin.providers.endpoints.destroy');
         Route::post('/providers/{provider}/discover-services', [ProviderEngineController::class, 'discovery'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:10,1'])->name('admin.providers.discover-services');
