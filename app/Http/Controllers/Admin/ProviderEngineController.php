@@ -205,7 +205,6 @@ class ProviderEngineController extends Controller
         return response()->json(['data'=>$checks]);
     }
 
-    public function endpoint(Request $request, ApiProvider $provider, ?ProviderEndpoint $endpoint = null): JsonResponse
     public function storeEndpoint(Request $request, ApiProvider $provider): JsonResponse
     {
         $data=$request->validate([
@@ -320,10 +319,10 @@ class ProviderEngineController extends Controller
 
     public function discovery(Request $request, ApiProvider $provider): JsonResponse
     {
-        $endpoint=$provider->endpoints()->where('operation','catalogue_retrieval')->where('enabled',true)->first()
-            ?? $provider->endpoints()->where('enabled',true)->whereIn('operation',['services','products','categories'])->first();
-
-        if (!$endpoint) return response()->json(['status'=>'manual_required','message'=>'No catalogue discovery endpoint is configured. Add an endpoint or create provider services manually.'],422);
+        $endpoint=$provider->endpoints()->where('enabled',true)
+            ->orderByRaw("CASE WHEN operation = 'catalogue_retrieval' THEN 0 WHEN operation IN ('services','products','categories') THEN 1 ELSE 2 END")
+            ->first();
+        if (!$endpoint) return response()->json(['status'=>'manual_required','message'=>'No enabled discovery endpoint is configured.'],422);
 
         $connection=$provider->connections()->where('enabled',true)->orderByDesc('is_default')->first();
         if (!$connection) return response()->json(['status'=>'configuration_required','message'=>'Configure an enabled provider connection first.'],422);
@@ -333,49 +332,54 @@ class ProviderEngineController extends Controller
             [$headers,$query,$body]=$this->authenticationPayload($connection,(array)($endpoint->request_mapping ?? []));
             $headers=array_merge($headers,(array)($endpoint->headers ?? []));
             $query=array_merge($query,(array)($endpoint->query_params ?? []));
-            $url=$endpoint->full_url ?: rtrim($connection->base_url,'/').'/'.ltrim($endpoint->path ?? '','/');
-
+            $url=$this->endpointUrl($connection,$endpoint);
             $client=Http::withHeaders($headers)->connectTimeout($connection->connect_timeout_seconds)->timeout($connection->request_timeout_seconds);
-            if (!$connection->verify_ssl) $client=$client->withoutVerifying();
+            if(!$connection->verify_ssl)$client=$client->withoutVerifying();
+            $response=$this->sendEndpointRequest($client,$endpoint,$url,$body,$query);
 
-            $response=match($endpoint->method){
-                'POST'=>$client->post($url,$body),
-                'PUT'=>$client->put($url,$body),
-                'PATCH'=>$client->patch($url,$body),
-                'DELETE'=>$client->delete($url,$body),
-                default=>$client->get($url,$query),
-            };
-
-            if (!$response->successful()) {
-                $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Provider discovery request returned an unsuccessful HTTP status.']);
+            if(!$response->successful()){
+                $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Provider discovery returned an unsuccessful HTTP status.']);
                 return response()->json(['status'=>'failed','http_status'=>$response->status(),'message'=>'Provider discovery request failed.'],502);
             }
 
             $payload=$response->json();
+            if(!is_array($payload)) return response()->json(['status'=>'failed','message'=>'Provider discovery returned an unsupported response format.'],502);
             $items=$this->extractItems($payload);
             $stored=0;
-            foreach ($items as $item) {
-                $externalId=(string)($item['id'] ?? $item['service_id'] ?? $item['serviceId'] ?? $item['code'] ?? Str::uuid());
-                $name=(string)($item['name'] ?? $item['service_name'] ?? $item['serviceName'] ?? $item['product_name'] ?? 'Unnamed provider service');
-                $category=(string)($item['category'] ?? $item['category_name'] ?? $item['service_category'] ?? 'Uncategorized');
-                $categoryRow=$provider->categories()->firstOrCreate(
-                    ['external_id'=>Str::slug($category)],
-                    ['external_name'=>$category,'normalized_key'=>Str::slug($category),'status'=>'discovered']
-                );
+
+            foreach($items as $item){
+                if(!is_array($item)) $item=['value'=>$item];
+                $normalized=$this->normalizeDiscoveredService($item);
+                $categoryRow=null;
+                if($normalized['category']!==null){
+                    $categoryRow=ProviderCategory::updateOrCreate(
+                        ['api_provider_id'=>$provider->id,'external_id'=>$normalized['category_id'] ?? Str::slug($normalized['category'])],
+                        ['external_name'=>$normalized['category'],'normalized_key'=>Str::slug($normalized['category']),'status'=>'discovered','metadata'=>$normalized['category_metadata'],'last_synced_at'=>now()]
+                    );
+                }
+                $subcategoryRow=null;
+                if($categoryRow && $normalized['subcategory']!==null){
+                    $subcategoryRow=ProviderSubcategory::updateOrCreate(
+                        ['provider_category_id'=>$categoryRow->id,'external_id'=>$normalized['subcategory_id'] ?? Str::slug($normalized['subcategory'])],
+                        ['external_name'=>$normalized['subcategory'],'normalized_key'=>Str::slug($normalized['subcategory']),'status'=>'discovered','metadata'=>$normalized['subcategory_metadata'],'last_synced_at'=>now()]
+                    );
+                }
+
                 ProviderService::updateOrCreate(
-                    ['api_provider_id'=>$provider->id,'external_service_id'=>$externalId],
+                    ['api_provider_id'=>$provider->id,'external_service_id'=>$normalized['external_service_id']],
                     [
-                        'provider_category_id'=>$categoryRow->id,
-                        'external_service_code'=>(string)($item['code'] ?? $item['service_code'] ?? ''),
-                        'name'=>$name,
-                        'description'=>$item['description'] ?? null,
-                        'service_type'=>$item['service_type'] ?? null,
-                        'network'=>$item['network'] ?? $item['operator'] ?? null,
-                        'provider_price'=>is_numeric($item['price'] ?? null) ? $item['price'] : null,
-                        'currency'=>$item['currency'] ?? 'NGN',
-                        'status'=>($item['status'] ?? 'discovered'),
-                        'metadata'=>is_array($item) ? $item : [],
-                        'raw_provider_data'=>is_array($item) ? $item : ['value'=>$item],
+                        'provider_category_id'=>$categoryRow?->id,
+                        'provider_subcategory_id'=>$subcategoryRow?->id,
+                        'external_service_code'=>$normalized['external_service_code'],
+                        'name'=>$normalized['name'],
+                        'description'=>$normalized['description'],
+                        'service_type'=>$normalized['service_type'],
+                        'network'=>$normalized['network'],
+                        'provider_price'=>$normalized['provider_price'],
+                        'currency'=>$normalized['currency'],
+                        'status'=>$normalized['status'],
+                        'metadata'=>$normalized['metadata'],
+                        'raw_provider_data'=>$item,
                         'last_synced_at'=>now(),
                     ]
                 );
@@ -383,7 +387,12 @@ class ProviderEngineController extends Controller
             }
 
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'SUCCESS','last_test_message'=>'Service discovery succeeded.']);
-            return response()->json(['status'=>'success','discovered'=>$stored,'duration_ms'=>(int)((microtime(true)-$started)*1000)]);
+            return response()->json([
+                'status'=>'success','discovered'=>$stored,
+                'duration_ms'=>(int)((microtime(true)-$started)*1000),
+                'categories'=>$provider->categories()->count(),
+                'services'=>$provider->providerServices()->count(),
+            ]);
         } catch (\Throwable $e) {
             report($e);
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Service discovery failed safely.']);
@@ -416,6 +425,51 @@ class ProviderEngineController extends Controller
             $imported++;
         }
         return response()->json(['status'=>'success','imported'=>$imported]);
+    }
+
+    private function normalizeDiscoveredService(array $item): array
+    {
+        $categoryValue=$item['category'] ?? $item['category_name'] ?? $item['service_category'] ?? $item['categoryName'] ?? null;
+        $subcategoryValue=$item['subcategory'] ?? $item['subcategory_name'] ?? $item['sub_category'] ?? $item['subCategory'] ?? null;
+        $category=$this->normalizeLabel($categoryValue);
+        $subcategory=$this->normalizeLabel($subcategoryValue);
+
+        $price=$item['price'] ?? $item['amount'] ?? $item['cost'] ?? $item['provider_price'] ?? $item['providerPrice'] ?? null;
+        return [
+            'external_service_id'=>(string)($item['id'] ?? $item['service_id'] ?? $item['serviceId'] ?? $item['product_id'] ?? $item['productId'] ?? $item['code'] ?? Str::uuid()),
+            'external_service_code'=>$this->normalizeScalar($item['code'] ?? $item['service_code'] ?? $item['serviceCode'] ?? $item['product_code'] ?? $item['productCode']),
+            'name'=>$this->normalizeScalar($item['name'] ?? $item['service_name'] ?? $item['serviceName'] ?? $item['product_name'] ?? $item['productName'] ?? $item['title']) ?: 'Unnamed provider service',
+            'description'=>$this->normalizeScalar($item['description'] ?? $item['details'] ?? $item['service_description']),
+            'service_type'=>$this->normalizeScalar($item['service_type'] ?? $item['serviceType'] ?? $item['type']),
+            'network'=>$this->normalizeScalar($item['network'] ?? $item['operator'] ?? $item['network_name'] ?? $item['networkName']),
+            'provider_price'=>is_numeric($price) ? $price : null,
+            'currency'=>$this->normalizeScalar($item['currency'] ?? $item['currency_code'] ?? 'NGN') ?: 'NGN',
+            'status'=>$this->normalizeScalar($item['status'] ?? $item['active'] ?? 'discovered') ?: 'discovered',
+            'category'=>$category,
+            'category_id'=>$this->normalizeScalar(is_array($categoryValue) ? ($categoryValue['id'] ?? $categoryValue['code'] ?? null) : null),
+            'category_metadata'=>is_array($categoryValue) ? $categoryValue : [],
+            'subcategory'=>$subcategory,
+            'subcategory_id'=>$this->normalizeScalar(is_array($subcategoryValue) ? ($subcategoryValue['id'] ?? $subcategoryValue['code'] ?? null) : null),
+            'subcategory_metadata'=>is_array($subcategoryValue) ? $subcategoryValue : [],
+            'metadata'=>[
+                'discovery_normalized'=>true,
+                'source_fields'=>array_keys($item),
+            ],
+        ];
+    }
+
+    private function normalizeLabel(mixed $value): ?string
+    {
+        if(is_array($value)) $value=$value['name'] ?? $value['title'] ?? $value['label'] ?? $value['code'] ?? null;
+        $value=$this->normalizeScalar($value);
+        return $value!==null && $value!=='' ? $value : null;
+    }
+
+    private function normalizeScalar(mixed $value): ?string
+    {
+        if(is_bool($value)) return $value?'active':'inactive';
+        if(is_scalar($value)) return trim((string)$value);
+        return null;
     }
 
     private function endpointUrl(ProviderConnection $connection, ProviderEndpoint $endpoint): string
