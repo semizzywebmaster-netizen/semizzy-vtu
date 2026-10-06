@@ -1,7 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function ForgotPassword() {
+export default function ForgotPassword({ platform }: { platform?: { platform_name?: string } }) {
   const [otpSent, setOtpSent] = useState(false);
   const form = useForm({ email: '', otp_code: '', password: '', password_confirmation: '' });
 
@@ -18,7 +18,7 @@ export default function ForgotPassword() {
   };
 
   return <main className="mx-auto flex min-h-screen max-w-md items-center px-6 py-10">
-    <Head title="Forgot password" />
+    <Head title={`Forgot password · ${platform?.platform_name || 'SEMIZZY ONE'}`} />
     <section className="w-full space-y-6 rounded-2xl border bg-white p-6 shadow-sm">
       <div><h1 className="text-2xl font-semibold">Reset your password</h1><p className="mt-2 text-sm text-slate-600">We will send a one-time verification code to your registered email. No old password is required.</p></div>
       <input type="email" required autoComplete="email" className="w-full rounded-lg border px-3 py-2" placeholder="Email address" value={form.data.email} onChange={e=>form.setData('email',e.target.value)} />
