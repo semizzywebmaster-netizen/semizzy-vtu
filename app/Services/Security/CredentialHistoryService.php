@@ -32,7 +32,6 @@ class CredentialHistoryService
             'credential_hash' => $oldHash,
         ]);
 
-        $this->prune($user, 'password', 5);
     }
 
     public function assertPinIsFresh(User $user, string $pin): void
@@ -67,17 +66,4 @@ class CredentialHistoryService
         }
     }
 
-    private function prune(User $user, string $type, int $keep): void
-    {
-        $ids = CredentialHistory::query()
-            ->where('user_id', $user->id)
-            ->where('credential_type', $type)
-            ->latest('id')
-            ->skip($keep)
-            ->pluck('id');
-
-        if ($ids->isNotEmpty()) {
-            CredentialHistory::query()->whereIn('id', $ids)->delete();
-        }
-    }
 }
