@@ -33,6 +33,9 @@ class AdminNavigationService
             ['id' => 'communications', 'label' => 'Communication Center', 'url' => '/admin/communications', 'icon' => 'bell', 'section' => 'core', 'permission' => 'communications.manage', 'roles' => ['ADMIN'], 'order' => 108],
             ['id' => 'kyc', 'label' => 'KYC Verification', 'url' => '/admin/kyc', 'icon' => 'shield', 'section' => 'core', 'permission' => 'users.verify', 'roles' => ['ADMIN'], 'order' => 109],
             ['id' => 'profile-change-requests', 'label' => 'Profile Change Requests', 'url' => '/admin/profile-change-requests', 'icon' => 'users', 'section' => 'core', 'permission' => 'users.verify', 'roles' => ['ADMIN'], 'order' => 109],
+            ['id' => 'pricing', 'label' => 'Pricing Rules', 'url' => '/admin/pricing', 'icon' => 'catalogue', 'section' => 'core', 'permission' => 'catalogue.view', 'order' => 109],
+            ['id' => 'routing', 'label' => 'Provider Routing', 'url' => '/admin/routing', 'icon' => 'server', 'section' => 'core', 'permission' => 'providers.view', 'order' => 109],
+            ['id' => 'help-unanswered', 'label' => 'Help Unanswered', 'url' => '/admin/help/unanswered', 'icon' => 'support', 'section' => 'core', 'permission' => 'help.manage', 'roles' => ['ADMIN'], 'order' => 109],
             ['id' => 'audit', 'label' => 'Audit Events', 'url' => '/admin/audit-events', 'icon' => 'audit', 'section' => 'core', 'permission' => 'audit.view', 'order' => 110],
             ['id' => 'profile', 'label' => 'Profile', 'url' => '/profile', 'icon' => 'profile', 'section' => 'account', 'order' => 1000],
         ];
