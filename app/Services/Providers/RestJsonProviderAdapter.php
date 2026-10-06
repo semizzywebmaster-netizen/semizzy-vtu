@@ -3,6 +3,9 @@
 namespace App\Services\Providers;
 
 use App\Models\ApiProvider;
+use App\Models\ProviderConnection;
+use App\Models\ProviderEndpoint;
+use App\Models\ProviderCredential;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -22,6 +25,22 @@ class RestJsonProviderAdapter implements ProviderAdapter
             throw new RuntimeException("Unsupported REST operation: {$operation}");
         }
 
+        $connection = $provider->connections()
+            ->where('enabled', true)
+            ->orderByDesc('is_default')
+            ->first();
+
+        $configuredEndpoint = $connection
+            ? $connection->provider()->exists()
+                ? $provider->endpoints()->where('enabled', true)->where('operation', $operation)->latest('id')->first()
+                : null
+            : null;
+
+        if ($connection && $configuredEndpoint) {
+            return $this->executeConfiguredEndpoint($provider, $connection, $configuredEndpoint, $operation, $payload, $idempotencyKey);
+        }
+
+        // Backward-compatible legacy provider configuration path.
         $this->guard->validate($provider->base_url);
 
         $url = $this->endpoint($provider, $operation);
@@ -80,24 +99,145 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
             $status = $response->status();
 
+            $uncertainHttp = $status === 408 || $status === 429 || $status >= 500;
+
             return new ProviderResult(
                 false,
-                $status >= 500 ? 'UNKNOWN' : 'FAILED',
-                message: 'Provider HTTP '.$status,
-                retryable: $status >= 500,
-                // Definitive 4xx rejections are safe to fail over. Only an
-                // uncertain 5xx response carries duplicate risk.
-                duplicateRisk: $operation === 'transaction_initiation' && $status >= 500
+                $uncertainHttp ? 'UNKNOWN' : 'FAILED',
+                message: 'Provider request failed.',
+                retryable: false,
+                // Timeouts/rate limits/server failures may occur after a provider
+                // accepted the request, so transaction initiation must never fail
+                // over automatically from these responses.
+                duplicateRisk: $operation === 'transaction_initiation' && $uncertainHttp
             );
         } catch (\Throwable $e) {
             return new ProviderResult(
                 false,
                 'UNKNOWN',
-                message: 'Provider request failed. Check the provider configuration and server logs.',
-                retryable: true,
+                message: 'Provider request failed; provider state must be rechecked before retry.',
+                retryable: false,
                 duplicateRisk: $operation === 'transaction_initiation'
             );
         }
+    }
+
+    private function executeConfiguredEndpoint(ApiProvider $provider, ProviderConnection $connection, ProviderEndpoint $endpoint, string $operation, array $payload, ?string $idempotencyKey): ProviderResult
+    {
+        $started = microtime(true);
+        try {
+            $url = $this->configuredEndpointUrl($connection, $endpoint);
+            [$headers, $query, $body] = $this->configuredAuthentication($connection, $endpoint, $payload);
+            $headers = array_merge($headers, (array) ($endpoint->headers ?? []));
+            $query = array_merge($query, (array) ($endpoint->query_params ?? []));
+
+            $request = Http::acceptJson()
+                ->withHeaders($headers)
+                ->connectTimeout(max(1, (int) $connection->connect_timeout_seconds))
+                ->timeout(max(1, (int) $connection->request_timeout_seconds))
+                ->withOptions(['allow_redirects' => false]);
+
+            if (!$connection->verify_ssl) {
+                $request = $request->withoutVerifying();
+            }
+            if ($idempotencyKey !== null && $idempotencyKey !== '') {
+                $request = $request->withHeaders(['Idempotency-Key' => $idempotencyKey]);
+            }
+
+            if ($query !== []) {
+                $request = $request->withOptions(['query' => $query]);
+            }
+
+            $response = match ($endpoint->content_type) {
+                'query' => $request->withOptions(['query' => array_merge($query, $body)])->send($endpoint->method, $url),
+                'form-data' => $request->asMultipart()->{$endpoint->method}($url, $body),
+                'x-www-form-urlencoded' => $request->asForm()->{$endpoint->method}($url, $body),
+                'raw' => $request->withBody((string) ($body['raw'] ?? ''), 'text/plain')->send($endpoint->method, $url),
+                default => $request->{$endpoint->method}($url, $body),
+            };
+
+            $bodyResponse = $response->json();
+            if ($response->successful()) {
+                $status = $this->normalizeStatus($bodyResponse, $operation);
+                $accepted = $status === 'ACCEPTED';
+                return new ProviderResult(
+                    $accepted,
+                    $status,
+                    $this->providerReference($bodyResponse),
+                    $bodyResponse,
+                    $accepted ? 'Provider request accepted.' : 'Provider returned a non-success status.',
+                    retryable: false,
+                    duplicateRisk: $operation === 'transaction_initiation' && $status === 'UNKNOWN'
+                );
+            }
+
+            $httpStatus = $response->status();
+            $uncertain = $httpStatus === 408 || $httpStatus === 429 || $httpStatus >= 500;
+            return new ProviderResult(
+                false,
+                $uncertain ? 'UNKNOWN' : 'FAILED',
+                message: 'Provider request failed.',
+                retryable: false,
+                duplicateRisk: $operation === 'transaction_initiation' && $uncertain,
+                providerId: $provider->id,
+            );
+        } catch (\Throwable $e) {
+            return new ProviderResult(
+                false,
+                'UNKNOWN',
+                message: $message,
+                retryable: false,
+                duplicateRisk: $operation === 'transaction_initiation',
+                providerId: $provider->id,
+            );
+        }
+    }
+
+    private function configuredEndpointUrl(ProviderConnection $connection, ProviderEndpoint $endpoint): string
+    {
+        if (filled($endpoint->full_url)) {
+            $this->guard->validate($endpoint->full_url);
+            return $endpoint->full_url;
+        }
+
+        $this->guard->validate($connection->base_url);
+        $prefix = trim((string) $connection->api_prefix, '/');
+        $path = trim((string) $endpoint->path, '/');
+        $url = rtrim($connection->base_url, '/') . ($prefix ? '/' . $prefix : '') . ($path ? '/' . $path : '');
+        $this->guard->validate($url);
+        return $url;
+    }
+
+    private function configuredAuthentication(ProviderConnection $connection, ProviderEndpoint $endpoint, array $payload): array
+    {
+        $body = $payload;
+        $headers = (array) ($connection->headers ?? []);
+        $query = (array) ($connection->query_params ?? []);
+
+        if ($endpoint->auth_mode === 'none') {
+            return [$headers, $query, $body];
+        }
+
+        $credentials = $connection->credentials()->get();
+        if ($endpoint->auth_mode === 'connection' && $connection->auth_type === 'basic') {
+            $username = $credentials->firstWhere('field_key', 'username')?->value;
+            $password = $credentials->firstWhere('field_key', 'password')?->value;
+            if ($username !== null && $password !== null) {
+                $headers['Authorization'] = 'Basic ' . base64_encode($username . ':' . $password);
+            }
+        } elseif ($endpoint->auth_mode === 'connection') {
+            foreach ($credentials as $credential) {
+                if (!filled($credential->value)) continue;
+                $value = (string) $credential->value;
+                if ($credential->prefix) $value = $credential->prefix . ' ' . $value;
+                if ($credential->placement === 'authorization') $headers['Authorization'] = $value;
+                elseif ($credential->placement === 'header' && $credential->header_name) $headers[$credential->header_name] = $value;
+                elseif ($credential->placement === 'query' && $credential->query_name) $query[$credential->query_name] = $value;
+                elseif (in_array($credential->placement, ['body', 'form'], true) && $credential->body_path) data_set($body, $credential->body_path, $credential->value);
+            }
+        }
+
+        return [$headers, $query, $body];
     }
 
     private function request(ApiProvider $provider): PendingRequest

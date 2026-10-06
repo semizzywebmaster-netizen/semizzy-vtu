@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Services\Providers\ProviderPresetRegistry;
 use App\Http\Controllers\Controller;
 use App\Models\ApiProvider;
 use App\Models\ProviderServiceProduct;
 use App\Services\Audit\AuditLogger;
 use App\Services\Providers\ProviderTestService;
-use App\Services\Providers\ProviderPresetRegistry;
 use App\Services\Providers\ProviderUrlGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,18 +34,23 @@ class ProviderController extends Controller
         }
     }
 
-    public function index(ProviderPresetRegistry $registry): Response
+    public function wizard(int $provider): Response
     {
-        // Always reconcile the built-in registry before rendering. The installer is
-        // idempotent and preserves administrator-entered credentials and status.
-        // This also repairs deployments where only part of the preset catalogue was
-        // previously imported.
-        try {
-            $registry->install();
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        $model = ApiProvider::query()->findOrFail($provider);
+        return Inertia::render('Admin/ProviderWizard', [
+            'provider' => [
+                'id' => $model->id,
+                'display_name' => $model->display_name,
+                'environment' => $model->environment,
+                'enabled' => (bool) $model->enabled,
+                'verification_status' => $model->verification_status,
+                'integration_status' => $model->integration_status,
+            ],
+        ]);
+    }
 
+    public function index(): Response
+    {
         return Inertia::render('Admin/Providers', [
             'providers' => ApiProvider::query()->latest()->get()->map(fn (ApiProvider $p) => [
                 'id' => $p->id,
@@ -70,7 +75,8 @@ class ProviderController extends Controller
                 },
                 'credentials' => $p->maskedCredentials(),
                 'capabilities' => $p->capabilities ?? [],
-                'endpoints' => $p->endpoints ?? [],
+                'endpoint_count' => is_array($p->endpoints) ? count($p->endpoints) : 0,
+                'endpoint_operations' => is_array($p->endpoints) ? array_values(array_filter(array_keys($p->endpoints), 'is_string')) : [],
                 'service_categories' => $p->service_categories ?? [],
             ]),
         ]);
@@ -343,7 +349,7 @@ class ProviderController extends Controller
             'documentation_url' => 'nullable|url:http,https|max:500',
             'official_website' => 'nullable|url:http,https|max:500',
             'environment' => ($creating ? 'required' : 'sometimes|required').'|in:sandbox,production',
-            'auth_type' => ($creating ? 'required' : 'sometimes|required').'|in:none,api_key,bearer_token,basic_auth,oauth2,custom,bearer,basic,api_key_header',
+            'auth_type' => ($creating ? 'required' : 'sometimes|required').'|string|max:80|regex:/^[A-Za-z0-9._:-]+$/',
             'capabilities' => 'nullable|array',
             'endpoints' => 'nullable|array',
             'service_categories' => 'nullable|array',

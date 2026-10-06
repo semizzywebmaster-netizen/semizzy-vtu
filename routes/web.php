@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\AuditEventController;
 use App\Http\Controllers\Admin\CatalogueController;
 use App\Http\Controllers\Admin\ProviderController;
+use App\Http\Controllers\Admin\ProviderEngineController;
+use App\Http\Controllers\Admin\PricingRoutingController;
 use App\Http\Controllers\Admin\SystemHealthController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\SystemMaintenanceController;
@@ -172,15 +174,50 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/help/unanswered', [HelpCenterController::class, 'unanswered'])->middleware('permission:help.manage')->name('admin.help.unanswered');
 
         Route::get('/providers', [ProviderController::class, 'index'])->middleware('permission:providers.view')->name('admin.providers.index');
-        Route::post('/providers/install-presets', [ProviderController::class, 'installPresets'])->middleware('permission:providers.manage')->name('admin.providers.install-presets');
-        Route::post('/providers/bulk/test', [ProviderController::class, 'bulkTest'])->middleware('permission:providers.manage')->name('admin.providers.bulk.test');
-        Route::post('/providers/bulk/toggle', [ProviderController::class, 'bulkToggle'])->middleware('permission:providers.manage')->name('admin.providers.bulk.toggle');
-        Route::delete('/providers/bulk', [ProviderController::class, 'bulkDestroy'])->middleware('permission:providers.manage')->name('admin.providers.bulk.destroy');
+        Route::post('/providers/install-presets', [ProviderController::class, 'installPresets'])->middleware(['permission:providers.manage','throttle:3,1'])->name('admin.providers.install-presets');
+        Route::post('/providers/bulk/test', [ProviderController::class, 'bulkTest'])->middleware(['permission:providers.manage','throttle:5,1'])->name('admin.providers.bulk.test');
+        Route::post('/providers/bulk/toggle', [ProviderController::class, 'bulkToggle'])->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.providers.bulk.toggle');
+        Route::delete('/providers/bulk', [ProviderController::class, 'bulkDestroy'])->middleware(['permission:providers.manage','throttle:10,1'])->name('admin.providers.bulk.destroy');
         Route::post('/providers', [ProviderController::class, 'store'])->middleware('permission:providers.manage')->name('admin.providers.store');
-        Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.update');
-        Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.test');
-        Route::post('/providers/{provider}/toggle', [ProviderController::class, 'toggle'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.toggle');
-        Route::delete('/providers/{provider}', [ProviderController::class, 'destroy'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.destroy');
+        Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:30,1'])->name('admin.providers.update');
+        Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:5,1'])->name('admin.providers.test');
+        Route::post('/providers/{provider}/toggle', [ProviderController::class, 'toggle'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.providers.toggle');
+        Route::delete('/providers/{provider}', [ProviderController::class, 'destroy'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:10,1'])->name('admin.providers.destroy');
+        // Self-service provider engine
+        Route::get('/providers/{provider}/setup', [ProviderController::class, 'wizard'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.setup');
+        Route::post('/providers/{provider}/connections', [ProviderEngineController::class, 'storeConnection'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:30,1'])->name('admin.providers.connections.store');
+        Route::get('/providers/{provider}/connections', [ProviderEngineController::class, 'connections'])->whereNumber('provider')->middleware(['permission:providers.view','throttle:60,1'])->name('admin.providers.connections');
+        Route::post('/providers/{provider}/test-connection', [ProviderEngineController::class, 'testConnection'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:5,1'])->name('admin.providers.test-connection');
+        Route::get('/providers/{provider}/health', [ProviderEngineController::class, 'health'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.health');
+        Route::get('/providers/{provider}/sync-history', [ProviderEngineController::class, 'syncHistory'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.sync-history');
+        Route::get('/providers/{provider}/sync-summary', [ProviderEngineController::class, 'syncSummary'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.sync-summary');
+        Route::post('/providers/{provider}/sync', [ProviderEngineController::class, 'sync'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:10,1'])->name('admin.providers.sync');
+        Route::get('/providers/{provider}/operation-logs', [ProviderEngineController::class, 'operationLogs'])->whereNumber('provider')->middleware(['permission:providers.view','throttle:60,1'])->name('admin.providers.operation-logs');
+        Route::get('/provider-auth/schema', [ProviderEngineController::class, 'authSchema'])->middleware('permission:providers.view')->name('admin.provider-auth.schema');
+        Route::post('/providers/{provider}/connections/{connection}/authentication', [ProviderEngineController::class, 'storeAuthentication'])->whereNumber('connection')->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.provider-connections.authentication.store');
+        Route::get('/providers/{provider}/connections/{connection}/credentials', [ProviderEngineController::class, 'credentials'])->whereNumber('connection')->middleware('permission:providers.view')->name('admin.provider-connections.credentials');
+        Route::post('/providers/{provider}/connections/{connection}/credentials', [ProviderEngineController::class, 'storeCredential'])->whereNumber('connection')->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.provider-connections.credentials.store');
+
+        Route::get('/providers/{provider}/endpoints', [ProviderEngineController::class, 'endpoints'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.endpoints');
+        Route::post('/providers/{provider}/endpoints', [ProviderEngineController::class, 'storeEndpoint'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:30,1'])->name('admin.providers.endpoints.store');
+        Route::put('/providers/{provider}/endpoints/{endpoint}', [ProviderEngineController::class, 'updateEndpoint'])->whereNumber(['provider','endpoint'])->middleware(['permission:providers.manage','throttle:30,1'])->name('admin.providers.endpoints.update');
+        Route::post('/providers/{provider}/endpoints/{endpoint}/test', [ProviderEngineController::class, 'testEndpoint'])->whereNumber(['provider','endpoint'])->middleware(['permission:providers.manage','throttle:10,1'])->name('admin.providers.endpoints.test');
+        Route::delete('/providers/{provider}/endpoints/{endpoint}', [ProviderEngineController::class, 'destroyEndpoint'])->whereNumber(['provider','endpoint'])->middleware(['permission:providers.manage','throttle:30,1'])->name('admin.providers.endpoints.destroy');
+        Route::post('/providers/{provider}/discover-services', [ProviderEngineController::class, 'discovery'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:10,1'])->name('admin.providers.discover-services');
+        Route::get('/providers/{provider}/provider-services', [ProviderEngineController::class, 'services'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.provider-services');
+        Route::get('/providers/{provider}/mappings', [ProviderEngineController::class, 'providerMappings'])->whereNumber('provider')->middleware('permission:providers.view');
+        Route::get('/catalogue/products', [ProviderEngineController::class, 'catalogueProducts'])->middleware('permission:catalogue.view');
+        Route::get('/pricing/rules', [PricingRoutingController::class, 'priceRules'])->middleware('permission:catalogue.view');
+        Route::post('/pricing/rules', [PricingRoutingController::class, 'storePriceRule'])->middleware('permission:catalogue.manage');
+        Route::get('/routing/rules', [PricingRoutingController::class, 'routingRules'])->middleware('permission:providers.view');
+        Route::post('/routing/rules', [PricingRoutingController::class, 'storeRoutingRule'])->middleware('permission:providers.manage');
+        Route::put('/routing/rules/{rule}', [PricingRoutingController::class, 'updateRoutingRule'])->whereNumber('rule')->middleware('permission:providers.manage');
+        Route::delete('/routing/rules/{rule}', [PricingRoutingController::class, 'deleteRoutingRule'])->whereNumber('rule')->middleware('permission:providers.manage');
+        Route::post('/providers/{provider}/mappings', [ProviderEngineController::class, 'createMapping'])->whereNumber('provider')->middleware('permission:providers.manage');
+        Route::patch('/providers/{provider}/mappings/{mapping}', [ProviderEngineController::class, 'toggleMapping'])->whereNumber(['provider','mapping'])->middleware(['permission:catalogue.manage','throttle:30,1'])->name('admin.providers.mappings.toggle-v2');
+        Route::get('/providers/{provider}/provider-services/import-preview', [ProviderEngineController::class, 'importPreview'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.import-preview');
+        Route::post('/providers/{provider}/provider-services/approve', [ProviderEngineController::class, 'approveImport'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.providers.approve-import');
+        Route::post('/providers/{provider}/provider-services/import', [ProviderEngineController::class, 'importSelected'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.providers.provider-services.import');
 
         Route::get('/catalogue', [CatalogueController::class, 'index'])->middleware('permission:catalogue.view')->name('admin.catalogue.index');
         Route::post('/catalogue/categories', [CatalogueController::class, 'storeCategory'])->middleware('permission:catalogue.manage')->name('admin.catalogue.categories.store');
@@ -228,3 +265,4 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/addons/{addon}/uninstall', [AddonController::class, 'uninstall'])->middleware('permission:addons.manage')->name('admin.addons.uninstall');
     });
 });
+

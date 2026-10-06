@@ -11,6 +11,8 @@ class ApiProvider extends Model
 {
     use SoftDeletes;
 
+    protected $hidden = ['credentials'];
+
     protected $fillable = ['identifier','display_name','official_website','documentation_url','service_categories','capabilities','endpoints','api_version','auth_type','environment','base_url','credentials','verification_status','integration_status','enabled','paused','priority','timeout_seconds','notes','last_tested_at','last_test_status','last_test_summary','last_successful_request_at'];
 
     protected function casts(): array { return [
@@ -19,6 +21,13 @@ class ApiProvider extends Model
     ];}
 
     public function serviceMappings(): HasMany { return $this->hasMany(ProviderServiceMapping::class); }
+    public function connections(): HasMany { return $this->hasMany(ProviderConnection::class); }
+    public function endpoints(): HasMany { return $this->hasMany(ProviderEndpoint::class); }
+    public function categories(): HasMany { return $this->hasMany(ProviderCategory::class); }
+    public function providerServices(): HasMany { return $this->hasMany(ProviderService::class); }
+    public function routingRules(): HasMany { return $this->hasMany(ProviderRoutingRule::class); }
+    public function healthChecks(): HasMany { return $this->hasMany(ProviderHealthCheck::class); }
+    public function operationLogs(): HasMany { return $this->hasMany(ProviderOperationLog::class); }
 
     public function scopeEligibleForNewTransactions(Builder $query): Builder
     {
