@@ -103,7 +103,7 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
           <div className="rounded-xl border bg-slate-50 p-4 text-sm"><b>.env / cPanel fallback</b><div className="mt-1">{smtp_env.mailer} · {smtp_env.host||'not configured'}:{smtp_env.port}</div></div>
         </div>
 
-        <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900"><b>How it works:</b> Failover tries enabled profiles by priority and moves to the next profile after a transport failure. Round-robin uses every enabled profile over successive sends and can retry another profile when one fails. This uses Laravel/Symfony's native failover and round-robin mail transports. citeturn1search1turn1search0</div>
+        <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900"><b>How it works:</b> Failover tries enabled profiles by priority and moves to the next profile after a transport failure. Round-robin uses every enabled profile over successive sends and can retry another profile when one fails. This uses Laravel/Symfony's native failover and round-robin mail transports.</div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{smtp_providers.map(p=><button type="button" key={p.key} onClick={()=>addProfile(p)} className="rounded-xl border p-4 text-left hover:border-indigo-400"><b>{p.name}</b><span className="mt-1 block text-xs text-slate-500">{p.host}:{p.port} · {p.encryption.toUpperCase()}</span><span className="mt-1 block text-xs font-semibold text-indigo-700">+ Add provider</span></button>)}</div>
 
