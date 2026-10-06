@@ -9,7 +9,7 @@ class ProviderRequestLogger
 {
     private const SENSITIVE_KEYS = [
         'token', 'api_key', 'secret', 'password', 'authorization',
-        'credential', 'private_key', 'signature', 'otp', 'pin', 'access_token', 'client_secret', 'api_secret', 'cookie', 'set_cookie', 'webhook_key',
+        'credential', 'private_key', 'signature', 'otp', 'pin', 'access_token', 'client_secret', 'api_secret', 'cookie', 'set_cookie', 'session', 'jwt', 'refresh_token', 'access_token', 'webhook_key',
     ];
 
     public function record(ApiProvider $provider, string $operation, ?string $serviceKey, ProviderResult $result, ?int $durationMs, ?string $idempotencyKey = null): void
