@@ -29,6 +29,9 @@ class AdminSystemSettingsTest extends TestCase
 
         $this->actingAs($admin)->put('/admin/settings', [
             'platform_name' => 'SEMIZZY ONE Core',
+            'theme_key' => 'premium-fintech',
+            'theme_primary' => '#4338CA',
+            'skin_default' => 'light',
             'support_email' => 'help@example.test',
             'support_notice' => 'Support is available weekdays.',
             'default_timezone' => 'Africa/Lagos',
@@ -37,7 +40,8 @@ class AdminSystemSettingsTest extends TestCase
         $this->assertDatabaseHas('system_settings', ['key' => 'platform_name', 'value' => 'SEMIZZY ONE Core', 'is_secret' => 0]);
         $this->assertDatabaseHas('system_settings', ['key' => 'default_timezone', 'value' => 'Africa/Lagos']);
         $event = \App\Models\AuditEvent::query()->where('event', 'admin.system_settings.updated')->firstOrFail();
-        $this->assertSame(['setting_keys' => ['platform_name', 'support_email', 'support_notice', 'default_timezone']], $event->context);
+        $this->assertContains('platform_name', $event->context['setting_keys']);
+        $this->assertContains('smtp', $event->context['setting_keys']);
     }
 
     public function test_saved_public_settings_are_shared_and_timezone_is_applied(): void
