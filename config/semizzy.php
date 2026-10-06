@@ -44,7 +44,7 @@ return [
         'protected_terms' => ['admin','administrator','support','staff','official','government','police','scam','fraud','sex'],
     ],
     'role_permissions' => [
-        'ADMIN' => ['vtu.view', 'vtu.services.manage', 'vtu.products.manage', 'vtu.providers.manage', 'vtu.mappings.manage', 'vtu.transactions.view', 'vtu.transactions.manage', 'vtu.bulk.manage', 'vtu.requery', 'vtu.refunds.manage', 'vtu.settings.manage', 'system.view', 'system.manage', 'security.view', 'audit.view', 'providers.view', 'providers.manage', 'catalogue.view', 'catalogue.manage', 'addons.view', 'addons.manage', 'users.view', 'users.manage', 'users.verify', 'users.fund', 'users.tier.manage', 'users.security.manage', 'users.merchant.manage', 'communications.manage', 'help.manage', 'analytics.view'],
+        'ADMIN' => ['vtu.view', 'vtu.services.manage', 'vtu.products.manage', 'vtu.providers.manage', 'vtu.mappings.manage', 'vtu.transactions.view', 'vtu.transactions.manage', 'vtu.bulk.manage', 'vtu.requery', 'vtu.refunds.manage', 'vtu.settings.manage', 'cac.view', 'cac.orders.manage', 'cac.products.manage', 'cac.providers.manage', 'cac.documents.manage', 'cac.settings.manage', 'cac.transactions.view', 'system.view', 'system.manage', 'security.view', 'audit.view', 'providers.view', 'providers.manage', 'catalogue.view', 'catalogue.manage', 'addons.view', 'addons.manage', 'users.view', 'users.manage', 'users.verify', 'users.fund', 'users.tier.manage', 'users.security.manage', 'users.merchant.manage', 'communications.manage', 'help.manage', 'analytics.view'],
         'STAFF' => ['vtu.view', 'vtu.transactions.view', 'vtu.requery', 'system.view', 'providers.view', 'catalogue.view'],
         'SUPPORT' => [],
         'USER' => ['vtu.view'],
