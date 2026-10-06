@@ -816,7 +816,7 @@ class ProviderEngineController extends Controller
             'request_mapping'=>$endpoint->request_mapping ?? [],
             'response_mapping'=>$endpoint->response_mapping ?? [],
             'error_mapping'=>$endpoint->error_mapping ?? [],
-            'webhook_config'=>$endpoint->webhook_config ?? [],
+            'webhook_config'=>$this->redactForLog((array)($endpoint->webhook_config ?? [])),
             'enabled'=>$endpoint->enabled,
         ];
     }
