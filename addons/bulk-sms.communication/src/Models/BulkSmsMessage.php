@@ -1,0 +1,2 @@
+<?php
+namespace Semizzy\Addons\BulkSms\Models; use Illuminate\Database\Eloquent\Model; class BulkSmsMessage extends Model {protected $table='bulk_sms_messages';protected $guarded=[];protected $casts=['sent_at'=>'datetime','delivered_at'=>'datetime','failed_at'=>'datetime','metadata'=>'array'];public function campaign(){return $this->belongsTo(BulkSmsCampaign::class,'campaign_id');}}
