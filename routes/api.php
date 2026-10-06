@@ -39,3 +39,12 @@ Route::middleware(['auth:sanctum','ensure.api.user','ensure.active.api','api.tok
 Route::middleware(['auth:sanctum','ensure.api.user','ensure.active.api','api.token:vtu.bulk','ensure.vtu','transaction.pin'])->prefix('/v1/vtu')->group(function (): void {
     Route::post('/bulk', [VtuController::class, 'bulk'])->middleware('throttle:10,1')->name('api.v1.vtu.bulk');
 });
+
+
+Route::middleware(['auth:sanctum','ensure.api.user','ensure.active.api','api.token:core.read'])->prefix('/v1/cac')->group(function (): void {
+    Route::get('/products', [\App\Http\Controllers\Api\CacOrderController::class, 'products'])->name('api.v1.cac.products');
+    Route::get('/orders/{order}', [\App\Http\Controllers\Api\CacOrderController::class, 'show'])->name('api.v1.cac.orders.show');
+});
+Route::middleware(['auth:sanctum','ensure.api.user','ensure.active.api','api.token:core.transact'])->prefix('/v1/cac')->group(function (): void {
+    Route::post('/orders', [\App\Http\Controllers\Api\CacOrderController::class, 'store'])->middleware('throttle:20,1')->name('api.v1.cac.orders.store');
+});
