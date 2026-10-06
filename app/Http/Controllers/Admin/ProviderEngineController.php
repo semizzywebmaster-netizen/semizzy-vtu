@@ -95,8 +95,11 @@ class ProviderEngineController extends Controller
         return response()->json(['data'=>$this->connectionSummary($connection->fresh('credentials'))],201);
     }
 
-    public function storeAuthentication(Request $request, ProviderConnection $connection): JsonResponse
+    public function storeAuthentication(Request $request, ApiProvider $provider, ProviderConnection $connection): JsonResponse
     {
+        if ((int) $connection->api_provider_id !== (int) $provider->id) {
+            return response()->json(['message'=>'Provider connection does not belong to this provider.'],404);
+        }
         $data=$request->validate([
             'auth_type'=>'required|in:'.implode(',',self::AUTH_TYPES),
             'auth_options'=>'nullable|array',
@@ -137,8 +140,11 @@ class ProviderEngineController extends Controller
         return $this->credentialSummary($connection->fresh('credentials'));
     }
 
-    public function storeCredential(Request $request, ProviderConnection $connection): JsonResponse
+    public function storeCredential(Request $request, ApiProvider $provider, ProviderConnection $connection): JsonResponse
     {
+        if ((int) $connection->api_provider_id !== (int) $provider->id) {
+            return response()->json(['message'=>'Provider connection does not belong to this provider.'],404);
+        }
         $data=$request->validate([
             'field_key'=>'required|string|max:120|regex:/^[A-Za-z0-9_.-]+$/',
             'label'=>'required|string|max:160',
@@ -163,8 +169,11 @@ class ProviderEngineController extends Controller
         return response()->json(['data'=>ProviderOperationLog::query()->where('api_provider_id',$provider->id)->latest()->limit(100)->get(['id','provider_connection_id','operation','method','endpoint','internal_reference','http_status','duration_ms','result','error_code','safe_message','safe_metadata','created_at'])]);
     }
 
-    public function credentials(ProviderConnection $connection): JsonResponse
+    public function credentials(ApiProvider $provider, ProviderConnection $connection): JsonResponse
     {
+        if ((int) $connection->api_provider_id !== (int) $provider->id) {
+            return response()->json(['message'=>'Provider connection does not belong to this provider.'],404);
+        }
         return $this->credentialSummary($connection->load('credentials'));
     }
 
