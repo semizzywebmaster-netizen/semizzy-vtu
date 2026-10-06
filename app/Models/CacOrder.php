@@ -11,7 +11,7 @@ class CacOrder extends Model
     protected $fillable = [
         'uuid','reference','user_id','cac_service_product_id','service_type','api_provider_id','status','idempotency_key',
         'customer_name','business_name','company_type','provider_reference',
-        'api_provider_id','amount_minor','fee_minor','total_minor','currency',
+        'amount_minor','fee_minor','total_minor','currency',
         'request_payload','response_payload','metadata','failure_message',
         'submitted_at','completed_at',
     ];
