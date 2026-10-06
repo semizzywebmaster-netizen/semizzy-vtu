@@ -21,3 +21,5 @@ Schedule::command('vtu:recover-stale-initiations', ['--limit' => 50, '--stale-mi
 Schedule::command('cac:reconcile-pending', ['--limit' => 50, '--min-age' => 1])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
 
 Schedule::command('payments:expire-pending', ['--limit' => 100])->everyMinute()->withoutOverlapping(2)->onOneServer();
+
+Schedule::command('savings:process-maturity', ['--limit' => 100])->everyMinute()->withoutOverlapping(2)->onOneServer();
