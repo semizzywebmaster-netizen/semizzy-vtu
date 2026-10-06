@@ -44,6 +44,25 @@ class AdminNavigationService
             ->orderBy('name')
             ->get(['identifier', 'name', 'navigation']);
 
+        // The VTU addon exposes several operational screens. Keep these visible
+        // even when an older stored addon manifest only contains the parent link.
+        if (in_array('vtu.view', $permissions, true)
+            && $addons->contains(fn (Addon $addon) => $addon->identifier === 'vtu.digital-services')) {
+            $vtuItems = [
+                ['id'=>'vtu-control','label'=>'VTU Control Center','url'=>'/admin/vtu','icon'=>'server','section'=>'addons','permission'=>'vtu.view','order'=>10],
+                ['id'=>'vtu-services','label'=>'VTU Services','url'=>'/admin/vtu/services','icon'=>'catalogue','section'=>'addons','permission'=>'vtu.services.manage','order'=>11],
+                ['id'=>'vtu-products','label'=>'VTU Products','url'=>'/admin/vtu/products','icon'=>'catalogue','section'=>'addons','permission'=>'vtu.products.manage','order'=>12],
+                ['id'=>'vtu-mappings','label'=>'VTU Mappings','url'=>'/admin/vtu/mappings','icon'=>'catalogue','section'=>'addons','permission'=>'vtu.mappings.manage','order'=>13],
+                ['id'=>'vtu-transactions','label'=>'VTU Transactions','url'=>'/admin/vtu/transactions','icon'=>'audit','section'=>'addons','permission'=>'vtu.transactions.view','order'=>14],
+                ['id'=>'vtu-bulk','label'=>'VTU Bulk Operations','url'=>'/admin/vtu/bulk','icon'=>'settings','section'=>'addons','permission'=>'vtu.bulk.manage','order'=>15],
+            ];
+            foreach ($vtuItems as $item) {
+                if ($this->visible($item, $user, $permissions)) {
+                    $items[] = $item + ['addon'=>'vtu.digital-services','addonName'=>'VTU & Digital Services'];
+                }
+            }
+        }
+
         foreach ($addons as $addon) {
             foreach ($this->normalizeAddonNavigation($addon->navigation) as $index => $item) {
                 if (! is_array($item) || empty($item['label']) || empty($item['url'])) {
