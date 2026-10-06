@@ -1,0 +1,5 @@
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+return new class extends Migration { public function up(): void { Schema::create('investment_products',function(Blueprint $t){$t->id();$t->string('key')->unique();$t->string('name');$t->string('currency',3)->default('NGN');$t->unsignedBigInteger('minimum_amount_minor')->default(1000);$t->unsignedBigInteger('maximum_amount_minor')->nullable();$t->decimal('profit_rate',8,4)->default(0);$t->unsignedInteger('term_days')->default(90);$t->boolean('allow_early_redemption')->default(false);$t->decimal('early_redemption_penalty',8,4)->default(0);$t->boolean('active')->default(true);$t->json('metadata')->nullable();$t->timestamps();}); } public function down(): void { Schema::dropIfExists('investment_products'); } };
