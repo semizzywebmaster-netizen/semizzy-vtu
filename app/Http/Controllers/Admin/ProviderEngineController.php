@@ -490,6 +490,24 @@ class ProviderEngineController extends Controller
         return response()->json(['status'=>'created'],201);
     }
 
+    public function toggleMapping(Request $request, ApiProvider $provider, int $mapping): JsonResponse
+    {
+        $data=$request->validate(['enabled'=>'required|boolean']);
+        $row=DB::table('provider_product_mappings_v2')->where('id',$mapping)->where('api_provider_id',$provider->id)->first();
+        if(!$row) return response()->json(['message'=>'Provider mapping not found.'],404);
+        if($data['enabled']){
+            $service=ProviderService::query()->find($row->provider_service_id);
+            $import=ProviderServiceImport::where('api_provider_id',$provider->id)->where('provider_service_id',$row->provider_service_id)->first();
+            if(!$service || $service->status==='removed' || !$import || !$import->approved || !$import->imported){
+                return response()->json(['message'=>'Mapping cannot be activated until the provider service is approved and imported.'],422);
+            }
+            DB::table('provider_product_mappings_v2')->where('id',$mapping)->update(['enabled'=>true,'mapping_status'=>'active','updated_at'=>now()]);
+        } else {
+            DB::table('provider_product_mappings_v2')->where('id',$mapping)->update(['enabled'=>false,'mapping_status'=>'disabled','updated_at'=>now()]);
+        }
+        return response()->json(['status'=>'updated','enabled'=>(bool)$data['enabled'],'mapping_status'=>$data['enabled']?'active':'disabled']);
+    }
+
     public function providerMappings(ApiProvider $provider): JsonResponse
     {
         $rows=\Illuminate\Support\Facades\DB::table('provider_product_mappings_v2 as m')
