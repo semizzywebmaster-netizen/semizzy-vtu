@@ -11,6 +11,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Semizzy\Addons\Kyc\Models\KycApplication;
 use Semizzy\Addons\Kyc\Services\KycOtpService;
+use Semizzy\Addons\Kyc\Services\KycVerificationService;
 
 class KycController extends Controller
 {
@@ -74,7 +75,7 @@ class KycController extends Controller
         return back()->with('success', 'Verification completed.');
     }
 
-    public function submit(Request $request): RedirectResponse
+    public function submit(Request $request, KycVerificationService $verification): RedirectResponse
     {
         $user = $request->user();
         if (!app(KycOtpService::class)->hasVerifiedContact($user->id)) {
@@ -117,6 +118,11 @@ class KycController extends Controller
             'sha256' => hash_file('sha256', $file->getRealPath()),
             'status' => 'submitted',
         ]);
+
+        $providerResult = $verification->verify($application->fresh());
+        if ($providerResult?->accepted === true) {
+            return back()->with('success', 'KYC application submitted and identity verification was accepted. It is awaiting final review.');
+        }
 
         return back()->with('success', 'KYC application submitted for review.');
     }
