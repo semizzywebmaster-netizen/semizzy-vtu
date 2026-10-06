@@ -76,10 +76,12 @@ Route::middleware(['auth'])->group(function (): void {
     Route::middleware(['verified','ensure.vtu'])->group(function (): void { Route::get('/vtu', [VtuController::class, 'index'])->middleware('permission:vtu.view')->name('vtu.services'); });
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::get('/kyc', [KycController::class, 'index'])->name('kyc.index');
-    Route::post('/kyc', [KycController::class, 'submit'])->middleware('throttle:5,1')->name('kyc.submit');
+    Route::post('/kyc', [KycController::class, 'submit'])->middleware(['throttle:5,1','transaction.pin'])->name('kyc.submit');
     Route::get('/kyc/document', [KycController::class, 'document'])->name('kyc.document');
     Route::get('/profile/identity-document', [ProfileController::class, 'identityDocument'])->name('profile.identity-document');
-    Route::post('/profile', [ProfileController::class, 'update'])->middleware('throttle:10,1')->name('profile.update');
+    Route::post('/profile', [ProfileController::class, 'update'])->middleware(['throttle:10,1','transaction.pin'])->name('profile.update');
+    Route::get('/profile/transaction-pin', [TransactionPinController::class, 'index'])->name('profile.transaction-pin');
+    Route::post('/profile/transaction-pin', [TransactionPinController::class, 'store'])->middleware('throttle:5,1')->name('profile.transaction-pin.store');
     Route::get('/transactions', [UserTransactionController::class, 'index'])->name('transactions.index');
     Route::get('/wallet/fund', [WalletFundingController::class, 'index'])->name('wallet.fund');
     Route::get('/send-money', fn () => Inertia::render('SendMoney'))->name('send-money.index');
