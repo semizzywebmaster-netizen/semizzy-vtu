@@ -388,6 +388,16 @@ class ProviderEngineController extends Controller
         return response()->json(['data'=>\App\Models\ServiceProduct::query()->with(['service.category'])->get()]);
     }
 
+    public function providerMappings(ApiProvider $provider): JsonResponse
+    {
+        $rows=\Illuminate\Support\Facades\DB::table('provider_product_mappings_v2 as m')
+            ->join('provider_services as ps','ps.id','=','m.provider_service_id')
+            ->leftJoin('service_products as cp','cp.id','=','m.catalogue_product_id')
+            ->where('m.api_provider_id',$provider->id)->orderBy('m.priority')
+            ->get(['m.id','m.provider_service_id','m.catalogue_product_id','m.priority','m.enabled','m.mapping_status','ps.name as provider_service_name','ps.external_service_code','cp.name as catalogue_product_name']);
+        return response()->json(['data'=>$rows]);
+    }
+
     public function services(ApiProvider $provider): JsonResponse
     {
         $services=$provider->providerServices()->with(['category','subcategory'])->latest()->get()->map(fn(ProviderService $s)=>[
