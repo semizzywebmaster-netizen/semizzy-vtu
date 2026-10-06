@@ -233,6 +233,8 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/addons', [AddonController::class, 'index'])->middleware('permission:addons.view')->name('admin.addons.index');
         Route::post('/addons/register-vtu', [AddonController::class, 'registerVtu'])->middleware('permission:addons.manage')->name('admin.addons.register-vtu');
         Route::post('/addons/install-vtu', [AddonController::class, 'installVtu'])->middleware('permission:addons.manage')->name('admin.addons.install-vtu');
+        Route::post('/addons/register-cac', [AddonController::class, 'registerCac'])->middleware('permission:addons.manage')->name('admin.addons.register-cac');
+        Route::post('/addons/install-cac', [AddonController::class, 'installCac'])->middleware('permission:addons.manage')->name('admin.addons.install-cac');
         Route::middleware('ensure.vtu')->prefix('vtu')->group(function (): void {
             Route::get('/', [VtuAdminController::class, 'dashboard'])->middleware('permission:vtu.view')->name('admin.vtu.dashboard');
             Route::get('/services', [VtuAdminController::class, 'services'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services');
