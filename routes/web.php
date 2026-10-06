@@ -1,6 +1,4 @@
-<?php
-
-use App\Http\Controllers\DashboardController;
+<?php\n\nuse App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinancialAnalyticsController;
 use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\AuditEventController;
@@ -28,10 +26,8 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RealtimeController;
 use App\Http\Controllers\HelpCenterController;
 use App\Http\Controllers\SupportTicketController;
-use App\Http\Controllers\VtuController;
 use App\Http\Controllers\UserTransactionController;
 use App\Http\Controllers\WalletFundingController;
-use App\Http\Controllers\Admin\VtuAdminController;
 use App\Http\Controllers\Admin\CommunicationController;
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\SecurityOtpController;
@@ -87,6 +83,8 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/forgot-password/reset', [PasswordRecoveryController::class, 'reset'])->middleware('throttle:5,10')->name('password.recovery.reset');
 });
 
+app(\App\Services\Addons\AddonRouteRegistrar::class)->registerWebRoutes();
+
 Route::get('/email/verify', fn () => Inertia::render('Auth/VerifyEmail'))->middleware('auth')->name('verification.notice');
 Route::get('/email/verify/{id}/{hash}', VerifyEmailController::class)->middleware(['auth', 'signed', 'throttle:6,1'])->name('verification.verify');
 
@@ -103,19 +101,11 @@ Route::get('/'.$adminLoginPath, [AuthenticatedSessionController::class, 'createA
 Route::post('/'.$adminLoginPath, [AuthenticatedSessionController::class, 'storeAdmin'])->middleware('guest')->name('admin.login.store');
 
 Route::middleware(['auth'])->group(function (): void {
-    Route::get('/cac', [\App\Http\Controllers\CacController::class, 'index'])->name('cac.index');
-    Route::post('/cac/orders', [\App\Http\Controllers\CacController::class, 'store'])->name('cac.orders.store');
-    Route::get('/cac/orders', [\App\Http\Controllers\CacController::class, 'orders'])->name('cac.orders');
-    Route::get('/cac/orders/{order}', [\App\Http\Controllers\CacController::class, 'show'])->name('cac.orders.show');
-    Route::post('/cac/orders/{order}/documents', [\App\Http\Controllers\CacController::class, 'uploadDocument'])->middleware('throttle:20,1')->name('cac.orders.documents.store');
-    Route::delete('/cac/orders/{order}/documents/{document}', [\App\Http\Controllers\CacController::class, 'deleteDocument'])->whereNumber('document')->middleware('throttle:20,1')->name('cac.orders.documents.destroy');
-    Route::get('/cac/orders/{order}/documents/{document}', [\App\Http\Controllers\CacController::class, 'downloadDocument'])->whereNumber('document')->name('cac.orders.documents.show');
 
     Route::get('/admin/communications', [CommunicationController::class, 'index'])->middleware('permission:communications.manage')->name('admin.communications');
     Route::post('/admin/communications', [CommunicationController::class, 'store'])->middleware('permission:communications.manage')->name('admin.communications.store');
     Route::post('/admin/communications/{campaign}/send', [CommunicationController::class, 'send'])->middleware('permission:communications.manage')->name('admin.communications.send');
     Route::get('/dashboard', DashboardController::class)->middleware('verified')->name('dashboard');
-    Route::middleware(['verified','ensure.vtu'])->group(function (): void { Route::get('/vtu', [VtuController::class, 'index'])->middleware('permission:vtu.view')->name('vtu.services'); });
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::get('/kyc', [KycController::class, 'index'])->name('kyc.index');
     Route::post('/kyc', [KycController::class, 'submit'])->middleware(['throttle:5,1','transaction.pin'])->name('kyc.submit');
@@ -239,37 +229,6 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/catalogue/mappings/{mapping}/toggle', [CatalogueController::class, 'toggleMapping'])->middleware('permission:catalogue.manage')->name('admin.catalogue.mappings.toggle');
 
         Route::get('/addons', [AddonController::class, 'index'])->middleware('permission:addons.view')->name('admin.addons.index');
-        Route::get('/cac/products', [\App\Http\Controllers\Admin\CacServiceProductController::class, 'index'])->middleware('permission:cac.products.manage')->name('admin.cac.products');
-        Route::get('/cac/orders', [\App\Http\Controllers\Admin\CacOrderController::class, 'index'])->middleware('permission:cac.orders.manage')->name('admin.cac.orders');
-        Route::get('/cac/orders/{order}', [\App\Http\Controllers\Admin\CacOrderController::class, 'show'])->middleware('permission:cac.orders.manage')->name('admin.cac.orders.show');
-        Route::post('/cac/orders/{order}/review', [\App\Http\Controllers\Admin\CacOrderController::class, 'review'])->middleware('permission:cac.orders.manage')->name('admin.cac.orders.review');
-        Route::post('/cac/orders/{order}/documents/{document}/review', [\App\Http\Controllers\Admin\CacOrderController::class, 'documentReview'])->middleware('permission:cac.documents.manage')->name('admin.cac.documents.review');
-        Route::get('/cac/orders/{order}/documents/{document}', [\App\Http\Controllers\Admin\CacOrderController::class, 'downloadDocument'])->whereNumber('document')->middleware('permission:cac.documents.manage')->name('admin.cac.documents.show');
-        Route::post('/cac/products', [\App\Http\Controllers\Admin\CacServiceProductController::class, 'store'])->middleware('permission:cac.products.manage')->name('admin.cac.products.store');
-        Route::put('/cac/products/{product}', [\App\Http\Controllers\Admin\CacServiceProductController::class, 'update'])->middleware('permission:cac.products.manage')->name('admin.cac.products.update');
-        Route::middleware('ensure.vtu')->prefix('vtu')->group(function (): void {
-            Route::get('/', [VtuAdminController::class, 'dashboard'])->middleware('permission:vtu.view')->name('admin.vtu.dashboard');
-            Route::get('/services', [VtuAdminController::class, 'services'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services');
-            Route::post('/services/bootstrap', [VtuAdminController::class, 'bootstrap'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services.bootstrap');
-            Route::post('/services/{service}/enable', [VtuAdminController::class, 'enableService'])->whereNumber('service')->middleware('permission:vtu.services.manage')->name('admin.vtu.services.enable');
-            Route::post('/services/{service}/disable', [VtuAdminController::class, 'disableService'])->whereNumber('service')->middleware('permission:vtu.services.manage')->name('admin.vtu.services.disable');
-            Route::post('/services/bulk/toggle', [VtuAdminController::class, 'bulkToggleServices'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services.bulk-toggle');
-            Route::get('/products', [VtuAdminController::class, 'products'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products');
-            Route::get('/mappings', [VtuAdminController::class, 'mappings'])->middleware('permission:vtu.mappings.manage')->name('admin.vtu.mappings');
-            Route::post('/mappings', [VtuAdminController::class, 'saveMapping'])->middleware('permission:vtu.mappings.manage')->name('admin.vtu.mappings.save');
-            Route::post('/mappings/bulk/toggle', [VtuAdminController::class, 'bulkToggleMappings'])->middleware('permission:vtu.mappings.manage')->name('admin.vtu.mappings.bulk-toggle');
-            Route::post('/products/{product}/enable', [VtuAdminController::class, 'enableProduct'])->whereNumber('product')->middleware('permission:vtu.products.manage')->name('admin.vtu.products.enable');
-            Route::post('/products/{product}/disable', [VtuAdminController::class, 'disableProduct'])->whereNumber('product')->middleware('permission:vtu.products.manage')->name('admin.vtu.products.disable');
-            Route::post('/products/bulk/toggle', [VtuAdminController::class, 'bulkToggleProducts'])->middleware('permission:vtu.products.manage')->name('admin.vtu.products.bulk-toggle');
-            Route::get('/bulk', [VtuAdminController::class, 'bulkOperations'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk');
-            // Keep the static bulk endpoint before the {bulk} wildcard route.
-            Route::post('/bulk/reconcile-selected', [VtuAdminController::class, 'reconcileSelectedBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.reconcile-selected');
-            Route::post('/bulk/{bulk}/reconcile', [VtuAdminController::class, 'reconcileBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.reconcile');
-            Route::get('/transactions', [VtuAdminController::class, 'transactions'])->middleware('permission:vtu.transactions.view')->name('admin.vtu.transactions');
-            Route::post('/transactions/bulk/requery', [VtuAdminController::class, 'bulkRequery'])->middleware('permission:vtu.requery')->name('admin.vtu.transactions.bulk-requery');
-            Route::post('/transactions/{transaction}/requery', [VtuAdminController::class, 'requery'])->whereNumber('transaction')->middleware('permission:vtu.requery')->name('admin.vtu.transactions.requery');
-            Route::post('/transactions/{transaction}/refund', [VtuAdminController::class, 'refund'])->whereNumber('transaction')->middleware(['permission:vtu.refunds.manage','throttle:10,1'])->name('admin.vtu.transactions.refund');
-        });
         Route::post('/addons/register', [AddonController::class, 'register'])->middleware('permission:addons.manage')->name('admin.addons.register');
         Route::post('/addons/{addon}/install', [AddonController::class, 'install'])->middleware('permission:addons.manage')->name('admin.addons.install');
         Route::post('/addons/{addon}/update', [AddonController::class, 'update'])->middleware('permission:addons.manage')->name('admin.addons.update');
