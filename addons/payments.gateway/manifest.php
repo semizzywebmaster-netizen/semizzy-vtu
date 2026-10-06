@@ -41,6 +41,7 @@ return [
     'migrations' => [
         '2026_10_06_000300_create_payment_intents.php',
         '2026_10_06_000301_create_payment_webhook_events.php',
+        '2026_10_06_000302_seed_payments_service.php',
     ],
     'web_route_files' => [
         'addons/payments.gateway/routes/web.php',
