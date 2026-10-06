@@ -1,0 +1,73 @@
+<?php
+
+namespace App\Services\Security;
+
+use App\Models\OtpChallenge;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
+
+class OtpChallengeService
+{
+    public function send(User $user, string $purpose, string $label): void
+    {
+        $purpose = $this->normalizePurpose($purpose);
+
+        OtpChallenge::query()
+            ->where('user_id', $user->id)
+            ->where('purpose', $purpose)
+            ->whereNull('consumed_at')
+            ->update(['consumed_at' => now()]);
+
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        $challenge = OtpChallenge::create([
+            'user_id' => $user->id,
+            'channel' => 'email',
+            'purpose' => $purpose,
+            'destination' => (string) $user->email,
+            'code_hash' => Hash::make($code),
+            'expires_at' => now()->addMinutes(10),
+            'consumed_at' => null,
+            'attempts' => 0,
+            'max_attempts' => 5,
+            'ip_address' => request()->ip(),
+        ]);
+
+        Mail::raw(
+            "Your SEMIZZY ONE {$label} verification code is {$code}. It expires in 10 minutes. If you did not request this, secure your account immediately.",
+            fn ($message) => $message->to($user->email)->subject("SEMIZZY ONE {$label} verification")
+        );
+    }
+
+    public function verify(User $user, string $purpose, string $code): void
+    {
+        $purpose = $this->normalizePurpose($purpose);
+        $challenge = OtpChallenge::query()
+            ->where('user_id', $user->id)
+            ->where('purpose', $purpose)
+            ->whereNull('consumed_at')
+            ->latest('id')
+            ->first();
+
+        if (! $challenge || $challenge->expires_at?->isPast() || $challenge->attempts >= $challenge->max_attempts) {
+            throw ValidationException::withMessages(['otp_code' => 'Your verification code is invalid or expired. Request a new code.']);
+        }
+
+        if (! Hash::check($code, (string) $challenge->code_hash)) {
+            $challenge->increment('attempts');
+            throw ValidationException::withMessages(['otp_code' => 'The verification code is incorrect.']);
+        }
+
+        $challenge->forceFill(['consumed_at' => now()])->saveOrFail();
+    }
+
+    private function normalizePurpose(string $purpose): string
+    {
+        return match ($purpose) {
+            'transaction_pin_change', 'password_change' => $purpose,
+            default => throw new \InvalidArgumentException('Unsupported OTP purpose.'),
+        };
+    }
+}
