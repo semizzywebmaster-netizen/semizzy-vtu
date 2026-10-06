@@ -54,7 +54,7 @@ class ProviderManagementTest extends TestCase
         $connectionResponse = $this->actingAs($admin)->postJson('/admin/providers/'.$provider->id.'/connections', [
             'name' => 'Production',
             'environment' => 'production',
-            'base_url' => 'https://example.test/api',
+            'base_url' => 'https://example.com/api',
             'auth_type' => 'api_key',
             'headers' => ['Authorization' => 'Bearer SUPER-CONNECTION-SECRET'],
             'query_params' => ['api_key' => 'SUPER-QUERY-SECRET'],
