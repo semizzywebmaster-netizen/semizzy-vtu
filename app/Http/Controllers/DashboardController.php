@@ -110,9 +110,17 @@ class DashboardController extends Controller
             ];
         } else {
             $quickLinks = [
-                ['label' => 'Notifications', 'url' => '/notifications'],
                 ['label' => 'VTU Services', 'url' => '/vtu'],
+                ['label' => 'Transactions', 'url' => '/transactions'],
+                ['label' => 'Fund Wallet', 'url' => '/wallet/fund'],
+                ['label' => 'Send Money', 'url' => '/send-money'],
+                ['label' => 'Withdraw', 'url' => '/withdraw'],
                 ['label' => 'Spending & analytics', 'url' => '/analytics'],
+                ['label' => 'KYC Verification', 'url' => '/kyc'],
+                ['label' => 'API Access', 'url' => '/api-access'],
+                ['label' => 'Profile Change Requests', 'url' => '/profile/change-requests'],
+                ['label' => 'Notifications', 'url' => '/notifications'],
+                ['label' => 'Help Center', 'url' => '/help'],
                 ['label' => 'Contact support', 'url' => '/support'],
                 ['label' => 'My profile', 'url' => '/profile'],
             ];
