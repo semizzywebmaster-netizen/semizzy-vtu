@@ -80,7 +80,7 @@ class ProfileChangeRequestController extends Controller
                     } else {
                         $user->forceFill([
                             'name'=>$locked->business_registered_name,
-                            'account_type'=>'merchant',
+                            'account_type'=>((int)$user->tier===5?'api':'merchant'),
                             'business_name'=>$locked->business_registered_name,
                             'business_registration_number'=>$locked->business_registration_number,
                             'business_type'=>$locked->business_entity_type,
