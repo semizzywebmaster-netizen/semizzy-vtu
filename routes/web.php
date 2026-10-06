@@ -161,6 +161,8 @@ Route::middleware(['auth'])->group(function (): void {
         Route::put('/platform-controls', [PlatformControlController::class, 'update'])->middleware(['permission:system.manage','throttle:20,1'])->name('admin.platform-controls.update');
         Route::get('/settings', [SystemSettingsController::class, 'index'])->middleware('permission:system.manage')->name('admin.settings.index');
         Route::put('/settings', [SystemSettingsController::class, 'update'])->middleware(['permission:system.manage', 'throttle:20,1'])->name('admin.settings.update');
+        Route::post('/settings/asset', [SystemSettingsController::class, 'upload'])->middleware(['permission:system.manage', 'throttle:20,1'])->name('admin.settings.asset');
+        Route::post('/settings/smtp-test', [SystemSettingsController::class, 'testSmtp'])->middleware(['permission:system.manage', 'throttle:5,10'])->name('admin.settings.smtp-test');
         Route::get('/security-events', [SecurityEventController::class, 'index'])->middleware('permission:security.view')->name('admin.security-events.index');
         Route::get('/help/unanswered', [HelpCenterController::class, 'unanswered'])->middleware('permission:help.manage')->name('admin.help.unanswered');
 
