@@ -67,14 +67,16 @@ class CommunicationCenterService
             ->orderBy('id')
             ->chunkById(250, function ($users) use ($campaign, $supported, &$queued): void {
                 foreach ($users as $user) {
-                    CommunicationDeliveryLog::create([
-                        'campaign_id' => $campaign->id,
-                        'user_id' => $user->id,
-                        'channel' => 'web_push',
-                        'status' => 'queued',
-                        'attempts' => 0,
-                        'queued_at' => now(),
-                    ]);
+                    if (in_array('web_push', $supported, true)) {
+                        CommunicationDeliveryLog::create([
+                            'campaign_id' => $campaign->id,
+                            'user_id' => $user->id,
+                            'channel' => 'web_push',
+                            'status' => 'queued',
+                            'attempts' => 0,
+                            'queued_at' => now(),
+                        ]);
+                    }
                     if (in_array('email', $supported, true)) {
                         CommunicationDeliveryLog::create([
                             'campaign_id' => $campaign->id,
