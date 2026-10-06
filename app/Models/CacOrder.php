@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CacOrder extends Model
 {
@@ -27,6 +28,11 @@ class CacOrder extends Model
             'fee_minor' => 'integer',
             'total_minor' => 'integer',
         ];
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(CacServiceProduct::class, 'cac_service_product_id');
     }
 
     public function attempts(): HasMany
