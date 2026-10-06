@@ -21,7 +21,7 @@ const validHex=(v:string)=>/^#[0-9A-Fa-f]{6}$/.test(v);
 function CustomBuilder({skin,value,onChange}:{skin:Skin;value:Partial<Palette>;onChange:(key:keyof Palette,value:string)=>void}){
   const fallback=DEFAULT_CUSTOM[skin];
   return <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-    <div className="mb-4"><h3 className="font-extrabold text-slate-900">Custom {skin==='light'?'Light':'Dark'} palette</h3><p className="mt-1 text-sm text-slate-500">Choose the colour tokens used globally by {settings.platform_name}. HEX values are validated before publishing.</p></div>
+    <div className="mb-4"><h3 className="font-extrabold text-slate-900">Custom {skin==='light'?'Light':'Dark'} palette</h3><p className="mt-1 text-sm text-slate-500">Choose the colour tokens used globally by the platform. HEX values are validated before publishing.</p></div>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {fields.map(field=>{const current=(value[field.key] as string)||fallback[field.key];return <label key={String(field.key)} className="rounded-xl border border-slate-200 bg-white p-3">
         <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">{field.label}</span>
