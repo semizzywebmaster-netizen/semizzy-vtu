@@ -133,8 +133,8 @@ class AddonLifecycleService
                 $this->assertDependencies($manifest['dependencies'] ?? [], $manifest['identifier']);
                 $this->transition($addon, 'updating', 'update_started', 'Addon update started.', $actorId);
                 $this->recordStep($addon, 'register', 'Update manifest validated.');
-                $this->recordMigrationContract($addon, $manifest);
-                $this->recordStep($addon, 'initialize', 'Addon update initialization contract validated; no arbitrary addon code is executed during update.');
+                $this->runMigrations($addon, $manifest);
+                $this->recordStep($addon, 'initialize', 'Addon update initialization completed.');
                 $this->recordStep($addon, 'health', 'Addon update health contract validated.');
 
                 $from = 'updating';
