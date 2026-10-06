@@ -37,6 +37,8 @@ class DashboardMessageService
             'quote' => $this->pick($quotes, $user->id),
             'seasonal' => $this->pick($seasonal, $user->id),
             'promotional' => $this->pick($promotional, $user->id),
+            'seasonalSlides' => $this->pickMany($seasonal, $user->id, 6),
+            'promotionSlides' => $this->pickMany($promotional, $user->id, 8),
             'period' => $period,
             'tier' => $tier,
             'audience' => $audience,
