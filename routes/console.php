@@ -1,4 +1,8 @@
 <?php
+Schedule::command('bulk-sms:dispatch',['--limit'=>100])->everyMinute()->withoutOverlapping(2)->onOneServer();
+Schedule::command('bulk-sms:reconcile',['--limit'=>100])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
+Artisan::command('bulk-sms:dispatch {--limit=100}',function(\Semizzy\Addons\BulkSms\Services\BulkSmsService $s){$this->info('Dispatched '.$s->dispatch((int)$this->option('limit')).' SMS messages.');});
+Artisan::command('bulk-sms:reconcile {--limit=100}',function(\Semizzy\Addons\BulkSms\Services\BulkSmsService $s){$this->info('Reconciled '.$s->reconcile((int)$this->option('limit')).' SMS messages.');});
 
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Artisan;
