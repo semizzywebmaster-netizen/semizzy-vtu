@@ -98,6 +98,47 @@ class AddonController extends Controller
         ]);
     }
 
+
+    public function registerCac(AddonLifecycleService $lifecycle): RedirectResponse
+    {
+        $manifest = $this->cacManifest();
+        $addon = Addon::query()->where('identifier', $manifest['identifier'])->first();
+
+        if (!$addon) {
+            $lifecycle->register($manifest, auth()->id());
+            return back()->with('success', 'CAC Services addon registered. Install it before activation.');
+        }
+
+        if ($addon->status === 'archived') {
+            return back()->withErrors(['addon' => 'The CAC Services addon is archived and cannot be re-registered directly.']);
+        }
+
+        return back()->with('success', 'CAC Services addon is already registered.');
+    }
+
+    public function installCac(AddonLifecycleService $lifecycle): RedirectResponse
+    {
+        $manifest = $this->cacManifest();
+        $addon = Addon::query()->where('identifier', $manifest['identifier'])->first();
+
+        if (!$addon) {
+            $addon = $lifecycle->register($manifest, auth()->id());
+        }
+
+        if (in_array($addon->status, ['draft','failed','inactive'], true)) {
+            $installed = $lifecycle->install($addon, auth()->id());
+            return back()->with('success', $installed->status === 'installed'
+                ? 'CAC Services addon installed. Activate it when its provider configuration is ready.'
+                : 'CAC Services addon installation did not complete.');
+        }
+
+        if (in_array($addon->status, ['installed','active'], true)) {
+            return back()->with('success', 'CAC Services addon is already installed or active.');
+        }
+
+        return back()->withErrors(['addon' => "CAC Services addon cannot be installed from lifecycle state [{$addon->status}]."]);
+    }
+
     public function register(Request $request, AddonLifecycleService $lifecycle): RedirectResponse
     {
         try { $lifecycle->register($this->validatedManifest($request), $request->user()?->id); return back()->with('success', 'Addon manifest registered.'); }
@@ -162,6 +203,49 @@ class AddonController extends Controller
             'provider_integrations' => ['Core ProviderManager'],
             'scheduled_tasks' => ['pending transaction reconciliation'],
             'events' => [],
+        ];
+    }
+
+
+    private function cacManifest(): array
+    {
+        return [
+            'identifier' => 'cac.business-services',
+            'name' => 'CAC Business Services',
+            'version' => '1.0.0',
+            'compatibility' => '>=2.0.0',
+            'dependencies' => [],
+            'permissions' => [
+                'cac.view','cac.orders.manage','cac.products.manage','cac.providers.manage',
+                'cac.documents.manage','cac.settings.manage','cac.transactions.view',
+            ],
+            'navigation' => [[
+                'id' => 'cac',
+                'label' => 'CAC Services',
+                'url' => '/admin/cac',
+                'icon' => 'briefcase',
+                'permission' => 'cac.view',
+                'section' => 'addons',
+                'order' => 20,
+            ]],
+            'settings' => [
+                ['key' => 'default_review_state', 'type' => 'string', 'default' => 'pending_review'],
+                ['key' => 'document_retention_days', 'type' => 'integer', 'default' => 365],
+            ],
+            'migrations' => [
+                '2026_10_06_000100_create_cac_addon_tables.php',
+            ],
+            'routes' => ['/cac'],
+            'api_routes' => ['/api/v1/cac'],
+            'services' => [
+                'business-name registration',
+                'company registration',
+                'CAC search and verification',
+                'document/order workflow',
+            ],
+            'provider_integrations' => ['Core ProviderManager'],
+            'scheduled_tasks' => ['pending CAC order reconciliation'],
+            'events' => ['cac.order.created','cac.order.status.changed','cac.order.completed'],
         ];
     }
 
