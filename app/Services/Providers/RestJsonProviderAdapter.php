@@ -182,10 +182,19 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 providerId: $provider->id,
             );
         } catch (\Throwable $e) {
+            // Never expose provider credentials, URLs with query strings, or raw
+            // transport details to callers. Tests may still surface the exception
+            // class/message so configuration regressions are diagnosable without
+            // weakening production error responses.
+            $message = 'Provider request failed; provider state must be rechecked before retry.';
+            if (app()->environment('testing')) {
+                $message .= ' [' . get_class($e) . ': ' . $e->getMessage() . ']';
+            }
+
             return new ProviderResult(
                 false,
                 'UNKNOWN',
-                message: 'Provider request failed; provider state must be rechecked before retry.',
+                message: $message,
                 retryable: false,
                 duplicateRisk: $operation === 'transaction_initiation',
                 providerId: $provider->id,
