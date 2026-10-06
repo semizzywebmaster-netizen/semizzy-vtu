@@ -382,7 +382,7 @@ class ProviderEngineController extends Controller
             'path'=>$e->path,'full_url'=>$this->safeUrlForDisplay($e->full_url),'content_type'=>$e->content_type,
             'auth_mode'=>$e->auth_mode,'headers'=>$this->safeKeyValueMap((array)($e->headers ?? [])),'query_params'=>$this->safeKeyValueMap((array)($e->query_params ?? [])),
             'request_mapping'=>$e->request_mapping ?? [],'response_mapping'=>$e->response_mapping ?? [],
-            'error_mapping'=>$e->error_mapping ?? [],'webhook_config'=>$e->webhook_config ?? [],
+            'error_mapping'=>$e->error_mapping ?? [],'webhook_config'=>$this->redactForLog((array)($e->webhook_config ?? [])),
             'enabled'=>$e->enabled,
         ])]);
     }
