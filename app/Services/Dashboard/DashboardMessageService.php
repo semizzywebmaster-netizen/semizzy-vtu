@@ -54,6 +54,24 @@ class DashboardMessageService
         return ['id'=>$item->id, 'title'=>$item->title, 'message'=>$this->render($item->message, $userId)];
     }
 
+    private function pickMany(Collection $messages, int $userId, int $limit): array
+    {
+        if ($messages->isEmpty()) return [];
+        $ordered = $messages->sortByDesc('priority')->values();
+        $count = $ordered->count();
+        $start = ($userId + (int) now()->format('z')) % $count;
+
+        return collect(range(0, min($limit, $count) - 1))
+            ->map(function (int $offset) use ($ordered, $count, $start, $userId): array {
+                $item = $ordered[($start + $offset) % $count];
+                return [
+                    'id' => $item->id,
+                    'title' => $item->title,
+                    'message' => $this->render($item->message, $userId),
+                ];
+            })->all();
+    }
+
     private function render(string $message, int $userId): string
     {
         $user = User::query()->select(['id','name','business_name'])->find($userId);
