@@ -31,7 +31,6 @@ class CredentialHistoryService
             'credential_type' => 'password',
             'credential_hash' => $oldHash,
         ]);
-
     }
 
     public function assertPinIsFresh(User $user, string $pin): void
@@ -51,7 +50,6 @@ class CredentialHistoryService
             ->where('user_id', $user->id)
             ->where('credential_type', $type)
             ->latest('id')
-            ->limit(5)
             ->get();
 
         foreach ($recent as $history) {
