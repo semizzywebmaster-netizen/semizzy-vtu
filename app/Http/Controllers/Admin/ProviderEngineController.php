@@ -1,21 +1,21 @@
 <?php
 
-namespace App\\Http\\Controllers\\Admin;
+namespace App\Http\Controllers\Admin;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\ApiProvider;
-use App\\Models\\ProviderConnection;
-use App\\Models\\ProviderCredential;
-use App\\Models\\ProviderEndpoint;
-use App\\Models\\ProviderService;
-use App\\Models\\ProviderServiceImport;
-use App\\Models\\ProviderHealthCheck;
-use App\\Models\\ProviderOperationLog;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Http;
-use Illuminate\\Support\\Str;
+use App\Http\Controllers\Controller;
+use App\Models\ApiProvider;
+use App\Models\ProviderConnection;
+use App\Models\ProviderCredential;
+use App\Models\ProviderEndpoint;
+use App\Models\ProviderService;
+use App\Models\ProviderServiceImport;
+use App\Models\ProviderHealthCheck;
+use App\Models\ProviderOperationLog;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class ProviderEngineController extends Controller
 {
