@@ -11,6 +11,8 @@ use App\Models\ProviderService;
 use App\Models\ProviderServiceImport;
 use App\Models\ProviderHealthCheck;
 use App\Models\ProviderOperationLog;
+use App\Models\ProviderCategory;
+use App\Models\ProviderSubcategory;
 use App\Services\Providers\ProviderUrlGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -186,11 +188,13 @@ class ProviderEngineController extends Controller
         if(!$endpoint) return response()->json(['status'=>'configuration_required','message'=>'Configure an enabled endpoint for connection testing.'],422);
 
         $started=microtime(true);
+        $safeUrl = null;
         try{
             [$headers,$query,$body]=$this->authenticationPayload($connection,(array)($endpoint->request_mapping ?? []),(string)$endpoint->auth_mode);
             $headers=array_merge($headers,(array)($endpoint->headers ?? []));
             $query=array_merge($query,(array)($endpoint->query_params ?? []));
             $url=$this->endpointUrl($connection,$endpoint);
+            $safeUrl = $url;
             $client=Http::withHeaders($headers)->connectTimeout($connection->connect_timeout_seconds)->timeout($connection->request_timeout_seconds);
             if(!$connection->verify_ssl)$client=$client->withoutVerifying();
             $response=match($endpoint->method){
@@ -210,7 +214,7 @@ class ProviderEngineController extends Controller
             ProviderHealthCheck::create(['api_provider_id'=>$provider->id,'provider_connection_id'=>$connection->id,'status'=>'FAILED','response_time_ms'=>$duration,'message'=>'Connection test failed safely.','checked_at'=>now()]);
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Connection test failed safely.']);
             $provider->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_summary'=>'Connection test failed safely.']);
-            $this->writeOperationLog($provider, $connection, 'connection_test', $endpoint->method, $this->endpointUrl($connection, $endpoint), 'FAILED', null, $duration, get_class($e), 'Connection test failed safely.');
+            $this->writeOperationLog($provider, $connection, 'connection_test', $endpoint->method, $safeUrl, 'FAILED', null, $duration, get_class($e), 'Connection test failed safely.');
             return response()->json(['status'=>'FAILED','response_time_ms'=>$duration,'message'=>'Connection test failed safely.'],502);
         }
     }
@@ -404,13 +408,15 @@ class ProviderEngineController extends Controller
 
         $input=$request->validate(['variables'=>'nullable|array']);
         $started=microtime(true);
+        $safeUrl = null;
         try {
-            $body=(array)($endpoint->request_mapping ?? []);
+            $body=(array($endpoint->request_mapping ?? []);
             foreach(($input['variables'] ?? []) as $key=>$value) data_set($body,$key,$value);
             [$headers,$query,$body]=$this->authenticationPayload($connection,$body,(string)$endpoint->auth_mode);
             $headers=array_merge($headers,(array)($endpoint->headers ?? []));
             $query=array_merge($query,(array)($endpoint->query_params ?? []));
             $url=$this->endpointUrl($connection,$endpoint);
+            $safeUrl = $url;
 
             $client=Http::withHeaders($headers)->connectTimeout($connection->connect_timeout_seconds)->timeout($connection->request_timeout_seconds);
             if(!$connection->verify_ssl) $client=$client->withoutVerifying();
@@ -435,7 +441,7 @@ class ProviderEngineController extends Controller
             ],$response->successful()?200:502);
         } catch (\Throwable $e) {
             report($e);
-            $this->writeOperationLog($provider, $connection, 'endpoint_test', $endpoint->method, $this->endpointUrl($connection, $endpoint), 'FAILED', null, (int)((microtime(true)-$started)*1000), get_class($e), 'Endpoint request failed safely.');
+            $this->writeOperationLog($provider, $connection, 'endpoint_test', $endpoint->method, $safeUrl, 'FAILED', null, (int)((microtime(true)-$started)*1000), get_class($e), 'Endpoint request failed safely.');
             return response()->json(['status'=>'FAILED','message'=>'Endpoint request failed safely. Review server-side diagnostics.'],502);
         }
     }
@@ -458,11 +464,13 @@ class ProviderEngineController extends Controller
         if (!$connection) return response()->json(['status'=>'configuration_required','message'=>'Configure an enabled provider connection first.'],422);
 
         $started=microtime(true);
+        $safeUrl = null;
         try {
             [$headers,$query,$body]=$this->authenticationPayload($connection,(array)($endpoint->request_mapping ?? []),(string)$endpoint->auth_mode);
             $headers=array_merge($headers,(array)($endpoint->headers ?? []));
             $query=array_merge($query,(array)($endpoint->query_params ?? []));
             $url=$this->endpointUrl($connection,$endpoint);
+            $safeUrl = $url;
             $client=Http::withHeaders($headers)->connectTimeout($connection->connect_timeout_seconds)->timeout($connection->request_timeout_seconds);
             if(!$connection->verify_ssl)$client=$client->withoutVerifying();
             $response=$this->sendEndpointRequest($client,$endpoint,$url,$body,$query);
@@ -539,7 +547,7 @@ class ProviderEngineController extends Controller
             report($e);
             $duration=(int)((microtime(true)-$started)*1000);
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Service discovery failed safely.']);
-            $this->writeOperationLog($provider,$connection,'service_discovery',$endpoint->method,$this->endpointUrl($connection,$endpoint),'FAILED',null,$duration,get_class($e),'Service discovery failed safely.');
+            $this->writeOperationLog($provider,$connection,'service_discovery',$endpoint->method,$safeUrl,'FAILED',null,$duration,get_class($e),'Service discovery failed safely.');
             return response()->json(['status'=>'failed','message'=>'Service discovery failed safely. Review server-side diagnostics.'],502);
         }
     }
