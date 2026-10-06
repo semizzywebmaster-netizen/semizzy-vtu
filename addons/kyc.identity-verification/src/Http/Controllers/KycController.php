@@ -33,6 +33,8 @@ class KycController extends Controller
                 'submittedAt' => $application->submitted_at?->toISOString(),
                 'reviewedAt' => $application->reviewed_at?->toISOString(),
                 'rejectionReason' => $application->rejection_reason,
+                'verificationStatus' => $application->verification_status,
+                'verificationCheckedAt' => $application->verification_checked_at?->toISOString(),
                 'hasDocument' => $application->documents->isNotEmpty(),
                 'otpVerified' => $otpVerified,
             ] : [
