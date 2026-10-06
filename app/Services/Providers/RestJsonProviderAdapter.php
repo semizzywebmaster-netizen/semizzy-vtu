@@ -96,8 +96,8 @@ class RestJsonProviderAdapter implements ProviderAdapter
             return new ProviderResult(
                 false,
                 'UNKNOWN',
-                message: 'Provider request failed. Check the provider configuration and server logs.',
-                retryable: true,
+                message: 'Provider request failed; provider state must be rechecked before retry.',
+                retryable: false,
                 duplicateRisk: $operation === 'transaction_initiation'
             );
         }
