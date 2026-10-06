@@ -1,4 +1,6 @@
-<?php\n\nuse App\Http\Controllers\DashboardController;
+<?php
+
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinancialAnalyticsController;
 use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\AuditEventController;
@@ -239,3 +241,4 @@ Route::middleware(['auth'])->group(function (): void {
     });
 });
 
+app(\App\Services\Addons\AddonRouteRegistrar::class)->registerWebRoutes();
