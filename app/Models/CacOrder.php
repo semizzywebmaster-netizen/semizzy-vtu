@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CacOrder extends Model
 {
     protected $fillable = [
-        'uuid','reference','user_id','service_type','status','idempotency_key',
+        'uuid','reference','user_id','cac_service_product_id','service_type','status','idempotency_key',
         'customer_name','business_name','company_type','provider_reference',
         'api_provider_id','amount_minor','fee_minor','total_minor','currency',
         'request_payload','response_payload','metadata','failure_message',
