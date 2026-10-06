@@ -186,6 +186,8 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/providers/{provider}/setup', [ProviderController::class, 'wizard'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.setup');
         Route::post('/providers/{provider}/connections', [ProviderEngineController::class, 'storeConnection'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.connections.store');
         Route::get('/providers/{provider}/connections', [ProviderEngineController::class, 'connections'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.connections');
+        Route::post('/providers/{provider}/test-connection', [ProviderEngineController::class, 'testConnection'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.test-connection');
+        Route::get('/providers/{provider}/health', [ProviderEngineController::class, 'health'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.health');
         Route::get('/provider-auth/schema', [ProviderEngineController::class, 'authSchema'])->middleware('permission:providers.view')->name('admin.provider-auth.schema');
         Route::post('/provider-connections/{connection}/authentication', [ProviderEngineController::class, 'storeAuthentication'])->whereNumber('connection')->middleware('permission:providers.manage')->name('admin.provider-connections.authentication.store');
         Route::get('/provider-connections/{connection}/credentials', [ProviderEngineController::class, 'credentials'])->whereNumber('connection')->middleware('permission:providers.view')->name('admin.provider-connections.credentials');
