@@ -6,6 +6,12 @@ return [
     'version' => '1.0.0',
     'compatibility' => '>=2.0.0',
     'dependencies' => [],
+    'role_permissions' => [
+        'ADMIN' => ['kyc.view', 'kyc.submit', 'kyc.verify', 'kyc.review', 'kyc.documents.manage', 'kyc.providers.manage', 'kyc.settings.manage'],
+        'STAFF' => ['kyc.view', 'kyc.review', 'kyc.documents.manage'],
+        'SUPPORT' => ['kyc.view'],
+        'USER' => ['kyc.view', 'kyc.submit', 'kyc.verify'],
+    ],
     'permissions' => [
         'kyc.view',
         'kyc.submit',
@@ -35,6 +41,7 @@ return [
         '2026_10_06_000200_create_kyc_applications.php',
         '2026_10_06_000201_create_kyc_documents.php',
         '2026_10_06_000202_create_kyc_verifications.php',
+        '2026_10_06_000203_add_kyc_verification_tracking.php',
     ],
     'web_route_files' => [
         'addons/kyc.identity-verification/routes/web.php',
