@@ -14,7 +14,7 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, Notifiable;
 
-    protected $fillable = ['name', 'username', 'email', 'phone', 'password', 'role', 'status', 'tier', 'account_type', 'business_name', 'business_registration_number', 'business_type', 'business_address', 'business_state', 'business_country', 'merchant_verified_at', 'tier_upgrade_status', 'two_factor_enabled', 'two_factor_secret', 'transaction_pin_hash', 'security_lock_until', 'onboarding_completed_at', 'last_login_at', 'last_login_ip', 'referral_code', 'referred_by_id'];
+    protected $fillable = ['name', 'username', 'email', 'phone', 'avatar_path', 'address', 'city', 'state', 'country', 'postal_code', 'date_of_birth', 'gender', 'occupation', 'identity_type', 'identity_number', 'identity_document_path', 'kyc_status', 'kyc_submitted_at', 'kyc_reviewed_at', 'kyc_rejection_reason', 'password', 'role', 'status', 'tier', 'account_type', 'business_name', 'business_registration_number', 'business_type', 'business_address', 'business_state', 'business_country', 'merchant_verified_at', 'tier_upgrade_status', 'two_factor_enabled', 'two_factor_secret', 'transaction_pin_hash', 'security_lock_until', 'onboarding_completed_at', 'last_login_at', 'last_login_ip', 'referral_code', 'referred_by_id'];
     protected $hidden = ['password', 'remember_token'];
 
     protected static function booted(): void
@@ -58,6 +58,9 @@ class User extends Authenticatable implements MustVerifyEmail
             'two_factor_secret' => 'encrypted',
             'transaction_pin_hash' => 'hashed',
             'password' => 'hashed',
+            'date_of_birth' => 'date',
+            'kyc_submitted_at' => 'datetime',
+            'kyc_reviewed_at' => 'datetime',
         ];
     }
 
