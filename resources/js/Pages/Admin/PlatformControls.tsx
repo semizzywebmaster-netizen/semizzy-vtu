@@ -1,6 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 type Props={tiers:any;features:Record<string,boolean>};
-const labels:any={registration_enabled:'User registration',kyc_enabled:'KYC applications',finance_enabled:'Wallet & finance',vtu_enabled:'VTU services',support_enabled:'Support centre',notifications_enabled:'Notifications',api_enabled:'API access',maintenance_mode:'Maintenance mode'};
+const labels:Record<string,string>={registration_enabled:'User registration',kyc_enabled:'KYC applications',finance_enabled:'Wallet & finance',vtu_enabled:'VTU services',support_enabled:'Support centre',notifications_enabled:'Notifications',api_enabled:'API access',maintenance_mode:'Maintenance mode'};
 export default function PlatformControls({tiers,features}:Props){
  const form=useForm({features,tiers:Object.fromEntries(Object.entries(tiers).map(([id,t]:any)=>[id,{daily_limit_minor:t.daily_limit_minor??'',balance_limit_minor:t.balance_limit_minor??''}]))});
  const submit=(e:React.FormEvent)=>{e.preventDefault();form.put('/admin/platform-controls',{preserveScroll:true});};
