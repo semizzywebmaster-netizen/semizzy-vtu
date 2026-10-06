@@ -58,6 +58,7 @@ class AddonController extends Controller
             $manifest = $registry->require($data['identifier']);
             unset($manifest['source']);
             $lifecycle->register($manifest, $request->user()?->id);
+
             return back()->with('success', 'Addon manifest registered.');
         } catch (\Throwable $e) {
             report($e);
@@ -76,11 +77,23 @@ class AddonController extends Controller
         }
     }
 
-    public function update(Request $request, Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
+    public function update(Request $request, Addon $addon, AddonRegistry $registry, AddonLifecycleService $lifecycle): RedirectResponse
     {
-        $lifecycle->update($addon, $this->validatedManifest($request), auth()->id());
+        try {
+            $data = $request->validate(['identifier' => ['required','string','max:100']]);
+            if (strcasecmp($data['identifier'], $addon->identifier) !== 0) {
+                throw new \InvalidArgumentException('Addon identifier does not match the selected addon.');
+            }
 
-        return back()->with('success', 'Addon updated successfully to the requested version.');
+            $manifest = $registry->require($addon->identifier);
+            unset($manifest['source']);
+            $lifecycle->update($addon, $manifest, auth()->id());
+
+            return back()->with('success', 'Addon updated successfully from its installed registry manifest.');
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'Addon update failed safely.');
+        }
     }
 
     public function activate(Addon $addon, AddonLifecycleService $lifecycle): RedirectResponse
@@ -125,17 +138,5 @@ class AddonController extends Controller
             report($e);
             return back()->with('error', 'Addon archive failed safely.');
         }
-    }
-
-    private function validatedManifest(Request $request): array
-    {
-        return $request->validate([
-            'identifier'=>['required','string','max:100'],'name'=>['required','string','max:150'],'version'=>['required','string','max:50'],
-            'compatibility'=>['nullable','string','max:100'],'dependencies'=>['nullable','array'],'permissions'=>['nullable','array'],
-            'navigation'=>['nullable','array'],'settings'=>['nullable','array'],'migrations'=>['nullable','array'],'migrations.*'=>['string','max:255'],
-            'routes'=>['nullable','array'],'api_routes'=>['nullable','array'],'menus'=>['nullable','array'],'widgets'=>['nullable','array'],
-            'services'=>['nullable','array'],'provider_integrations'=>['nullable','array'],'scheduled_tasks'=>['nullable','array'],'events'=>['nullable','array'],
-            'checksum'=>['nullable','regex:/^[A-Fa-f0-9]{64}$/'],
-        ]);
     }
 }
