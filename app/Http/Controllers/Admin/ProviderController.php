@@ -52,8 +52,41 @@ class ProviderController extends Controller
 
     public function index(): Response
     {
-        return Inertia::render('Admin/Providers', [
-            'providers' => ApiProvider::query()->latest()->get()->map(fn (ApiProvider $p) => [
+        // Provider records can contain legacy encrypted endpoint/credential data
+        // created before the current encryption casts were introduced. One malformed
+        // legacy row must never take the entire admin provider page down with HTTP 500.
+        $providers = ApiProvider::query()->latest()->get()->map(function (ApiProvider $p): array {
+            $credentials = [];
+            try {
+                $credentials = $p->maskedCredentials();
+            } catch (\Throwable $e) {
+                Log::warning('Provider credential masking failed during admin listing.', [
+                    'provider_id' => $p->id,
+                    'exception_class' => get_class($e),
+                ]);
+            }
+
+            $endpoints = [];
+            try {
+                $endpoints = $p->endpoints()
+                    ->latest('id')
+                    ->get(['id','name','operation','method','path','enabled'])
+                    ->map(fn ($endpoint) => [
+                        'id' => $endpoint->id,
+                        'name' => $endpoint->name,
+                        'operation' => $endpoint->operation,
+                        'method' => $endpoint->method,
+                        'path' => $endpoint->path,
+                        'enabled' => (bool) $endpoint->enabled,
+                    ])->values()->all();
+            } catch (\Throwable $e) {
+                Log::warning('Provider endpoint metadata could not be read during admin listing.', [
+                    'provider_id' => $p->id,
+                    'exception_class' => get_class($e),
+                ]);
+            }
+
+            return [
                 'id' => $p->id,
                 'identifier' => $p->identifier,
                 'display_name' => $p->display_name,
@@ -64,8 +97,8 @@ class ProviderController extends Controller
                 'auth_type' => $p->auth_type,
                 'verification_status' => $p->verification_status,
                 'integration_status' => $p->integration_status,
-                'enabled' => $p->enabled,
-                'paused' => $p->paused,
+                'enabled' => (bool) $p->enabled,
+                'paused' => (bool) $p->paused,
                 'priority' => $p->priority,
                 'last_tested_at' => $p->last_tested_at?->toISOString(),
                 'last_test_status' => $p->last_test_status,
@@ -74,23 +107,20 @@ class ProviderController extends Controller
                     'FAILED', 'ERROR', 'REJECTED' => 'Connection test failed. Review server-side diagnostics.',
                     default => null,
                 },
-                'credentials' => $p->maskedCredentials(),
-                'capabilities' => $p->capabilities ?? [],
+                'credentials' => $credentials,
+                'capabilities' => is_array($p->capabilities ?? null) ? $p->capabilities : [],
                 // Never serialize legacy endpoint configuration: it may contain
                 // authentication headers, query parameters, webhook secrets, or URLs.
                 // The admin UI only needs safe endpoint metadata.
-                'endpoints' => $p->endpoints()->get(['id','name','operation','method','path','enabled'])->map(fn ($endpoint) => [
-                    'id' => $endpoint->id,
-                    'name' => $endpoint->name,
-                    'operation' => $endpoint->operation,
-                    'method' => $endpoint->method,
-                    'path' => $endpoint->path,
-                    'enabled' => (bool) $endpoint->enabled,
-                ])->values()->all(),
-                'endpoint_count' => $p->endpoints()->count(),
-                'endpoint_operations' => $p->endpoints()->pluck('operation')->filter()->values()->all(),
-                'service_categories' => $p->service_categories ?? [],
-            ]),
+                'endpoints' => $endpoints,
+                'endpoint_count' => count($endpoints),
+                'endpoint_operations' => collect($endpoints)->pluck('operation')->filter()->values()->all(),
+                'service_categories' => is_array($p->service_categories ?? null) ? $p->service_categories : [],
+            ];
+        })->values()->all();
+
+        return Inertia::render('Admin/Providers', [
+            'providers' => $providers,
         ]);
     }
 
