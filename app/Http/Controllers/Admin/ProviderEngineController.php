@@ -369,6 +369,7 @@ class ProviderEngineController extends Controller
             $duration=(int)((microtime(true)-$started)*1000);
             $payload=$response->json();
             $safeStatus=$response->successful()?'SUCCESS':'FAILED';
+            $this->writeOperationLog($provider, $connection, 'endpoint_test', $endpoint->method, $url, $safeStatus, $response->status(), $duration, null, 'Endpoint request completed.');
             return response()->json([
                 'status'=>$safeStatus,'http_status'=>$response->status(),'duration_ms'=>$duration,
                 'message'=>$response->successful()?'Endpoint request succeeded.':'Endpoint request returned an error.',
@@ -377,6 +378,7 @@ class ProviderEngineController extends Controller
             ],$response->successful()?200:502);
         } catch (\Throwable $e) {
             report($e);
+            $this->writeOperationLog($provider, $connection, 'endpoint_test', $endpoint->method, $this->endpointUrl($connection, $endpoint), 'FAILED', null, (int)((microtime(true)-$started)*1000), get_class($e), 'Endpoint request failed safely.');
             return response()->json(['status'=>'FAILED','message'=>'Endpoint request failed safely. Review server-side diagnostics.'],502);
         }
     }
@@ -658,6 +660,28 @@ class ProviderEngineController extends Controller
             $mapped[$target]=data_get($payload,$source);
         }
         return $mapped;
+    }
+
+    private function writeOperationLog(ApiProvider $provider, ProviderConnection $connection, string $operation, string $method, ?string $endpoint, string $result, ?int $httpStatus, ?int $durationMs, ?string $errorCode = null, ?string $message = null): void
+    {
+        try {
+            ProviderOperationLog::create([
+                'api_provider_id' => $provider->id,
+                'provider_connection_id' => $connection->id,
+                'operation' => $operation,
+                'method' => $method,
+                'endpoint' => $endpoint ? preg_replace('/([?&])(token|secret|password|pin|api[_-]?key)=[^&]*/i', '$1$2=[REDACTED]', $endpoint) : null,
+                'internal_reference' => (string) Str::uuid(),
+                'http_status' => $httpStatus,
+                'duration_ms' => $durationMs,
+                'result' => $result,
+                'error_code' => $errorCode,
+                'safe_message' => $message,
+                'safe_metadata' => null,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     private function safeAuthOptions(array $options): array
