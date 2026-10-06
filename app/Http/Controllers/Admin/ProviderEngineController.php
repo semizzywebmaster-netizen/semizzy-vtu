@@ -388,6 +388,20 @@ class ProviderEngineController extends Controller
         return response()->json(['data'=>\App\Models\ServiceProduct::query()->with(['service.category'])->get()]);
     }
 
+    public function createMapping(Request $request, ApiProvider $provider): JsonResponse
+    {
+        $data=$request->validate(['provider_service_id'=>'required|integer|exists:provider_services,id','catalogue_product_id'=>'required|integer|exists:service_products,id','priority'=>'nullable|integer|min:1|max:100000']);
+        if(!$provider->providerServices()->whereKey($data['provider_service_id'])->exists()) return response()->json(['message'=>'Provider service does not belong to this provider.'],422);
+        $exists=DB::table('provider_product_mappings_v2')->where('provider_service_id',$data['provider_service_id'])->where('catalogue_product_id',$data['catalogue_product_id'])->exists();
+        if($exists) return response()->json(['message'=>'Mapping already exists.'],409);
+        DB::table('provider_product_mappings_v2')->insert([
+            'api_provider_id'=>$provider->id,'provider_service_id'=>$data['provider_service_id'],'catalogue_product_id'=>$data['catalogue_product_id'],
+            'catalogue_product_type'=>'service_product','priority'=>$data['priority']??100,'enabled'=>false,'mapping_status'=>'pending',
+            'metadata'=>json_encode([]),'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        return response()->json(['status'=>'created'],201);
+    }
+
     public function providerMappings(ApiProvider $provider): JsonResponse
     {
         $rows=\Illuminate\Support\Facades\DB::table('provider_product_mappings_v2 as m')
