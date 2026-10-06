@@ -1,5 +1,5 @@
 <?php
-use Illuminate\\Database\\Migrations\\Migration;
-use Illuminate\\Database\\Schema\\Blueprint;
-use Illuminate\\Support\\Facades\\Schema;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 return new class extends Migration { public function up(): void { Schema::create('savings_plans', function(Blueprint $t){$t->id();$t->string('key')->unique();$t->string('name');$t->string('type')->default('flexible');$t->unsignedBigInteger('minimum_amount_minor')->default(100);$t->unsignedBigInteger('maximum_amount_minor')->nullable();$t->unsignedInteger('lock_days')->default(0);$t->decimal('interest_rate',8,4)->default(0);$t->decimal('early_withdrawal_penalty',8,4)->default(0);$t->boolean('allow_early_withdrawal')->default(true);$t->boolean('active')->default(true);$t->json('metadata')->nullable();$t->timestamps();}); } public function down(): void { Schema::dropIfExists('savings_plans'); } };
