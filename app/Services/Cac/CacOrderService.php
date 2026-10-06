@@ -23,17 +23,23 @@ class CacOrderService
 
         $this->validateRequirements($product, $payload);
         $key = $idempotencyKey ?: 'cac_'.Str::uuid();
+        ksort($payload);
 
         return DB::transaction(function () use ($userId, $product, $payload, $key) {
             $existing = CacOrder::query()->where('idempotency_key', $key)->lockForUpdate()->first();
             if ($existing) {
-                if ((int) $existing->user_id !== $userId || $existing->cac_service_product_id !== $product->id || $existing->request_payload !== $payload) {
+                $existingPayload = (array) $existing->request_payload;
+                ksort($existingPayload);
+                if ((int) $existing->user_id !== $userId || (int) $existing->cac_service_product_id !== (int) $product->id || $existingPayload !== $payload) {
                     throw ValidationException::withMessages(['idempotency_key' => 'This idempotency key was already used for a different CAC order.']);
                 }
                 return $existing;
             }
 
             $amount = (int) ($product->selling_price_minor ?? 0);
+            if ($amount < 0) {
+                throw ValidationException::withMessages(['service' => 'Invalid CAC service price configuration.']);
+            }
             $currency = strtoupper($product->currency ?: 'NGN');
 
             return CacOrder::create([
