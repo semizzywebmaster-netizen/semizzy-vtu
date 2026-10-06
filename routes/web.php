@@ -95,7 +95,7 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/realtime/snapshot', [RealtimeController::class, 'snapshot'])->middleware('throttle:120,1')->name('realtime.snapshot');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->middleware('throttle:30,1')->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->middleware('throttle:60,1')->name('notifications.read');
-    Route::post('/profile/password', [UpdatePasswordController::class, 'store'])->middleware('throttle:5,1')->name('profile.password.update');
+    Route::post('/profile/password', [UpdatePasswordController::class, 'store'])->middleware(['throttle:5,1','transaction.pin'])->name('profile.password.update');
     Route::get('/help', [HelpCenterController::class, 'index'])->name('help.index');
     Route::get('/help/articles/{article:slug}', [HelpCenterController::class, 'show'])->name('help.article');
     Route::post('/help/articles/{article:slug}/feedback', [HelpCenterController::class, 'feedback'])->middleware('throttle:20,1')->name('help.feedback');
