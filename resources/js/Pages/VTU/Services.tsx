@@ -1,3 +1,4 @@
+import CoreMobileNav from '../../Components/CoreMobileNav';
 import { Head, Link } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 
