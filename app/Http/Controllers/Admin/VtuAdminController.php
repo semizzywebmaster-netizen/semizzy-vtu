@@ -13,6 +13,7 @@ use App\Services\Vtu\VtuServiceRegistry;
 use App\Services\Vtu\VtuTransactionService;
 use App\Services\Vtu\VtuBulkService;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 
 class VtuAdminController extends Controller
@@ -53,7 +54,7 @@ class VtuAdminController extends Controller
   return Inertia::render('Admin/VTU/Mappings',compact('mappings','providers','services'));
  }
 
- public function bulkToggleMappings(Request $r, AuditLogger $audit){
+ public function bulkToggleMappings(Request $r, AuditLogger $audit): JsonResponse|\Illuminate\Http\RedirectResponse{
   $data=$r->validate(['mapping_ids'=>['required','array','min:1','max:100'],'mapping_ids.*'=>['integer','distinct','exists:provider_service_mappings,id'],'enabled'=>['required','boolean']]);$changed=0;$skipped=0;
   foreach(ProviderServiceMapping::query()->whereIn('id',$data['mapping_ids'])->with(['provider','service.category'])->get() as $mapping){
    try{
@@ -63,7 +64,7 @@ class VtuAdminController extends Controller
     try{$audit->record($data['enabled']?'vtu.provider_mapping.enabled':'vtu.provider_mapping.disabled',$mapping,['bulk'=>true],$r);}catch(\Throwable $auditException){report($auditException);}
    }catch(\Throwable $e){report($e);$skipped++;}
   }
-  return back()->with('success',"Bulk mapping update completed: {$changed} changed, {$skipped} skipped.");
+  $message="Bulk mapping update completed: {$changed} changed, {$skipped} skipped."; return $r->expectsJson()?response()->json(['status'=>'completed','changed'=>$changed,'skipped'=>$skipped,'message'=>$message]):back()->with('success',$message);
  }
 
  public function saveMapping(Request $r, AuditLogger $audit){
@@ -91,7 +92,7 @@ class VtuAdminController extends Controller
  }
 
  public function products(){return Inertia::render('Admin/VTU/Products',['products'=>ServiceProduct::whereHas('service.category',fn($q)=>$q->where('key','vtu-digital-services'))->with('service')->latest()->paginate(50)]);}
- public function bulkToggleServices(Request $r, AuditLogger $audit){
+ public function bulkToggleServices(Request $r, AuditLogger $audit): JsonResponse|\Illuminate\Http\RedirectResponse{
   $data=$r->validate(['service_ids'=>['required','array','min:1','max:100'],'service_ids.*'=>['integer','distinct','exists:services,id'],'enabled'=>['required','boolean']]);$changed=0;$skipped=0;
   foreach(Service::query()->whereIn('id',$data['service_ids'])->with('category')->get() as $service){
    try{
@@ -100,9 +101,9 @@ class VtuAdminController extends Controller
     try{$audit->record($data['enabled']?'vtu.service.enabled':'vtu.service.disabled',$service,['bulk'=>true],$r);}catch(\Throwable $auditException){report($auditException);}
    }catch(\Throwable $e){report($e);$skipped++;}
   }
-  return back()->with('success',"Bulk service status update completed: {$changed} changed, {$skipped} skipped.");
+  $message="Bulk service status update completed: {$changed} changed, {$skipped} skipped."; return $r->expectsJson()?response()->json(['status'=>'completed','changed'=>$changed,'skipped'=>$skipped,'message'=>$message]):back()->with('success',$message);
  }
- public function bulkToggleProducts(Request $r, AuditLogger $audit){
+ public function bulkToggleProducts(Request $r, AuditLogger $audit): JsonResponse|\Illuminate\Http\RedirectResponse{
   $data=$r->validate(['product_ids'=>['required','array','min:1','max:100'],'product_ids.*'=>['integer','distinct','exists:service_products,id'],'enabled'=>['required','boolean']]);$changed=0;$skipped=0;
   foreach(ServiceProduct::query()->whereIn('id',$data['product_ids'])->with('service.category')->get() as $product){
    try{
@@ -111,7 +112,7 @@ class VtuAdminController extends Controller
     try{$audit->record($data['enabled']?'vtu.product.enabled':'vtu.product.disabled',$product,['bulk'=>true],$r);}catch(\Throwable $auditException){report($auditException);}
    }catch(\Throwable $e){report($e);$skipped++;}
   }
-  return back()->with('success',"Bulk product status update completed: {$changed} changed, {$skipped} skipped.");
+  $message="Bulk product status update completed: {$changed} changed, {$skipped} skipped."; return $r->expectsJson()?response()->json(['status'=>'completed','changed'=>$changed,'skipped'=>$skipped,'message'=>$message]):back()->with('success',$message);
  }
  public function enableProduct(ServiceProduct $product){if(!$product->service || !$product->service->category || $product->service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU products can be managed here.');if(!$product->service->enabled)return back()->with('error','Enable the VTU service before enabling its product.');try{$product->updateOrFail(['enabled'=>true]);return back()->with('success','Product enabled.');}catch(\Throwable $e){report($e);return back()->with('error','Product could not be enabled safely.');}}
  public function disableProduct(ServiceProduct $product){if(!$product->service || !$product->service->category || $product->service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU products can be managed here.');try{$product->updateOrFail(['enabled'=>false]);return back()->with('success','Product disabled.');}catch(\Throwable $e){report($e);return back()->with('error','Product could not be disabled safely.');}}
