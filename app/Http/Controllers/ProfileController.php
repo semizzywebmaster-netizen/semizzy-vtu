@@ -12,7 +12,18 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
+        $tierNumber = max(1, min(4, (int) $user->tier));
+        $tiers = collect(config('semizzy.user_tiers', []))->map(fn (array $definition, $key) => [
+            'id' => (int) $key,
+            'name' => $definition['name'],
+            'requirements' => $definition['requirements'] ?? [],
+            'upgradeLabel' => $definition['upgrade_label'] ?? null,
+            'current' => (int) $key === $tierNumber,
+        ])->values()->all();
+
         return Inertia::render('Profile', [
+            'tier' => $tierNumber,
+            'tiers' => $tiers,
             'user' => [
                 'name' => $user->name,
                 'username' => $user->username,
