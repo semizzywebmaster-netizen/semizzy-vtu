@@ -128,7 +128,7 @@ class VtuAdminController extends Controller
   $bulkService->recalculate($bulk);
   return back()->with('success',"Bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
  }
- public function reconcileSelectedBulk(Request $r,VtuTransactionService $service,VtuBulkService $bulkService){
+ public function reconcileSelectedBulk(Request $r,VtuTransactionService $service,VtuBulkService $bulkService): JsonResponse|\Illuminate\Http\RedirectResponse{
   $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id']]);
   $attempted=0;$reconciled=0;
   $bulks=VtuBulkOperation::query()->whereIn('id',$data['bulk_ids'])->get();
@@ -141,7 +141,7 @@ class VtuAdminController extends Controller
    }
    try{$bulkService->recalculate($bulk);}catch(\Throwable $e){report($e);}
   }
-  return back()->with('success',"Selected bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
+  $message="Selected bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied."; return $r->expectsJson()?response()->json(['status'=>'completed','attempted'=>$attempted,'reconciled'=>$reconciled,'message'=>$message]):back()->with('success',$message);
  }
  public function transactions(Request $r){
   $q=VtuTransaction::with(['user:id,name,email','service:id,name','product:id,name','provider:id,display_name'])->latest('created_at');
@@ -149,10 +149,10 @@ class VtuAdminController extends Controller
   $transactions=$q->paginate(50)->withQueryString();
   return Inertia::render('Admin/VTU/Transactions',['transactions'=>$transactions]);
  }
- public function bulkRequery(Request $r,VtuTransactionService $service){
+ public function bulkRequery(Request $r,VtuTransactionService $service): JsonResponse|\Illuminate\Http\RedirectResponse{
   $data=$r->validate(['transaction_ids'=>['required','array','min:1','max:100'],'transaction_ids.*'=>['integer','distinct','exists:vtu_transactions,id']]);$checked=0;$changed=0;$skipped=0;
   foreach(VtuTransaction::query()->whereIn('id',$data['transaction_ids'])->whereIn('status',['pending','processing'])->get() as $tx){if(!$tx->provider_reference){$skipped++;continue;}$checked++;try{$before=$tx->status;$after=$service->requery($tx);if($after->status!==$before)$changed++;}catch(\Throwable $e){$skipped++;}}
-  return back()->with('success',"Bulk transaction requery checked {$checked}; {$changed} state change(s), {$skipped} skipped/failed.");
+  $message="Bulk transaction requery checked {$checked}; {$changed} state change(s), {$skipped} skipped/failed."; return $r->expectsJson()?response()->json(['status'=>'completed','checked'=>$checked,'changed'=>$changed,'skipped'=>$skipped,'message'=>$message]):back()->with('success',$message);
  }
 
  public function requery(VtuTransaction $transaction,VtuTransactionService $s){try{$s->requery($transaction);return back()->with('success','Transaction requery completed.');}catch(\Throwable $e){report($e);return back()->with('error','Transaction requery failed safely.');}}
