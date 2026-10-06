@@ -349,12 +349,44 @@ class ProviderEngineController extends Controller
         return response()->json(['data'=>$saved->fresh()],201);
     }
 
+    public function updateEndpoint(Request $request, ApiProvider $provider, ProviderEndpoint $endpoint): JsonResponse
+    {
+        if ((int) $endpoint->api_provider_id !== (int) $provider->id) {
+            return response()->json(['message' => 'Provider endpoint does not belong to this provider.'], 404);
+        }
+
+        $data = $request->validate([
+            'name'=>'required|string|max:160',
+            'operation'=>'nullable|string|max:100',
+            'method'=>'required|in:GET,POST,PUT,PATCH,DELETE',
+            'path'=>'nullable|string|max:2048',
+            'full_url'=>'nullable|url|max:2048',
+            'content_type'=>'required|in:json,form-data,x-www-form-urlencoded,query,raw',
+            'auth_mode'=>'required|in:connection,none,custom',
+            'headers'=>'nullable|array',
+            'query_params'=>'nullable|array',
+            'request_mapping'=>'nullable|array',
+            'response_mapping'=>'nullable|array',
+            'error_mapping'=>'nullable|array',
+            'webhook_config'=>'nullable|array',
+            'enabled'=>'nullable|boolean',
+        ]);
+
+        if (blank($data['path'] ?? null) && blank($data['full_url'] ?? null)) {
+            return response()->json(['message'=>'Provide either a relative path or a full URL.'], 422);
+        }
+
+        $endpoint->update($data);
+
+        return response()->json(['data'=>$endpoint->fresh()]);
+    }
+
     public function endpoints(ApiProvider $provider): JsonResponse
     {
         return response()->json(['data'=>$provider->endpoints()->orderByDesc('enabled')->latest()->get()->map(fn(ProviderEndpoint $e)=>[
             'id'=>$e->id,'name'=>$e->name,'operation'=>$e->operation,'method'=>$e->method,
-            'path'=>$e->path,'full_url'=>$e->full_url,'content_type'=>$e->content_type,
-            'auth_mode'=>$e->auth_mode,'headers'=>$e->headers ?? [],'query_params'=>$e->query_params ?? [],
+            'path'=>$e->path,'full_url'=>$this->safeUrlForDisplay($e->full_url),'content_type'=>$e->content_type,
+            'auth_mode'=>$e->auth_mode,'headers'=>$this->safeKeyValueMap((array)($e->headers ?? [])),'query_params'=>$this->safeKeyValueMap((array)($e->query_params ?? [])),
             'request_mapping'=>$e->request_mapping ?? [],'response_mapping'=>$e->response_mapping ?? [],
             'error_mapping'=>$e->error_mapping ?? [],'webhook_config'=>$e->webhook_config ?? [],
             'enabled'=>$e->enabled,
@@ -739,6 +771,29 @@ class ProviderEngineController extends Controller
         } catch (\Throwable $e) {
             report($e);
         }
+    }
+
+    private function safeKeyValueMap(array $values): array
+    {
+        $safe = [];
+        foreach ($values as $key => $value) {
+            $name = strtolower((string) $key);
+            $sensitive = preg_match('/token|secret|password|passwd|pin|api[_-]?key|authorization|credential|signature/i', $name);
+            $safe[$key] = $sensitive ? '[REDACTED]' : (is_scalar($value) || $value === null ? $value : '[CONFIGURED]');
+        }
+        return $safe;
+    }
+
+    private function safeUrlForDisplay(?string $url): ?string
+    {
+        if (blank($url)) return $url;
+        $parts = parse_url($url);
+        if ($parts === false) return '[CONFIGURED URL]';
+        $host = $parts['host'] ?? null;
+        $scheme = $parts['scheme'] ?? 'https';
+        $port = isset($parts['port']) ? ':'.$parts['port'] : '';
+        $path = $parts['path'] ?? '';
+        return $host ? $scheme.'://'.$host.$port.$path : '[CONFIGURED URL]';
     }
 
     private function safeAuthOptions(array $options): array
