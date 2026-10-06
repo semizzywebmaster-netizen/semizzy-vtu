@@ -20,6 +20,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\Admin\KycController as AdminKycController;
 use App\Http\Controllers\Admin\PlatformControlController;
+use App\Http\Controllers\ProfileChangeRequestController;
+use App\Http\Controllers\Admin\ProfileChangeRequestController as AdminProfileChangeRequestController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RealtimeController;
 use App\Http\Controllers\HelpCenterController;
@@ -81,6 +83,8 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/profile/identity-document', [ProfileController::class, 'identityDocument'])->name('profile.identity-document');
     Route::post('/profile', [ProfileController::class, 'update'])->middleware(['throttle:10,1','transaction.pin'])->name('profile.update');
     Route::get('/profile/transaction-pin', [TransactionPinController::class, 'index'])->name('profile.transaction-pin');
+    Route::get('/profile/change-requests', [ProfileChangeRequestController::class, 'index'])->name('profile.change-requests.index');
+    Route::post('/profile/change-requests', [ProfileChangeRequestController::class, 'store'])->middleware(['throttle:5,1','transaction.pin'])->name('profile.change-requests.store');
     Route::post('/profile/transaction-pin', [TransactionPinController::class, 'store'])->middleware('throttle:5,1')->name('profile.transaction-pin.store');
     Route::get('/api-access', [ApiAccessController::class, 'index'])->name('api.access');
     Route::post('/api-access', [ApiAccessController::class, 'store'])->middleware(['throttle:5,1','transaction.pin'])->name('api.access.store');
