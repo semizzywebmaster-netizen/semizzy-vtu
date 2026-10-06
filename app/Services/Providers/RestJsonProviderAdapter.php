@@ -144,9 +144,14 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 $request = $request->withHeaders(['Idempotency-Key' => $idempotencyKey]);
             }
 
+            if ($query !== []) {
+                $request = $request->withQueryParameters($query);
+            }
+
             $response = match ($endpoint->content_type) {
-                'query' => $request->request($endpoint->method, $url, $query),
-                'form-data', 'x-www-form-urlencoded' => $request->asForm()->request($endpoint->method, $url, $body),
+                'query' => $request->request($endpoint->method, $url),
+                'form-data' => $request->asMultipart()->request($endpoint->method, $url, $body),
+                'x-www-form-urlencoded' => $request->asForm()->request($endpoint->method, $url, $body),
                 'raw' => $request->withBody((string) ($body['raw'] ?? ''), 'text/plain')->request($endpoint->method, $url),
                 default => $request->request($endpoint->method, $url, $body),
             };
