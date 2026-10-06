@@ -14,7 +14,6 @@ type Props = {
   };
 };
 
-const label=(v:string|null|undefined)=>v ? v.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase()) : 'Not provided';
 const kycLabel=(v:string)=>v==='pending'?'Pending review':v==='verified'?'Verified':v==='rejected'?'Rejected':'Not started';
 
 export default function Profile({user,tier,tiers}:Props){
