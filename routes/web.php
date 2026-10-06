@@ -184,6 +184,8 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/catalogue', [CatalogueController::class, 'index'])->middleware('permission:catalogue.view')->name('admin.catalogue.index');
         Route::post('/catalogue/categories', [CatalogueController::class, 'storeCategory'])->middleware('permission:catalogue.manage')->name('admin.catalogue.categories.store');
         Route::post('/catalogue/services', [CatalogueController::class, 'storeService'])->middleware('permission:catalogue.manage')->name('admin.catalogue.services.store');
+        Route::post('/catalogue/services/generate-icons', [CatalogueController::class, 'generateServiceIcons'])->middleware('permission:catalogue.manage')->name('admin.catalogue.services.generate-icons');
+        Route::post('/catalogue/services/{service}/icon', [CatalogueController::class, 'uploadServiceIcon'])->whereNumber('service')->middleware('permission:catalogue.manage')->name('admin.catalogue.services.icon');
         Route::post('/catalogue/products', [CatalogueController::class, 'storeProduct'])->middleware('permission:catalogue.manage')->name('admin.catalogue.products.store');
         Route::post('/catalogue/products/{product}/disable', [CatalogueController::class, 'disableProduct'])->middleware('permission:catalogue.manage')->name('admin.catalogue.products.disable');
         Route::post('/catalogue/sync', [CatalogueController::class, 'syncProvider'])->middleware('permission:catalogue.manage')->name('admin.catalogue.sync');
