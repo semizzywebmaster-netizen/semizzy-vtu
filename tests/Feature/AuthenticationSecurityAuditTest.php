@@ -50,11 +50,11 @@ class AuthenticationSecurityAuditTest extends TestCase
 
     public function test_password_reset_request_is_audited_without_email(): void
     {
-        $this->post('/forgot-password', [
+        $this->post('/forgot-password/otp', [
             'email' => 'unknown@example.test',
-        ])->assertSessionHas('success');
+        ])->assertSessionHas('otp_sent');
 
-        $event = SecurityEvent::where('event', 'auth.password_reset.requested')->latest('id')->firstOrFail();
+        $event = SecurityEvent::where('event', 'auth.password_recovery.otp_sent')->latest('id')->firstOrFail();
 
         $this->assertArrayNotHasKey('email', $event->context);
     }
