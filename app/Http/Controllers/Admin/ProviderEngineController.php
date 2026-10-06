@@ -196,6 +196,22 @@ class ProviderEngineController extends Controller
         }
     }
 
+    public function syncSummary(ApiProvider $provider): JsonResponse
+    {
+        $services=$provider->providerServices()->get();
+        $pending=ProviderServiceImport::where('api_provider_id',$provider->id)->where('approved',false)->count();
+        $approvedNotImported=ProviderServiceImport::where('api_provider_id',$provider->id)->where('approved',true)->where('imported',false)->count();
+        return response()->json(['data'=>[
+            'provider_id'=>$provider->id,
+            'services'=>$services->count(),
+            'pending_approval'=>$pending,
+            'approved_not_imported'=>$approvedNotImported,
+            'last_tested_at'=>$provider->last_tested_at,
+            'last_test_status'=>$provider->last_test_status,
+            'last_successful_request_at'=>$provider->last_successful_request_at,
+        ]]);
+    }
+
     public function health(ApiProvider $provider): JsonResponse
     {
         $checks=$provider->healthChecks()->latest('checked_at')->limit(50)->get()->map(fn(ProviderHealthCheck $h)=>[
