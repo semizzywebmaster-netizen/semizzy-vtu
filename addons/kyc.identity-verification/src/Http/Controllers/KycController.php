@@ -10,6 +10,7 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Semizzy\Addons\Kyc\Models\KycApplication;
+use Semizzy\Addons\Kyc\Services\KycOtpService;
 
 class KycController extends Controller
 {
@@ -39,6 +40,34 @@ class KycController extends Controller
                 'hasDocument' => false,
             ],
         ]);
+    }
+
+    public function sendOtp(Request $request, KycOtpService $otp): RedirectResponse
+    {
+        $data = $request->validate([
+            'channel' => ['required', Rule::in(['sms', 'email', 'whatsapp'])],
+        ]);
+
+        $user = $request->user();
+        $channel = $data['channel'];
+        $destination = $channel === 'email' ? $user->email : $user->phone;
+
+        if (!$destination || ($channel === 'email' && !$user->email_verified_at) || ($channel !== 'email' && !$user->phone_verified_at)) {
+            return back()->withErrors(['channel' => 'A verified contact is required for this verification channel.']);
+        }
+
+        $otp->issue($user->id, $channel, $destination);
+        return back()->with('success', 'Verification code sent.');
+    }
+
+    public function verifyOtp(Request $request, KycOtpService $otp): RedirectResponse
+    {
+        $data = $request->validate(['code' => ['required', 'digits:6']]);
+        if (!$otp->verify($request->user()->id, $data['code'])) {
+            return back()->withErrors(['code' => 'Invalid or expired verification code.']);
+        }
+
+        return back()->with('success', 'Verification completed.');
     }
 
     public function submit(Request $request): RedirectResponse
