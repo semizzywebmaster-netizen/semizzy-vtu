@@ -151,7 +151,7 @@ export default function Providers({ providers }: { providers: Provider[] }) {
   const runBulk = async (url: string, method: 'post' | 'delete', confirmText: string, data: Record<string, unknown> = {}) => {
     if (!selectedIds.length || !window.confirm(confirmText)) return;
     setBulkBusy(true);
-    try { await runJson(url, { provider_ids: selectedIds, ...data }, method === 'delete' ? 'DELETE' : 'POST'); setSelectedIds([]); window.location.reload(); }
+    try { setBulkBusy(true); const result = await runJson(url, { provider_ids: selectedIds, ...data }, method === 'delete' ? 'DELETE' : 'POST'); setSelectedIds([]); const summary = result?.message || 'Bulk action completed.'; window.alert(summary); window.location.reload(); } finally { setBulkBusy(false); }
     catch (error) { window.alert(error instanceof Error ? error.message : 'Provider bulk action failed.'); }
     finally { setBulkBusy(false); }
   };
