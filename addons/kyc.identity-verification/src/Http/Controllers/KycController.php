@@ -16,6 +16,8 @@ class KycController extends Controller
 {
     public function index(Request $request): Response
     {
+        $otpVerified = app(KycOtpService::class)->hasVerifiedContact($request->user()->id);
+
         $application = KycApplication::with('documents')
             ->where('user_id', $request->user()->id)
             ->latest('id')->first();
@@ -31,6 +33,7 @@ class KycController extends Controller
                 'reviewedAt' => $application->reviewed_at?->toISOString(),
                 'rejectionReason' => $application->rejection_reason,
                 'hasDocument' => $application->documents->isNotEmpty(),
+                'otpVerified' => $otpVerified,
             ] : [
                 'status' => 'not_started',
                 'identityType' => null,
@@ -38,6 +41,7 @@ class KycController extends Controller
                 'reviewedAt' => null,
                 'rejectionReason' => null,
                 'hasDocument' => false,
+                'otpVerified' => $otpVerified,
             ],
         ]);
     }
@@ -73,6 +77,10 @@ class KycController extends Controller
     public function submit(Request $request): RedirectResponse
     {
         $user = $request->user();
+        if (!app(KycOtpService::class)->hasVerifiedContact($user->id)) {
+            return back()->withErrors(['otp' => 'Verify a recent SMS, email, or WhatsApp OTP before submitting KYC.']);
+        }
+
         $existing = KycApplication::where('user_id', $user->id)->where('status', 'approved')->exists();
         if ($existing) {
             return back()->with('success', 'Your KYC is already approved.');
