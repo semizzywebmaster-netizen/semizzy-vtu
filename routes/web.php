@@ -82,6 +82,9 @@ Route::middleware(['auth'])->group(function (): void {
     Route::post('/profile', [ProfileController::class, 'update'])->middleware(['throttle:10,1','transaction.pin'])->name('profile.update');
     Route::get('/profile/transaction-pin', [TransactionPinController::class, 'index'])->name('profile.transaction-pin');
     Route::post('/profile/transaction-pin', [TransactionPinController::class, 'store'])->middleware('throttle:5,1')->name('profile.transaction-pin.store');
+    Route::get('/api-access', [ApiAccessController::class, 'index'])->name('api.access');
+    Route::post('/api-access', [ApiAccessController::class, 'store'])->middleware(['throttle:5,1','transaction.pin'])->name('api.access.store');
+    Route::delete('/api-access/{token}', [ApiAccessController::class, 'destroy'])->whereNumber('token')->middleware(['throttle:10,1','transaction.pin'])->name('api.access.destroy');
     Route::get('/transactions', [UserTransactionController::class, 'index'])->name('transactions.index');
     Route::get('/wallet/fund', [WalletFundingController::class, 'index'])->name('wallet.fund');
     Route::get('/send-money', fn () => Inertia::render('SendMoney'))->name('send-money.index');
