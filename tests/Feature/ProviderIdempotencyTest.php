@@ -212,7 +212,7 @@ class ProviderIdempotencyTest extends TestCase
             'display_name' => 'Provider '.$suffix.' Second',
             'base_url' => 'https://example.com',
             'credentials' => ['token' => 'test-secret-2'],
-            'capabilities' => ['transaction_initiation'],
+            'capabilities' => ['transaction_initiation', 'transaction_status'],
             'verification_status' => 'live_verified',
             'integration_status' => 'live_verified',
             'enabled' => true,
