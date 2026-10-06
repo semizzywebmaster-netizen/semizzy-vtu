@@ -79,7 +79,9 @@ class ProviderIdempotencyTest extends TestCase
             message: 'Timeout after submission.',
             duplicateRisk: true,
         ));
-        $this->mock(ProviderRequestLogger::class);
+        $this->mock(ProviderRequestLogger::class, function ($mock): void {
+            $mock->shouldReceive('record')->zeroOrMoreTimes();
+        });
 
         $manager = app(ProviderManager::class);
         $first = $manager->executeProvider($provider, $service->key, 'transaction_initiation', ['recipient' => '08000000000'], 'idem-unknown');
