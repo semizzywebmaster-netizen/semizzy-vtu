@@ -86,7 +86,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 false,
                 $uncertainHttp ? 'UNKNOWN' : 'FAILED',
                 message: 'Provider request failed.',
-                retryable: $uncertainHttp,
+                retryable: false,
                 // Timeouts/rate limits/server failures may occur after a provider
                 // accepted the request, so transaction initiation must never fail
                 // over automatically from these responses.
