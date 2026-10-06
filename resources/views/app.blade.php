@@ -7,7 +7,7 @@
     <meta name="application-name" content="{{ $platform['platform_name'] }}">
     <meta name="theme-color" content="{{ $platform['theme_primary'] }}">
     <link rel="manifest" href="{{ route('manifest') }}">
-    <link rel="icon" href="/icons/semizzy-one.svg" type="image/svg+xml">
+    @if(!empty($platform['assets']['favicon']))<link rel="icon" href="{{ $platform['assets']['favicon'] }}">@else<link rel="icon" href="/icons/semizzy-one.svg" type="image/svg+xml">@endif
     <title inertia>{{ $platform['platform_name'] }}</title>
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.tsx'])
