@@ -205,6 +205,7 @@ class ProviderEngineController extends Controller
             ProviderHealthCheck::create(['api_provider_id'=>$provider->id,'provider_connection_id'=>$connection->id,'status'=>$status,'http_status'=>$response->status(),'response_time_ms'=>$duration,'message'=>$status==='SUCCESS'?'Connection test succeeded.':'Connection test returned an unsuccessful HTTP response.','checked_at'=>now()]);
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>$status,'last_test_message'=>$status==='SUCCESS'?'Connection test succeeded.':'Connection test failed.']);
             $provider->update(['last_tested_at'=>now(),'last_test_status'=>$status,'last_test_summary'=>$status==='SUCCESS'?'Connection test succeeded.':'Connection test failed.','last_successful_request_at'=>$status==='SUCCESS'?now():$provider->last_successful_request_at]);
+            $this->writeOperationLog($provider, $connection, 'connection_test', $endpoint->method, $url, $status, $response->status(), $duration, null, $status==='SUCCESS'?'Connection test succeeded.':'Connection test failed.');
             return response()->json(['status'=>$status,'http_status'=>$response->status(),'response_time_ms'=>$duration,'message'=>$status==='SUCCESS'?'Connection test succeeded.':'Connection test failed.']);
         }catch(\Throwable $e){
             report($e);
@@ -212,6 +213,7 @@ class ProviderEngineController extends Controller
             ProviderHealthCheck::create(['api_provider_id'=>$provider->id,'provider_connection_id'=>$connection->id,'status'=>'FAILED','response_time_ms'=>$duration,'message'=>'Connection test failed safely.','checked_at'=>now()]);
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Connection test failed safely.']);
             $provider->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_summary'=>'Connection test failed safely.']);
+            $this->writeOperationLog($provider, $connection, 'connection_test', $endpoint->method, $this->endpointUrl($connection, $endpoint), 'FAILED', null, $duration, get_class($e), 'Connection test failed safely.');
             return response()->json(['status'=>'FAILED','response_time_ms'=>$duration,'message'=>'Connection test failed safely.'],502);
         }
     }
