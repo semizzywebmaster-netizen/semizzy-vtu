@@ -40,6 +40,11 @@ class CacOrder extends Model
         return $this->belongsTo(CacServiceProduct::class, 'cac_service_product_id');
     }
 
+    public function statusHistory(): HasMany
+    {
+        return $this->hasMany(CacOrderStatusHistory::class);
+    }
+
     public function attempts(): HasMany
     {
         return $this->hasMany(CacOrderAttempt::class);
