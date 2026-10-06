@@ -22,6 +22,19 @@ class ProviderEngineController extends Controller
         'username_password_pin','client_id_secret','bearer','basic','custom',
     ];
 
+    private function redactForLog(mixed $value): mixed
+    {
+        if (is_array($value)) {
+            $out=[];
+            foreach ($value as $key=>$item) {
+                $name=strtolower((string)$key);
+                $out[$key]=preg_match('/token|secret|password|passwd|pin|api[_-]?key|authorization|credential/i',$name) ? '[REDACTED]' : $this->redactForLog($item);
+            }
+            return $out;
+        }
+        return is_string($value) && strlen($value)>200 ? substr($value,0,200).'…' : $value;
+    }
+
     public function connections(ApiProvider $provider): JsonResponse
     {
         $connections=$provider->connections()->with('credentials')->orderByDesc('is_default')->latest()->get()->map(fn(ProviderConnection $connection)=>[
