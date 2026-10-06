@@ -23,7 +23,7 @@ class ProviderConnection extends Model
     protected function casts(): array
     {
         return [
-            'auth_options'=>'array','headers'=>'array','query_params'=>'array','proxy'=>'array',
+            'auth_options'=>'encrypted:array','headers'=>'encrypted:array','query_params'=>'encrypted:array','proxy'=>'encrypted:array',
             'verify_ssl'=>'boolean','is_default'=>'boolean','enabled'=>'boolean',
             'last_tested_at'=>'datetime',
         ];
