@@ -51,10 +51,13 @@ class AddonController extends Controller
         ]);
     }
 
-    public function register(Request $request, AddonLifecycleService $lifecycle): RedirectResponse
+    public function register(Request $request, AddonRegistry $registry, AddonLifecycleService $lifecycle): RedirectResponse
     {
         try {
-            $lifecycle->register($this->validatedManifest($request), $request->user()?->id);
+            $data = $request->validate(['identifier' => ['required','string','max:100']]);
+            $manifest = $registry->require($data['identifier']);
+            unset($manifest['source']);
+            $lifecycle->register($manifest, $request->user()?->id);
             return back()->with('success', 'Addon manifest registered.');
         } catch (\Throwable $e) {
             report($e);
