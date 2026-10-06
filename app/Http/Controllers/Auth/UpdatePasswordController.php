@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\Security\OtpChallengeService;
 use App\Services\Security\SecurityEventLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,32 +16,35 @@ class UpdatePasswordController extends Controller
     {
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, OtpChallengeService $otp): RedirectResponse
     {
         $user = $request->user();
 
         $data = $request->validate([
             'current_password' => ['required', 'current_password:web'],
             'password' => ['required', 'confirmed', Password::defaults()],
+            'otp_code' => ['required', 'digits:6'],
         ]);
 
         if (Hash::check($data['current_password'], $user->password) === false) {
             abort(422);
         }
 
+        $otp->verify($user, 'password_change', $data['otp_code']);
+
         $user->forceFill([
             'password' => $data['password'],
             'remember_token' => bin2hex(random_bytes(30)),
         ])->save();
 
-        // Password rotation revokes all previously issued API credentials.
         $user->tokens()->delete();
 
         $this->securityEvents->record('password.changed', 'info', [
             'user_id' => $user->id,
             'api_tokens_revoked' => true,
+            'otp_verified' => true,
         ], $request);
 
-        return back()->with('success', 'Your password has been changed.');
+        return back()->with('success', 'Your password has been changed after OTP verification.');
     }
 }
