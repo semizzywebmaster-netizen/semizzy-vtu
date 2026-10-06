@@ -42,6 +42,12 @@ class CacOrderController extends Controller
         return response()->json(['data' => $order->fresh('product')], 201);
     }
 
+    public function statusHistory(Request $request, CacOrder $order)
+    {
+        abort_unless((int) $order->user_id === (int) $request->user()->id, 404);
+        return response()->json(['data' => $order->statusHistory()->latest()->get()]);
+    }
+
     public function show(Request $request, CacOrder $order)
     {
         abort_unless((int) $order->user_id === (int) $request->user()->id, 404);
