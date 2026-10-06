@@ -13,6 +13,7 @@ use App\Models\VtuTransaction;
 use App\Models\WalletAccount;
 use App\Models\WalletMovement;
 use App\Services\Dashboard\DashboardMessageService;
+use App\Services\Platform\TierLimitService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -138,18 +139,15 @@ class DashboardController extends Controller
         $tier = null;
         $tierLimits = [];
         if (!$isOperations) {
+            $tierService = app(TierLimitService::class);
             $wallet = WalletAccount::query()->where('user_id', $user->id)->where('status', '!=', 'closed')->first();
             $tierNumber = max(1, min(4, (int) $user->tier));
             $tier = [
                 'id' => $tierNumber,
-                'name' => config("semizzy.user_tiers.{$tierNumber}.name", 'Tier '.$tierNumber),
+                'name' => $tierService->get($tierNumber)['name'],
             ];
-            $tierLimits = collect(config('semizzy.user_tiers', []))->map(fn (array $definition, $key): array => [
-                'id' => (int) $key,
-                'name' => $definition['name'],
-                'dailyLimitMinor' => $definition['daily_limit_minor'],
-                'balanceLimitMinor' => $definition['balance_limit_minor'],
-                'upgradeLabel' => $definition['upgrade_label'],
+            $tierLimits = collect($tierService->all())->map(fn (array $definition, $key): array => [
+                'id' => (int) $key, 'name' => $definition['name'], 'dailyLimitMinor' => $definition['daily_limit_minor'], 'balanceLimitMinor' => $definition['balance_limit_minor'], 'upgradeLabel' => $definition['upgrade_label'],
             ])->values()->all();
         }
 
