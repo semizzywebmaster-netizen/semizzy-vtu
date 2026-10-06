@@ -1,10 +1,10 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 
-export default function Login() {
+export default function Login({ platform }: { platform?: { platform_name?: string } }) {
   const form = useForm({ login: '', password: '', remember: false });
 
   return <main className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
-    <Head title="Login" />
+    <Head title={`Sign in · ${platform?.platform_name || 'SEMIZZY ONE'}`} />
     <form onSubmit={e => { e.preventDefault(); form.post('/login'); }} className="w-full max-w-md rounded-3xl bg-white p-7 shadow-xl">
       <h1 className="mt-1 text-3xl font-black">Sign in</h1>
       <p className="mt-2 text-sm text-slate-500">Enter your account credentials to continue.</p>
