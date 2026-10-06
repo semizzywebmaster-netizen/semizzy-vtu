@@ -96,38 +96,21 @@ class UserController extends Controller
     public function update(Request $request, User $user, AuditLogger $audit): RedirectResponse
     {
         $data = $request->validate([
-            'name' => ['sometimes', 'required', 'string', 'max:120'],
             'username' => ['sometimes', 'required', 'string', 'min:3', 'max:40', 'regex:/^[a-zA-Z0-9._]+$/', 'unique:users,username,'.$user->id],
-            'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
+            
             'role' => ['sometimes', 'required', 'in:ADMIN,STAFF,SUPPORT,USER'],
             'status' => ['sometimes', 'required', 'in:active,suspended,disabled'],
             'tier' => ['sometimes', 'required', 'integer', 'in:1,2,3,4,5'],
             'account_type' => ['sometimes', 'required', 'in:personal,merchant'],
-            'business_name' => ['sometimes', 'nullable', 'string', 'max:180'],
-            'business_registration_number' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'business_type' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'business_address' => ['sometimes', 'nullable', 'string', 'max:500'],
-            'business_state' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'business_country' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'password' => ['nullable', 'string', 'min:8', 'max:72'],
+                        'password' => ['nullable', 'string', 'min:8', 'max:72'],
         ]);
 
         $data = array_merge([
-            'name' => $user->name,
             'username' => $user->username,
-            'email' => $user->email,
-            'phone' => $user->phone,
             'role' => $user->role,
             'status' => $user->status,
             'tier' => max(1, min(5, (int) $user->tier)),
             'account_type' => $user->account_type ?? 'personal',
-            'business_name' => $user->business_name,
-            'business_registration_number' => $user->business_registration_number,
-            'business_type' => $user->business_type,
-            'business_address' => $user->business_address,
-            'business_state' => $user->business_state,
-            'business_country' => $user->business_country,
             'password' => null,
         ], $data);
 
@@ -152,12 +135,8 @@ class UserController extends Controller
             if ($reserved->contains($data['username']) || $protected->contains(fn ($term) => $term !== '' && str_contains($data['username'], $term))) {
                 throw new \RuntimeException('That username is reserved or protected.');
             }
-            $data['phone'] = $data['phone'] !== null
-                ? preg_replace('/[^0-9+]/', '', $data['phone'])
-                : null;
-
-            $emailChanged = strcasecmp((string) $user->email, (string) $data['email']) !== 0;
-            $phoneChanged = (string) ($user->phone ?? '') !== (string) ($data['phone'] ?? '');
+            $emailChanged = false;
+            $phoneChanged = false;
 
             DB::transaction(function () use ($user, $data, $emailChanged, $phoneChanged): void {
                 $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
@@ -179,30 +158,14 @@ class UserController extends Controller
                 }
 
                 $payload = [
-                    'name' => ((int) $data['tier'] === 4 && trim((string) ($data['business_name'] ?? '')) !== '') ? trim((string) $data['business_name']) : trim($data['name']),
                     'username' => $data['username'],
-                    'email' => strtolower(trim($data['email'])),
-                    'phone' => $data['phone'],
                     'role' => $data['role'],
                     'status' => $data['status'],
                     'tier' => (int) $data['tier'],
                     'account_type' => (int) $data['tier'] === 5 ? 'api' : ((int) $data['tier'] === 4 ? 'merchant' : 'personal'),
-                    'business_name' => trim((string) ($data['business_name'] ?? '')) ?: null,
-                    'business_registration_number' => trim((string) ($data['business_registration_number'] ?? '')) ?: null,
-                    'business_type' => trim((string) ($data['business_type'] ?? '')) ?: null,
-                    'business_address' => trim((string) ($data['business_address'] ?? '')) ?: null,
-                    'business_state' => trim((string) ($data['business_state'] ?? '')) ?: null,
-                    'business_country' => trim((string) ($data['business_country'] ?? '')) ?: null,
-                    'merchant_verified_at' => (int) $data['tier'] === 4 ? now() : null,
                     'tier_upgrade_status' => in_array((int) $data['tier'], [4,5], true) ? 'approved' : 'none',
                 ];
 
-                if ($emailChanged) {
-                    $payload['email_verified_at'] = null;
-                }
-                if ($phoneChanged) {
-                    $payload['phone_verified_at'] = null;
-                }
                 if (! empty($data['password'])) {
                     $payload['password'] = Hash::make($data['password']);
                 }
