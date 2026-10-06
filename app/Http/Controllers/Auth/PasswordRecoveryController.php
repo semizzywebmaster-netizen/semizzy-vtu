@@ -30,11 +30,13 @@ class PasswordRecoveryController extends Controller
         if ($user) {
             try {
                 $otp->sendToUser($user, 'password_forgot', 'password recovery');
-                $events->record('auth.password_recovery.otp_sent', 'info', ['channel' => 'email'], $request);
+
             } catch (\Throwable $e) {
                 report($e);
             }
         }
+
+        $events->record('auth.password_recovery.otp_requested', 'info', ['account_found' => (bool) $user], $request);
 
         return back()->with('otp_sent', 'If an account exists for that email, a 6-digit verification code has been sent. It expires in 10 minutes.');
     }
