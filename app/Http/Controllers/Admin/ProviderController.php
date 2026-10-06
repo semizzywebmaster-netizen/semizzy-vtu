@@ -75,8 +75,12 @@ class ProviderController extends Controller
                 },
                 'credentials' => $p->maskedCredentials(),
                 'capabilities' => $p->capabilities ?? [],
-                'endpoint_count' => is_array($p->endpoints) ? count($p->endpoints) : 0,
-                'endpoint_operations' => is_array($p->endpoints) ? array_values(array_filter(array_keys($p->endpoints), 'is_string')) : [],
+                // ApiProvider has both a legacy JSON `endpoints` attribute and a new
+                // Eloquent `endpoints()` relation. Read the legacy value explicitly so
+                // the relation cannot shadow the configuration and make the UI appear empty.
+                'endpoints' => (json_decode((string) $p->getRawOriginal('endpoints'), true) ?: []),
+                'endpoint_count' => $p->endpoints()->count(),
+                'endpoint_operations' => $p->endpoints()->pluck('operation')->filter()->values()->all(),
                 'service_categories' => $p->service_categories ?? [],
             ]),
         ]);
