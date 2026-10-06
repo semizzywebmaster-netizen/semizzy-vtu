@@ -12,7 +12,7 @@ use Inertia\Response;
 
 class SystemSettingsController extends Controller
 {
-    private const KEYS = ['platform_name', 'support_email', 'support_notice', 'default_timezone'];
+    private const KEYS = ['platform_name', 'support_email', 'support_notice', 'default_timezone', 'theme_key', 'theme_primary'];
 
     public function index(): Response
     {
@@ -24,6 +24,8 @@ class SystemSettingsController extends Controller
                 'support_email' => (string) ($stored['support_email'] ?? config('mail.from.address', '')),
                 'support_notice' => (string) ($stored['support_notice'] ?? ''),
                 'default_timezone' => (string) ($stored['default_timezone'] ?? config('app.timezone', 'UTC')),
+                'theme_key' => (string) ($stored['theme_key'] ?? 'ocean-blue'),
+                'theme_primary' => (string) ($stored['theme_primary'] ?? '#2563EB'),
             ],
         ]);
     }
@@ -35,21 +37,19 @@ class SystemSettingsController extends Controller
             'support_email' => ['nullable', 'email', 'max:254'],
             'support_notice' => ['nullable', 'string', 'max:500'],
             'default_timezone' => ['required', 'timezone'],
+            'theme_key' => ['required', 'string', 'max:40'],
+            'theme_primary' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
 
-        $types = [
-            'platform_name' => 'string',
-            'support_email' => 'string',
-            'support_notice' => 'string',
-            'default_timezone' => 'string',
-        ];
+        $types = array_fill_keys(self::KEYS, 'string');
 
         try {
             foreach (self::KEYS as $key) {
-                SystemSetting::query()->updateOrCreate(
-                    ['key' => $key],
-                    ['value' => $data[$key] ?? null, 'type' => $types[$key], 'is_secret' => false],
-                );
+                SystemSetting::query()->updateOrCreate(['key' => $key], [
+                    'value' => $data[$key] ?? null,
+                    'type' => $types[$key],
+                    'is_secret' => false,
+                ]);
             }
 
             try {
