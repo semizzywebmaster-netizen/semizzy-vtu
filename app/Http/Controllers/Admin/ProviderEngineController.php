@@ -196,6 +196,12 @@ class ProviderEngineController extends Controller
         }
     }
 
+    public function syncHistory(ApiProvider $provider): JsonResponse
+    {
+        $rows = DB::table('provider_syncs')->where('api_provider_id',$provider->id)->latest('id')->limit(50)->get();
+        return response()->json(['data'=>$rows]);
+    }
+
     public function syncSummary(ApiProvider $provider): JsonResponse
     {
         $services=$provider->providerServices()->get();
