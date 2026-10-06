@@ -4,6 +4,7 @@ namespace App\Services\System;
 
 use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Crypt;
 use Throwable;
 
 class SystemSettingsService
@@ -39,7 +40,12 @@ class SystemSettingsService
                 foreach (['theme_custom_light','theme_custom_dark','business','social','assets','smtp'] as $key) {
                     if (isset($stored[$key]) && is_string($stored[$key])) {
                         $decoded = json_decode($stored[$key], true);
-                        if (is_array($decoded)) $settings[$key] = array_replace_recursive($settings[$key] ?? [], $decoded);
+                        if (is_array($decoded)) {
+                            if ($key === 'smtp' && !empty($decoded['password'])) {
+                                try { $decoded['password'] = Crypt::decryptString($decoded['password']); } catch (Throwable) { unset($decoded['password']); }
+                            }
+                            $settings[$key] = array_replace_recursive($settings[$key] ?? [], $decoded);
+                        }
                     }
                 }
             }
