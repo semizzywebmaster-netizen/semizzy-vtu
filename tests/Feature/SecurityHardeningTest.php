@@ -56,6 +56,7 @@ class SecurityHardeningTest extends TestCase
             'password' => 'Strong-Test-Password-123!',
             'role' => 'USER',
             'status' => 'active',
+            'tier' => 5,
         ]);
 
         $this->actingAs($u)->get('/admin/health')->assertStatus(403);
