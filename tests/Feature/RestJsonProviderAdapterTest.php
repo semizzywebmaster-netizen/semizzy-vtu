@@ -178,12 +178,10 @@ class RestJsonProviderAdapterTest extends TestCase
             'enabled' => true,
         ]);
 
-        Http::fake([
-            'https://8.8.8.8/v1/purchase*' => Http::response([
-                'status' => 'success',
-                'reference' => 'CFG-1',
-            ], 200),
-        ]);
+        Http::fake(fn () => Http::response([
+            'status' => 'success',
+            'reference' => 'CFG-1',
+        ], 200));
 
         $result = app(RestJsonProviderAdapter::class)->execute(
             $provider,
@@ -252,11 +250,9 @@ class RestJsonProviderAdapterTest extends TestCase
             'enabled' => true,
         ]);
 
-        Http::fake([
-            'https://8.8.8.8/v2/status*' => Http::response([
-                'status' => 'pending',
-            ], 200),
-        ]);
+        Http::fake(fn () => Http::response([
+            'status' => 'pending',
+        ], 200));
 
         $result = app(RestJsonProviderAdapter::class)->execute(
             $provider,
