@@ -168,6 +168,11 @@ class ProviderEngineController extends Controller
         return $this->credentialSummary($connection->fresh('credentials'));
     }
 
+    public function operationLogs(ApiProvider $provider): JsonResponse
+    {
+        return response()->json(['data'=>ProviderOperationLog::query()->where('api_provider_id',$provider->id)->latest()->limit(100)->get(['id','provider_connection_id','operation','method','endpoint','internal_reference','http_status','duration_ms','result','error_code','safe_message','safe_metadata','created_at'])]);
+    }
+
     public function credentials(ProviderConnection $connection): JsonResponse
     {
         return $this->credentialSummary($connection->load('credentials'));
