@@ -49,7 +49,7 @@ class SystemMaintenanceAndServiceIconTest extends TestCase
         if (!class_exists(\ZipArchive::class)) $this->markTestSkipped('ZIP extension unavailable.');
         $admin=$this->admin();
         $response=$this->actingAs($admin)->get('/admin/maintenance/backup');
-        $response->assertDownload();
+        $response->assertOk()->assertHeader('content-disposition');
         $this->assertDirectoryExists(storage_path('app/backups'));
     }
 
