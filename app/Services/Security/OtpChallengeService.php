@@ -12,7 +12,16 @@ class OtpChallengeService
 {
     public function send(User $user, string $purpose, string $label): void
     {
+        $this->sendToUser($user, $purpose, $label);
+    }
+
+    public function sendToUser(User $user, string $purpose, string $label): void
+    {
         $purpose = $this->normalizePurpose($purpose);
+
+        if (! filled($user->email) || ! filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+            throw ValidationException::withMessages(['email' => 'A valid email address is required.']);
+        }
 
         OtpChallenge::query()
             ->where('user_id', $user->id)
@@ -22,7 +31,7 @@ class OtpChallengeService
 
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        $challenge = OtpChallenge::create([
+        OtpChallenge::create([
             'user_id' => $user->id,
             'channel' => 'email',
             'purpose' => $purpose,
@@ -42,6 +51,11 @@ class OtpChallengeService
     }
 
     public function verify(User $user, string $purpose, string $code): void
+    {
+        $this->verifyForUser($user, $purpose, $code);
+    }
+
+    public function verifyForUser(User $user, string $purpose, string $code): void
     {
         $purpose = $this->normalizePurpose($purpose);
         $challenge = OtpChallenge::query()
@@ -66,7 +80,7 @@ class OtpChallengeService
     private function normalizePurpose(string $purpose): string
     {
         return match ($purpose) {
-            'transaction_pin_change', 'password_change' => $purpose,
+            'transaction_pin_change', 'password_change', 'password_forgot' => $purpose,
             default => throw new \InvalidArgumentException('Unsupported OTP purpose.'),
         };
     }
