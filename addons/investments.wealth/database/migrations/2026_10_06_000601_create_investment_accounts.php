@@ -1,0 +1,5 @@
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+return new class extends Migration { public function up(): void { Schema::create('investment_accounts',function(Blueprint $t){$t->id();$t->foreignId('user_id')->constrained()->cascadeOnDelete();$t->foreignId('investment_product_id')->constrained('investment_products')->restrictOnDelete();$t->string('reference')->unique();$t->string('currency',3);$t->unsignedBigInteger('principal_minor');$t->unsignedBigInteger('profit_minor')->default(0);$t->unsignedBigInteger('redeemed_minor')->default(0);$t->string('status',32)->index();$t->timestamp('funded_at')->nullable();$t->timestamp('matures_at')->nullable();$t->timestamp('redeemed_at')->nullable();$t->json('metadata')->nullable();$t->timestamps();$t->index(['user_id','status']);}); } public function down(): void { Schema::dropIfExists('investment_accounts'); } };
