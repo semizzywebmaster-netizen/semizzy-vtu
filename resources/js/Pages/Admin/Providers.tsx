@@ -156,10 +156,10 @@ export default function Providers({ providers }: { providers: Provider[] }) {
     finally { setBulkBusy(false); }
   };
 
-  const remove = (provider: Provider) => {
-    if (window.confirm(`Remove ${provider.display_name} from the active provider registry? Historical records will be retained.`)) {
-      router.delete(`/admin/providers/${provider.id}`, { preserveScroll: true });
-    }
+  const remove = async (provider: Provider) => {
+    if (!window.confirm(`Remove ${provider.display_name} from the active provider registry? Historical records will be retained.`)) return;
+    try { await runJson(`/admin/providers/${provider.id}`, {}, 'DELETE'); window.location.reload(); }
+    catch (error) { window.alert(error instanceof Error ? error.message : 'Provider removal failed.'); }
   };
 
   return <><Head title="API Providers" /><main className="min-h-screen bg-slate-50 p-4 md:p-8"><div className="mx-auto max-w-6xl">
