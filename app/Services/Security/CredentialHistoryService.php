@@ -57,8 +57,9 @@ class CredentialHistoryService
 
         foreach ($recent as $history) {
             if (Hash::check($value, (string) $history->credential_hash)) {
+                $field = $type === 'password' ? 'password' : 'pin';
                 throw ValidationException::withMessages([
-                    $type === 'password' ? 'password' : 'pin' => $label === 'password'
+                    $field => $label === 'password'
                         ? 'You cannot reuse a previous password. Choose a different password.'
                         : 'You cannot reuse a previous transaction PIN. Choose a different PIN.',
                 ]);
