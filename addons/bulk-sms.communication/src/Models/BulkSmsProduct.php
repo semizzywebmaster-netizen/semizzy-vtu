@@ -1,0 +1,2 @@
+<?php
+namespace Semizzy\Addons\BulkSms\Models; use Illuminate\Database\Eloquent\Model; class BulkSmsProduct extends Model {protected $table='bulk_sms_products';protected $guarded=[];public function provider(){return $this->belongsTo(\App\Models\ApiProvider::class,'provider_id');}public function campaigns(){return $this->hasMany(BulkSmsCampaign::class,'product_id');}}
