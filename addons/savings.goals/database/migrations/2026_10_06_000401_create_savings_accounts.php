@@ -1,0 +1,5 @@
+<?php
+use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\\Database\\Schema\\Blueprint;
+use Illuminate\\Support\\Facades\\Schema;
+return new class extends Migration { public function up(): void { Schema::create('savings_accounts', function(Blueprint $t){$t->id();$t->foreignId('user_id')->constrained()->cascadeOnDelete();$t->foreignId('savings_plan_id')->constrained('savings_plans')->restrictOnDelete();$t->string('reference')->unique();$t->string('name');$t->string('currency',3)->default('NGN');$t->unsignedBigInteger('target_amount_minor')->nullable();$t->unsignedBigInteger('balance_minor')->default(0);$t->string('status')->default('active');$t->timestamp('matures_at')->nullable();$t->timestamp('last_contribution_at')->nullable();$t->json('metadata')->nullable();$t->timestamps();$t->index(['user_id','status']);}); } public function down(): void { Schema::dropIfExists('savings_accounts'); } };
