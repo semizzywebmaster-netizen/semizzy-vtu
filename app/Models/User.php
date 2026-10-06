@@ -107,8 +107,27 @@ class User extends Authenticatable implements MustVerifyEmail
 
         $override = $this->permissionOverrides()->where('permission', $permission)->value('allowed');
 
-        return $override !== null
-            ? (bool) $override
-            : in_array($permission, config('semizzy.role_permissions.'.$this->role, []), true);
+        if ($override !== null) {
+            return (bool) $override;
+        }
+
+        $addonRolePermissions = Addon::query()
+            ->where('status', 'active')
+            ->whereJsonContains('permissions', $permission)
+            ->get(['manifest'])
+            ->contains(function (Addon $addon): bool {
+                $rolePermissions = data_get($addon->manifest, 'role_permissions.'.$this->role, []);
+                return is_array($rolePermissions) && in_array(
+                    $permission,
+                    $rolePermissions,
+                    true
+                );
+            });
+
+        if ($addonRolePermissions) {
+            return true;
+        }
+
+        return in_array($permission, config('semizzy.role_permissions.'.$this->role, []), true);
     }
 }
