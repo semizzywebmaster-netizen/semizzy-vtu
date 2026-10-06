@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\SystemSetting;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Crypt;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -17,6 +18,7 @@ class AppServiceProvider extends ServiceProvider
             $raw = SystemSetting::query()->where('key','smtp')->value('value');
             $smtp = is_string($raw) ? json_decode($raw, true) : null;
             if (!is_array($smtp) || empty($smtp['enabled']) || empty($smtp['host']) || empty($smtp['username']) || empty($smtp['password'])) return;
+            try { $smtp['password'] = Crypt::decryptString($smtp['password']); } catch (\Throwable) { return; }
 
             config([
                 'mail.default' => 'platform_smtp',
