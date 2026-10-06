@@ -8,7 +8,8 @@ return [
         1 => ['name' => 'Tier 1', 'daily_limit_minor' => '5000000', 'balance_limit_minor' => '30000000', 'upgrade_label' => 'Upgrade to Tier 2', 'type' => 'personal', 'requirements' => ['basic registration']],
         2 => ['name' => 'Tier 2', 'daily_limit_minor' => '20000000', 'balance_limit_minor' => '50000000', 'upgrade_label' => 'Upgrade to Tier 3', 'type' => 'personal', 'requirements' => ['identity verification']],
         3 => ['name' => 'Tier 3', 'daily_limit_minor' => '500000000', 'balance_limit_minor' => '1000000000', 'upgrade_label' => 'Upgrade to Tier 4 Merchant', 'type' => 'personal', 'requirements' => ['enhanced verification']],
-        4 => ['name' => 'Merchant', 'daily_limit_minor' => null, 'balance_limit_minor' => null, 'upgrade_label' => null, 'type' => 'merchant', 'requirements' => ['business/company details', 'merchant approval']],
+        4 => ['name' => 'Merchant', 'daily_limit_minor' => null, 'balance_limit_minor' => null, 'upgrade_label' => 'Upgrade to API User', 'type' => 'merchant', 'requirements' => ['business/company details', 'merchant approval']],
+        5 => ['name' => 'API User', 'daily_limit_minor' => null, 'balance_limit_minor' => null, 'upgrade_label' => null, 'type' => 'api', 'requirements' => ['admin approval']],
     ],
     'help' => [
         'ai' => [
