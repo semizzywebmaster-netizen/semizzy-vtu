@@ -15,6 +15,8 @@ return [
     'settings'=>[],
     'migrations'=>['2026_10_05_000026_create_vtu_addon_tables.php','2026_10_05_000027_add_vtu_bulk_idempotency.php'],
     'installer'=>'App\\Services\\Vtu\\VtuAddonInstaller',
+    'web_route_files'=>["addons/vtu.digital-services/routes/web.php","addons/vtu.digital-services/routes/admin.php"],
+    'api_route_files'=>["addons/vtu.digital-services/routes/api.php"],
     'routes'=>['/vtu'],'api_routes'=>['/api/v1/vtu'],'services'=>['provider-driven digital services'],
     'provider_integrations'=>['Core ProviderManager'],'scheduled_tasks'=>['pending transaction reconciliation'],'events'=>[],
 ];
