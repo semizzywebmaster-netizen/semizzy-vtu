@@ -25,3 +25,5 @@ Schedule::command('payments:expire-pending', ['--limit' => 100])->everyMinute()-
 Schedule::command('savings:process-maturity', ['--limit' => 100])->everyMinute()->withoutOverlapping(2)->onOneServer();
 
 Schedule::command('loans:process-overdue', ['--limit'=>100])->everyMinute()->withoutOverlapping(2)->onOneServer();
+
+Schedule::command('investments:process-maturity', ['--limit'=>100])->everyMinute()->withoutOverlapping(2)->onOneServer();
