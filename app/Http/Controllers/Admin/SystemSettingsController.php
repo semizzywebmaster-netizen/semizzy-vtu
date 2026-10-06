@@ -29,14 +29,14 @@ class SystemSettingsController extends Controller
         return Inertia::render('Admin/Settings', [
             'settings' => $settings,
             'smtp_env' => [
-                    'mailer' => env('MAIL_MAILER', 'log'),
-                    'host' => env('MAIL_HOST', ''),
-                    'port' => (int) env('MAIL_PORT', 587),
-                    'encryption' => env('MAIL_SCHEME', 'tls'),
-                    'from_address' => env('MAIL_FROM_ADDRESS', ''),
-                    'from_name' => env('MAIL_FROM_NAME', env('APP_NAME', 'SEMIZZY ONE')),
-                ],
-                'smtp_providers' => [
+                'mailer' => env('MAIL_MAILER', 'log'),
+                'host' => env('MAIL_HOST', ''),
+                'port' => (int) env('MAIL_PORT', 587),
+                'encryption' => env('MAIL_SCHEME', 'tls'),
+                'from_address' => env('MAIL_FROM_ADDRESS', ''),
+                'from_name' => env('MAIL_FROM_NAME', env('APP_NAME', 'SEMIZZY ONE')),
+            ],
+            'smtp_providers' => [
                     [
                         'key'=>'sendpulse','name'=>'SendPulse','host'=>'smtp-pulse.com','port'=>587,'encryption'=>'tls',
                         'limit'=>'Free plan: up to 12,000/month',
