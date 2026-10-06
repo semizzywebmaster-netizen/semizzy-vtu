@@ -7,7 +7,6 @@ use App\Models\ApiProvider;
 use App\Models\ProviderServiceProduct;
 use App\Services\Audit\AuditLogger;
 use App\Services\Providers\ProviderTestService;
-use App\Services\Providers\ProviderPresetRegistry;
 use App\Services\Providers\ProviderUrlGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,18 +48,8 @@ class ProviderController extends Controller
         ]);
     }
 
-    public function index(ProviderPresetRegistry $registry): Response
+    public function index(): Response
     {
-        // Always reconcile the built-in registry before rendering. The installer is
-        // idempotent and preserves administrator-entered credentials and status.
-        // This also repairs deployments where only part of the preset catalogue was
-        // previously imported.
-        try {
-            $registry->install();
-        } catch (\Throwable $e) {
-            report($e);
-        }
-
         return Inertia::render('Admin/Providers', [
             'providers' => ApiProvider::query()->latest()->get()->map(fn (ApiProvider $p) => [
                 'id' => $p->id,
