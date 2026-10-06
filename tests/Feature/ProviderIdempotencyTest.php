@@ -134,6 +134,105 @@ class ProviderIdempotencyTest extends TestCase
         $this->assertSame('IN_PROGRESS', $second['record']->state);
     }
 
+    public function test_definitive_failure_fails_over_to_the_next_provider(): void
+    {
+        [$service, $first, $second] = $this->providersForFailover('definitive-failure');
+
+        $adapter = $this->mock(RestJsonProviderAdapter::class);
+        $adapter->shouldReceive('execute')->twice()
+            ->andReturn(
+                new ProviderResult(false, 'FAILED', message: 'Rejected.'),
+                new ProviderResult(true, 'SUCCESS', providerReference: 'SECOND-1')
+            );
+        $this->mock(ProviderRequestLogger::class, function ($mock): void {
+            $mock->shouldReceive('record')->zeroOrMoreTimes();
+        });
+
+        $result = app(ProviderManager::class)->execute($service->key, 'transaction_initiation', ['recipient' => '08000000000'], 'idem-failover');
+
+        $this->assertTrue($result->accepted);
+        $this->assertSame('SECOND-1', $result->providerReference);
+    }
+
+    public function test_uncertain_http_style_failure_does_not_fail_over(): void
+    {
+        [$service] = $this->providersForFailover('uncertain-http');
+
+        $adapter = $this->mock(RestJsonProviderAdapter::class);
+        $adapter->shouldReceive('execute')->once()->andReturn(new ProviderResult(
+            false, 'UNKNOWN', message: 'Provider request failed.', retryable: false, duplicateRisk: true
+        ));
+        $this->mock(ProviderRequestLogger::class, function ($mock): void {
+            $mock->shouldReceive('record')->zeroOrMoreTimes();
+        });
+
+        $result = app(ProviderManager::class)->execute($service->key, 'transaction_initiation', ['recipient' => '08000000000'], 'idem-uncertain');
+
+        $this->assertSame('UNKNOWN', $result->status);
+        $this->assertTrue($result->duplicateRisk);
+    }
+
+    public function test_pending_or_processing_does_not_fail_over(): void
+    {
+        [$service] = $this->providersForFailover('pending');
+
+        $adapter = $this->mock(RestJsonProviderAdapter::class);
+        $adapter->shouldReceive('execute')->once()->andReturn(new ProviderResult(false, 'PENDING', message: 'Queued.'));
+        $this->mock(ProviderRequestLogger::class, function ($mock): void {
+            $mock->shouldReceive('record')->zeroOrMoreTimes();
+        });
+
+        $result = app(ProviderManager::class)->execute($service->key, 'transaction_initiation', ['recipient' => '08000000000'], 'idem-pending');
+
+        $this->assertSame('PENDING', $result->status);
+    }
+
+    public function test_success_does_not_call_a_second_provider(): void
+    {
+        [$service] = $this->providersForFailover('success');
+
+        $adapter = $this->mock(RestJsonProviderAdapter::class);
+        $adapter->shouldReceive('execute')->once()->andReturn(new ProviderResult(true, 'SUCCESS', providerReference: 'FIRST-1'));
+        $this->mock(ProviderRequestLogger::class, function ($mock): void {
+            $mock->shouldReceive('record')->zeroOrMoreTimes();
+        });
+
+        $result = app(ProviderManager::class)->execute($service->key, 'transaction_initiation', ['recipient' => '08000000000'], 'idem-success-failover');
+
+        $this->assertTrue($result->accepted);
+        $this->assertSame('FIRST-1', $result->providerReference);
+    }
+
+    private function providersForFailover(string $suffix): array
+    {
+        [$service, $first] = $this->providerFor($suffix.'-first');
+
+        $second = ApiProvider::create([
+            'identifier' => 'provider-'.$suffix.'-second',
+            'display_name' => 'Provider '.$suffix.' Second',
+            'base_url' => 'https://example.com',
+            'credentials' => ['token' => 'test-secret-2'],
+            'capabilities' => ['transaction_initiation'],
+            'verification_status' => 'live_verified',
+            'integration_status' => 'live_verified',
+            'enabled' => true,
+            'paused' => false,
+            'priority' => 2,
+            'timeout_seconds' => 10,
+        ]);
+
+        ProviderServiceMapping::create([
+            'api_provider_id' => $second->id,
+            'service_id' => $service->id,
+            'service_key' => $service->key,
+            'provider_service_id' => $service->key.'-second',
+            'capabilities' => ['transaction_initiation'],
+            'enabled' => true,
+        ]);
+
+        return [$service, $first, $second];
+    }
+
     private function providerFor(string $suffix): array
     {
         $category = ServiceCategory::create([
