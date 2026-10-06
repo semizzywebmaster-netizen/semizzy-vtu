@@ -80,6 +80,9 @@ class ProviderManager
         }
 
         if ($operation === 'transaction_initiation' && filled($idempotencyKey)) {
+            // The idempotency key is provider-scoped. Once a provider call becomes
+            // ambiguous, execute() stops failover; definitive failures may safely
+            // continue to the next provider.
             $reservation = $this->idempotency->reserve($provider, $idempotencyKey, $payload);
 
             if (($reservation['replay'] ?? false) === true) {
