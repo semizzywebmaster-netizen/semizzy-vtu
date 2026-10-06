@@ -73,7 +73,7 @@ class VtuAdminPagesSmokeTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('role', 'USER')
-                ->where('quickLinks.0.url', '/notifications')
+                ->where('quickLinks.0.url', '/vtu')
             );
 
         $this->actingAs($user)->get('/vtu')->assertOk();
