@@ -33,9 +33,9 @@ Route::middleware(['auth:sanctum','ensure.active.api','api.token:vtu.read','ensu
     Route::get('/transactions/{t}', [VtuController::class, 'show'])->name('api.v1.vtu.transaction');
     Route::post('/transactions/{t}/requery', [VtuController::class, 'requery'])->middleware('throttle:60,1')->name('api.v1.vtu.requery');
 });
-Route::middleware(['auth:sanctum','ensure.active.api','api.token:vtu.transact','ensure.vtu'])->prefix('/v1/vtu')->group(function (): void {
+Route::middleware(['auth:sanctum','ensure.active.api','api.token:vtu.transact','ensure.vtu','transaction.pin'])->prefix('/v1/vtu')->group(function (): void {
     Route::post('/transactions', [VtuController::class, 'store'])->middleware('throttle:30,1')->name('api.v1.vtu.transactions.store');
 });
-Route::middleware(['auth:sanctum','ensure.active.api','api.token:vtu.bulk','ensure.vtu'])->prefix('/v1/vtu')->group(function (): void {
+Route::middleware(['auth:sanctum','ensure.active.api','api.token:vtu.bulk','ensure.vtu','transaction.pin'])->prefix('/v1/vtu')->group(function (): void {
     Route::post('/bulk', [VtuController::class, 'bulk'])->middleware('throttle:10,1')->name('api.v1.vtu.bulk');
 });
