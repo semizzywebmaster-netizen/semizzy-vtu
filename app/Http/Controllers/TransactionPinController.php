@@ -28,6 +28,7 @@ class TransactionPinController extends Controller
             'pin' => ['required', 'digits:4'],
             'pin_confirmation' => ['required', 'same:pin'],
             'current_pin' => ['nullable', 'digits:4'],
+            'forgot_pin' => ['nullable', 'boolean'],
             'otp_code' => ['required', 'digits:6'],
         ]);
 
@@ -35,7 +36,7 @@ class TransactionPinController extends Controller
 
         $otp->verify($user, 'transaction_pin_change', $data['otp_code']);
 
-        if (filled($user->transaction_pin_hash)) {
+        if (filled($user->transaction_pin_hash) && ! $request->boolean('forgot_pin')) {
             if (! filled($data['current_pin']) || ! Hash::check($data['current_pin'], (string) $user->transaction_pin_hash)) {
                 throw ValidationException::withMessages([
                     'current_pin' => 'Enter your current transaction PIN to change it.',
