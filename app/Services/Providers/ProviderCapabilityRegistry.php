@@ -7,7 +7,7 @@ use InvalidArgumentException;
 
 class ProviderCapabilityRegistry
 {
-    public const SUPPORTED_CAPABILITIES=['balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status','refund','reversal','webhook','health_check'];
+    public const SUPPORTED_CAPABILITIES=['balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status','refund','reversal','webhook','health_check','kyc_verification'];
 
     public function validate(ApiProvider $provider): void
     {
