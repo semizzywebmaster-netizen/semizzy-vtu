@@ -105,19 +105,27 @@ class RestJsonProviderAdapter implements ProviderAdapter
         $credentials = $provider->credentials ?? [];
         $request = Http::acceptJson();
 
-        return match ($provider->auth_type) {
+        $request = match ($provider->auth_type) {
             'bearer' => $request->withToken((string)($credentials['token'] ?? $credentials['api_token'] ?? '')),
             'basic' => $request->withBasicAuth((string)($credentials['username'] ?? ''),(string)($credentials['password'] ?? '')),
             'api_key_header' => $request->withHeaders([(string)($credentials['header'] ?? 'X-API-Key') => (string)($credentials['key'] ?? $credentials['api_key'] ?? '')]),
-            'api_key' => $request->withHeaders([
-                (string)($credentials['api_key_name'] ?? 'X-API-Key') => (string)($credentials['api_key'] ?? ''),
-            ]),
+            'api_key' => $request->withHeaders([(string)($credentials['api_key_name'] ?? 'X-API-Key') => (string)($credentials['api_key'] ?? '')]),
             'bearer_token' => $request->withToken((string)($credentials['api_token'] ?? $credentials['token'] ?? '')),
             'basic_auth' => $request->withBasicAuth((string)($credentials['username'] ?? ''), (string)($credentials['password'] ?? '')),
             'oauth2' => $request->withToken((string)($credentials['access_token'] ?? $credentials['api_token'] ?? '')),
             'custom' => $request->withHeaders($this->safeCredentialHeaders((array)($credentials['headers'] ?? []))),
             default => $request,
         };
+
+        // Generic credential-to-header/query mapping. No provider names or credential
+        // names are hard-coded into the integration registry: administrators decide
+        // where each secret belongs.
+        $mappedHeaders = (array)($credentials['credential_headers'] ?? []);
+        if ($mappedHeaders) $request = $request->withHeaders($this->safeCredentialHeaders(array_map(
+            fn($credentialKey) => $credentials[$credentialKey] ?? '',
+            $mappedHeaders
+        )));
+        return $request;
     }
 
 
