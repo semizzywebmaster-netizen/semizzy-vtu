@@ -17,3 +17,5 @@ Schedule::command('vtu:reconcile-pending', ['--limit' => 50])->everyFiveMinutes(
 Schedule::command('vtu:recover-bulk', ['--limit' => 50, '--stale-minutes' => 10])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
 
 Schedule::command('vtu:recover-stale-initiations', ['--limit' => 50, '--stale-minutes' => 10])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
+
+Schedule::command('cac:reconcile-pending', ['--limit' => 50, '--min-age' => 1])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
