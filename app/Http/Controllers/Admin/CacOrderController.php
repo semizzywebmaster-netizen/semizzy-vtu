@@ -33,11 +33,17 @@ class CacOrderController extends Controller
             'action' => ['required','in:approve,reject,request_documents'],
             'note' => ['nullable','string','max:2000'],
         ]);
-        $status = match ($data['action']) {
-            'approve' => 'provider_ready',
-            'reject' => 'rejected',
-            'request_documents' => 'documents_required',
-        };
+        $allowed = [
+            'pending_review' => ['approve' => 'provider_ready', 'reject' => 'rejected', 'request_documents' => 'documents_required'],
+            'documents_required' => ['approve' => 'provider_ready', 'reject' => 'rejected', 'request_documents' => 'documents_required'],
+        ];
+        $status = $allowed[$order->status][$data['action']] ?? null;
+        if (!$status) {
+            return back()->withErrors(['action' => 'This CAC order cannot be reviewed from its current status.']);
+        }
+        if ($data['action'] === 'approve' && $order->documents()->count() === 0) {
+            return back()->withErrors(['documents' => 'At least one supporting document is required before approval.']);
+        }
         $order->update([
             'status' => $status,
             'failure_message' => $data['action'] === 'reject' ? ($data['note'] ?? 'CAC order rejected during review.') : null,
