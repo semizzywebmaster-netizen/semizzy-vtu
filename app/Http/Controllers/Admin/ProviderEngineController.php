@@ -1,22 +1,44 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\\Http\\Controllers\\Admin;
 
-use App\Http\Controllers\Controller;
-use App\Models\ApiProvider;
-use App\Models\ProviderConnection;
-use App\Models\ProviderCredential;
-use App\Models\ProviderEndpoint;
-use App\Models\ProviderService;
-use App\Models\ProviderServiceImport;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
+use App\\Http\\Controllers\\Controller;
+use App\\Models\\ApiProvider;
+use App\\Models\\ProviderConnection;
+use App\\Models\\ProviderCredential;
+use App\\Models\\ProviderEndpoint;
+use App\\Models\\ProviderService;
+use App\\Models\\ProviderServiceImport;
+use Illuminate\\Http\\JsonResponse;
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\DB;
+use Illuminate\\Support\\Facades\\Http;
+use Illuminate\\Support\\Str;
 
 class ProviderEngineController extends Controller
 {
+    private const AUTH_TYPES = [
+        'none','api_token','token','api_key','api_key_secret','username_password',
+        'username_password_pin','client_id_secret','bearer','basic','custom',
+    ];
+
+    public function authSchema(): JsonResponse
+    {
+        return response()->json(['data'=>[
+            ['value'=>'none','label'=>'No authentication','fields'=>[]],
+            ['value'=>'api_token','label'=>'API Token','fields'=>[['key'=>'api_token','label'=>'API Token','type'=>'password','secret'=>true,'required'=>true,'placement'=>'header','header_name'=>'Authorization','prefix'=>'Bearer']]],
+            ['value'=>'token','label'=>'Token','fields'=>[['key'=>'token','label'=>'Token','type'=>'password','secret'=>true,'required'=>true,'placement'=>'header','header_name'=>'Authorization','prefix'=>'Token']]],
+            ['value'=>'api_key','label'=>'API Key','fields'=>[['key'=>'api_key','label'=>'API Key','type'=>'password','secret'=>true,'required'=>true,'placement'=>'header','header_name'=>'X-API-Key','prefix'=>'']]],
+            ['value'=>'api_key_secret','label'=>'API Key + Secret','fields'=>[['key'=>'api_key','label'=>'API Key','type'=>'password','secret'=>true,'required'=>true,'placement'=>'header','header_name'=>'X-API-Key','prefix'=>''],['key'=>'api_secret','label'=>'API Secret','type'=>'password','secret'=>true,'required'=>true,'placement'=>'header','header_name'=>'X-API-Secret','prefix'=>'']]],
+            ['value'=>'username_password','label'=>'Username + Password','fields'=>[['key'=>'username','label'=>'Username','type'=>'text','secret'=>false,'required'=>true,'placement'=>'body','body_path'=>'username'],['key'=>'password','label'=>'Password','type'=>'password','secret'=>true,'required'=>true,'placement'=>'body','body_path'=>'password']]],
+            ['value'=>'username_password_pin','label'=>'Username + Password + PIN','fields'=>[['key'=>'username','label'=>'Username','type'=>'text','secret'=>false,'required'=>true,'placement'=>'body','body_path'=>'username'],['key'=>'password','label'=>'Password','type'=>'password','secret'=>true,'required'=>true,'placement'=>'body','body_path'=>'password'],['key'=>'pin','label'=>'PIN','type'=>'password','secret'=>true,'required'=>true,'placement'=>'body','body_path'=>'pin']]],
+            ['value'=>'client_id_secret','label'=>'Client ID + Secret','fields'=>[['key'=>'client_id','label'=>'Client ID','type'=>'text','secret'=>false,'required'=>true,'placement'=>'body','body_path'=>'client_id'],['key'=>'client_secret','label'=>'Client Secret','type'=>'password','secret'=>true,'required'=>true,'placement'=>'body','body_path'=>'client_secret']]],
+            ['value'=>'bearer','label'=>'Bearer / Access Token','fields'=>[['key'=>'access_token','label'=>'Access Token','type'=>'password','secret'=>true,'required'=>true,'placement'=>'header','header_name'=>'Authorization','prefix'=>'Bearer']]],
+            ['value'=>'basic','label'=>'HTTP Basic','fields'=>[['key'=>'username','label'=>'Username','type'=>'text','secret'=>false,'required'=>true,'placement'=>'authorization'],['key'=>'password','label'=>'Password','type'=>'password','secret'=>true,'required'=>true,'placement'=>'authorization']]],
+            ['value'=>'custom','label'=>'Custom authentication','fields'=>[]],
+        ]]);
+    }
+
     public function storeConnection(Request $request, ApiProvider $provider): JsonResponse
     {
         $data = $request->validate([
@@ -25,6 +47,8 @@ class ProviderEngineController extends Controller
             'base_url'=>'required|url|max:2048',
             'api_version'=>'nullable|string|max:100',
             'api_prefix'=>'nullable|string|max:255',
+            'auth_type'=>'nullable|in:'.implode(',',self::AUTH_TYPES),
+            'auth_options'=>'nullable|array',
             'connect_timeout_seconds'=>'nullable|integer|min:1|max:120',
             'request_timeout_seconds'=>'nullable|integer|min:1|max:300',
             'verify_ssl'=>'nullable|boolean',
@@ -40,6 +64,48 @@ class ProviderEngineController extends Controller
             }
             return $provider->connections()->create($data);
         })],201);
+    }
+
+    public function storeAuthentication(Request $request, ProviderConnection $connection): JsonResponse
+    {
+        $data=$request->validate([
+            'auth_type'=>'required|in:'.implode(',',self::AUTH_TYPES),
+            'auth_options'=>'nullable|array',
+            'credentials'=>'nullable|array',
+            'credentials.*.field_key'=>'required|string|max:120|regex:/^[A-Za-z0-9_.-]+$/',
+            'credentials.*.label'=>'required|string|max:160',
+            'credentials.*.field_type'=>'nullable|string|max:40',
+            'credentials.*.required'=>'nullable|boolean',
+            'credentials.*.secret'=>'nullable|boolean',
+            'credentials.*.placement'=>'required|in:header,query,body,form,authorization',
+            'credentials.*.header_name'=>'nullable|string|max:255',
+            'credentials.*.query_name'=>'nullable|string|max:255',
+            'credentials.*.body_path'=>'nullable|string|max:255',
+            'credentials.*.prefix'=>'nullable|string|max:100',
+            'credentials.*.value'=>'nullable|string|max:10000',
+        ]);
+
+        DB::transaction(function() use ($connection,$data) {
+            $connection->update([
+                'auth_type'=>$data['auth_type'],
+                'auth_options'=>$data['auth_options'] ?? [],
+            ]);
+
+            foreach (($data['credentials'] ?? []) as $credentialData) {
+                // A masked value means “keep the existing secret”; never store the mask itself.
+                if (($credentialData['value'] ?? null) === '••••••••') {
+                    unset($credentialData['value']);
+                }
+                $key=$credentialData['field_key'];
+                $existing=$connection->credentials()->where('field_key',$key)->first();
+                if (!$existing && !filled($credentialData['value'] ?? null) && ($credentialData['required'] ?? false)) {
+                    continue;
+                }
+                $connection->credentials()->updateOrCreate(['field_key'=>$key],$credentialData);
+            }
+        });
+
+        return $this->credentialSummary($connection->fresh('credentials'));
     }
 
     public function storeCredential(Request $request, ProviderConnection $connection): JsonResponse
@@ -58,25 +124,14 @@ class ProviderEngineController extends Controller
             'value'=>'nullable|string|max:10000',
         ]);
 
-        $credential=$connection->credentials()->updateOrCreate(
-            ['field_key'=>$data['field_key']],
-            $data
-        );
+        if (($data['value'] ?? null) === '••••••••') unset($data['value']);
+        $credential=$connection->credentials()->updateOrCreate(['field_key'=>$data['field_key']],$data);
+        return $this->credentialSummary($connection->fresh('credentials'));
+    }
 
-        return response()->json(['data'=>[
-            'id'=>$credential->id,
-            'field_key'=>$credential->field_key,
-            'label'=>$credential->label,
-            'field_type'=>$credential->field_type,
-            'required'=>$credential->required,
-            'secret'=>$credential->secret,
-            'placement'=>$credential->placement,
-            'header_name'=>$credential->header_name,
-            'query_name'=>$credential->query_name,
-            'body_path'=>$credential->body_path,
-            'prefix'=>$credential->prefix,
-            'value'=>filled($credential->value) ? '••••••••' : null,
-        ]]);
+    public function credentials(ProviderConnection $connection): JsonResponse
+    {
+        return $this->credentialSummary($connection->load('credentials'));
     }
 
     public function storeEndpoint(Request $request, ApiProvider $provider): JsonResponse
@@ -108,47 +163,35 @@ class ProviderEngineController extends Controller
         $endpoint=$provider->endpoints()->where('operation','catalogue_retrieval')->where('enabled',true)->first()
             ?? $provider->endpoints()->where('enabled',true)->whereIn('operation',['services','products','categories'])->first();
 
-        if (!$endpoint) {
-            return response()->json(['status'=>'manual_required','message'=>'No catalogue discovery endpoint is configured. Add an endpoint or create provider services manually.'],422);
-        }
+        if (!$endpoint) return response()->json(['status'=>'manual_required','message'=>'No catalogue discovery endpoint is configured. Add an endpoint or create provider services manually.'],422);
 
         $connection=$provider->connections()->where('enabled',true)->orderByDesc('is_default')->first();
-        if (!$connection) {
-            return response()->json(['status'=>'configuration_required','message'=>'Configure an enabled provider connection first.'],422);
-        }
+        if (!$connection) return response()->json(['status'=>'configuration_required','message'=>'Configure an enabled provider connection first.'],422);
 
         $started=microtime(true);
         try {
+            [$headers,$query,$body]=$this->authenticationPayload($connection,(array)($endpoint->request_mapping ?? []));
+            $headers=array_merge($headers,(array)($endpoint->headers ?? []));
+            $query=array_merge($query,(array)($endpoint->query_params ?? []));
             $url=$endpoint->full_url ?: rtrim($connection->base_url,'/').'/'.ltrim($endpoint->path ?? '','/');
-            $headers=(array)($connection->headers ?? []);
-            $query=(array)($connection->query_params ?? []);
-            foreach ($connection->credentials as $credential) {
-                if (!$credential->value) continue;
-                $value=$credential->value;
-                if ($credential->prefix) $value=$credential->prefix.' '.$value;
-                if ($credential->placement==='authorization') $headers['Authorization']=$value;
-                elseif ($credential->placement==='header' && $credential->header_name) $headers[$credential->header_name]=$value;
-                elseif ($credential->placement==='query' && $credential->query_name) $query[$credential->query_name]=$value;
-            }
 
-            $client=Http::withHeaders($headers)
-                ->connectTimeout($connection->connect_timeout_seconds)
-                ->timeout($connection->request_timeout_seconds);
+            $client=Http::withHeaders($headers)->connectTimeout($connection->connect_timeout_seconds)->timeout($connection->request_timeout_seconds);
             if (!$connection->verify_ssl) $client=$client->withoutVerifying();
 
             $response=match($endpoint->method){
-                'POST'=>$client->post($url,(array)($endpoint->request_mapping ?? [])),
-                'PUT'=>$client->put($url,(array)($endpoint->request_mapping ?? [])),
-                'PATCH'=>$client->patch($url,(array)($endpoint->request_mapping ?? [])),
-                'DELETE'=>$client->delete($url,(array)($endpoint->request_mapping ?? [])),
+                'POST'=>$client->post($url,$body),
+                'PUT'=>$client->put($url,$body),
+                'PATCH'=>$client->patch($url,$body),
+                'DELETE'=>$client->delete($url,$body),
                 default=>$client->get($url,$query),
             };
 
-            $payload=$response->json();
             if (!$response->successful()) {
+                $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Provider discovery request returned an unsuccessful HTTP status.']);
                 return response()->json(['status'=>'failed','http_status'=>$response->status(),'message'=>'Provider discovery request failed.'],502);
             }
 
+            $payload=$response->json();
             $items=$this->extractItems($payload);
             $stored=0;
             foreach ($items as $item) {
@@ -181,7 +224,7 @@ class ProviderEngineController extends Controller
 
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'SUCCESS','last_test_message'=>'Service discovery succeeded.']);
             return response()->json(['status'=>'success','discovered'=>$stored,'duration_ms'=>(int)((microtime(true)-$started)*1000)]);
-        } catch (\Throwable $e) {
+        } catch (\\Throwable $e) {
             report($e);
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Service discovery failed safely.']);
             return response()->json(['status'=>'failed','message'=>'Service discovery failed safely. Review server-side diagnostics.'],502);
@@ -191,18 +234,10 @@ class ProviderEngineController extends Controller
     public function services(ApiProvider $provider): JsonResponse
     {
         $services=$provider->providerServices()->with(['category','subcategory'])->latest()->get()->map(fn(ProviderService $s)=>[
-            'id'=>$s->id,
-            'external_service_id'=>$s->external_service_id,
-            'external_service_code'=>$s->external_service_code,
-            'name'=>$s->name,
-            'description'=>$s->description,
-            'service_type'=>$s->service_type,
-            'network'=>$s->network,
-            'provider_price'=>$s->provider_price,
-            'currency'=>$s->currency,
-            'status'=>$s->status,
-            'category'=>$s->category?->external_name,
-            'subcategory'=>$s->subcategory?->external_name,
+            'id'=>$s->id,'external_service_id'=>$s->external_service_id,'external_service_code'=>$s->external_service_code,
+            'name'=>$s->name,'description'=>$s->description,'service_type'=>$s->service_type,'network'=>$s->network,
+            'provider_price'=>$s->provider_price,'currency'=>$s->currency,'status'=>$s->status,
+            'category'=>$s->category?->external_name,'subcategory'=>$s->subcategory?->external_name,
         ]);
         return response()->json(['data'=>$services]);
     }
@@ -223,13 +258,47 @@ class ProviderEngineController extends Controller
         return response()->json(['status'=>'success','imported'=>$imported]);
     }
 
+    private function credentialSummary(ProviderConnection $connection): JsonResponse
+    {
+        $data=$connection->credentials->map(fn(ProviderCredential $c)=>[
+            'id'=>$c->id,'field_key'=>$c->field_key,'label'=>$c->label,'field_type'=>$c->field_type,
+            'required'=>$c->required,'secret'=>$c->secret,'placement'=>$c->placement,
+            'header_name'=>$c->header_name,'query_name'=>$c->query_name,'body_path'=>$c->body_path,
+            'prefix'=>$c->prefix,'has_value'=>filled($c->value),
+            'value'=>filled($c->value) ? '••••••••' : null,
+        ])->values();
+        return response()->json(['data'=>$data]);
+    }
+
+    private function authenticationPayload(ProviderConnection $connection, array $body): array
+    {
+        $headers=(array)($connection->headers ?? []);
+        $query=(array)($connection->query_params ?? []);
+
+        $credentials=$connection->credentials()->get();
+        if ($connection->auth_type==='basic') {
+            $username=$credentials->firstWhere('field_key','username')?->value;
+            $password=$credentials->firstWhere('field_key','password')?->value;
+            if ($username!==null && $password!==null) $headers['Authorization']='Basic '.base64_encode($username.':'.$password);
+        } else {
+            foreach ($credentials as $credential) {
+                if (!filled($credential->value)) continue;
+                $value=$credential->value;
+                if ($credential->prefix) $value=$credential->prefix.' '.$value;
+                if ($credential->placement==='authorization') $headers['Authorization']=$value;
+                elseif ($credential->placement==='header' && $credential->header_name) $headers[$credential->header_name]=$value;
+                elseif ($credential->placement==='query' && $credential->query_name) $query[$credential->query_name]=$value;
+                elseif (in_array($credential->placement,['body','form'],true) && $credential->body_path) data_set($body,$credential->body_path,$credential->value);
+            }
+        }
+        return [$headers,$query,$body];
+    }
+
     private function extractItems(mixed $payload): array
     {
         if (!is_array($payload)) return [];
         foreach (['data','services','products','items','results','variations'] as $key) {
-            if (isset($payload[$key]) && is_array($payload[$key])) {
-                return array_is_list($payload[$key]) ? $payload[$key] : [$payload[$key]];
-            }
+            if (isset($payload[$key]) && is_array($payload[$key])) return array_is_list($payload[$key]) ? $payload[$key] : [$payload[$key]];
         }
         return array_is_list($payload) ? $payload : [];
     }
