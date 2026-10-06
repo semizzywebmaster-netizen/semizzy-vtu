@@ -200,6 +200,8 @@ Route::middleware(['auth'])->group(function (): void {
         Route::delete('/providers/{provider}/endpoints/{endpoint}', [ProviderEngineController::class, 'destroyEndpoint'])->whereNumber(['provider','endpoint'])->middleware('permission:providers.manage')->name('admin.providers.endpoints.destroy');
         Route::post('/providers/{provider}/discover-services', [ProviderEngineController::class, 'discovery'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.discover-services');
         Route::get('/providers/{provider}/provider-services', [ProviderEngineController::class, 'services'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.provider-services');
+        Route::get('/providers/{provider}/provider-services/import-preview', [ProviderEngineController::class, 'importPreview'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.import-preview');
+        Route::post('/providers/{provider}/provider-services/approve', [ProviderEngineController::class, 'approveImport'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.approve-import');
         Route::post('/providers/{provider}/provider-services/import', [ProviderEngineController::class, 'importSelected'])->whereNumber('provider')->middleware('permission:providers.manage')->name('admin.providers.provider-services.import');
 
         Route::get('/catalogue', [CatalogueController::class, 'index'])->middleware('permission:catalogue.view')->name('admin.catalogue.index');
