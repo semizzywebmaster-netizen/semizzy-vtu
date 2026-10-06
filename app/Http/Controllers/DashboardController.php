@@ -141,7 +141,7 @@ class DashboardController extends Controller
         if (!$isOperations) {
             $tierService = app(TierLimitService::class);
             $wallet = WalletAccount::query()->where('user_id', $user->id)->where('status', '!=', 'closed')->first();
-            $tierNumber = max(1, min(4, (int) $user->tier));
+            $tierNumber = max(1, min(5, (int) $user->tier));
             $tier = [
                 'id' => $tierNumber,
                 'name' => $tierService->get($tierNumber)['name'],
@@ -186,7 +186,7 @@ class DashboardController extends Controller
                 ];
             }
 
-            if (!$user->phone_verified_at) {
+            if (!$user->transaction_pin_hash) { $requiredActions[] = ['key'=>'transaction-pin','title'=>'Set your transaction PIN','message'=>'Create your 4-digit PIN before protected actions.','url'=>'/profile/transaction-pin','label'=>'Set transaction PIN','priority'=>'high']; }\n\n            if (!$user->phone_verified_at) {
                 $requiredActions[] = [
                     'key' => 'phone-verification',
                     'title' => 'Verify your phone number',
