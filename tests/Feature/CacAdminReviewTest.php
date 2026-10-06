@@ -17,7 +17,7 @@ class CacAdminReviewTest extends TestCase
 
     private function admin(): User
     {
-        return User::factory()->create(['role' => 'ADMIN', 'status' => 'active']);
+        return User::factory()->create(['role' => 'ADMIN', 'status' => 'active', 'email_verified_at' => now()]);
     }
 
     private function activateAddon(): void
