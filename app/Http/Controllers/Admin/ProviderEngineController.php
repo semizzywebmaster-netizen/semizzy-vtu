@@ -11,6 +11,7 @@ use App\Models\ProviderService;
 use App\Models\ProviderServiceImport;
 use App\Models\ProviderHealthCheck;
 use App\Models\ProviderOperationLog;
+use App\Services\Providers\ProviderUrlGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -81,6 +82,8 @@ class ProviderEngineController extends Controller
             'proxy'=>'nullable|array',
             'is_default'=>'nullable|boolean',
         ]);
+
+        app(ProviderUrlGuard::class)->validate($data['base_url']);
 
         $connection = DB::transaction(function() use ($provider,$data) {
             if (($data['is_default'] ?? false)) {
