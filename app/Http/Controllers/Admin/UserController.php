@@ -12,7 +12,6 @@ use App\Services\Finance\AdminWalletDebitService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Inertia\Inertia;
@@ -101,7 +100,6 @@ class UserController extends Controller
             'role' => ['sometimes', 'required', 'in:ADMIN,STAFF,SUPPORT,USER'],
             'status' => ['sometimes', 'required', 'in:active,suspended,disabled'],
             'tier' => ['sometimes', 'required', 'integer', 'in:1,2,3,4,5'],
-                        'password' => ['nullable', 'string', 'min:8', 'max:72'],
         ]);
 
         $data = array_merge([
@@ -110,7 +108,7 @@ class UserController extends Controller
             'status' => $user->status,
             'tier' => max(1, min(5, (int) $user->tier)),
             'account_type' => $user->account_type ?? 'personal',
-            'password' => null,
+            
         ], $data);
 
         try {
@@ -161,10 +159,6 @@ class UserController extends Controller
                     'tier_upgrade_status' => in_array((int) $data['tier'], [4,5], true) ? 'approved' : 'none',
                 ];
 
-                if (! empty($data['password'])) {
-                    $payload['password'] = Hash::make($data['password']);
-                }
-
                 $lockedUser->forceFill($payload)->saveOrFail();
             });
 
@@ -176,7 +170,7 @@ class UserController extends Controller
                     'tier' => (int) $data['tier'],
                     'email_changed' => false,
                     'phone_changed' => false,
-                    'password_reset' => ! empty($data['password']),
+                    'password_reset' => false,
                 ], $request);
             } catch (\Throwable $auditException) {
                 report($auditException);
