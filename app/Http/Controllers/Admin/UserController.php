@@ -96,12 +96,11 @@ class UserController extends Controller
     public function update(Request $request, User $user, AuditLogger $audit): RedirectResponse
     {
         $data = $request->validate([
-            'username' => ['sometimes', 'required', 'string', 'min:3', 'max:40', 'regex:/^[a-zA-Z0-9._]+$/', 'unique:users,username,'.$user->id],
+            'username' => ['sometimes', 'required', 'string', 'min:3', 'max:40', 'regex:/^[a-zA-Z0-9._]+$/', 'in:'.strtolower($user->username)],
             
             'role' => ['sometimes', 'required', 'in:ADMIN,STAFF,SUPPORT,USER'],
             'status' => ['sometimes', 'required', 'in:active,suspended,disabled'],
             'tier' => ['sometimes', 'required', 'integer', 'in:1,2,3,4,5'],
-            'account_type' => ['sometimes', 'required', 'in:personal,merchant'],
                         'password' => ['nullable', 'string', 'min:8', 'max:72'],
         ]);
 
@@ -125,7 +124,7 @@ class UserController extends Controller
                 'You cannot deactivate, demote, or change the email of your own administrator account.'
             );
 
-            $data['username'] = strtolower(trim($data['username']));
+            $data['username'] = $user->username;
             $reserved = collect(config('semizzy.username_policy.reserved', []))->map(fn ($value) => strtolower((string) $value));
             $protected = collect(config('semizzy.username_policy.protected_terms', []))->map(fn ($value) => strtolower((string) $value));
             if ($reserved->contains($data['username']) || $protected->contains(fn ($term) => $term !== '' && str_contains($data['username'], $term))) {
@@ -175,8 +174,8 @@ class UserController extends Controller
                     'role' => $data['role'],
                     'status' => $data['status'],
                     'tier' => (int) $data['tier'],
-                    'email_changed' => $emailChanged,
-                    'phone_changed' => $phoneChanged,
+                    'email_changed' => false,
+                    'phone_changed' => false,
                     'password_reset' => ! empty($data['password']),
                 ], $request);
             } catch (\Throwable $auditException) {
@@ -311,7 +310,7 @@ class UserController extends Controller
             $wallet=$debit->debit($user,$data['amount'],$request->user(),trim((string)($data['note']??'')));
             try { $audit->record('admin.user.wallet.debited',$user->fresh(),['target_user_id'=>$user->id,'amount_major'=>$data['amount'],'currency'=>$wallet->currency,'wallet_account_id'=>$wallet->id,'note'=>trim((string)($data['note']??''))?:null],$request); } catch(\\Throwable $e){report($e);}
             return back()->with('success','User wallet debited successfully.');
-        } catch(\\Throwable $e) { report($e); return back()->with('error',$e->getMessage()?:'User debit failed safely.'); }
+        } catch (\Throwable $e) { report($e); return back()->with('error',$e->getMessage()?:'User debit failed safely.'); }
     }
 
     public function fund(
