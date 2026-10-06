@@ -249,13 +249,33 @@ class ProviderEngineController extends Controller
                     }
                 }
             }
-            foreach($before as $key=>$old){
-                if(!$after->has($key)){
-                    $old->update(['status'=>'removed']);
-                    $import=ProviderServiceImport::where('api_provider_id',$provider->id)->where('provider_service_id',$old->id)->first();
-                    if($import) $import->update(['state'=>'removed','auto_sync_allowed'=>false]);
-                    $removed++;
+            // Never mark services removed unless discovery explicitly proved that the
+            // returned catalogue is complete. Partial/paginated discovery must not cause
+            // destructive false-removals.
+            $discoveryComplete=(bool)($resultData['discovery_complete'] ?? false);
+            if ($discoveryComplete) {
+                foreach($before as $key=>$old){
+                    if(!$after->has($key)){
+                        $old->update(['status'=>'removed']);
+                        $import=ProviderServiceImport::where('api_provider_id',$provider->id)->where('provider_service_id',$old->id)->first();
+                        if($import) $import->update(['state'=>'removed','auto_sync_allowed'=>false]);
+                        $removed++;
+                    }
                 }
+            } else {
+                $this->writeOperationLog(
+                    $provider,
+                    null,
+                    'sync_removal_skipped',
+                    null,
+                    null,
+                    'SKIPPED',
+                    null,
+                    0,
+                    'INCOMPLETE_DISCOVERY',
+                    'Removal detection skipped because discovery completeness was not proven.',
+                    ['sync_id'=>$syncId,'before_count'=>$before->count(),'after_count'=>$after->count()]
+                );
             }
             $summary=['discovered'=>$after->count(),'new'=>$new,'updated'=>$updated,'removed'=>$removed,'price_changed'=>$priceChanged,'pending_approval'=>ProviderServiceImport::where('api_provider_id',$provider->id)->where('approved',false)->count()];
             DB::table('provider_syncs')->where('id',$syncId)->update([
