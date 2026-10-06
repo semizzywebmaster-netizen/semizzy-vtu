@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import CoreMobileNav from '../Components/CoreMobileNav';
 
@@ -38,8 +38,8 @@ const money = (minor: string | undefined, currency = 'NGN') => {
   } catch { return '—'; }
 };
 
-export default function Dashboard({ role, user, metrics = [], quickLinks = [], serviceCategories = [], wallet = null, tier = null, tierLimits = [], dashboardMessages = {} }: {
-  role: string; user?: { name?: string; email?: string; username?: string }; metrics?: Metric[]; quickLinks?: QuickLink[];
+export default function Dashboard({ role, user, metrics = [], quickLinks = [], serviceCategories = [], wallet = null, tier = null, tierLimits = [], dashboardMessages = {}, recentTransactions = [], requiredActions = [], unreadNotifications = 0 }: {
+  role: string; user?: { name?: string; email?: string; username?: string; initials?: string }; metrics?: Metric[]; quickLinks?: QuickLink[];
   serviceCategories?: ServiceCategory[]; wallet?: Wallet | null; tier?: Tier | null; tierLimits?: TierLimit[]; dashboardMessages?: DashboardMessages; recentTransactions?: RecentTransaction[]; requiredActions?: RequiredAction[]; unreadNotifications?: number;
 }) {
   const isUser = !['ADMIN', 'STAFF', 'SUPPORT'].includes(role);
