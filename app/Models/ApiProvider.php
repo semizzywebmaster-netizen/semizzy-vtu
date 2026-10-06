@@ -19,6 +19,13 @@ class ApiProvider extends Model
     ];}
 
     public function serviceMappings(): HasMany { return $this->hasMany(ProviderServiceMapping::class); }
+    public function connections(): HasMany { return $this->hasMany(ProviderConnection::class); }
+    public function endpoints(): HasMany { return $this->hasMany(ProviderEndpoint::class); }
+    public function categories(): HasMany { return $this->hasMany(ProviderCategory::class); }
+    public function providerServices(): HasMany { return $this->hasMany(ProviderService::class); }
+    public function routingRules(): HasMany { return $this->hasMany(ProviderRoutingRule::class); }
+    public function healthChecks(): HasMany { return $this->hasMany(ProviderHealthCheck::class); }
+    public function operationLogs(): HasMany { return $this->hasMany(ProviderOperationLog::class); }
 
     public function scopeEligibleForNewTransactions(Builder $query): Builder
     {
