@@ -1,31 +1,12 @@
 import CoreMobileNav from '../../Components/CoreMobileNav';
+import ServiceIcon, { iconForService } from '../../Components/ServiceIcon';
 import { Head, Link } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 
 type Product = { id: number; name: string; key: string; metadata?: Record<string, unknown> | null };
 type Service = { id: number; key: string; name: string; description?: string | null; metadata?: Record<string, unknown> | null; category?: { key: string; name: string; description?: string | null } | null; products: Product[] };
 
-const iconFor = (value: string) => {
-  const key = value.toLowerCase();
-  if (key.includes('data')) return '▣';
-  if (key.includes('airtime') || key.includes('voice')) return '◉';
-  if (key.includes('electric') || key.includes('bill')) return '⌁';
-  if (key.includes('cable') || key.includes('tv')) return '▤';
-  if (key.includes('exam') || key.includes('education')) return '✎';
-  if (key.includes('sms') || key.includes('message')) return '✉';
-  if (key.includes('cash') || key.includes('payment') || key.includes('wallet')) return '₦';
-  if (key.includes('bet') || key.includes('gaming')) return '◎';
-  return '✦';
-};
-
-const categoryIcon = (value: string) => {
-  const key = value.toLowerCase();
-  if (key.includes('vtu') || key.includes('digital')) return '⚡';
-  if (key.includes('education')) return '✎';
-  if (key.includes('bill')) return '⌁';
-  if (key.includes('payment')) return '₦';
-  return '✦';
-};
+const categoryIcon = (value: string) => iconForService(value);
 
 export default function Services({ services = [] }: { services: Service[] }) {
   const [query, setQuery] = useState('');
@@ -81,7 +62,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
       <section className='mt-5 overflow-x-auto pb-1'>
         <div className='flex min-w-max gap-2'>
           <button type='button' onClick={() => setActiveCategory('all')} className={'rounded-full px-4 py-2.5 text-sm font-bold transition ' + (activeCategory === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-600 ring-1 ring-slate-200')}>All services</button>
-          {categories.map(category => <button key={category.key} type='button' onClick={() => setActiveCategory(category.key)} className={'flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold transition ' + (activeCategory === category.key ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-600 ring-1 ring-slate-200')}><span>{categoryIcon(category.name)}</span>{category.name}</button>)}
+          {categories.map(category => <button key={category.key} type='button' onClick={() => setActiveCategory(category.key)} className={'flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold transition ' + (activeCategory === category.key ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-600 ring-1 ring-slate-200')}><ServiceIcon name={category.name} icon={categoryIcon(category.name)} size='sm'/>{category.name}</button>)}
         </div>
       </section>
 
