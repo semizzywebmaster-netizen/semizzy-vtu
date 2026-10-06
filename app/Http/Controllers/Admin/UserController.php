@@ -8,6 +8,7 @@ use App\Models\UserPermissionOverride;
 use App\Models\WalletAccount;
 use App\Services\Audit\AuditLogger;
 use App\Services\Finance\AdminWalletFundingService;
+use App\Services\Finance\AdminWalletDebitService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -309,6 +310,15 @@ class UserController extends Controller
         }
     }
 
+    public function freeze(Request $request, User $user, AuditLogger $audit): RedirectResponse
+    {
+        if ($user->is($request->user())) return back()->with('error', 'You cannot freeze your own administrator account.');
+        $data=$request->validate(['frozen'=>['required','boolean'],'note'=>['nullable','string','max:255']]);
+        $user->forceFill(['status'=>$data['frozen'] ? 'suspended' : 'active'])->saveOrFail();
+        try { $audit->record('admin.user.account.freeze.updated',$user->fresh(),['target_user_id'=>$user->id,'frozen'=>(bool)$data['frozen'],'note'=>trim((string)($data['note']??''))?:null],$request); } catch (\\Throwable $e) { report($e); }
+        return back()->with('success',$data['frozen']?'User account frozen.':'User account unfrozen.');
+    }
+
     public function walletStatus(Request $request, User $user, AuditLogger $audit): RedirectResponse
     {
         $data = $request->validate(['status' => ['required', 'in:active,frozen']]);
@@ -333,6 +343,16 @@ class UserController extends Controller
             report($e);
             return back()->with('error', $e->getMessage() ?: 'Wallet status update failed safely.');
         }
+    }
+
+    public function debit(Request $request, User $user, AdminWalletDebitService $debit, AuditLogger $audit): RedirectResponse
+    {
+        $data=$request->validate(['amount'=>['required','string','max:30','regex:/^\\d+(?:\\.\\d{1,2})?$/'],'note'=>['nullable','string','max:255']]);
+        try {
+            $wallet=$debit->debit($user,$data['amount'],$request->user(),trim((string)($data['note']??'')));
+            try { $audit->record('admin.user.wallet.debited',$user->fresh(),['target_user_id'=>$user->id,'amount_major'=>$data['amount'],'currency'=>$wallet->currency,'wallet_account_id'=>$wallet->id,'note'=>trim((string)($data['note']??''))?:null],$request); } catch(\\Throwable $e){report($e);}
+            return back()->with('success','User wallet debited successfully.');
+        } catch(\\Throwable $e) { report($e); return back()->with('error',$e->getMessage()?:'User debit failed safely.'); }
     }
 
     public function fund(
