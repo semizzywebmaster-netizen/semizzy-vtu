@@ -344,7 +344,9 @@ class ProviderEngineController extends Controller
 
             $payload=$response->json();
             if(!is_array($payload)) return response()->json(['status'=>'failed','message'=>'Provider discovery returned an unsupported response format.'],502);
-            $items=$this->extractItems($payload);
+            $mapping=(array)($endpoint->response_mapping ?? []);
+            $normalizedPayload=$mapping ? $this->mapResponse($payload,$mapping) : $payload;
+            $items=$this->extractItems($normalizedPayload['items'] ?? $normalizedPayload);
             $stored=0;
 
             foreach($items as $item){
