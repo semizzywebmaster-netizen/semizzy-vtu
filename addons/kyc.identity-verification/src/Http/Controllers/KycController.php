@@ -24,6 +24,8 @@ class KycController extends Controller
                 'id' => $application->id,
                 'status' => $application->status,
                 'identityType' => $application->identity_type,
+                'identityNumber' => $application->identity_number ? '••••••••' . substr((string) $application->identity_number, -4) : null,
+                'documentUrl' => $application->documents->first() ? route('kyc.document', $application->documents->first()->id) : null,
                 'submittedAt' => $application->submitted_at?->toISOString(),
                 'reviewedAt' => $application->reviewed_at?->toISOString(),
                 'rejectionReason' => $application->rejection_reason,
