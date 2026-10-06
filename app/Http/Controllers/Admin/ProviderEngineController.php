@@ -346,7 +346,7 @@ class ProviderEngineController extends Controller
             return response()->json(['message'=>'Provide either a relative path or a full URL.'],422);
         }
         $saved = $provider->endpoints()->create($data);
-        return response()->json(['data'=>$saved->fresh()],201);
+        return response()->json(['data'=>$this->endpointSummary($saved->fresh())],201);
     }
 
     public function updateEndpoint(Request $request, ApiProvider $provider, ProviderEndpoint $endpoint): JsonResponse
@@ -378,7 +378,7 @@ class ProviderEngineController extends Controller
 
         $endpoint->update($data);
 
-        return response()->json(['data'=>$endpoint->fresh()]);
+        return response()->json(['data'=>$this->endpointSummary($endpoint->fresh())]);
     }
 
     public function endpoints(ApiProvider $provider): JsonResponse
@@ -773,13 +773,32 @@ class ProviderEngineController extends Controller
         }
     }
 
+    private function endpointSummary(ProviderEndpoint $endpoint): array
+    {
+        return [
+            'id'=>$endpoint->id,
+            'name'=>$endpoint->name,
+            'operation'=>$endpoint->operation,
+            'method'=>$endpoint->method,
+            'path'=>$endpoint->path,
+            'full_url'=>$this->safeUrlForDisplay($endpoint->full_url),
+            'content_type'=>$endpoint->content_type,
+            'auth_mode'=>$endpoint->auth_mode,
+            'headers'=>$this->safeKeyValueMap((array)($endpoint->headers ?? [])),
+            'query_params'=>$this->safeKeyValueMap((array)($endpoint->query_params ?? [])),
+            'request_mapping'=>$endpoint->request_mapping ?? [],
+            'response_mapping'=>$endpoint->response_mapping ?? [],
+            'error_mapping'=>$endpoint->error_mapping ?? [],
+            'webhook_config'=>$endpoint->webhook_config ?? [],
+            'enabled'=>$endpoint->enabled,
+        ];
+    }
+
     private function safeKeyValueMap(array $values): array
     {
         $safe = [];
         foreach ($values as $key => $value) {
-            $name = strtolower((string) $key);
-            $sensitive = preg_match('/token|secret|password|passwd|pin|api[_-]?key|authorization|credential|signature/i', $name);
-            $safe[$key] = $sensitive ? '[REDACTED]' : (is_scalar($value) || $value === null ? $value : '[CONFIGURED]');
+            $safe[(string)$key] = '[CONFIGURED]';
         }
         return $safe;
     }
