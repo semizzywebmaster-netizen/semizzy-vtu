@@ -160,7 +160,7 @@ class ProviderEngineController extends Controller
         return $this->credentialSummary($connection->load('credentials'));
     }
 
-    public function storeEndpoint(Request $request, ApiProvider $provider): JsonResponse
+    public function endpoint(Request $request, ApiProvider $provider, ?ProviderEndpoint $endpoint = null): JsonResponse
     {
         $data=$request->validate([
             'name'=>'required|string|max:160',
@@ -168,8 +168,96 @@ class ProviderEngineController extends Controller
             'method'=>'required|in:GET,POST,PUT,PATCH,DELETE',
             'path'=>'nullable|string|max:2048',
             'full_url'=>'nullable|url|max:2048',
-            'content_type'=>'nullable|in:json,form-data,x-www-form-urlencoded,query,raw',
-            'auth_mode'=>'nullable|string|max:40',
+            'content_type'=>'required|in:json,form-data,x-www-form-urlencoded,query,raw',
+            'auth_mode'=>'required|in:connection,none,custom',
+            'headers'=>'nullable|array',
+            'query_params'=>'nullable|array',
+            'request_mapping'=>'nullable|array',
+            'response_mapping'=>'nullable|array',
+            'error_mapping'=>'nullable|array',
+            'webhook_config'=>'nullable|array',
+            'enabled'=>'nullable|boolean',
+        ]);
+        if (blank($data['path'] ?? null) && blank($data['full_url'] ?? null)) {
+            return response()->json(['message'=>'Provide either a relative path or a full URL.'],422);
+        }
+        if ($endpoint && $endpoint->api_provider_id !== $provider->id) {
+            return response()->json(['message'=>'Endpoint does not belong to this provider.'],404);
+        }
+        $saved=$endpoint ? tap($endpoint)->update($data) : $provider->endpoints()->create($data);
+        return response()->json(['data'=>$saved->fresh()], $endpoint ? 200 : 201);
+    }
+
+    public function endpoints(ApiProvider $provider): JsonResponse
+    {
+        return response()->json(['data'=>$provider->endpoints()->orderByDesc('enabled')->latest()->get()->map(fn(ProviderEndpoint $e)=>[
+            'id'=>$e->id,'name'=>$e->name,'operation'=>$e->operation,'method'=>$e->method,
+            'path'=>$e->path,'full_url'=>$e->full_url,'content_type'=>$e->content_type,
+            'auth_mode'=>$e->auth_mode,'headers'=>$e->headers ?? [],'query_params'=>$e->query_params ?? [],
+            'request_mapping'=>$e->request_mapping ?? [],'response_mapping'=>$e->response_mapping ?? [],
+            'error_mapping'=>$e->error_mapping ?? [],'webhook_config'=>$e->webhook_config ?? [],
+            'enabled'=>$e->enabled,
+        ])]);
+    }
+
+    public function testEndpoint(Request $request, ApiProvider $provider, ProviderEndpoint $endpoint): JsonResponse
+    {
+        if ($endpoint->api_provider_id !== $provider->id) return response()->json(['message'=>'Endpoint does not belong to this provider.'],404);
+        $connection=$provider->connections()->where('enabled',true)->orderByDesc('is_default')->first();
+        if (!$connection) return response()->json(['status'=>'configuration_required','message'=>'Configure an enabled connection first.'],422);
+
+        $input=$request->validate(['variables'=>'nullable|array']);
+        $started=microtime(true);
+        try {
+            $body=(array)($endpoint->request_mapping ?? []);
+            foreach(($input['variables'] ?? []) as $key=>$value) data_set($body,$key,$value);
+            [$headers,$query,$body]=$this->authenticationPayload($connection,$body);
+            $headers=array_merge($headers,(array)($endpoint->headers ?? []));
+            $query=array_merge($query,(array)($endpoint->query_params ?? []));
+            $url=$this->endpointUrl($connection,$endpoint);
+
+            $client=Http::withHeaders($headers)->connectTimeout($connection->connect_timeout_seconds)->timeout($connection->request_timeout_seconds);
+            if(!$connection->verify_ssl) $client=$client->withoutVerifying();
+
+            $response=match($endpoint->method){
+                'POST'=>$this->sendEndpointRequest($client,$endpoint,$url,$body,$query),
+                'PUT'=>$this->sendEndpointRequest($client,$endpoint,$url,$body,$query),
+                'PATCH'=>$this->sendEndpointRequest($client,$endpoint,$url,$body,$query),
+                'DELETE'=>$this->sendEndpointRequest($client,$endpoint,$url,$body,$query),
+                default=>$client->get($url,$query),
+            };
+
+            $duration=(int)((microtime(true)-$started)*1000);
+            $payload=$response->json();
+            $safeStatus=$response->successful()?'SUCCESS':'FAILED';
+            return response()->json([
+                'status'=>$safeStatus,'http_status'=>$response->status(),'duration_ms'=>$duration,
+                'message'=>$response->successful()?'Endpoint request succeeded.':'Endpoint request returned an error.',
+                'mapped_response'=>$this->mapResponse($payload,(array)($endpoint->response_mapping ?? [])),
+                'mapped_error'=>$response->successful()?null:$this->mapResponse($payload,(array)($endpoint->error_mapping ?? [])),
+            ],$response->successful()?200:502);
+        } catch (\\Throwable $e) {
+            report($e);
+            return response()->json(['status'=>'FAILED','message'=>'Endpoint request failed safely. Review server-side diagnostics.'],502);
+        }
+    }
+
+    public function destroyEndpoint(ApiProvider $provider, ProviderEndpoint $endpoint): JsonResponse
+    {
+        if ($endpoint->api_provider_id !== $provider->id) return response()->json(['message'=>'Endpoint does not belong to this provider.'],404);
+        $endpoint->delete();
+        return response()->json(['status'=>'deleted']);
+    }
+
+    {
+        $data=$request->validate([
+            'name'=>'required|string|max:160',
+            'operation'=>'nullable|string|max:100',
+            'method'=>'required|in:GET,POST,PUT,PATCH,DELETE',
+            'path'=>'nullable|string|max:2048',
+            'full_url'=>'nullable|url|max:2048',
+            'content_type'=>'required|in:json,form-data,x-www-form-urlencoded,query,raw',
+            'auth_mode'=>'required|in:connection,none,custom',
             'headers'=>'nullable|array',
             'query_params'=>'nullable|array',
             'request_mapping'=>'nullable|array',
@@ -282,6 +370,34 @@ class ProviderEngineController extends Controller
             $imported++;
         }
         return response()->json(['status'=>'success','imported'=>$imported]);
+    }
+
+    private function endpointUrl(ProviderConnection $connection, ProviderEndpoint $endpoint): string
+    {
+        if (filled($endpoint->full_url)) return $endpoint->full_url;
+        $prefix=trim((string)$connection->api_prefix,'/');
+        $path=trim((string)$endpoint->path,'/');
+        return rtrim($connection->base_url,'/').($prefix?'/'.$prefix:'').($path?'/'.$path:'');
+    }
+
+    private function sendEndpointRequest($client, ProviderEndpoint $endpoint, string $url, array $body, array $query)
+    {
+        return match($endpoint->content_type){
+            'query'=>$client->request($endpoint->method,$url,$query),
+            'form-data','x-www-form-urlencoded'=>$client->asForm()->request($endpoint->method,$url,$body),
+            'raw'=>$client->withBody((string)($body['raw'] ?? ''),'text/plain')->request($endpoint->method,$url),
+            default=>$client->request($endpoint->method,$url,$body),
+        };
+    }
+
+    private function mapResponse(mixed $payload, array $mapping): array
+    {
+        $mapped=[];
+        foreach($mapping as $target=>$source){
+            if(!is_string($source)) continue;
+            $mapped[$target]=data_get($payload,$source);
+        }
+        return $mapped;
     }
 
     private function credentialSummary(ProviderConnection $connection): JsonResponse
