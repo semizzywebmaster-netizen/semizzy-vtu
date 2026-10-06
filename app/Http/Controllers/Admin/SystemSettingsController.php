@@ -128,7 +128,7 @@ class SystemSettingsController extends Controller
     {
         $data=$request->validate([
             'asset'=>['required','in:logo,favicon,banner,hero'],
-            'file'=>['required','file','mimes:png,jpg,jpeg,webp,svg,ico','max:10240'],
+            'file'=>['required','file','mimes:png,jpg,jpeg,webp,ico','max:10240'],
         ]);
         $key=$data['asset'];
         $stored=SystemSetting::query()->where('key','assets')->value('value');
