@@ -78,7 +78,6 @@ class SystemSettingsController extends Controller
                         'setup'=>'In cPanel create an Email Account, open Connect Devices, choose Secure SSL/TLS settings and copy the outgoing SMTP server, port, email username and mailbox password.',
                     ],
                 ],
-            ],
         ]);
     }
 
