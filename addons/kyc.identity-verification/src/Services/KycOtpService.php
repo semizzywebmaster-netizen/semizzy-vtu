@@ -39,7 +39,7 @@ class KycOtpService
             'updated_at' => now(),
         ]);
 
-        event(new \App\Events\KycOtpRequested(
+        event(new \Semizzy\Addons\Kyc\Events\KycOtpRequested(
             $userId,
             $channel,
             $destination,
@@ -48,6 +48,16 @@ class KycOtpService
         ));
 
         return ['id' => $id, 'expires_at' => now()->addMinutes(10)->toISOString()];
+    }
+
+    public function hasVerifiedContact(int $userId, int $withinMinutes = 30): bool
+    {
+        return DB::table('kyc_verifications')
+            ->where('user_id', $userId)
+            ->where('status', 'verified')
+            ->whereNotNull('verified_at')
+            ->where('verified_at', '>=', now()->subMinutes(max(1, $withinMinutes)))
+            ->exists();
     }
 
     public function verify(int $userId, string $code): bool
