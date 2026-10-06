@@ -12,6 +12,26 @@ class ProviderTestService
     {
         $this->guard->validate($provider->base_url);
         $started=microtime(true);
+        // Prefer the self-service endpoint/connection engine. The legacy JSON
+        // endpoint configuration is retained only as a backwards-compatible fallback.
+        $configuredConnection = $provider->connections()->where('enabled', true)->orderByDesc('is_default')->first();
+        if ($configuredConnection) {
+            $configuredOperations = $provider->endpoints()->where('enabled', true)->pluck('operation')->filter()->values()->all();
+            foreach (['health_check','balance_inquiry','catalogue_retrieval'] as $candidate) {
+                if (in_array($candidate, $configuredOperations, true)) {
+                    $result = $this->adapter->execute($provider, $candidate);
+                    $ms = (int) round((microtime(true) - $started) * 1000);
+                    $provider->forceFill([
+                        'last_tested_at' => now(),
+                        'last_test_status' => $result->status,
+                        'last_test_summary' => $result->message ?: 'Health check completed.',
+                        'last_successful_request_at' => $result->accepted ? now() : $provider->last_successful_request_at,
+                    ])->save();
+                    return ['result' => $result, 'duration_ms' => $ms, 'operation' => $candidate];
+                }
+            }
+        }
+
         $rawEndpoints=$provider->getRawOriginal('endpoints');
         $endpoints=is_array($rawEndpoints) ? $rawEndpoints : (is_string($rawEndpoints) ? (json_decode($rawEndpoints,true) ?: []) : []);
         $capabilities=$provider->capabilities ?? [];
