@@ -27,7 +27,7 @@ export default function ProviderWizard({provider}:{provider:Provider}){
  const saveAuth=()=>{
    if(!connectionId)return;
    const payload={auth_type:authType,auth_options:{custom_fields:authType==='custom'?customFields:[]},credentials:(authType==='custom'?customFields:credentials).map(({id,has_value,value,...f}:any)=>({...f,value:value||undefined}))};
-   router.post('/admin/provider-connections/'+connectionId+'/authentication',payload,{preserveScroll:true,onSuccess:()=>setStep(4)});
+   router.post('/admin/providers/'+provider.id+'/connections/'+connectionId+'/authentication',payload,{preserveScroll:true,onSuccess:()=>setStep(4)});
  };
  const discover=()=>{setDiscovering(true);router.post('/admin/providers/'+provider.id+'/discover-services',{}, {preserveScroll:true,onFinish:()=>setDiscovering(false),onSuccess:()=>fetch('/admin/providers/'+provider.id+'/provider-services').then(r=>r.json()).then(x=>setServices(x.data||[]))});};
  const approveSelected=()=>{setApproving(true);router.post('/admin/providers/'+provider.id+'/provider-services/approve',{provider_service_ids:selected},{preserveScroll:true,onFinish:()=>setApproving(false),onSuccess:()=>setApproved(x=>Array.from(new Set(x.concat(selected))))});};
