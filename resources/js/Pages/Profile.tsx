@@ -20,7 +20,7 @@ type Props = {
   };
 };
 
-export default function Profile({ user }: Props) {
+export default function Profile({ user, tier, tiers }: Props) {
   const unreadCount = usePage<SharedProps>().props.navigation?.unreadNotifications ?? 0;
   const form = useForm({ current_password: '', password: '', password_confirmation: '' });
   const submit = (event: React.FormEvent) => {
