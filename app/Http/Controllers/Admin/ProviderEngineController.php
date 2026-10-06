@@ -22,6 +22,32 @@ class ProviderEngineController extends Controller
         'username_password_pin','client_id_secret','bearer','basic','custom',
     ];
 
+    public function connections(ApiProvider $provider): JsonResponse
+    {
+        $connections=$provider->connections()->with('credentials')->orderByDesc('is_default')->latest()->get()->map(fn(ProviderConnection $connection)=>[
+            'id'=>$connection->id,
+            'name'=>$connection->name,
+            'environment'=>$connection->environment,
+            'base_url'=>$connection->base_url,
+            'api_version'=>$connection->api_version,
+            'api_prefix'=>$connection->api_prefix,
+            'auth_type'=>$connection->auth_type,
+            'auth_options'=>$connection->auth_options ?? [],
+            'verify_ssl'=>$connection->verify_ssl,
+            'enabled'=>$connection->enabled,
+            'is_default'=>$connection->is_default,
+            'credentials'=>$connection->credentials->map(fn(ProviderCredential $credential)=>[
+                'id'=>$credential->id,'field_key'=>$credential->field_key,'label'=>$credential->label,
+                'field_type'=>$credential->field_type,'required'=>$credential->required,'secret'=>$credential->secret,
+                'placement'=>$credential->placement,'header_name'=>$credential->header_name,
+                'query_name'=>$credential->query_name,'body_path'=>$credential->body_path,
+                'prefix'=>$credential->prefix,'has_value'=>filled($credential->value),
+                'value'=>filled($credential->value) ? '••••••••' : null,
+            ])->values(),
+        ])->values();
+        return response()->json(['data'=>$connections]);
+    }
+
     public function authSchema(): JsonResponse
     {
         return response()->json(['data'=>[
