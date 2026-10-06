@@ -55,6 +55,10 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
 
   const smtpTest=useForm({email:'',profile_key:''});
   const smtpHealth=useForm({email:''});
+  const restoreForm=useForm<{backup:File|null}>({backup:null});
+  const clearCache=useForm({});
+  const restoreBackup=(e:React.FormEvent)=>{e.preventDefault();if(!restoreForm.data.backup)return; if(!window.confirm('Restore this backup? Current database records will be replaced.'))return; restoreForm.post('/admin/maintenance/restore',{forceFormData:true,preserveScroll:true});};
+  const clearWebsiteCache=(e:React.MouseEvent)=>{e.preventDefault();if(window.confirm('Clear application cache now?'))clearCache.post('/admin/maintenance/cache-clear',{preserveScroll:true});};
   const runHealth=(e:React.FormEvent)=>{e.preventDefault();smtpHealth.post('/admin/settings/smtp-health',{preserveScroll:true});};
   const sendSmtpTest=(e:React.FormEvent)=>{e.preventDefault();smtpTest.post('/admin/settings/smtp-test',{preserveScroll:true});};
 
@@ -136,6 +140,15 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
       </section>
 
       <section className="space-y-4 rounded-2xl border bg-white p-5 shadow-sm"><label className="block"><b>Site identity</b><p className="mt-1 text-xs text-slate-500">Change once and publish globally across public, user, admin and PWA metadata.</p><input className="mt-2 w-full rounded-xl border p-3" value={form.data.platform_name} onChange={e=>form.setData('platform_name',e.target.value)} maxLength={80} required/></label><label className="block"><b>Support email</b><input type="email" className="mt-1 w-full rounded-xl border p-3" value={form.data.support_email} onChange={e=>form.setData('support_email',e.target.value)}/></label><label className="block"><b>Support notice</b><textarea className="mt-1 min-h-24 w-full rounded-xl border p-3" value={form.data.support_notice} onChange={e=>form.setData('support_notice',e.target.value)}/></label><label className="block"><b>Default timezone</b><input className="mt-1 w-full rounded-xl border p-3" value={form.data.default_timezone} onChange={e=>form.setData('default_timezone',e.target.value)} placeholder="Africa/Lagos"/></label></section>
+
+      <section className="space-y-5 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+        <div><h2 className="text-lg font-extrabold text-amber-950">System Maintenance</h2><p className="mt-1 text-sm text-amber-900">Production-safe maintenance tools. Backups contain the database and public uploaded files; secrets such as .env are never included.</p></div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl bg-white p-4 shadow-sm"><b className="block">Website Backup</b><p className="mt-1 text-xs text-slate-500">Create and download a portable SEMIZZY ONE backup.</p><a href="/admin/maintenance/backup" className="mt-4 inline-flex rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white">Create & Download Backup</a></div>
+          <form onSubmit={restoreBackup} className="rounded-2xl bg-white p-4 shadow-sm"><b className="block">Restore Backup</b><p className="mt-1 text-xs text-slate-500">Restores database records and public uploads from a verified SEMIZZY ONE backup.</p><input type="file" accept=".zip,application/zip" className="mt-3 w-full text-sm" onChange={e=>restoreForm.setData('backup',e.target.files?.[0]||null)} required/><button disabled={restoreForm.processing} className="mt-4 rounded-xl bg-amber-700 px-4 py-3 text-sm font-semibold text-white">{restoreForm.processing?'Restoring…':'Restore Backup'}</button></form>
+          <div className="rounded-2xl bg-white p-4 shadow-sm"><b className="block">Clear Website Cache</b><p className="mt-1 text-xs text-slate-500">Clears Laravel application, route, config, view and event caches.</p><button onClick={clearWebsiteCache} disabled={clearCache.processing} className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{clearCache.processing?'Clearing…':'Clear Website Cache'}</button></div>
+        </div>
+      </section>
 
       <div className="flex flex-wrap items-center gap-3"><button disabled={form.processing} className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white">{form.processing?'Saving…':'Save & publish settings'}</button>{form.recentlySuccessful&&<span className="text-sm text-emerald-700">Settings saved and published globally.</span>}</div>
     </form>
