@@ -1,14 +1,14 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 
-export default function Register({ referral = '' }: { referral?: string }) {
+export default function Register({ referral = '', platform }: { referral?: string; platform?: { platform_name?: string } }) {
   const form = useForm({ name: '', username: '', email: '', phone: '', referral_code: referral, password: '', password_confirmation: '', terms: false });
   const submit = (e: FormEvent) => { e.preventDefault(); form.post('/register'); };
 
   return <main className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
-    <Head title="Create account" />
+    <Head title={`Create account · ${platform?.platform_name || 'SEMIZZY ONE'}`} />
     <form onSubmit={submit} className="w-full max-w-lg rounded-3xl bg-white p-7 shadow-xl">
-      <p className="text-sm font-semibold text-indigo-700">SEMIZZY ONE</p><h1 className="mt-1 text-3xl font-black text-slate-900">Create your account</h1>
+      <p className="text-sm font-semibold text-indigo-700">{platform?.platform_name || 'SEMIZZY ONE'}</p><h1 className="mt-1 text-3xl font-black text-slate-900">Create your account</h1>
       <p className="mt-2 text-sm text-slate-600">Choose a username you can use to sign in. You can also join through a referral link or code.</p>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <label className="sm:col-span-2"><span className="text-sm font-semibold">Full name</span><input autoComplete="name" required className="mt-1 w-full rounded-xl border p-3" value={form.data.name} onChange={e => form.setData('name', e.target.value)} />{form.errors.name && <p className="mt-1 text-sm text-red-600">{form.errors.name}</p>}</label>
