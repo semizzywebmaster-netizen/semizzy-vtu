@@ -16,8 +16,33 @@ class AddonLifecycleService
 
         return DB::transaction(function () use ($manifest, $actorId): Addon {
             $existing = Addon::withTrashed()->where('identifier', $manifest['identifier'])->lockForUpdate()->first();
+
+            if ($existing && !in_array($existing->status, ['archived'], true)) {
+                throw ValidationException::withMessages(['identifier' => 'This addon is already registered. Use the explicit update lifecycle for an installed addon.']);
+            }
+
             if ($existing) {
-                throw ValidationException::withMessages(['identifier' => 'This addon is already registered. Use the explicit update lifecycle for a new version.']);
+                $from = $existing->status;
+                if ($existing->trashed()) {
+                    $existing->restore();
+                }
+                $existing->fill($this->manifestAttributes($manifest));
+                $existing->status = 'draft';
+                $existing->installed_at = null;
+                $existing->activated_at = null;
+                $existing->save();
+
+                $existing->lifecycleEvents()->create([
+                    'addon_identifier' => $existing->identifier,
+                    'event' => 'reregistered',
+                    'from_status' => $from,
+                    'to_status' => 'draft',
+                    'message' => 'Archived addon manifest was safely re-registered from the current addon registry.',
+                    'context' => ['version' => $existing->version],
+                    'actor_id' => $actorId,
+                ]);
+
+                return $existing->fresh();
             }
 
             $addon = new Addon();
