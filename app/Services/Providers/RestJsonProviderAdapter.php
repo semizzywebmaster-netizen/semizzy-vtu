@@ -106,6 +106,9 @@ class RestJsonProviderAdapter implements ProviderAdapter
         $request = Http::acceptJson();
 
         return match ($provider->auth_type) {
+            'bearer' => $request->withToken((string)($credentials['token'] ?? $credentials['api_token'] ?? '')),
+            'basic' => $request->withBasicAuth((string)($credentials['username'] ?? ''),(string)($credentials['password'] ?? '')),
+            'api_key_header' => $request->withHeaders([(string)($credentials['header'] ?? 'X-API-Key') => (string)($credentials['key'] ?? $credentials['api_key'] ?? '')]),
             'api_key' => $request->withHeaders([
                 (string)($credentials['api_key_name'] ?? 'X-API-Key') => (string)($credentials['api_key'] ?? ''),
             ]),
