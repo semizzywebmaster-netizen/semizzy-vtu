@@ -18,7 +18,7 @@ class CacDocumentService
     public function upload(CacOrder $order, UploadedFile $file, string $documentType, int $userId): CacOrderDocument
     {
         if ((int) $order->user_id !== $userId) abort(404);
-        if ($order->status !== 'pending_review') {
+        if (!in_array($order->status, ['pending_review','documents_required'], true)) {
             throw ValidationException::withMessages(['order' => 'Documents can only be uploaded while the CAC order is under review.']);
         }
         if ($file->getSize() > self::MAX_BYTES) {
