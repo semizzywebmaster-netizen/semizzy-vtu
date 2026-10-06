@@ -13,7 +13,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
     public function supports(string $operation): bool
     {
-        return in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status','refund','reversal'], true);
+        return in_array($operation, ['health_check','balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status','refund','reversal','sms_send','whatsapp_send'], true);
     }
 
     public function execute(ApiProvider $provider, string $operation, array $payload = [], ?string $idempotencyKey = null): ProviderResult
