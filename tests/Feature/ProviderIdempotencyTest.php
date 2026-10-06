@@ -54,7 +54,9 @@ class ProviderIdempotencyTest extends TestCase
             'SUCCESS',
             providerReference: 'PROVIDER-2',
         ));
-        $this->mock(ProviderRequestLogger::class);
+        $this->mock(ProviderRequestLogger::class, function ($mock): void {
+            $mock->shouldReceive('record')->zeroOrMoreTimes();
+        });
 
         $manager = app(ProviderManager::class);
         $manager->executeProvider($provider, $service->key, 'transaction_initiation', ['recipient' => '08000000000'], 'idem-mismatch');
