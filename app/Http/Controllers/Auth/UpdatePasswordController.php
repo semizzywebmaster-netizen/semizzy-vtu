@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\CredentialHistory;
+use App\Services\Security\CredentialHistoryService;
 use App\Services\Security\OtpChallengeService;
 use App\Services\Security\SecurityEventLogger;
 use Illuminate\Http\RedirectResponse;
@@ -17,7 +17,7 @@ class UpdatePasswordController extends Controller
     {
     }
 
-    public function store(Request $request, OtpChallengeService $otp): RedirectResponse
+    public function store(Request $request, OtpChallengeService $otp, CredentialHistoryService $history): RedirectResponse
     {
         $user = $request->user();
 
@@ -32,12 +32,15 @@ class UpdatePasswordController extends Controller
         }
 
         $otp->verify($user, 'password_change', $data['otp_code']);
+        $history->assertPasswordIsFresh($user, $data['password']);
+        $oldHash = (string) $user->password;
 
         $user->forceFill([
             'password' => $data['password'],
             'remember_token' => bin2hex(random_bytes(30)),
         ])->save();
 
+        $history->recordPassword($user, $oldHash);
         $user->tokens()->delete();
 
         $this->securityEvents->record('password.changed', 'info', [
