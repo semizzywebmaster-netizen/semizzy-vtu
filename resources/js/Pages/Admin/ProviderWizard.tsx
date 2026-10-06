@@ -28,19 +28,20 @@ export default function ProviderWizard({provider}:{provider:Provider}){
  const endpoint=useForm({name:'Service Catalogue',operation:'catalogue_retrieval',method:'GET',path:'',full_url:'',content_type:'json',auth_mode:'connection',headers:{},query_params:{},request_mapping:{},response_mapping:{},error_mapping:{},webhook_config:{}});
 
  useEffect(()=>{fetch('/admin/provider-auth/schema').then(r=>r.json()).then(x=>setAuthTypes(x.data||[]));},[]);
- const loadConnection=()=>fetch('/admin/providers/'+provider.id+'/connections').then(r=>r.json()).then(x=>{const c=x.data?.[0];if(c){setConnectionId(c.id);setAuthType(c.auth_type||'none');setCredentials(c.credentials||[]);}});
+ const normalizeCredential=(f:any):Credential=>({...f,key:f.key??f.field_key??'',label:f.label??f.field_key??'Credential',type:f.type??f.field_type??'text',secret:!!f.secret,required:!!f.required,placement:f.placement??'header'});
+ const loadConnection=()=>fetch('/admin/providers/'+provider.id+'/connections',{headers:{Accept:'application/json','X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'}).then(r=>r.json()).then(x=>{const c=x.data?.[0];if(c){setConnectionId(c.id);setAuthType(c.auth_type||'none');setCredentials((c.credentials||[]).map(normalizeCredential));}});
  const selectAuth=(type:string)=>{
    setAuthType(type);
    const schema=authTypes.find(x=>x.value===type);
    setCustomFields(type==='custom' ? [] : (schema?.fields||[]));
-   setCredentials(type==='custom' ? [] : (schema?.fields||[]).map(f=>({...f,value:''})));
+   setCredentials(type==='custom' ? [] : (schema?.fields||[]).map(f=>({...f,value:'',key:f.key})));
  };
  const updateCredential=(key:string,patch:Partial<Credential>)=>setCredentials(xs=>xs.map(x=>x.key===key?{...x,...patch}:x));
  const addCustomField=()=>setCustomFields(xs=>[...xs,{key:'field_'+(xs.length+1),label:'Custom credential',type:'password',secret:true,required:true,placement:'header',header_name:'',value:''} as AuthField & {value?:string}]);
  const saveAuth=async()=>{
    if(!connectionId)return;
    setActionError(null);
-   const payload={auth_type:authType,auth_options:{custom_fields:authType==='custom'?customFields:[]},credentials:(authType==='custom'?customFields:credentials).map(({id,has_value,value,...f}:any)=>({...f,value:value||undefined}))};
+   const payload={auth_type:authType,auth_options:{custom_fields:authType==='custom'?customFields:[]},credentials:(authType==='custom'?customFields:credentials).map(({id,has_value,value,key,...f}:any)=>({...f,field_key:key,value:value||undefined}))};
    try { await postJson('/admin/providers/'+provider.id+'/connections/'+connectionId+'/authentication',payload); setStep(4); }
    catch(e){ setActionError(e instanceof Error ? e.message : 'Authentication could not be saved.'); }
  };
