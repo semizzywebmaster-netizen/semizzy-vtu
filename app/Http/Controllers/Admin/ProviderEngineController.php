@@ -160,6 +160,51 @@ class ProviderEngineController extends Controller
         return $this->credentialSummary($connection->load('credentials'));
     }
 
+    public function testConnection(Request $request, ApiProvider $provider): JsonResponse
+    {
+        $connection=$provider->connections()->where('enabled',true)->orderByDesc('is_default')->first();
+        if(!$connection) return response()->json(['status'=>'configuration_required','message'=>'Configure an enabled connection first.'],422);
+
+        $endpoint=$provider->endpoints()->where('enabled',true)->orderByRaw("CASE WHEN operation = 'health' THEN 0 WHEN operation = 'services' THEN 1 ELSE 2 END")->first();
+        if(!$endpoint) return response()->json(['status'=>'configuration_required','message'=>'Configure an enabled endpoint for connection testing.'],422);
+
+        $started=microtime(true);
+        try{
+            [$headers,$query,$body]=$this->authenticationPayload($connection,(array)($endpoint->request_mapping ?? []));
+            $headers=array_merge($headers,(array)($endpoint->headers ?? []));
+            $query=array_merge($query,(array)($endpoint->query_params ?? []));
+            $url=$this->endpointUrl($connection,$endpoint);
+            $client=Http::withHeaders($headers)->connectTimeout($connection->connect_timeout_seconds)->timeout($connection->request_timeout_seconds);
+            if(!$connection->verify_ssl)$client=$client->withoutVerifying();
+            $response=match($endpoint->method){
+                'POST','PUT','PATCH','DELETE'=>$this->sendEndpointRequest($client,$endpoint,$url,$body,$query),
+                default=>$client->get($url,$query),
+            };
+            $duration=(int)((microtime(true)-$started)*1000);
+            $status=$response->successful()?'SUCCESS':'FAILED';
+            ProviderHealthCheck::create(['api_provider_id'=>$provider->id,'provider_connection_id'=>$connection->id,'status'=>$status,'http_status'=>$response->status(),'response_time_ms'=>$duration,'message'=>$status==='SUCCESS'?'Connection test succeeded.':'Connection test returned an unsuccessful HTTP response.','checked_at'=>now()]);
+            $connection->update(['last_tested_at'=>now(),'last_test_status'=>$status,'last_test_message'=>$status==='SUCCESS'?'Connection test succeeded.':'Connection test failed.']);
+            $provider->update(['last_tested_at'=>now(),'last_test_status'=>$status,'last_test_summary'=>$status==='SUCCESS'?'Connection test succeeded.':'Connection test failed.','last_successful_request_at'=>$status==='SUCCESS'?now():$provider->last_successful_request_at]);
+            return response()->json(['status'=>$status,'http_status'=>$response->status(),'response_time_ms'=>$duration,'message'=>$status==='SUCCESS'?'Connection test succeeded.':'Connection test failed.']);
+        }catch(\Throwable $e){
+            report($e);
+            $duration=(int)((microtime(true)-$started)*1000);
+            ProviderHealthCheck::create(['api_provider_id'=>$provider->id,'provider_connection_id'=>$connection->id,'status'=>'FAILED','response_time_ms'=>$duration,'message'=>'Connection test failed safely.','checked_at'=>now()]);
+            $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Connection test failed safely.']);
+            $provider->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_summary'=>'Connection test failed safely.']);
+            return response()->json(['status'=>'FAILED','response_time_ms'=>$duration,'message'=>'Connection test failed safely.'],502);
+        }
+    }
+
+    public function health(ApiProvider $provider): JsonResponse
+    {
+        $checks=$provider->healthChecks()->latest('checked_at')->limit(50)->get()->map(fn(ProviderHealthCheck $h)=>[
+            'id'=>$h->id,'connection_id'=>$h->provider_connection_id,'status'=>$h->status,'http_status'=>$h->http_status,
+            'response_time_ms'=>$h->response_time_ms,'checked_at'=>$h->checked_at,
+        ]);
+        return response()->json(['data'=>$checks]);
+    }
+
     public function endpoint(Request $request, ApiProvider $provider, ?ProviderEndpoint $endpoint = null): JsonResponse
     public function storeEndpoint(Request $request, ApiProvider $provider): JsonResponse
     {
