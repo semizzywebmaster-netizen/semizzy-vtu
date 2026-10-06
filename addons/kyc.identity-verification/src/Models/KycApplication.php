@@ -13,11 +13,12 @@ class KycApplication extends Model
 
     protected $fillable = [
         'user_id', 'identity_type', 'identity_number', 'status',
-        'submitted_at', 'reviewed_at', 'reviewed_by', 'rejection_reason',
+        'submitted_at', 'reviewed_at', 'reviewed_by', 'rejection_reason', 'provider_id', 'provider_reference', 'verification_status', 'verification_checked_at',
     ];
 
     protected $casts = [
         'identity_number' => 'encrypted',
+        'verification_checked_at' => 'datetime',
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
     ];
