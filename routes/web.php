@@ -34,12 +34,40 @@ use App\Http\Controllers\SetupController;
 use App\Http\Controllers\SecurityOtpController;
 use App\Http\Controllers\TransactionPinController;
 use App\Http\Controllers\ApiAccessController;
+use App\Services\System\SystemSettingsService;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', fn () => Inertia::render('Welcome', [
     'appName' => config('app.name', 'SEMIZZY ONE'),
 ]))->name('home');
+
+Route::get('/manifest.webmanifest', function (SystemSettingsService $settings) {
+    $platform = $settings->all();
+    $name = trim((string) ($platform['platform_name'] ?? 'SEMIZZY ONE')) ?: 'SEMIZZY ONE';
+    $shortName = mb_substr($name, 0, 24);
+
+    return response()->json([
+        'id' => '/',
+        'name' => $name,
+        'short_name' => $shortName,
+        'description' => $name . ' platform',
+        'start_url' => '/dashboard',
+        'scope' => '/',
+        'display' => 'standalone',
+        'background_color' => '#f8fafc',
+        'theme_color' => $platform['theme_primary'] ?? '#4338ca',
+        'orientation' => 'portrait-primary',
+        'icons' => [
+            [
+                'src' => '/icons/semizzy-one.svg',
+                'sizes' => 'any',
+                'type' => 'image/svg+xml',
+                'purpose' => 'any maskable',
+            ],
+        ],
+    ])->header('Cache-Control', 'no-store, max-age=0');
+})->name('manifest');
 
 Route::get('/setup', [SetupController::class, 'index'])->name('setup');
 Route::post('/setup/key', [SetupController::class, 'generateKey'])->middleware('throttle:3,1')->name('setup.key');
