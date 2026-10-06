@@ -75,7 +75,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function usernameHistory(): HasMany { return $this->hasMany(UsernameHistory::class); }
 
     public function isMerchant(): bool { return (int) $this->tier === 4 && $this->account_type === 'merchant'; }
-    public function currentTier(): array { $tier = max(1, min(4, (int) $this->tier)); return config('semizzy.user_tiers.'.$tier, config('semizzy.user_tiers.1')); }
+    public function currentTier(): array { $tier = max(1, min(5, (int) $this->tier)); return config('semizzy.user_tiers.'.$tier, config('semizzy.user_tiers.1')); }
     public function securityEvents(): HasMany { return $this->hasMany(SecurityEvent::class); }
     public function referrals(): HasMany { return $this->hasMany(self::class, 'referred_by_id'); }
 
