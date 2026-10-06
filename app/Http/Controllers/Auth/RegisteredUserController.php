@@ -33,7 +33,7 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:120',
             'username' => ['required', 'string', 'min:3', 'max:40', 'regex:/^[a-zA-Z0-9._]+$/', 'unique:users,username'],
             'email' => 'required|email|max:190|unique:users,email',
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'confirmed', Rules\Password::min(12)->mixedCase()->numbers()->symbols()->uncompromised()],
             'terms' => 'accepted',
         ]);
 
