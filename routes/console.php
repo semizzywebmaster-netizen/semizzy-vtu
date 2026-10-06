@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Schedule;
+use Illuminate\Support\Facades\Artisan;
+use Semizzy\Addons\SimHosting\Services\SimHostingService;
 
 Schedule::command('queue:work database', [
     '--stop-when-empty' => true,
@@ -28,3 +30,8 @@ Schedule::command('loans:process-overdue', ['--limit'=>100])->everyMinute()->wit
 
 Schedule::command('investments:process-maturity', ['--limit'=>100])->everyMinute()->withoutOverlapping(2)->onOneServer();
 Schedule::command('sim-hosting:expire', ['--limit'=>100])->everyMinute()->withoutOverlapping(2)->onOneServer();
+
+
+Artisan::command('sim-hosting:expire {--limit=100}', function (SimHostingService $service) {
+    $this->info('Expired '.$service->expire((int) $this->option('limit')).' rentals.');
+});
