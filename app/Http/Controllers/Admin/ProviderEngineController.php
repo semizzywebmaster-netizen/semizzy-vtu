@@ -487,18 +487,40 @@ class ProviderEngineController extends Controller
                 $stored++;
             }
 
+            $duration=(int)((microtime(true)-$started)*1000);
+            $discoveryComplete=$this->discoveryCompleteness($payload);
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'SUCCESS','last_test_message'=>'Service discovery succeeded.']);
+            $this->writeOperationLog($provider,$connection,'service_discovery',$endpoint->method,$url,'SUCCESS',$response->status(),$duration,null,'Service discovery succeeded.',[
+                'discovered'=>$stored,
+                'discovery_complete'=>$discoveryComplete,
+            ]);
             return response()->json([
-                'status'=>'success','discovered'=>$stored,
-                'duration_ms'=>(int)((microtime(true)-$started)*1000),
+                'status'=>'success','discovered'=>$stored,'discovery_complete'=>$discoveryComplete,
+                'duration_ms'=>$duration,
                 'categories'=>$provider->categories()->count(),
                 'services'=>$provider->providerServices()->count(),
             ]);
         } catch (\Throwable $e) {
             report($e);
+            $duration=(int)((microtime(true)-$started)*1000);
             $connection->update(['last_tested_at'=>now(),'last_test_status'=>'FAILED','last_test_message'=>'Service discovery failed safely.']);
+            $this->writeOperationLog($provider,$connection,'service_discovery',$endpoint->method,$this->endpointUrl($connection,$endpoint),'FAILED',null,$duration,get_class($e),'Service discovery failed safely.');
             return response()->json(['status'=>'failed','message'=>'Service discovery failed safely. Review server-side diagnostics.'],502);
         }
+    }
+
+    private function discoveryCompleteness(array $payload): bool
+    {
+        foreach (['discovery_complete','complete','is_complete'] as $key) {
+            if (array_key_exists($key,$payload) && is_bool($payload[$key])) return $payload[$key];
+        }
+        foreach (['has_more','hasMore','more'] as $key) {
+            if (array_key_exists($key,$payload) && is_bool($payload[$key])) return !$payload[$key];
+        }
+        foreach (['next_cursor','nextCursor','next_page_token','nextPageToken','next_url','nextUrl'] as $key) {
+            if (array_key_exists($key,$payload)) return blank($payload[$key]);
+        }
+        return false;
     }
 
     public function catalogueProducts(): JsonResponse
@@ -619,6 +641,8 @@ class ProviderEngineController extends Controller
             'external_service_id'=>(string)($item['id'] ?? $item['service_id'] ?? $item['serviceId'] ?? $item['product_id'] ?? $item['productId'] ?? $item['code'] ?? hash('sha256', json_encode([
                 $item['category'] ?? $item['category_name'] ?? $item['service_category'] ?? null,
                 $item['subcategory'] ?? $item['subcategory_name'] ?? $item['sub_category'] ?? null,
+                $item['service_type'] ?? $item['serviceType'] ?? $item['type'] ?? null,
+                $item['network'] ?? $item['operator'] ?? $item['network_name'] ?? $item['networkName'] ?? null,
                 $item['name'] ?? $item['service_name'] ?? $item['serviceName'] ?? $item['product_name'] ?? $item['productName'] ?? $item['title'] ?? null,
             ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))),
             'external_service_code'=>$this->normalizeScalar($item['code'] ?? $item['service_code'] ?? $item['serviceCode'] ?? $item['product_code'] ?? $item['productCode']),
