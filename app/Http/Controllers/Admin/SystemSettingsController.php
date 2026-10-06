@@ -25,7 +25,7 @@ class SystemSettingsController extends Controller
         return Inertia::render('Admin/Settings', [
             'settings' => [
                 'platform_name' => (string) ($stored['platform_name'] ?? config('app.name', 'SEMIZZY ONE')),
-                'support_email' => (string) ($stored['support_email'] ?? config('mail.from.address', '')),
+                'support_email' => (string) ($stored['support_email'] ?? ''),
                 'support_notice' => (string) ($stored['support_notice'] ?? ''),
                 'default_timezone' => (string) ($stored['default_timezone'] ?? config('app.timezone', 'UTC')),
                 'theme_key' => (string) ($stored['theme_key'] ?? 'modern-corporate'),
