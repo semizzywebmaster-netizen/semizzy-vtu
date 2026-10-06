@@ -16,7 +16,7 @@ class SystemSettingsService
 
         $settings = [
             'platform_name' => (string) config('app.name', 'SEMIZZY ONE'),
-            'support_email' => (string) config('mail.from.address', ''),
+            'support_email' => '',
             'support_notice' => '',
             'default_timezone' => (string) config('app.default_timezone', config('app.timezone', 'UTC')),
             'theme_key' => 'modern-corporate',
