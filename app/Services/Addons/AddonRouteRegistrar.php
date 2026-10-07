@@ -3,9 +3,7 @@
 namespace App\Services\Addons;
 
 use Illuminate\Support\Facades\Route;
-use App\Models\Addon;
 use RuntimeException;
-use Throwable;
 
 class AddonRouteRegistrar
 {
@@ -26,16 +24,6 @@ class AddonRouteRegistrar
     private function registerFiles(string $manifestKey): void
     {
         foreach ($this->registry->all() as $manifest) {
-            try {
-                $addon = Addon::query()->where('identifier', strtolower(trim((string) ($manifest['identifier'] ?? ''))))->first();
-            } catch (Throwable) {
-                // Composer/package discovery can run before the production database exists.
-                // Route registration will retry during the normal application boot cycle.
-                continue;
-            }
-            if (!$addon || $addon->status !== 'active') {
-                continue;
-            }
             $files = $manifest[$manifestKey] ?? [];
             if (!is_array($files)) {
                 continue;
