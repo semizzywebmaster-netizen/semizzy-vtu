@@ -345,6 +345,7 @@ class AddonLifecycleService
         $controls = $manifest['feature_controls'] ?? [];
         if (!is_array($controls)) return;
         $service = app(FeatureControlService::class);
+        if (!$enabled) usort($controls, fn ($a,$b) => count((array)($b['dependencies'] ?? [])) <=> count((array)($a['dependencies'] ?? [])));
         foreach ($controls as $control) {
             if (!is_array($control) || empty($control['key'])) continue;
             $rawKey = strtolower(trim((string) $control['key']));
