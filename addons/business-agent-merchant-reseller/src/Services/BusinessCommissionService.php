@@ -23,7 +23,7 @@ class BusinessCommissionService
    $seen[$parent->id]=true; $depth++;
 
    $rate=max(0,min($remainingBps,(int)$parent->commission_rate_bps));
-   $amount=intdiv($baseAmountMinor*$rate+5000,10000);
+   $amount=$this->percentage($baseAmountMinor,$rate);
    $remainingBps-=$rate;
 
    if($rate>0 && $amount>0){
@@ -68,6 +68,16 @@ class BusinessCommissionService
    $claim->status='settled'; $claim->settlement_reference=$reference; $claim->settled_at=now(); $claim->saveOrFail();
    return $claim->fresh();
   });
+ }
+
+ private function percentage(int $base,int $rate): int {
+  if ($base < 0 || $rate < 0 || $rate > 10000) throw new RuntimeException('Invalid commission calculation.');
+  if ($rate === 0 || $base === 0) return 0;
+  if ($base > intdiv(PHP_INT_MAX - 5000, $rate)) {
+   if (!function_exists('bcmul')) throw new RuntimeException('Large commission calculations require BCMath.');
+   return (int) bcdiv(bcadd(bcmul((string)$base,(string)$rate,0),'5000',0),'10000',0);
+  }
+  return intdiv($base * $rate + 5000,10000);
  }
 
  private function add(string $a,string $b):string {
