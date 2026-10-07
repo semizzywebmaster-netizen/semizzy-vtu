@@ -108,7 +108,7 @@ class TravelBookingExecutionService
 
         try {
             $this->wallet->settle($claimed);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             TravelBookingAttempt::create([
                 'travel_booking_id' => $claimed->id,
                 'provider_code' => $providerCode,
