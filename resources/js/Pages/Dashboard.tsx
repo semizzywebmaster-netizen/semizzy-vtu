@@ -1,6 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import CoreMobileNav from '../Components/CoreMobileNav';
 
 type Metric = { label: string; value: number | string; description?: string };
 type QuickLink = { label: string; url: string };
@@ -116,7 +115,7 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
         <section className="mt-6">
           <div className="flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Services</p><h2 className="mt-1 text-2xl font-black">What do you need today?</h2></div><Link href="/vtu" className="text-sm font-bold text-indigo-700">View all</Link></div>
           {visibleCategories.length === 0 ? <div className="mt-5 rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-2xl">✦</div><h3 className="mt-3 font-bold">Services are being prepared</h3><p className="mt-1 text-sm text-slate-500">Available services will appear here automatically when enabled in the catalogue.</p></div> :
-            <div className="mt-5 space-y-4">{visibleCategories.map(category => <section key={category.key} className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><div className="mb-4 flex items-center justify-between"><div><h3 className="font-extrabold">{category.name}</h3>{category.description && <p className="mt-0.5 text-xs text-slate-500">{category.description}</p>}</div><Link href={'/vtu?category=' + encodeURIComponent(category.key)} className="text-xs font-bold text-indigo-700">See all</Link></div><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{category.services.slice(0, 8).map(service => <Link key={service.key} href={service.url} className="rounded-2xl border border-slate-100 p-3 hover:bg-indigo-50"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-lg font-black text-indigo-700">{iconFor(service.name)}</span><p className="mt-2 line-clamp-2 text-sm font-bold">{service.name}</p></Link>)}</div></section>)}</div>}
+            <div className="mt-5 space-y-4">{visibleCategories.map(category => <section key={category.key} className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><div className="mb-4 flex items-center justify-between"><div><h3 className="font-extrabold">{category.name}</h3>{category.description && <p className="mt-0.5 text-xs text-slate-500">{category.description}</p>}</div><Link href={'/vtu?category=' + encodeURIComponent(category.key)} className="text-xs font-bold text-indigo-700">See all</Link></div><div className="grid grid-cols-4 gap-2">{category.services.slice(0, 8).map(service => <Link key={service.key} href={service.url} className="rounded-2xl border border-slate-100 p-3 hover:bg-indigo-50"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-lg font-black text-indigo-700">{iconFor(service.name)}</span><p className="mt-2 line-clamp-2 text-sm font-bold">{service.name}</p></Link>)}</div></section>)}</div>}
         </section>
 
         {promotionSlides.length > 0 && <section className="mt-6 overflow-hidden rounded-3xl bg-indigo-600 text-white shadow-lg">
@@ -134,7 +133,6 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
         </div>
       </section>
 
-      <CoreMobileNav active="home" unreadCount={unreadNotifications || 0} />
     </main>;
   }
 
