@@ -2,7 +2,13 @@
     "name": "semizzywebmaster/semizzy-one-core",
     "type": "project",
     "description": "SEMIZZY ONE Core V2 integrated fintech and provider platform",
-    "keywords": ["laravel","fintech","vtu","providers","addons"],
+    "keywords": [
+        "laravel",
+        "fintech",
+        "vtu",
+        "providers",
+        "addons"
+    ],
     "license": "proprietary",
     "require": {
         "php": "^8.4",
@@ -30,16 +36,33 @@
             "Semizzy\\Addons\\Loans\\": "addons/loans.credit/src/",
             "Semizzy\\Addons\\Savings\\": "addons/savings.goals/src/",
             "Semizzy\\Addons\\Investments\\": "addons/investments.wealth/src/",
-            "Semizzy\\Addons\\SimHosting\\": "addons/sim-hosting/src/"
+            "Semizzy\\Addons\\SimHosting\\": "addons/sim-hosting/src/",
+            "Semizzy\\Addons\\BulkSms\\": "addons/bulk-sms.communication/src/"
         }
     },
-    "autoload-dev": {"psr-4": {"Tests\\": "tests/"}},
-    "scripts": {
-        "post-autoload-dump": ["Illuminate\\Foundation\\ComposerScripts::postAutoloadDump","@php artisan package:discover --ansi"],
-        "test": "@php artisan test",
-        "post-create-project-cmd": ["@php artisan key:generate --ansi"]
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
     },
-    "config": {"optimize-autoloader": true,"preferred-install": "dist","sort-packages": true,"allow-plugins": {"php-http/discovery": true}},
+    "scripts": {
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php artisan package:discover --ansi"
+        ],
+        "test": "@php artisan test",
+        "post-create-project-cmd": [
+            "@php artisan key:generate --ansi"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    },
     "minimum-stability": "stable",
     "prefer-stable": true
 }
