@@ -1,6 +1,7 @@
 <?php
 namespace Addons\CommunicationWhatsapp\Http\Controllers;
 
+use Addons\CommunicationWhatsapp\Services\WhatsAppDeliveryStatusService;
 use Addons\CommunicationWhatsapp\Services\WhatsAppWebhookService;
 use App\Models\Communication\Provider;
 use Illuminate\Http\Request;
@@ -18,10 +19,13 @@ class WhatsAppWebhookController
   }
  }
 
- public function receive(Request $request,Provider $provider,WhatsAppWebhookService $service): Response
+ public function receive(Request $request,Provider $provider,WhatsAppWebhookService $service,WhatsAppDeliveryStatusService $statusService): Response
  {
   try {
-   $service->handle($provider,$request->getContent(),$request->header('X-Hub-Signature-256'));
+   $raw=$request->getContent();
+   $service->handle($provider,$raw,$request->header('X-Hub-Signature-256'));
+   $payload=json_decode($raw,true);
+   if(is_array($payload)) $statusService->handle($payload);
    return response('OK',200);
   } catch(Throwable $e) {
    return response('Webhook rejected',400);
