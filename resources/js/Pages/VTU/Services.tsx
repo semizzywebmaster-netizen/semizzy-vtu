@@ -52,7 +52,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
   const parseBulkRows = () => {
     const seen = new Set<string>();
     const rows = bulkInput.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
-      const [phone, amount] = line.split(/[,;\\t]/).map(value => value.trim());
+      const [phone, amount] = line.split(/[,;\t]/g).map(value => value.trim());
       return { phone: phone || '', amount: amount || '', network: detectNetwork(phone || '') };
     }).filter(row => row.phone);
     const normalized = rows.filter(row => {
@@ -140,7 +140,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
   const parseBulkDataRows = () => {
     const seen = new Set<string>();
     const rows = bulkDataInput.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
-      const [phone] = line.split(/[,;\\t]/).map(value => value.trim());
+      const [phone] = line.split(/[,;\t]/g).map(value => value.trim());
       return { phone: phone || '', network: detectNetwork(phone || '') };
     }).filter(row => row.phone);
     const normalized = rows.filter(row => {
