@@ -175,16 +175,41 @@ class TravelWalletService
 
     private function add(string $a, string $b): string
     {
+        if (function_exists('bcadd')) {
+            return bcadd($a, $b, 0);
+        }
+
+        if (!$this->fitsNativeInteger($a) || !$this->fitsNativeInteger($b)) {
+            throw new RuntimeException('Large wallet amounts require the BCMath PHP extension.');
+        }
+
         return (string) ((int) $a + (int) $b);
     }
 
     private function sub(string $a, string $b): string
     {
+        if (function_exists('bcsub')) {
+            return bcsub($a, $b, 0);
+        }
+
+        if (!$this->fitsNativeInteger($a) || !$this->fitsNativeInteger($b)) {
+            throw new RuntimeException('Large wallet amounts require the BCMath PHP extension.');
+        }
+
         return (string) ((int) $a - (int) $b);
     }
 
-    private function compare(string $a, string $b): int
+    private function fitsNativeInteger(string $value): bool
     {
-        return (int) $a <=> (int) $b;
+        $value = ltrim($value, '0');
+        return ctype_digit($value === '' ? '0' : $value) && PHP_INT_SIZE >= 8 && strlen($value) <= 17;
+    }
+
+    private function compare(string $left, string $right): int
+    {
+        $left = ltrim($left, '0') ?: '0';
+        $right = ltrim($right, '0') ?: '0';
+
+        return strlen($left) <=> strlen($right) ?: strcmp($left, $right);
     }
 }
