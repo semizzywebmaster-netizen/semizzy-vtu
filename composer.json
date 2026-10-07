@@ -39,6 +39,7 @@
       "Semizzy\\Addons\\SimHosting\\": "addons/sim-hosting/src/",
       "Semizzy\\Addons\\BulkSms\\": "addons/bulk-sms.communication/src/",
       "Semizzy\\Addons\\Exams\\": "addons/exams.results/src/",
+      "Semizzy\\Addons\\Marketplace\\": "addons/marketplace.commerce/src/",
       "Semizzy\\Addons\\P2p\\": "addons/p2p.transfers/src/"
     }
   },
