@@ -29,6 +29,7 @@ use App\Http\Controllers\RealtimeController;
 use App\Http\Controllers\HelpCenterController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\UserTransactionController;
+use App\Http\Controllers\TransactionReceiptController;
 use App\Http\Controllers\WalletFundingController;
 use App\Http\Controllers\Admin\CommunicationController;
 use App\Http\Controllers\SetupController;
@@ -123,6 +124,7 @@ Route::middleware(['auth'])->group(function (): void {
     Route::post('/api-access', [ApiAccessController::class, 'store'])->middleware(['throttle:5,1','transaction.pin'])->name('api.access.store');
     Route::delete('/api-access/{token}', [ApiAccessController::class, 'destroy'])->whereNumber('token')->middleware(['throttle:10,1','transaction.pin'])->name('api.access.destroy');
     Route::get('/transactions', [UserTransactionController::class, 'index'])->name('transactions.index');
+    Route::get('/transactions/{movement}/receipt', [TransactionReceiptController::class, 'show'])->whereNumber('movement')->name('transactions.receipt');
     Route::get('/wallet/fund', [WalletFundingController::class, 'index'])->name('wallet.fund');
     Route::get('/send-money', fn () => Inertia::render('SendMoney'))->name('send-money.index');
     Route::get('/withdraw', fn () => Inertia::render('Withdraw'))->name('withdraw.index');
