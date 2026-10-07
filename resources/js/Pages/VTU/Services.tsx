@@ -25,6 +25,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
   const [bulkResult, setBulkResult] = useState<string | null>(null);
   const [bulkQuote, setBulkQuote] = useState<{ total_customer_price: string; currency: string; total_items: number; items: Array<{ index: number; product_id: number; customer_price: string; currency: string }> } | null>(null);
   const [bulkQuoting, setBulkQuoting] = useState(false);
+  const [bulkResultItems, setBulkResultItems] = useState<Array<{ sequence?: number; recipient?: string; status?: string; reference?: string | null; error_message?: string | null }>>([]);
 
   const airtimeService = useMemo(() => services.find(service => service.key === 'airtime'), [services]);
   const airtimeProduct = airtimeService?.products?.[0] ?? null;
@@ -53,7 +54,17 @@ export default function Services({ services = [] }: { services: Service[] }) {
     setBulkRows(normalized);
     setBulkQuote(null);
     setBulkResult(null);
+    setBulkResultItems([]);
   };
+  const importBulkFile = async (file: File) => {
+    const text = await file.text();
+    setBulkInput(text);
+    setBulkRows([]);
+    setBulkQuote(null);
+    setBulkResult(null);
+    setBulkResultItems([]);
+  };
+
   const quoteBulk = async () => {
     if (!airtimeProduct || !bulkRows.length) return;
     setBulkQuoting(true); setBulkResult(null);
@@ -75,7 +86,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
 
   const submitBulk = async () => {
     if (!airtimeProduct || !bulkRows.length || bulkPin.length !== 4) return;
-    setBulkBusy(true); setBulkResult(null);
+    setBulkBusy(true); setBulkResult(null); setBulkResultItems([]);
     try {
       const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
       const items=bulkRows.map((row,index)=>({
@@ -89,6 +100,8 @@ export default function Services({ services = [] }: { services: Service[] }) {
       const body=await response.json();
       if(!response.ok) throw new Error(body.message || 'Bulk airtime could not be processed.');
       const data=body.data;
+      const items=Array.isArray(data?.items) ? data.items : [];
+      setBulkResultItems(items.map((item: any) => ({ sequence: item.sequence, recipient: item.recipient, status: item.status, reference: item.reference ?? item.transaction_reference ?? null, error_message: item.error_message ?? null })));
       setBulkResult(`Bulk ${data.reference || 'request'}: ${data.successful_items ?? 0} successful, ${data.failed_items ?? 0} failed, ${data.total_items ?? bulkRows.length} total.`);
       setBulkPin('');
     } catch(e) {
@@ -228,8 +241,9 @@ export default function Services({ services = [] }: { services: Service[] }) {
       <div className='flex items-start justify-between gap-4'><div><p className='text-xs font-black uppercase tracking-wider text-indigo-600'>Bulk Airtime</p><h3 className='mt-1 text-2xl font-black'>Auto-detect & recharge</h3><p className='mt-1 text-sm text-slate-500'>All rows use the configured airtime product. Mixed networks are supported.</p></div><button type='button' onClick={() => setBulkOpen(false)} disabled={bulkBusy} className='flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 font-bold'>×</button></div>
       <div className='mt-5 rounded-2xl bg-slate-50 p-4'>
         <p className='text-xs font-black uppercase tracking-wider text-slate-500'>Paste list</p>
-        <p className='mt-1 text-xs text-slate-500'>Format: <span className='font-mono'>08012345678,1000</span> — one recipient per line. CSV-style commas, semicolons and tabs are accepted.</p>
+        <p className='mt-2 text-xs text-slate-500'>CSV/TXT format: phone,amount. Duplicate numbers are removed before processing.<br/>Format: <span className='font-mono'>08012345678,1000</span> — one recipient per line. CSV-style commas, semicolons and tabs are accepted.</p>
         <textarea value={bulkInput} onChange={e => setBulkInput(e.target.value)} placeholder={'08012345678,1000\n08123456789,2000\n0724xxxxxxx,1500'} rows={6} className='mt-3 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-indigo-500' />
+        <label className='mt-3 inline-flex cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700'>Upload CSV / TXT<input type='file' accept='.csv,.txt,text/csv,text/plain' className='hidden' onChange={e => { const file=e.target.files?.[0]; if(file) void importBulkFile(file); e.currentTarget.value=''; }} /></label>
         <button type='button' onClick={parseBulkRows} className='mt-3 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-black text-white'>Validate & preview</button>
       </div>
       {bulkRows.length > 0 && <div className='mt-4 overflow-x-auto rounded-2xl border border-slate-200'><table className='w-full text-left text-xs'><thead className='bg-slate-50'><tr><th className='p-3'>Phone</th><th className='p-3'>Amount</th><th className='p-3'>Detected network</th></tr></thead><tbody>{bulkRows.map((row,index) => <tr key={index} className='border-t'><td className='p-3 font-mono'>{row.phone}</td><td className='p-3'>₦{Number(row.amount || 0).toLocaleString()}</td><td className='p-3 font-bold'>{row.network ? row.network.toUpperCase() : <span className='text-amber-600'>Unknown — review</span>}</td></tr>)}</tbody></table></div>}
@@ -241,6 +255,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
         <label className='mt-4 block text-sm font-bold'>Transaction PIN<input value={bulkPin} onChange={e => setBulkPin(e.target.value.replace(/\D/g,'').slice(0,4))} type='password' inputMode='numeric' maxLength={4} placeholder='••••' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-center tracking-[0.5em] outline-none' /></label>
         <p className='mt-2 text-[11px] leading-5 text-slate-500'>Network detection uses a safe prefix fallback. Where the provider supports current-network/MNP verification, that provider result should take precedence before fulfillment.</p>
         {bulkResult && <div className='mt-3 rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700'>{bulkResult}</div>}
+        {bulkResultItems.length > 0 && <div className='mt-3 max-h-56 overflow-auto rounded-xl border border-slate-200'><table className='w-full text-left text-[11px]'><thead className='sticky top-0 bg-slate-50'><tr><th className='p-2'>#</th><th className='p-2'>Recipient</th><th className='p-2'>Status</th><th className='p-2'>Reference / Error</th></tr></thead><tbody>{bulkResultItems.map((item,index)=><tr key={`${item.sequence ?? index}-${item.recipient ?? ''}`} className='border-t'><td className='p-2'>{item.sequence ?? index+1}</td><td className='p-2 font-mono'>{item.recipient || '—'}</td><td className='p-2 font-bold'>{item.status || '—'}</td><td className='p-2'>{item.reference || item.error_message || '—'}</td></tr>)}</tbody></table></div>}
         <button type='button' onClick={submitBulk} disabled={bulkBusy || !bulkQuote || bulkPin.length !== 4 || bulkRows.some(row => !row.network || !/^\+?(234|0)\d{10}$/.test(row.phone.replace(/\s|-/g,'')) || !(Number(row.amount) > 0))} className='mt-4 w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-black text-white disabled:opacity-40'>{bulkBusy ? 'Processing bulk airtime…' : 'Confirm & purchase all'}</button>
       </div>}
     </section>
