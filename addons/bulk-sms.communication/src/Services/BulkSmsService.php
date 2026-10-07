@@ -1,71 +1,14 @@
 <?php
 namespace Semizzy\Addons\BulkSms\Services;
-use App\Models\WalletAccount;
-use App\Models\WalletMovement;
-use App\Services\Providers\ProviderManager;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use RuntimeException;
-use Semizzy\Addons\BulkSms\Models\BulkSmsCampaign;
-use Semizzy\Addons\BulkSms\Models\BulkSmsMessage;
-use Semizzy\Addons\BulkSms\Models\BulkSmsProduct;
-
-final class BulkSmsService
-{
+use App\Models\WalletAccount; use App\Models\WalletMovement; use App\Services\Providers\ProviderManager; use Illuminate\Support\Facades\DB; use Illuminate\Support\Str; use RuntimeException;
+use Semizzy\Addons\BulkSms\Models\BulkSmsCampaign; use Semizzy\Addons\BulkSms\Models\BulkSmsMessage; use Semizzy\Addons\BulkSms\Models\BulkSmsProduct;
+final class BulkSmsService {
  public function __construct(private ProviderManager $providers){}
- private function cmp(string $a,string $b):int{return function_exists('bccomp')?bccomp($a,$b,0):((int)$a<=>$b);}
- private function mul(string $a,int $b):string{return function_exists('bcmul')?bcmul($a,(string)$b,0):(string)((int)$a*$b);}
- private function add(string $a,string $b):string{return function_exists('bcadd')?bcadd($a,$b,0):(string)((int)$a+(int)$b);}
- private function sub(string $a,string $b):string{return function_exists('bcsub')?bcsub($a,$b,0):(string)((int)$a-(int)$b);}
- private function debit(WalletAccount $w,string $amount,string $op,array $meta):void{
-  $before=(string)$w->available_minor;if($this->cmp($before,$amount)<0)throw new RuntimeException('Insufficient wallet balance.');
-  $after=$this->sub($before,$amount);$w->available_minor=$after;$w->saveOrFail();
-  WalletMovement::create(['wallet_account_id'=>$w->id,'operation_key'=>$op,'reference'=>'SMS-WAL-'.strtoupper(Str::random(10)),'type'=>'bulk_sms','amount_minor'=>$amount,'currency'=>$w->currency,'available_before_minor'=>$before,'available_after_minor'=>$after,'held_before_minor'=>(string)$w->held_minor,'held_after_minor'=>(string)$w->held_minor,'metadata'=>$meta]);
- }
- private function refund(BulkSmsCampaign $c,BulkSmsMessage $m,string $reason):void{
-  $op='bulk-sms:refund:'.$m->id;
-  if(WalletMovement::where('operation_key',$op)->exists())return;
-  $w=WalletAccount::where('user_id',$c->user_id)->where('currency',$c->currency)->where('status','active')->lockForUpdate()->first();
-  if(!$w)throw new RuntimeException('Active wallet not found for SMS refund.');
-  $before=(string)$w->available_minor;$after=$this->add($before,(string)$m->amount_minor);$w->available_minor=$after;$w->saveOrFail();
-  WalletMovement::create(['wallet_account_id'=>$w->id,'operation_key'=>$op,'reference'=>'SMS-REF-'.strtoupper(Str::random(10)),'type'=>'bulk_sms_refund','amount_minor'=>(string)$m->amount_minor,'currency'=>$w->currency,'available_before_minor'=>$before,'available_after_minor'=>$after,'held_before_minor'=>(string)$w->held_minor,'held_after_minor'=>(string)$w->held_minor,'metadata'=>['campaign'=>$c->reference,'message_id'=>$m->id,'reason'=>$reason]]);
- }
- private function finish(BulkSmsCampaign $c):void{
-  $done=(int)$c->delivered_count+(int)$c->failed_count;
-  if($done >= (int)$c->recipient_count){$c->status='completed';$c->completed_at=now();$c->save();}
-  elseif((int)$c->sent_count>0 && $c->status==='queued'){$c->status='processing';$c->started_at=now();$c->save();}
- }
- public function createCampaign(int $uid,array $data,array $phones):BulkSmsCampaign{return DB::transaction(function()use($uid,$data,$phones){
-  $existing=BulkSmsCampaign::where('user_id',$uid)->where('idempotency_key',$data['idempotency_key'])->first();if($existing)return $existing;
-  $p=BulkSmsProduct::where('key',$data['product_key'])->where('active',true)->lockForUpdate()->firstOrFail();
-  $phones=array_values(array_unique(array_filter(array_map('trim',$phones))));$limit=(int)$p->max_recipients;
-  if(count($phones)<1||count($phones)>$limit)throw new RuntimeException('Invalid recipient count.');
-  $amount=$this->mul((string)$p->price_per_sms_minor,count($phones));
-  $w=WalletAccount::where('user_id',$uid)->where('currency',$p->currency)->where('status','active')->lockForUpdate()->firstOrFail();
-  $this->debit($w,$amount,'bulk-sms:create:'.$data['idempotency_key'],['product'=>$p->key,'recipients'=>count($phones)]);
-  $c=BulkSmsCampaign::create(['user_id'=>$uid,'product_id'=>$p->id,'reference'=>'SMS-'.strtoupper(Str::random(12)),'sender'=>$data['sender'],'message'=>$data['message'],'status'=>'queued','recipient_count'=>count($phones),'amount_minor'=>$amount,'currency'=>$p->currency,'scheduled_at'=>$data['scheduled_at']??null,'idempotency_key'=>$data['idempotency_key']]);
-  foreach($phones as $phone)BulkSmsMessage::create(['campaign_id'=>$c->id,'phone'=>$phone,'status'=>'queued','amount_minor'=>(string)$p->price_per_sms_minor,'idempotency_key'=>$c->reference.':'.hash('sha256',$phone)]);
-  return $c;
- });}
- public function dispatch(int $limit=100):int{
-  $now=now();$messages=BulkSmsMessage::where('status','queued')->whereHas('campaign',fn($q)=>$q->where(function($x)use($now){$x->whereNull('scheduled_at')->orWhere('scheduled_at','<=',$now);})->whereIn('status',['queued','processing']))->with(['campaign.product'])->orderBy('id')->limit(max(1,min($limit,500)))->get();$count=0;
-  foreach($messages as $m){$c=$m->campaign;$p=$c?->product;if(!$c||!$p)continue;
-   if(!$c->started_at){$c->started_at=now();$c->status='processing';$c->save();}
-   try{
-    $result=$this->providers->execute('bulk-sms.communication','sms_send',['to'=>$m->phone,'sender'=>$c->sender,'message'=>$c->message,'campaign_reference'=>$c->reference],'bulk-sms:send:'.$m->id);
-    if($result->accepted){$m->status='sent';$m->provider_status=$result->status;$m->provider_reference=$result->providerReference;$m->sent_at=now();$m->save();$c->increment('sent_count');$count++;}
-    elseif($result->duplicateRisk||in_array(strtoupper((string)$result->status),['UNKNOWN','PENDING','PROCESSING'],true)){$m->status='unknown';$m->provider_status=$result->status;$m->provider_reference=$result->providerReference;$m->error='Provider state is uncertain; requery required before refund or retry.';$m->save();$count++;}
-    else{DB::transaction(function()use($c,$m,$result){$m->status='failed';$m->provider_status=$result->status;$m->error=$result->message?:'Provider rejected message.';$m->failed_at=now();$m->save();$this->refund($c,$m,$m->error);$c->increment('failed_count');$this->finish($c);});$count++;}
-   }catch(\Throwable $e){report($e);$m->status='unknown';$m->error='Provider state is uncertain; requery required before retry or refund.';$m->save();$count++;}
-  }return $count;
- }
- public function reconcile(int $limit=100):int{
-  $messages=BulkSmsMessage::where('status','sent')->whereNotNull('provider_reference')->with('campaign.product')->orderBy('id')->limit(max(1,min($limit,500)))->get();$n=0;
-  foreach($messages as $m){$c=$m->campaign;$p=$c?->product;if(!$c||!$p)continue;try{
-   $r=$this->providers->executeProvider($p->provider,'bulk-sms.communication','sms_status',['provider_reference'=>$m->provider_reference,'campaign_reference'=>$c->reference],'bulk-sms:status:'.$m->id);$status=strtolower((string)$r->status);
-   if(in_array($status,['delivered','success','successful','completed'],true)){$m->status='delivered';$m->delivered_at=now();$m->provider_status=$r->status;$m->save();$c->increment('delivered_count');$c->refresh();$this->finish($c);$n++;}
-   elseif(in_array($status,['failed','rejected','undelivered'],true)){DB::transaction(function()use($c,$m,$r){$m->status='failed';$m->provider_status=$r->status;$m->failed_at=now();$m->error=$r->message?:'Provider reported delivery failure.';$m->save();$this->refund($c,$m,$m->error);$c->increment('failed_count');$c->refresh();$this->finish($c);});$n++;}
-  }catch(\Throwable $e){report($e);}
-  }return $n;
- }
+ private function cmp(string $a,string $b):int{return function_exists('bccomp')?bccomp($a,$b,0):((int)$a<=>$b);} private function mul(string $a,int $b):string{return function_exists('bcmul')?bcmul($a,(string)$b,0):(string)((int)$a*$b);} private function add(string $a,string $b):string{return function_exists('bcadd')?bcadd($a,$b,0):(string)((int)$a+(int)$b);} private function sub(string $a,string $b):string{return function_exists('bcsub')?bcsub($a,$b,0):(string)((int)$a-(int)$b);}
+ private function debit(WalletAccount $w,string $amount,string $op,array $meta):void{$before=(string)$w->available_minor;if($this->cmp($before,$amount)<0)throw new RuntimeException('Insufficient wallet balance.');$after=$this->sub($before,$amount);$w->available_minor=$after;$w->saveOrFail();WalletMovement::create(['wallet_account_id'=>$w->id,'operation_key'=>$op,'reference'=>'SMS-WAL-'.strtoupper(Str::random(10)),'type'=>'bulk_sms','amount_minor'=>$amount,'currency'=>$w->currency,'available_before_minor'=>$before,'available_after_minor'=>$after,'held_before_minor'=>(string)$w->held_minor,'held_after_minor'=>(string)$w->held_minor,'metadata'=>$meta]);}
+ private function refund(BulkSmsCampaign $c,BulkSmsMessage $m,string $reason):void{$op='bulk-sms:refund:'.$m->id;if(WalletMovement::where('operation_key',$op)->exists())return;$w=WalletAccount::where('user_id',$c->user_id)->where('currency',$c->currency)->where('status','active')->lockForUpdate()->first();if(!$w)throw new RuntimeException('Active wallet not found for SMS refund.');$before=(string)$w->available_minor;$after=$this->add($before,(string)$m->amount_minor);$w->available_minor=$after;$w->saveOrFail();WalletMovement::create(['wallet_account_id'=>$w->id,'operation_key'=>$op,'reference'=>'SMS-REF-'.strtoupper(Str::random(10)),'type'=>'bulk_sms_refund','amount_minor'=>(string)$m->amount_minor,'currency'=>$w->currency,'available_before_minor'=>$before,'available_after_minor'=>$after,'held_before_minor'=>(string)$w->held_minor,'held_after_minor'=>(string)$w->held_minor,'metadata'=>['campaign'=>$c->reference,'message_id'=>$m->id,'reason'=>$reason]]);}
+ private function finish(BulkSmsCampaign $c):void{$done=(int)$c->delivered_count+(int)$c->failed_count;if($done >= (int)$c->recipient_count){$c->status='completed';$c->completed_at=now();$c->save();}}
+ public function createCampaign(int $uid,array $data,array $phones):BulkSmsCampaign{return DB::transaction(function()use($uid,$data,$phones){$existing=BulkSmsCampaign::where('user_id',$uid)->where('idempotency_key',$data['idempotency_key'])->first();if($existing)return $existing;$p=BulkSmsProduct::where('key',$data['product_key'])->where('active',true)->lockForUpdate()->firstOrFail();$phones=array_values(array_unique(array_filter(array_map('trim',$phones))));if(count($phones)<1||count($phones)>(int)$p->max_recipients)throw new RuntimeException('Invalid recipient count.');$amount=$this->mul((string)$p->price_per_sms_minor,count($phones));$w=WalletAccount::where('user_id',$uid)->where('currency',$p->currency)->where('status','active')->lockForUpdate()->firstOrFail();$this->debit($w,$amount,'bulk-sms:create:'.$data['idempotency_key'],['product'=>$p->key,'recipients'=>count($phones)]);$c=BulkSmsCampaign::create(['user_id'=>$uid,'product_id'=>$p->id,'reference'=>'SMS-'.strtoupper(Str::random(12)),'sender'=>$data['sender'],'message'=>$data['message'],'status'=>'queued','recipient_count'=>count($phones),'amount_minor'=>$amount,'currency'=>$p->currency,'scheduled_at'=>$data['scheduled_at']??null,'idempotency_key'=>$data['idempotency_key']]);foreach($phones as $phone)BulkSmsMessage::create(['campaign_id'=>$c->id,'phone'=>$phone,'status'=>'queued','amount_minor'=>(string)$p->price_per_sms_minor,'idempotency_key'=>$c->reference.':'.hash('sha256',$phone)]);return $c;});}
+ public function dispatch(int $limit=100):int{$now=now();$messages=BulkSmsMessage::where('status','queued')->whereHas('campaign',fn($q)=>$q->where(function($x)use($now){$x->whereNull('scheduled_at')->orWhere('scheduled_at','<=',$now);})->whereIn('status',['queued','processing']))->with(['campaign.product'])->orderBy('id')->limit(max(1,min($limit,500)))->get();$count=0;foreach($messages as $m){$c=$m->campaign;$p=$c?->product;if(!$c||!$p)continue;if(!$c->started_at){$c->started_at=now();$c->status='processing';$c->save();}try{$r=$this->providers->execute('bulk-sms.communication','sms_send',['to'=>$m->phone,'sender'=>$c->sender,'message'=>$c->message,'campaign_reference'=>$c->reference],'bulk-sms:send:'.$m->id);if($r->accepted){$m->status='sent';$m->provider_status=$r->status;$m->provider_reference=$r->providerReference;$m->sent_at=now();$m->save();$c->increment('sent_count');$count++;}elseif($r->duplicateRisk||in_array(strtoupper((string)$r->status),['UNKNOWN','PENDING','PROCESSING'],true)){$m->status='unknown';$m->provider_status=$r->status;$m->provider_reference=$r->providerReference;$m->error='Provider state is uncertain; requery required.';$m->save();$count++;}else{DB::transaction(function()use($c,$m,$r){$m->status='failed';$m->provider_status=$r->status;$m->error=$r->message?:'Provider rejected message.';$m->failed_at=now();$m->save();$this->refund($c,$m,$m->error);$c->increment('failed_count');$this->finish($c);});$count++;}}catch(\Throwable $e){report($e);$m->status='unknown';$m->error='Provider state is uncertain; requery required.';$m->save();$count++;}}return $count;}
+ public function reconcile(int $limit=100):int{$messages=BulkSmsMessage::where('status','sent')->whereNotNull('provider_reference')->with('campaign.product')->orderBy('id')->limit(max(1,min($limit,500)))->get();$n=0;foreach($messages as $m){$c=$m->campaign;$p=$c?->product;if(!$c||!$p)continue;try{$r=$this->providers->execute('bulk-sms.communication','sms_status',['provider_reference'=>$m->provider_reference,'campaign_reference'=>$c->reference],'bulk-sms:status:'.$m->id);$s=strtolower((string)$r->status);if(in_array($s,['delivered','success','successful','completed'],true)){$m->status='delivered';$m->delivered_at=now();$m->provider_status=$r->status;$m->save();$c->increment('delivered_count');$c->refresh();$this->finish($c);$n++;}elseif(in_array($s,['failed','rejected','undelivered'],true)){DB::transaction(function()use($c,$m,$r){$m->status='failed';$m->provider_status=$r->status;$m->failed_at=now();$m->error=$r->message?:'Provider reported delivery failure.';$m->save();$this->refund($c,$m,$m->error);$c->increment('failed_count');$c->refresh();$this->finish($c);});$n++;}}catch(\Throwable $e){report($e);}}return $n;}
 }
