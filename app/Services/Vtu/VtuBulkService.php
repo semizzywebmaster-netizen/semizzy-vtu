@@ -98,6 +98,7 @@ class VtuBulkService
 
         $items = array_values($items);
         $seenKeys = [];
+        $seenRecipients = [];
 
         foreach ($items as $index => $item) {
             if (!is_array($item) || !isset($item['product_id']) || !is_numeric($item['product_id']) || (int) $item['product_id'] < 1) {
@@ -126,6 +127,23 @@ class VtuBulkService
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'items.' . $index . '.payload' => 'The item payload must be an object.',
                 ]);
+            }
+
+            $product = ServiceProduct::query()->with('service')->find((int) $item['product_id']);
+            if ($product?->service && in_array($product->service->key, ['airtime', 'data'], true)) {
+                $phone = trim((string) (($item['payload'] ?? [])['phone'] ?? ''));
+                if ($phone !== '') {
+                    $canonical = preg_replace('/\D+/', '', $phone);
+                    $canonical = preg_replace('/^234/', '0', $canonical);
+                    if ($canonical !== '' && isset($seenRecipients[$canonical])) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            'items.' . $index . '.payload.phone' => 'Duplicate recipient numbers are not allowed in a bulk airtime/data request.',
+                        ]);
+                    }
+                    if ($canonical !== '') {
+                        $seenRecipients[$canonical] = true;
+                    }
+                }
             }
         }
 
