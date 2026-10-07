@@ -13,6 +13,15 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
+        if ($request->user() && $request->session()->get('device_id')) {
+            $device = $request->user()->devices()->find($request->session()->get('device_id'));
+            if (!$device || $device->revoked_at) {
+                \Illuminate\Support\Facades\Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+            }
+        }
+
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $request->user() ? [
