@@ -19,6 +19,61 @@ class VtuBulkService
         private VtuPayloadValidator $validator,
     ) {}
 
+    public function quote(array $items, string $tier = 'USER'): array
+    {
+        if (count($items) < 1 || count($items) > self::MAX_ITEMS) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'items' => 'A bulk request must contain between 1 and ' . self::MAX_ITEMS . ' items.',
+            ]);
+        }
+
+        $total = 0.0;
+        $currency = null;
+        $rows = [];
+
+        foreach (array_values($items) as $index => $item) {
+            if (!is_array($item) || !isset($item['product_id'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'items.' . $index . '.product_id' => 'A valid product ID is required.',
+                ]);
+            }
+
+            $product = ServiceProduct::query()->with('service')->findOrFail((int) $item['product_id']);
+            if (!$product->service || !$product->enabled || !$product->service->enabled) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'items.' . $index => 'The selected VTU product or service is unavailable.',
+                ]);
+            }
+
+            $payload = (array) ($item['payload'] ?? []);
+            $this->validator->validate($product->service, $payload);
+            $q = $this->transactions->quote($product, $tier);
+            $price = (float) $q['customer_price'];
+
+            if ($currency !== null && $currency !== $q['currency']) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'items.' . $index => 'All bulk items must use the same currency.',
+                ]);
+            }
+
+            $currency = $q['currency'];
+            $total += $price;
+            $rows[] = [
+                'index' => $index,
+                'product_id' => (int) $product->id,
+                'customer_price' => $q['customer_price'],
+                'currency' => $q['currency'],
+            ];
+        }
+
+        return [
+            'total_customer_price' => number_format($total, 2, '.', ''),
+            'currency' => $currency ?? 'NGN',
+            'total_items' => count($rows),
+            'items' => $rows,
+        ];
+    }
+
     public function execute(int $uid, array $items, string $tier = 'USER', ?string $operationKey = null): VtuBulkOperation
     {
         if (count($items) < 1 || count($items) > self::MAX_ITEMS) {
