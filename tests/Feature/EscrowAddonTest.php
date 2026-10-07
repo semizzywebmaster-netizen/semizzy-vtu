@@ -42,6 +42,17 @@ class EscrowAddonTest extends TestCase
         $this->assertContains('escrow.expiry_reconciliation', $m['scheduled_tasks']);
     }
 
+    public function test_escrow_web_actions_are_protected_by_addon_and_transaction_pin(): void
+    {
+        $routes = $this->source('addons/escrow.protection/routes/web.php');
+
+        $this->assertStringContainsString('ensure.addon:escrow.protection', $routes);
+        $this->assertSame(4, substr_count($routes, 'transaction.pin'));
+        $this->assertStringContainsString('permission:escrow.release', $routes);
+        $this->assertStringContainsString('permission:escrow.dispute', $routes);
+        $this->assertStringContainsString('/escrow/{escrow}/cancel', $routes);
+    }
+
     public function test_escrow_api_is_protected_by_addon_and_transaction_pin(): void
     {
         $routes = $this->source('addons/escrow.protection/routes/api.php');
