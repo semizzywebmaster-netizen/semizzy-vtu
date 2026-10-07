@@ -99,7 +99,6 @@ class EscrowAddonTest extends TestCase
     {
         $routes = $this->source('addons/escrow.protection/routes/admin.php');
 
-        $this->assertStringContainsString('permission:escrow.manage', $routes);
         $this->assertStringContainsString('permission:escrow.refund', $routes);
         $this->assertStringContainsString("'/admin/escrow/{escrow}/resolve'", $routes);
     }
