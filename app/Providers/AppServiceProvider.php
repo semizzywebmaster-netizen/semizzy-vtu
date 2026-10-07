@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\SystemSetting;
+use App\Models\Addon;
+use Semizzy\Addons\MailerSmtp\Services\MailerSmtpService;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
@@ -13,6 +15,14 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        try {
+            if (Schema::hasTable('addons') && Addon::query()->where('identifier','mailer.smtp')->where('status','active')->exists()) {
+                if (app(MailerSmtpService::class)->configure()) return;
+            }
+        } catch (\Throwable) {
+            // Fall back to the legacy Core SMTP settings when the addon is unavailable.
+        }
+
         try {
             if (! Schema::hasTable('system_settings')) return;
 
