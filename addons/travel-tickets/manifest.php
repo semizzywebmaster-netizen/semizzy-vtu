@@ -15,6 +15,6 @@ return [
  'web_route_files'=>['addons/travel-tickets/routes/web.php','addons/travel-tickets/routes/admin.php'],'api_route_files'=>['addons/travel-tickets/routes/api.php'],
  'routes'=>['/travel-tickets','/admin/travel-tickets'],'api_routes'=>['/api/v1/travel-tickets'],
  'provider_integrations'=>['Core ProviderManager','Core Payment/Wallet'],
- 'provider_capabilities'=>['flight_search','flight_availability','flight_book','flight_cancel','bus_search','bus_availability','bus_book','bus_cancel','hotel_search','hotel_availability','hotel_book','hotel_cancel'],
+ 'provider_capabilities'=>['flight_search','flight_availability','flight_book','flight_requery','flight_cancel','flight_cancel_requery','bus_search','bus_availability','bus_book','bus_requery','bus_cancel','bus_cancel_requery','hotel_search','hotel_availability','hotel_book','hotel_requery','hotel_cancel','hotel_cancel_requery'],
  'capabilities'=>['flight_booking','bus_booking','hotel_booking','booking_history','cancellation','refunds','manual_fulfillment','provider_fulfillment','requery','receipts'],
 ];
