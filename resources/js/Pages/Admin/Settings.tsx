@@ -52,7 +52,7 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
   const safeSmtp = safeSettings.smtp && typeof safeSettings.smtp === 'object' && !Array.isArray(safeSettings.smtp) ? safeSettings.smtp : {};
   const initialProfiles:SmtpProfile[]=Array.isArray(safeSmtp.profiles) ? safeSmtp.profiles.filter((p:unknown):p is SmtpProfile => !!p && typeof p === 'object').map((p:SmtpProfile)=>({...p,password:''})) : [];
   const form=useForm<any>({
-    platform_name:safeSettings.platform_name || 'SEMIZZY ONE',support_email:safeSettings.support_email || '',support_notice:safeSettings.support_notice || '',default_timezone:safeSettings.default_timezone || 'Africa/Lagos',
+    platform_name:safeSettings.platform_name || 'SEMIZZY ONE',kyc_bvn_lookup_charge_minor:Number(safeSettings.kyc_bvn_lookup_charge_minor||0),kyc_nin_lookup_charge_minor:Number(safeSettings.kyc_nin_lookup_charge_minor||0),support_email:safeSettings.support_email || '',support_notice:safeSettings.support_notice || '',default_timezone:safeSettings.default_timezone || 'Africa/Lagos',
     business:safeBusiness,
     social:safeSocial,
     smtp:{enabled:!!safeSmtp.enabled,strategy:safeSmtp.strategy||'failover',profiles:initialProfiles},
@@ -102,6 +102,15 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
           <button type="button" onClick={()=>choose('custom')} className={'rounded-2xl border-2 p-4 text-left '+(form.data.theme_key==='custom'?'border-indigo-600 bg-indigo-50':'border-slate-200')}><b>🎨 Custom Theme</b><span className="mt-1 block text-xs text-slate-500">Admin-defined Light and Dark palettes.</span></button>
         </div>
         {form.data.theme_key==='custom'&&<><CustomBuilder skin="light" value={form.data.theme_custom_light} onChange={(k,v)=>updateCustom('light',k,v)}/><CustomBuilder skin="dark" value={form.data.theme_custom_dark} onChange={(k,v)=>updateCustom('dark',k,v)}/></>}
+      </section>
+
+      <section className="rounded-2xl border bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-extrabold">KYC Provider Charges</h2>
+        <p className="mt-1 text-sm text-slate-500">Set the exact provider charge in NGN minor units. No markup is added to these lookup charges.</p>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label><span className="text-sm font-semibold">BVN lookup charge (kobo)</span><input type="number" min="0" step="1" className="mt-1 w-full rounded-xl border p-3" value={form.data.kyc_bvn_lookup_charge_minor} onChange={e=>form.setData('kyc_bvn_lookup_charge_minor',Number(e.target.value))}/></label>
+          <label><span className="text-sm font-semibold">NIN lookup charge (kobo)</span><input type="number" min="0" step="1" className="mt-1 w-full rounded-xl border p-3" value={form.data.kyc_nin_lookup_charge_minor} onChange={e=>form.setData('kyc_nin_lookup_charge_minor',Number(e.target.value))}/></label>
+        </div>
       </section>
 
       <section className="rounded-2xl border bg-white p-5 shadow-sm"><h2 className="text-lg font-extrabold">Global Skin</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{(['light','dark'] as Skin[]).map(s=><button type="button" key={s} onClick={()=>form.setData('skin_default',s)} className={'rounded-2xl border-2 p-4 text-left '+(form.data.skin_default===s?'border-indigo-600 bg-indigo-50':'border-slate-200')}>{s==='light'?'☀':'☾'} <b className="ml-2">{s==='light'?'Light':'Dark'}</b></button>)}</div></section>
