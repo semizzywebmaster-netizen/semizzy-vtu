@@ -15,6 +15,7 @@ Route::post('/webhooks/communication/whatsapp/{provider}/status',[WhatsAppStatus
 
 Route::middleware(['auth','verified','permission:communication.send'])->group(function () {
  Route::post('/communication/whatsapp/send',[CommunicationMessageController::class,'sendWhatsApp'])->name('communication.whatsapp.send');
+ Route::post('/communication/messages/{message}/retry',[CommunicationMessageController::class,'retry'])->name('communication.messages.retry');
 });
 
 Route::middleware(['auth','verified','permission:communication.view'])->group(function () { Route::get('/communication',[\Addons\CommunicationWhatsapp\Http\Controllers\CommunicationCenterController::class,'page'])->name('communication.page');
