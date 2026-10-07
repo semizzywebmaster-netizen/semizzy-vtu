@@ -360,7 +360,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
         {bulkResult && <div className='mt-3 rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700'>{bulkResult}</div>}
         {bulkResultItems.length > 0 && <div className='mt-3 max-h-56 overflow-auto rounded-xl border border-slate-200'><table className='w-full text-left text-[11px]'><thead className='sticky top-0 bg-slate-50'><tr><th className='p-2'>#</th><th className='p-2'>Recipient</th><th className='p-2'>Status</th><th className='p-2'>Reference / Error</th></tr></thead><tbody>{bulkResultItems.map((item,index)=><tr key={`${item.sequence ?? index}-${item.recipient ?? ''}`} className='border-t'><td className='p-2'>{item.sequence ?? index+1}</td><td className='p-2 font-mono'>{item.recipient || '—'}</td><td className='p-2 font-bold'>{item.status || '—'}</td><td className='p-2'>{item.reference || item.error_message || '—'}</td></tr>)}</tbody></table></div>}
         <button type='button' onClick={submitBulk} disabled={bulkBusy || !bulkQuote || bulkPin.length !== 4 || bulkRows.some(row => !row.network || !/^\+?(234|0)\d{10}$/.test(row.phone.replace(/\s|-/g,'')) || !(Number(row.amount) > 0))} className='mt-4 w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-black text-white disabled:opacity-40'>{bulkBusy ? 'Processing bulk airtime…' : 'Confirm & purchase all'}</button>
-      </div>}
+      </div></div>}
     </section>
   </div>}
   <CoreMobileNav /></main>;
