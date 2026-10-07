@@ -15,7 +15,7 @@ class MailerSmtpService {
   if($profiles->isEmpty())return false;
   $mailers=[];$names=[];
   foreach($profiles as $p){$name='addon_smtp_'.$p->id;$mailers[$name]=['transport'=>'smtp','host'=>$p->host,'port'=>$p->port,'encryption'=>$p->encryption==='null'?null:$p->encryption,'username'=>$p->username,'password'=>$p->password,'timeout'=>15,'auth_mode'=>null];$names[]=$name;}
-  $strategy=in_array((string)config('mailer_smtp.strategy','failover'),['failover','roundrobin'],true)?config('mailer_smtp.strategy','failover'):'failover';
+  $stored=SystemSetting::query()->where('key','mailer_smtp')->value('value');$settings=is_string($stored)?json_decode($stored,true):[];$strategy=in_array((string)($settings['strategy']??config('mailer_smtp.strategy','failover')),['failover','roundrobin'],true)?($settings['strategy']??'failover'):'failover';
   config(['mail.mailers'=>array_merge(config('mail.mailers',[]),$mailers,['mailer_smtp_pool'=>['transport'=>$strategy,'mailers'=>$names,'retry_after'=>60]]),'mail.default'=>'mailer_smtp_pool']);
   $first=$profiles->first();config(['mail.from.address'=>$first->from_address,'mail.from.name'=>$first->from_name ?: config('mail.from.name')]);
   return true;
