@@ -88,6 +88,17 @@ class VtuController extends Controller
         return response()->json(['data' => $this->present($tx)], $tx->status === 'failed' ? 422 : 201);
     }
 
+    public function bulkQuote(Request $r, VtuBulkService $b)
+    {
+        $d = $r->validate([
+            'items' => ['required', 'array', 'min:1', 'max:500'],
+            'items.*.product_id' => ['required', 'integer', 'exists:service_products,id'],
+            'items.*.payload' => ['required', 'array'],
+        ]);
+
+        return response()->json(['data' => $b->quote($d['items'], $r->user()->role)]);
+    }
+
     public function bulk(Request $r, VtuBulkService $b)
     {
         $d = $r->validate([
