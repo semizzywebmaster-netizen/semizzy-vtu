@@ -90,10 +90,8 @@ class AuthenticatedSessionController extends Controller
             throw ValidationException::withMessages([$this->loginErrorKey($request) => 'This phone number is not verified. Please use your email or username, or verify your phone first.']);
         }
 
-        $deviceKey = hash('sha256', (string) $request->cookie('semizzy_device_key', ''));
-        if ($deviceKey === hash('sha256', '')) {
-            $deviceKey = hash('sha256', Str::uuid()->toString());
-        }
+        $rawDeviceKey = (string) $request->cookie('semizzy_device_key', '');
+        $deviceKey = $rawDeviceKey !== '' ? hash('sha256', $rawDeviceKey) : hash('sha256', Str::uuid()->toString());
         $activeDevice = $user->devices()->whereNull('revoked_at')->latest('id')->first();
         if ($activeDevice && $activeDevice->device_key !== $deviceKey) {
             if (!$request->session()->get('device_login_pending') || (int) $request->session()->get('device_login_user_id') !== (int) $user->id || (bool) $request->session()->get('device_login_admin', false) !== $admin) {
@@ -105,6 +103,7 @@ class AuthenticatedSessionController extends Controller
                 throw ValidationException::withMessages(['otp_code' => 'Enter the verification code sent to your email.']);
             }
             $this->otp->verifyForUser($user, 'new_device_login', (string)$credentials['otp_code']);
+            $request->session()->regenerate();
             $user->devices()->whereNull('revoked_at')->update(['revoked_at'=>now()]);
             $activeDevice = null;
             $request->session()->forget(['device_login_pending','device_login_user_id','device_login_admin']);
@@ -123,6 +122,7 @@ class AuthenticatedSessionController extends Controller
             'session_token_hash' => Hash::make($sessionToken),
         ])->saveOrFail();
         $request->session()->put('device_session_token', $sessionToken);
+        $request->session()->put('device_key', $deviceKey);
         $request->session()->put('device_id', $device->id);
 
         if ($admin && ! $request->user()->hasRole(['ADMIN','STAFF','SUPPORT'])) {
