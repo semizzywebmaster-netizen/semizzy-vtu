@@ -5,7 +5,6 @@
   "keywords": [
     "laravel",
     "fintech",
-    "vtu",
     "providers",
     "addons"
   ],
@@ -41,7 +40,7 @@
       "Semizzy\\Addons\\Exams\\": "addons/exams.results/src/",
       "Semizzy\\Addons\\Marketplace\\": "addons/marketplace.commerce/src/",
       "Semizzy\\Addons\\P2p\\": "addons/p2p.transfers/src/",
-      "Semizzy\\\\Addons\\\\Escrow\\\\": "addons/escrow.protection/src/"
+      "Semizzy\\Addons\\Escrow\\": "addons/escrow.protection/src/"
     }
   },
   "autoload-dev": {
