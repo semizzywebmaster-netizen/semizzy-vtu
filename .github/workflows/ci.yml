@@ -31,7 +31,7 @@ jobs:
           path: public/build
           if-no-files-found: error
           retention-days: 7
-      - run: find app bootstrap config database public routes tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: find app addons bootstrap config database public routes tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - run: php -l public/index.php
       - run: cp .env.example .env
       - run: php artisan key:generate
