@@ -24,3 +24,6 @@ Schedule::command('exams:reconcile')->everyFiveMinutes()->withoutOverlapping(5)-
 Artisan::command('sim-hosting:expire {--limit=100}',function(SimHostingService $service){$this->info('Expired '.$service->expire((int)$this->option('limit')).' rentals.');});
 Artisan::command('sim-hosting:reconcile {--limit=100}',function(SimHostingService $service){$this->info('Reconciled '.$service->reconcile((int)$this->option('limit')).' rentals.');});
 Artisan::command('exams:reconcile',function(ExamResultService $service){$this->info('Reconciled '.$service->reconcile().' exam transactions.');});
+
+
+Schedule::call(function (): void { foreach (\Semizzy\Addons\Escrow\Models\EscrowTransaction::query()->where('status','funded')->whereNotNull('expires_at')->where('expires_at','<=',now())->pluck('id') as $id) { app(\Semizzy\Addons\Escrow\Services\EscrowService::class)->expire((int) $id); } })->everyFiveMinutes()->withoutOverlapping()->name('escrow-expiry-reconciliation');
