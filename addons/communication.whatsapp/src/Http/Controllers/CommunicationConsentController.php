@@ -4,6 +4,7 @@ namespace Addons\CommunicationWhatsapp\Http\Controllers;
 use Addons\CommunicationWhatsapp\Services\CommunicationConsentService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use App\Models\Communication\Consent;
 
 class CommunicationConsentController
 {
@@ -15,6 +16,6 @@ class CommunicationConsentController
  }
  public function mine(Request $request): JsonResponse
  {
-  return response()->json(['consents'=>$request->user()->communicationConsents ?? []]);
+  return response()->json(['consents'=>Consent::where('user_id',$request->user()->id)->get()]);
  }
 }
