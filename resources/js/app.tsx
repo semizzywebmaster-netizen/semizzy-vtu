@@ -17,8 +17,8 @@ if ((import.meta as ViteImportMeta).env.PROD && 'serviceWorker' in navigator) {
 createInertiaApp({
   resolve: async (name) => {
     const pages = (import.meta as ViteImportMeta).glob('./Pages/**/*.tsx');
-    const page = pages[\`./Pages/\${name}.tsx\`];
-    if (!page) throw new Error(\`Inertia page not found: \${name}\`);
+    const page = pages[`./Pages/${name}.tsx`];
+    if (!page) throw new Error(`Inertia page not found: ${name}`);
     const module = (await page()) as PageModule;
     const ResolvedPage = module.default;
     const isAdminPage = name === 'Dashboard' || name.startsWith('Admin/');
