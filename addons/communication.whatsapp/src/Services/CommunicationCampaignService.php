@@ -31,7 +31,7 @@ class CommunicationCampaignService
   $campaign->update(['status'=>'running','started_at'=>$campaign->started_at ?: now()]);
 
   $sent=$failed=$skipped=$processed=0;
-  $users=$this->audience($campaign->audience ?: [])->whereNotExists(function($q)use($campaign){$q->selectRaw('1')->from('communication_messages as cm')->whereColumn('cm.user_id','users.id')->where('cm.campaign_id',$campaign->id);});
+  $users=$this->audience($campaign->audience ?: [])->whereNotExists(function($q)use($campaign){$q->selectRaw('1')->from('communication_messages as cm')->whereColumn('cm.user_id','users.id')->where('cm.campaign_id',$campaign->id)->whereIn('cm.status',['sent','delivered']);});
   $users=$users->limit(max(1,$limit))->get();
   $renderer=app(CommunicationTemplateService::class);
   $gateway=app(CommunicationProviderGateway::class);
@@ -52,7 +52,8 @@ class CommunicationCampaignService
     $gateway->send($message); $sent++;
    }catch(\Throwable $e){$failed++;}
   }
-  if($users->isEmpty()) $campaign->update(['status'=>'completed','completed_at'=>now()]);
+  $remaining=$this->audience($campaign->audience ?: [])->whereNotExists(function($q)use($campaign){$q->selectRaw('1')->from('communication_messages as cm')->whereColumn('cm.user_id','users.id')->where('cm.campaign_id',$campaign->id)->whereIn('cm.status',['sent','delivered']);})->exists();
+  if($remaining) $campaign->update(['status'=>'scheduled','scheduled_at'=>now()]); else $campaign->update(['status'=>$failed?'failed':'completed','completed_at'=>now()]);
   return compact('processed','sent','failed','skipped');
  }
 
