@@ -6,4 +6,5 @@ class Campaign extends Model {
  protected $casts=['audience'=>'array','scheduled_at'=>'datetime','started_at'=>'datetime','completed_at'=>'datetime'];
  public function template(){return $this->belongsTo(Template::class,'template_id');}
  public function creator(){return $this->belongsTo(\App\Models\User::class,'created_by');}
+ public function messages(){return $this->hasMany(Message::class,'campaign_id');}
 }
