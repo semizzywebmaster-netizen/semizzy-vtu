@@ -26,7 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withCommands([
-        __DIR__.'/../app/Console/Commands',
+        __DIR__.'/../app/Console/Commands',\n        __DIR__.'/../addons/communication.whatsapp/src/Console/Commands',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
