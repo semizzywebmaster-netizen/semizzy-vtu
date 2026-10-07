@@ -19,6 +19,27 @@ class AdminGovernmentServicesController extends Controller {
  }
  public function storeService(Request $r){$d=$r->validate(['service_key'=>'required|string|max:120|unique:government_services,service_key','name'=>'required|string|max:180','agency'=>'nullable|string|max:180','description'=>'nullable|string','fulfillment_mode'=>'required|in:api,manual,api_or_manual','provider_reference'=>'nullable|string|max:255','price'=>'required|numeric|min:0','currency'=>'required|string|size:3','status'=>'required|in:active,inactive','requirements'=>'nullable|array','metadata'=>'nullable|array']);$d['currency']=strtoupper($d['currency']);return response()->json(['data'=>GovernmentService::create($d)],201);}
  public function updateService(Request $r,GovernmentService $service){$d=$r->validate(['name'=>'sometimes|required|string|max:180','agency'=>'nullable|string|max:180','description'=>'nullable|string','fulfillment_mode'=>'sometimes|required|in:api,manual,api_or_manual','provider_reference'=>'nullable|string|max:255','price'=>'sometimes|required|numeric|min:0','currency'=>'sometimes|required|string|size:3','status'=>'sometimes|required|in:active,inactive','requirements'=>'nullable|array','metadata'=>'nullable|array']);if(isset($d['currency']))$d['currency']=strtoupper($d['currency']);$service->fill($d)->save();return response()->json(['data'=>$service->fresh()]);}
+  public function addRequirement(Request $r, GovernmentService $service){
+   $d=$r->validate(['key'=>'required|string|max:100','label'=>'required|string|max:180','type'=>'required|in:text,textarea,email,number,date,select,checkbox,file,json','required'=>'sometimes|boolean','options'=>'nullable|array','accept'=>'nullable|string|max:255']);
+   $requirements=$service->requirements??[];
+   if(collect($requirements)->contains(fn($x)=>($x['key']??null)===$d['key'])) return response()->json(['message'=>'Requirement key already exists.'],422);
+   $d['required']=(bool)($d['required']??false); $d['options']=$d['options']??[]; $requirements[]=$d;
+   $service->requirements=$requirements; $service->save();
+   return response()->json(['data'=>$service->fresh()]);
+  }
+  public function updateRequirement(Request $r, GovernmentService $service, string $key){
+   $d=$r->validate(['label'=>'sometimes|required|string|max:180','type'=>'sometimes|required|in:text,textarea,email,number,date,select,checkbox,file,json','required'=>'sometimes|boolean','options'=>'nullable|array','accept'=>'nullable|string|max:255']);
+   $requirements=$service->requirements??[]; $found=false;
+   foreach($requirements as &$item){ if(($item['key']??null)===$key){$item=array_merge($item,$d);$found=true;break;} }
+   if(!$found) return response()->json(['message'=>'Requirement not found.'],404);
+   $service->requirements=$requirements; $service->save();
+   return response()->json(['data'=>$service->fresh()]);
+  }
+  public function deleteRequirement(GovernmentService $service, string $key){
+   $requirements=array_values(array_filter($service->requirements??[],fn($x)=>($x['key']??null)!==$key));
+   $service->requirements=$requirements; $service->save();
+   return response()->json(['data'=>$service->fresh()]);
+  }
  public function updateApplicationStatus(Request $r,GovernmentApplication $application){$d=$r->validate(['status'=>'required|in:draft,pending_payment,paid,processing,awaiting_documents,submitted,completed,failed,cancelled']);$application->status=$d['status'];if($d['status']==='submitted'&&!$application->submitted_at)$application->submitted_at=now();if($d['status']==='completed'&&!$application->completed_at)$application->completed_at=now();$application->save();return response()->json(['data'=>$application->fresh()]);}
  public function reviewDocument(Request $r,GovernmentDocument $document){$d=$r->validate(['status'=>'required|in:pending,approved,rejected','review_note'=>'nullable|string|max:2000']);$document->status=$d['status'];$document->review_note=$d['review_note']??null;$document->reviewed_by=$r->user()->id;$document->reviewed_at=now();$document->save();return response()->json(['data'=>$document->fresh()]);}
  public function storeCertificate(Request $r,GovernmentApplication $application){
