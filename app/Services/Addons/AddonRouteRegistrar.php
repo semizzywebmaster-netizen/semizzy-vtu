@@ -41,7 +41,8 @@ class AddonRouteRegistrar
 
                 $path = base_path($relative);
                 if (!is_file($path)) {
-                    throw new RuntimeException("Addon route file not found [{$relative}].");
+                    report(new RuntimeException("Addon route file not found [{$relative}]."));
+                    continue;
                 }
 
                 require $path;
