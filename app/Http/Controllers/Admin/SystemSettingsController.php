@@ -90,7 +90,7 @@ class SystemSettingsController extends Controller
             'kyc_bvn_lookup_charge_minor'=>['required','integer','min:0','max:9223372036854775807'],
             'kyc_nin_lookup_charge_minor'=>['required','integer','min:0','max:9223372036854775807'],
             'default_timezone'=>['required','timezone'],
-            'theme_key'=>['required','in:opay-inspired,palmpay-inspired,modern-corporate,clean-saas,luxury-executive,custom'],
+            'theme_key'=>['required','in:opay-inspired,palmpay-inspired,modern-corporate,clean-saas,luxury-executive,sky-enterprise,forest-growth,crimson-modern,sunset-commerce,slate-professional,custom'],
             'theme_primary'=>['required','regex:/^#[0-9A-Fa-f]{6}$/'],
             'skin_default'=>['required','in:light,dark'],
             'theme_custom_light'=>['nullable','array'],
