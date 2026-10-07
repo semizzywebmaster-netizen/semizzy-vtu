@@ -15,4 +15,5 @@ class InsuranceController {
  public function renew(Request $r,InsurancePolicy $policy,InsuranceService $s){$key='insurance:renew:'.$policy->id.':'.($r->input('idempotency_key')?:Str::uuid());return response()->json(['policy'=>$s->renew($r->user(),$policy,$key)]);}
  public function claim(Request $r,InsurancePolicy $policy,InsuranceService $s){$d=$r->validate(['claim_type'=>['nullable','string','max:100'],'amount_minor'=>['nullable','integer','min:1'],'description'=>['required','string','max:10000'],'documents'=>['nullable','array'],'idempotency_key'=>['nullable','string','max:191']]);$key=$d['idempotency_key']?:'insurance:claim:'.$policy->id.':'.Str::uuid();return response()->json(['claim'=>$s->claim($r->user(),$policy,$d,$key)],201);}
  public function claims(Request $r){return response()->json(['claims'=>InsuranceClaim::where('user_id',$r->user()->id)->with('policy.product')->latest()->get()]);}
+ public function requeryClaim(Request $r,InsuranceClaim $claim,InsuranceService $s){return response()->json(['claim'=>$s->requeryClaim($r->user(),$claim)]);}
 }
