@@ -111,9 +111,13 @@ final class P2pTradingService
             if ($offer->status !== 'pending') throw new RuntimeException('This offer is not pending.');
             if ($offer->expires_at && $offer->expires_at->isPast()) throw new RuntimeException('This offer has expired.');
 
+            if ($offer->price_minor === '0') throw new RuntimeException('Trade value must be greater than zero.');
+            $seller = $offer->seller;
+            if (!$seller) throw new RuntimeException('Seller account could not be resolved.');
+
             $escrow = app(EscrowService::class)->create(
                 $offer->buyer_id,
-                (string) $offer->seller->username,
+                (string) ($seller->username ?: $seller->id),
                 (string) $offer->price_minor,
                 $offer->listing->asset_key,
                 $offer->listing->description,
