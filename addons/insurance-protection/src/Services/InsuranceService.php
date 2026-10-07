@@ -44,5 +44,16 @@ class InsuranceService {
    throw new RuntimeException($result->message?:'Insurance renewal was rejected.');
   } catch(\Throwable $e) { if($p->status!=='provider_pending'){try{$this->wallet->releaseRenewal($p,$key);}catch(\Throwable $ignored){}} throw $e; }
  }
+ public function requeryClaim(User $user,InsuranceClaim $claim): InsuranceClaim {
+  if($claim->user_id!==$user->id) throw new RuntimeException('Claim not found.');
+  if(in_array($claim->status,['approved','paid','rejected','cancelled'],true)) return $claim;
+  $result=$this->providers->execute('insurance','insurance_claim_status',['provider_reference'=>$claim->provider_reference,'claim_reference'=>$claim->reference,'policy_reference'=>$claim->policy?->reference],$claim->idempotency_key.':requery');
+  $state=strtoupper((string)$result->status);
+  $claim->update(['provider_status'=>$result->status,'provider_reference'=>$result->providerReference?:$claim->provider_reference]);
+  if(in_array($state,['APPROVED','SUCCESS','SETTLED'],true)) $claim->update(['status'=>'approved','resolved_at'=>now()]);
+  elseif(in_array($state,['REJECTED','FAILED','CANCELLED'],true)) $claim->update(['status'=>'rejected','resolved_at'=>now()]);
+  return $claim->fresh();
+ }
+
  public function claim(User $user,InsurancePolicy $policy,array $data,string $key): InsuranceClaim { if($policy->user_id!==$user->id||!in_array($policy->status,['active','issued'],true)) throw new RuntimeException('Policy is not eligible for a claim.'); $existing=InsuranceClaim::where('idempotency_key',$key)->where('user_id',$user->id)->first(); if($existing) return $existing; $claim=InsuranceClaim::create(['insurance_policy_id'=>$policy->id,'user_id'=>$user->id,'reference'=>'CLM-'.strtoupper(Str::random(18)),'idempotency_key'=>$key,'status'=>'submitted','claim_type'=>$data['claim_type']??null,'amount_minor'=>$data['amount_minor']??null,'description'=>$data['description'],'documents'=>$data['documents']??[],'submitted_at'=>now()]); try { $result=$this->providers->execute('insurance','insurance_claim',['policy_reference'=>$policy->reference,'provider_reference'=>$policy->provider_reference,'claim_reference'=>$claim->reference,'claim_type'=>$claim->claim_type,'amount_minor'=>$claim->amount_minor,'description'=>$claim->description,'documents'=>$claim->documents],$key); $claim->update(['provider_status'=>$result->status,'provider_reference'=>$result->providerReference,'submitted_to_provider_at'=>now()]); if($result->accepted) $claim->update(['status'=>'under_review']); elseif($result->duplicateRisk||in_array(strtoupper((string)$result->status),['UNKNOWN','PENDING','PROCESSING'],true)) $claim->update(['status'=>'submitted']); else $claim->update(['status'=>'rejected']); } catch(\Throwable $e) { $claim->update(['provider_status'=>'PENDING']); } return $claim->fresh(); }
 }
