@@ -106,7 +106,30 @@ class TravelBookingExecutionService
             'provider_reference' => $providerReference,
         ]);
 
-        $this->wallet->settle($claimed);
+        try {
+            $this->wallet->settle($claimed);
+        } catch (\\Throwable $e) {
+            TravelBookingAttempt::create([
+                'travel_booking_id' => $claimed->id,
+                'provider_code' => $providerCode,
+                'operation' => $operation,
+                'status' => 'accepted',
+                'provider_reference' => $providerReference,
+                'error' => 'Provider accepted booking but wallet settlement is pending: ' . $e->getMessage(),
+                'response' => $response,
+            ]);
+
+            $claimed->update([
+                'status' => 'provider_pending',
+                'provider_code' => $providerCode,
+                'provider_reference' => $providerReference,
+                'booking_reference' => $bookingReference,
+                'booking_data' => array_merge($claimed->booking_data ?? [], ['provider_response' => $response]),
+                'failure_reason' => 'Provider accepted booking but wallet settlement is pending.',
+            ]);
+
+            return $claimed->fresh();
+        }
 
         $claimed->update([
             'status' => 'confirmed',
