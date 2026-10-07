@@ -7,6 +7,7 @@ use App\Models\SystemSetting;
 use App\Services\Audit\AuditLogger;
 use App\Services\System\SystemSettingsService;
 use App\Services\System\SettingsService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -80,6 +81,39 @@ class SystemSettingsController extends Controller
                     ],
                 ],
         ]);
+    }
+
+    public function updateRegistrySetting(Request $request, string $key, AuditLogger $audit, SettingsService $registry): JsonResponse
+    {
+        $definition = $registry->definition($key);
+        abort_unless($definition && ($definition['editable'] ?? false) === true, 404);
+
+        if (($definition['secret'] ?? false) === true) {
+            return response()->json(['message' => 'Secret settings must be changed through their secure workflow.'], 422);
+        }
+
+        $data = $request->validate(['value' => ['present']]);
+
+        try {
+            $old = $registry->get($key, null);
+            $normalized = $registry->set($key, $data['value'], (string) ($request->user()?->id ?? ''));
+            $audit->record('admin.setting.updated', null, [
+                'setting_key' => $key,
+                'old_value' => $old,
+                'new_value' => $normalized,
+                'save_mode' => 'individual',
+            ], $request);
+
+            return response()->json([
+                'ok' => true,
+                'key' => $key,
+                'value' => $normalized,
+                'saved_at' => now()->toISOString(),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
     }
 
     public function update(Request $request, AuditLogger $audit, SettingsService $registry): RedirectResponse
