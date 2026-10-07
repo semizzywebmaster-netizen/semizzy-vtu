@@ -26,6 +26,10 @@ Artisan::command('sim-hosting:reconcile {--limit=100}',function(SimHostingServic
 Artisan::command('exams:reconcile',function(ExamResultService $service){$this->info('Reconciled '.$service->reconcile().' exam transactions.');});
 
 Schedule::call(function (): void {
+    if (!\App\Models\Addon::query()->where('identifier', 'escrow.protection')->where('status', 'active')->exists()) {
+        return;
+    }
+
     foreach (\Semizzy\Addons\Escrow\Models\EscrowTransaction::query()
         ->where('status', 'funded')
         ->whereNotNull('expires_at')
