@@ -15,6 +15,10 @@ class UserDevice extends Model
         'user_agent',
         'last_seen_at',
         'revoked_at',
+        'authenticated_at',
+        'auth_method',
+        'biometric_enabled',
+        'session_token_hash',
     ];
 
     protected function casts(): array
@@ -22,6 +26,8 @@ class UserDevice extends Model
         return [
             'last_seen_at' => 'datetime',
             'revoked_at' => 'datetime',
+            'authenticated_at' => 'datetime',
+            'biometric_enabled' => 'boolean',
         ];
     }
 
