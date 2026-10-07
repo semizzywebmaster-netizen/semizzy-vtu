@@ -13,6 +13,7 @@ use App\Http\Middleware\SecurityThrottle;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\EnsureTransactionPin;
 use App\Http\Middleware\EnsureApiUser;
+use App\Http\Middleware\EnsureFeatureEnabled;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'ensure.addon' => \App\Http\Middleware\EnsureAddonActive::class,
             'transaction.pin' => EnsureTransactionPin::class,
             'ensure.api.user' => EnsureApiUser::class,
+            'feature' => EnsureFeatureEnabled::class,
         ]);
         $middleware->append([RequestId::class, SecurityHeaders::class]);
         $middleware->web(prepend: [EnsureApplicationInstalled::class]);
