@@ -1,0 +1,16 @@
+<?php
+namespace Addons\InsuranceProtection\Http\Controllers;
+use Addons\InsuranceProtection\Models\{InsuranceProvider,InsuranceProduct,InsurancePolicy,InsuranceClaim};
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+class InsuranceAdminController {
+ public function page(){return Inertia::render('InsuranceAdmin');}
+ public function providers(){return response()->json(['providers'=>InsuranceProvider::latest()->get()->makeHidden(['credentials'])]);}
+ public function products(){return response()->json(['products'=>InsuranceProduct::with('provider')->latest()->paginate(100)]);}
+ public function claims(){return response()->json(['claims'=>InsuranceClaim::with(['policy.product'])->latest()->paginate(100)]);}
+ public function storeProvider(Request $r){$d=$r->validate(['name'=>'required|string|max:191','driver'=>'nullable|string|max:100','credentials'=>'nullable|array','capabilities'=>'nullable|array','priority'=>'nullable|integer|min:1','weight'=>'nullable|integer|min:1','enabled'=>'boolean','paused'=>'boolean']);return response()->json(['provider'=>InsuranceProvider::create($d)],201);}
+ public function updateProvider(Request $r,InsuranceProvider $provider){$d=$r->validate(['name'=>'sometimes|string|max:191','driver'=>'nullable|string|max:100','credentials'=>'nullable|array','capabilities'=>'nullable|array','priority'=>'sometimes|integer|min:1','weight'=>'sometimes|integer|min:1','enabled'=>'sometimes|boolean','paused'=>'sometimes|boolean']);$provider->update($d);return response()->json(['provider'=>$provider->fresh()->makeHidden(['credentials'])]);}
+ public function storeProduct(Request $r){$d=$r->validate(['insurance_provider_id'=>'nullable|exists:insurance_providers,id','code'=>'required|string|max:100|unique:insurance_products,code','name'=>'required|string|max:191','category'=>'required|string|max:100','description'=>'nullable|string','currency'=>'required|string|size:3','premium_minor'=>'required|integer|min:0','min_premium_minor'=>'nullable|integer|min:0','max_premium_minor'=>'nullable|integer|min:0','coverage'=>'nullable|array','eligibility'=>'nullable|array','metadata'=>'nullable|array','active'=>'boolean']);return response()->json(['product'=>InsuranceProduct::create($d)],201);}
+ public function toggleProduct(InsuranceProduct $product){$product->update(['active'=>!$product->active]);return response()->json(['product'=>$product->fresh()]);}
+ public function updateClaim(Request $r,InsuranceClaim $claim){$d=$r->validate(['status'=>'required|in:submitted,under_review,approved,rejected,paid,closed','provider_reference'=>'nullable|string|max:191']);$claim->update(array_filter($d,fn($v)=>$v!==null));if(in_array($d['status'],['paid','rejected','closed'],true))$claim->resolved_at=now();$claim->save();return response()->json(['claim'=>$claim->fresh()]);}
+}
