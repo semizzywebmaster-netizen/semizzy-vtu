@@ -30,7 +30,7 @@ class BusinessCommercialAdapter implements CommercialServiceAdapter
  public function record(int $userId,string $serviceKey,?string $productKey,int $amountMinor,string $transactionKey): void
  {
   $partner=$this->partner($userId);
-  if($partner) $this->commercial->record($partner,$amountMinor);
+  if($partner) $this->commercial->record($partner,$amountMinor,$serviceKey,$productKey,$transactionKey);
  }
 
  private function partner(int $userId): ?BusinessPartner
