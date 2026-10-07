@@ -16,6 +16,6 @@ final class SmmController extends Controller
   return response()->json(['data'=>$order->fresh('service')],$order->wasRecentlyCreated?201:200);
  }
  public function history(Request $r){return response()->json(['data'=>SmmOrder::with('service')->where('user_id',$r->user()->id)->latest()->paginate(25)]);}
- public function requery(Request $r,SmmOrder $order){abort_unless((int)$order->user_id===(int)$r->user()->id,404);return response()->json(['data'=>$order->fresh('service')]);}
- public function cancel(Request $r,SmmOrder $order){abort_unless((int)$order->user_id===(int)$r->user()->id,404);if(!in_array(strtolower($order->status),['pending','processing','accepted'],true))return response()->json(['message'=>'Order cannot be cancelled in its current state.'],422);$order->status='cancel_requested';$order->save();return response()->json(['data'=>$order->fresh('service')]);}
+ public function requery(Request $r,SmmOrder $order,SmmOrderService $service){abort_unless((int)$order->user_id===(int)$r->user()->id,404);return response()->json(['data'=>$service->requery($order)]);}
+ public function cancel(Request $r,SmmOrder $order,SmmOrderService $service){abort_unless((int)$order->user_id===(int)$r->user()->id,404);return response()->json(['data'=>$service->cancel($order)]);}
 }
