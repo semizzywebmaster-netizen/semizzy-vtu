@@ -10,6 +10,13 @@ type SmtpProfile = {
 };
 type SmtpEnv = { mailer:string; host:string; port:number; encryption:string; from_address:string; from_name:string };
 type Props = { settings?:any; smtp_env?:SmtpEnv; smtp_providers?:ProviderPreset[] };
+const FOOTER_OPTIONS=[
+  {key:'home',label:'Home',href:'/dashboard',icon:'⌂'}, {key:'services',label:'Services',href:'/vtu',icon:'✦'},
+  {key:'transactions',label:'Transactions',href:'/transactions',icon:'↔'}, {key:'notifications',label:'Alerts',href:'/notifications',icon:'♧'},
+  {key:'profile',label:'Profile',href:'/profile',icon:'◎'}, {key:'wallet',label:'Wallet',href:'/wallet/fund',icon:'₦'},
+  {key:'support',label:'Support',href:'/support',icon:'? '}, {key:'help',label:'Help',href:'/help',icon:'? '},
+  {key:'savings',label:'Savings',href:'/savings',icon:'◈'}, {key:'analytics',label:'Analytics',href:'/analytics',icon:'▥'},
+];
 
 const fields:{key:keyof Palette;label:string}[]=[
   {key:'primary',label:'Primary'},{key:'secondary',label:'Secondary'},{key:'accent',label:'Accent'},{key:'background',label:'Background'},
@@ -51,6 +58,7 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
     smtp:{enabled:!!safeSmtp.enabled,strategy:safeSmtp.strategy||'failover',profiles:initialProfiles},
     theme_key:safeSettings.theme_key||'modern-corporate',theme_primary:safeSettings.theme_primary||'#2563EB',skin_default:safeSettings.skin_default||('light' as Skin),
     theme_custom_light:safeSettings.theme_custom_light && typeof safeSettings.theme_custom_light === 'object' ? safeSettings.theme_custom_light : {},theme_custom_dark:safeSettings.theme_custom_dark && typeof safeSettings.theme_custom_dark === 'object' ? safeSettings.theme_custom_dark : {},
+    footer_menu:Array.isArray(safeSettings.footer_menu) && safeSettings.footer_menu.length===5 ? safeSettings.footer_menu : FOOTER_OPTIONS.slice(0,5),
   });
 
   const choose=(key:string)=>{const theme=THEMES.find(t=>t.key===key);if(theme)form.setData((d:any)=>({...d,theme_key:key,theme_primary:theme.light.primary}));};
@@ -88,7 +96,7 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
 
     <form onSubmit={submit} className="mt-6 space-y-6">
       <section className="rounded-2xl border bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-extrabold">Global Theme · 11 options</h2><p className="mt-1 text-sm text-slate-500">Applied platform-wide.</p>
+        <h2 className="text-lg font-extrabold">Global Theme · 6 options</h2><p className="mt-1 text-sm text-slate-500">Five professional themes plus one Custom theme. Applied platform-wide.</p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {THEMES.map(theme=><button type="button" key={theme.key} onClick={()=>choose(theme.key)} className={'rounded-2xl border-2 p-4 text-left '+(form.data.theme_key===theme.key?'border-indigo-600 bg-indigo-50':'border-slate-200')}><div className="flex gap-3"><span className="h-12 w-12 shrink-0 rounded-xl" style={{background:'linear-gradient(135deg,'+theme.light.primary+','+theme.light.accent+')'}}/><span><b className="block">{theme.name}</b><span className="text-xs text-slate-500">{theme.description}</span></span></div></button>)}
           <button type="button" onClick={()=>choose('custom')} className={'rounded-2xl border-2 p-4 text-left '+(form.data.theme_key==='custom'?'border-indigo-600 bg-indigo-50':'border-slate-200')}><b>🎨 Custom Theme</b><span className="mt-1 block text-xs text-slate-500">Admin-defined Light and Dark palettes.</span></button>
