@@ -5,6 +5,7 @@ use App\Models\Addon;
 use App\Models\User;
 use App\Models\WalletAccount;
 use App\Models\WalletMovement;
+use Brick\Math\BigInteger;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -13,15 +14,16 @@ use Semizzy\Addons\P2p\Models\P2pTransfer;
 
 final class P2pTransferService
 {
-    private function sub(string $a, string $b): string { return function_exists('bcsub') ? bcsub($a, $b, 0) : (string) ((int) $a - (int) $b); }
-    private function add(string $a, string $b): string { return function_exists('bcadd') ? bcadd($a, $b, 0) : (string) ((int) $a + (int) $b); }
-    private function gte(string $a, string $b): bool { return function_exists('bccomp') ? bccomp($a, $b, 0) >= 0 : (int) $a >= (int) $b; }
+    private function sub(string $a, string $b): string { return BigInteger::of($a)->minus($b)->__toString(); }
+    private function add(string $a, string $b): string { return BigInteger::of($a)->plus($b)->__toString(); }
+    private function gte(string $a, string $b): bool { return BigInteger::of($a)->compareTo($b) >= 0; }
 
     public function transfer(int $senderId, string $recipientQuery, string $amountMinor, ?string $note, string $idempotencyKey): P2pTransfer
     {
-        if (!preg_match('/^\d+$/', $amountMinor) || (int) $amountMinor <= 0) {
+        if (!preg_match('/^\d+$/', $amountMinor) || BigInteger::of($amountMinor)->isZero() || BigInteger::of($amountMinor)->isNegative()) {
             throw new RuntimeException('Transfer amount must be a positive integer minor-unit value.');
         }
+
         $settings = Addon::query()->where('identifier', 'p2p.transfers')->value('settings_schema') ?? [];
         $defaults = collect(is_array($settings) ? $settings : [])->mapWithKeys(function ($item) {
             return [($item['key'] ?? '') => $item['default'] ?? null];
@@ -29,15 +31,20 @@ final class P2pTransferService
         $currency = strtoupper((string) ($defaults->get('default_currency') ?: 'NGN'));
         $maxTransfer = (string) ($defaults->get('max_transfer_minor') ?? '1000000000');
         $fee = (string) ($defaults->get('fee_minor') ?? '0');
+
         if ($currency !== 'NGN') {
             throw new RuntimeException('P2P currently supports NGN wallet transfers only.');
         }
-        if (!preg_match('/^\\d+$/', $maxTransfer) || !$this->gte($maxTransfer, $amountMinor)) {
+        if (!preg_match('/^\d+$/', $maxTransfer) || !$this->gte($maxTransfer, $amountMinor)) {
             throw new RuntimeException('Transfer amount exceeds the configured P2P transfer limit.');
         }
-        if (!preg_match('/^\\d+$/', $fee) || (int) $fee !== 0) {
+        if (!preg_match('/^\d+$/', $fee) || BigInteger::of($fee)->isNegative()) {
+            throw new RuntimeException('P2P fee must be a non-negative integer minor-unit value.');
+        }
+        if (BigInteger::of($fee)->isPositive()) {
             throw new RuntimeException('A non-zero P2P fee is configured, but no platform fee wallet is configured. Set the P2P fee to ₦0 until fee settlement is enabled.');
         }
+
         $idempotencyKey = trim($idempotencyKey);
         if ($idempotencyKey === '') {
             throw new RuntimeException('A valid idempotency key is required.');
@@ -48,25 +55,45 @@ final class P2pTransferService
                 $existing = P2pTransfer::where('sender_id', $senderId)
                     ->where('idempotency_key', $idempotencyKey)
                     ->lockForUpdate()->first();
-                if ($existing && (string) $existing->amount_minor === $amountMinor) return $existing;
-                if ($existing) throw new RuntimeException('This idempotency key has already been used for a different transfer.');
+
+                if ($existing) {
+                    if ((string) $existing->amount_minor !== $amountMinor) {
+                        throw new RuntimeException('This idempotency key has already been used for a different transfer.');
+                    }
+                    return $existing;
+                }
 
                 $recipientQuery = trim($recipientQuery);
-                $recipient = User::query()
+                if ($recipientQuery === '') {
+                    throw new RuntimeException('A recipient username, email, or phone number is required.');
+                }
+
+                $matches = User::query()
                     ->where(function ($q) use ($recipientQuery) {
                         $q->where('username', $recipientQuery)
                           ->orWhere('email', $recipientQuery)
                           ->orWhere('phone', $recipientQuery);
-                    })->first();
+                    })
+                    ->limit(2)
+                    ->get(['id']);
 
-                if (!$recipient) throw new RuntimeException('Recipient account not found.');
-                if ($recipient->id === $senderId) throw new RuntimeException('You cannot transfer to yourself.');
+                if ($matches->count() !== 1) {
+                    throw new RuntimeException($matches->isEmpty()
+                        ? 'Recipient account not found.'
+                        : 'Recipient identifier is ambiguous. Use the recipient username.');
+                }
+
+                $recipient = $matches->first();
+                if ($recipient->id === $senderId) {
+                    throw new RuntimeException('You cannot transfer to yourself.');
+                }
 
                 $users = [$senderId, $recipient->id];
                 sort($users, SORT_NUMERIC);
 
                 $wallets = WalletAccount::whereIn('user_id', $users)
-                    ->where('currency', 'NGN')->lockForUpdate()->get()->keyBy('user_id');
+                    ->where('currency', 'NGN')
+                    ->lockForUpdate()->get()->keyBy('user_id');
 
                 $sender = $wallets->get($senderId);
                 $receiver = $wallets->get($recipient->id);
@@ -117,7 +144,7 @@ final class P2pTransferService
         } catch (QueryException $e) {
             if (str_contains(strtolower($e->getMessage()), 'unique') || str_contains(strtolower($e->getMessage()), 'duplicate')) {
                 $existing = P2pTransfer::where('sender_id', $senderId)->where('idempotency_key', $idempotencyKey)->first();
-                if ($existing) return $existing;
+                if ($existing && (string) $existing->amount_minor === $amountMinor) return $existing;
             }
             throw $e;
         }
