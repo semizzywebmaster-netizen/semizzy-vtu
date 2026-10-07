@@ -9,9 +9,12 @@ class CommercialServiceRegistry
   foreach($this->adapters as $adapter) if($adapter->canHandle($serviceKey,$productKey)) return $adapter;
   return null;
  }
- public function quote(int $userId,string $serviceKey,?string $productKey,int $baseAmountMinor): int {
+ public function quoteDetails(int $userId,string $serviceKey,?string $productKey,int $baseAmountMinor): array {
   $adapter=$this->adapter($serviceKey,$productKey);
-  return $adapter ? (int)$adapter->quote($userId,$serviceKey,$productKey,$baseAmountMinor)['amount_minor'] : $baseAmountMinor;
+  return $adapter ? $adapter->quote($userId,$serviceKey,$productKey,$baseAmountMinor) : ['amount_minor'=>$baseAmountMinor,'partner_id'=>null,'rule_id'=>null];
+ }
+ public function quote(int $userId,string $serviceKey,?string $productKey,int $baseAmountMinor): int {
+  return (int)$this->quoteDetails($userId,$serviceKey,$productKey,$baseAmountMinor)['amount_minor'];
  }
  public function authorize(int $userId,string $serviceKey,?string $productKey,int $amountMinor): void {
   $this->adapter($serviceKey,$productKey)?->authorize($userId,$serviceKey,$productKey,$amountMinor);
