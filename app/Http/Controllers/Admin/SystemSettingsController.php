@@ -19,7 +19,7 @@ class SystemSettingsController extends Controller
 {
     private const KEYS = [
         'platform_name','support_email','support_notice','default_timezone','theme_key','theme_primary','skin_default',
-        'theme_custom_light','theme_custom_dark','business','social','assets','smtp',
+        'theme_custom_light','theme_custom_dark','business','social','assets','footer_menu','smtp',
     ];
 
     public function index(): Response
@@ -88,11 +88,16 @@ class SystemSettingsController extends Controller
             'support_email'=>['nullable','email','max:254'],
             'support_notice'=>['nullable','string','max:500'],
             'default_timezone'=>['required','timezone'],
-            'theme_key'=>['required','in:opay-inspired,palmpay-inspired,kuda-inspired,moniepoint-inspired,stripe-inspired,premium-fintech,modern-corporate,clean-saas,vibrant-tech,luxury-executive,custom'],
+            'theme_key'=>['required','in:opay-inspired,palmpay-inspired,modern-corporate,clean-saas,luxury-executive,custom'],
             'theme_primary'=>['required','regex:/^#[0-9A-Fa-f]{6}$/'],
             'skin_default'=>['required','in:light,dark'],
             'theme_custom_light'=>['nullable','array'],
             'theme_custom_dark'=>['nullable','array'],
+            'footer_menu'=>['required','array','size:5'],
+            'footer_menu.*.key'=>['required','string','max:40','distinct'],
+            'footer_menu.*.label'=>['required','string','max:30'],
+            'footer_menu.*.href'=>['required','string','max:255'],
+            'footer_menu.*.icon'=>['required','string','max:8'],
             'business'=>['nullable','array'],
             'business.phone'=>['nullable','string','max:40'],
             'business.whatsapp'=>['nullable','string','max:40'],
@@ -139,7 +144,7 @@ class SystemSettingsController extends Controller
             foreach(['platform_name','support_email','support_notice','default_timezone','theme_key','theme_primary','skin_default'] as $key){
                 SystemSetting::query()->updateOrCreate(['key'=>$key],['value'=>$data[$key]??'','type'=>'string','is_secret'=>false]);
             }
-            foreach(['theme_custom_light','theme_custom_dark','business','social','smtp'] as $key){
+            foreach(['theme_custom_light','theme_custom_dark','business','social','footer_menu','smtp'] as $key){
                 SystemSetting::query()->updateOrCreate(['key'=>$key],[
                     'value'=>json_encode($data[$key]??[],JSON_UNESCAPED_SLASHES),
                     'type'=>'json',
