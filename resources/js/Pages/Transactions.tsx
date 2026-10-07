@@ -44,7 +44,7 @@ export default function Transactions({ transactions, unreadCount }: Props) {
             const positive = ['admin_fund','funding','wallet_funding','deposit','credit','refund'].some(key => item.type.toLowerCase().includes(key));
             return <article key={item.id} className="flex items-center justify-between gap-4 p-4">
               <div className="min-w-0"><p className="truncate font-bold">{label(item.type)}</p><p className="mt-1 truncate text-xs text-slate-500">{item.reference}</p><time className="mt-1 block text-xs text-slate-400" dateTime={item.createdAt || undefined}>{item.createdAt ? new Date(item.createdAt).toLocaleString() : '—'}</time></div>
-              <div className="shrink-0 text-right"><p className={'font-black ' + (positive ? 'text-emerald-600' : 'text-slate-900')}>{positive ? '+' : '−'}{money(item.amountMinor, item.currency)}</p><p className="mt-1 text-[11px] text-slate-400">Balance {money(item.availableAfterMinor, item.currency)}</p></div>
+              <div className="shrink-0 text-right"><p className={'font-black ' + (positive ? 'text-emerald-600' : 'text-slate-900')}>{positive ? '+' : '−'}{money(item.amountMinor, item.currency)}</p><p className="mt-1 text-[11px] text-slate-400">Balance {money(item.availableAfterMinor, item.currency)}</p><Link href={`/transactions/${item.id}/receipt`} className="mt-2 inline-block text-xs font-bold text-indigo-600">View Receipt</Link></div>
             </article>;
           })}</div>}
       </section>
