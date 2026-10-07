@@ -1,6 +1,7 @@
 <?php
 namespace Semizzy\Addons\P2p\Services;
 
+use App\Models\Addon;
 use App\Models\User;
 use App\Models\WalletAccount;
 use App\Models\WalletMovement;
@@ -21,13 +22,29 @@ final class P2pTransferService
         if (!preg_match('/^\d+$/', $amountMinor) || (int) $amountMinor <= 0) {
             throw new RuntimeException('Transfer amount must be a positive integer minor-unit value.');
         }
+        $settings = Addon::query()->where('identifier', 'p2p.transfers')->value('settings_schema') ?? [];
+        $defaults = collect(is_array($settings) ? $settings : [])->mapWithKeys(function ($item) {
+            return [($item['key'] ?? '') => $item['default'] ?? null];
+        });
+        $currency = strtoupper((string) ($defaults->get('default_currency') ?: 'NGN'));
+        $maxTransfer = (string) ($defaults->get('max_transfer_minor') ?? '1000000000');
+        $fee = (string) ($defaults->get('fee_minor') ?? '0');
+        if ($currency !== 'NGN') {
+            throw new RuntimeException('P2P currently supports NGN wallet transfers only.');
+        }
+        if (!preg_match('/^\\d+$/', $maxTransfer) || !$this->gte($maxTransfer, $amountMinor)) {
+            throw new RuntimeException('Transfer amount exceeds the configured P2P transfer limit.');
+        }
+        if (!preg_match('/^\\d+$/', $fee) || (int) $fee !== 0) {
+            throw new RuntimeException('A non-zero P2P fee is configured, but no platform fee wallet is configured. Set the P2P fee to ₦0 until fee settlement is enabled.');
+        }
         $idempotencyKey = trim($idempotencyKey);
         if ($idempotencyKey === '') {
             throw new RuntimeException('A valid idempotency key is required.');
         }
 
         try {
-            return DB::transaction(function () use ($senderId, $recipientQuery, $amountMinor, $note, $idempotencyKey) {
+            return DB::transaction(function () use ($senderId, $recipientQuery, $amountMinor, $note, $idempotencyKey, $currency, $fee) {
                 $existing = P2pTransfer::where('sender_id', $senderId)
                     ->where('idempotency_key', $idempotencyKey)
                     ->lockForUpdate()->first();
@@ -56,7 +73,6 @@ final class P2pTransferService
                     throw new RuntimeException('Both sender and recipient must have active NGN wallets.');
                 }
 
-                $fee = '0';
                 $totalDebit = $this->add($amountMinor, $fee);
                 if (!$this->gte((string) $sender->available_minor, $totalDebit)) {
                     throw new RuntimeException('Insufficient wallet balance.');
@@ -74,14 +90,14 @@ final class P2pTransferService
                     'sender_id' => $senderId, 'recipient_id' => $recipient->id,
                     'reference' => $reference, 'idempotency_key' => $idempotencyKey,
                     'amount_minor' => $amountMinor, 'fee_minor' => $fee,
-                    'currency' => 'NGN', 'status' => 'completed', 'note' => $note,
+                    'currency' => $currency, 'status' => 'completed', 'note' => $note,
                     'metadata' => ['addon' => 'p2p.transfers'],
                 ]);
 
                 WalletMovement::create([
                     'wallet_account_id' => $sender->id, 'operation_key' => 'p2p:debit:' . $tx->id,
                     'reference' => $reference, 'type' => 'debit', 'amount_minor' => $totalDebit,
-                    'currency' => 'NGN', 'available_before_minor' => $beforeSender,
+                    'currency' => $currency, 'available_before_minor' => $beforeSender,
                     'available_after_minor' => $sender->available_minor,
                     'held_before_minor' => $sender->held_minor, 'held_after_minor' => $sender->held_minor,
                     'metadata' => ['addon' => 'p2p.transfers', 'transfer_id' => $tx->id, 'recipient_id' => $recipient->id],
@@ -89,7 +105,7 @@ final class P2pTransferService
                 WalletMovement::create([
                     'wallet_account_id' => $receiver->id, 'operation_key' => 'p2p:credit:' . $tx->id,
                     'reference' => $reference, 'type' => 'credit', 'amount_minor' => $amountMinor,
-                    'currency' => 'NGN', 'available_before_minor' => $beforeReceiver,
+                    'currency' => $currency, 'available_before_minor' => $beforeReceiver,
                     'available_after_minor' => $receiver->available_minor,
                     'held_before_minor' => $receiver->held_minor, 'held_after_minor' => $receiver->held_minor,
                     'metadata' => ['addon' => 'p2p.transfers', 'transfer_id' => $tx->id, 'sender_id' => $senderId],
