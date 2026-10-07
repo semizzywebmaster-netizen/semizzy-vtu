@@ -15,6 +15,23 @@ class TravelProviderGateway{
   }
   throw new \RuntimeException('No eligible travel provider completed the requested operation.');
  }
+ public function requestBooking(string $capability,string $operation,array $payload):array{
+  $lastError=null;
+  foreach($this->candidates($capability) as $provider){
+   $endpoint=$this->endpoint($provider->id,$operation);if(!$endpoint)continue;
+   $url=$endpoint->full_url ?: rtrim((string)$provider->base_url,'/').'/'.ltrim((string)$endpoint->path,'/');
+   $request=Http::timeout(max(1,(int)($provider->timeout_seconds?:30)))->acceptJson();
+   foreach(($endpoint->headers?:[]) as $k=>$v)$request=$request->withHeaders([$k=>$v]);
+   $request=$this->authenticate($request,$provider,$endpoint);
+   try{
+    $response=strtoupper($endpoint->method)==='GET'?$request->get($url,$payload):$request->send(strtoupper($endpoint->method?:'POST'),$url,['json'=>$payload]);
+    if($response->successful()){$provider->forceFill(['last_successful_request_at'=>now(),'last_test_status'=>'success'])->saveQuietly();return ['status'=>'accepted','provider'=>$provider,'endpoint'=>$endpoint,'response'=>$response->json()];}
+    if($response->serverError()||$response->status()===408||$response->status()===429)return ['status'=>'ambiguous','provider'=>$provider,'endpoint'=>$endpoint,'response'=>$response->json(),'message'=>'Provider response is inconclusive; do not submit the booking to another provider.'];
+    $lastError='Provider rejected booking with HTTP '.$response->status();
+   }catch(\Throwable $e){return ['status'=>'ambiguous','provider'=>$provider,'endpoint'=>$endpoint,'response'=>null,'message'=>'Provider request outcome is unknown; do not submit the booking to another provider.','error'=>$e->getMessage()];}
+  }
+  throw new \RuntimeException($lastError?:'No eligible travel provider completed the booking operation.');
+ }
  private function endpoint(int $providerId,string $operation):?ProviderEndpoint{return ProviderEndpoint::where('api_provider_id',$providerId)->where('operation',$operation)->where('enabled',true)->first();}
  private function authenticate($request,ApiProvider $provider,ProviderEndpoint $endpoint){
   $credentials=$provider->credentials?:[];$mode=$endpoint->auth_mode?:$provider->auth_type;
