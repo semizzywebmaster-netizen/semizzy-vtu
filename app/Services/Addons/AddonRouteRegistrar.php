@@ -3,6 +3,7 @@
 namespace App\Services\Addons;
 
 use Illuminate\Support\Facades\Route;
+use App\Models\Addon;
 use RuntimeException;
 
 class AddonRouteRegistrar
@@ -24,6 +25,10 @@ class AddonRouteRegistrar
     private function registerFiles(string $manifestKey): void
     {
         foreach ($this->registry->all() as $manifest) {
+            $addon = Addon::query()->where('identifier', strtolower(trim((string) ($manifest['identifier'] ?? ''))))->first();
+            if (!$addon || $addon->status !== 'active') {
+                continue;
+            }
             $files = $manifest[$manifestKey] ?? [];
             if (!is_array($files)) {
                 continue;
