@@ -29,6 +29,60 @@ class VtuBulkIdempotencyTest extends TestCase
         ], 'USER', 'bulk-duplicate-items');
     }
 
+    public function test_changed_bulk_quote_is_rejected_before_processing(): void
+    {
+        $user = User::create([
+            'name' => 'Bulk Quote Test',
+            'email' => 'bulk-quote@example.test',
+            'password' => 'password',
+            'role' => 'USER',
+            'status' => 'active',
+        ]);
+
+        $category = ServiceCategory::create([
+            'key' => 'bulk-quote-test',
+            'name' => 'Bulk Quote Test',
+            'enabled' => true,
+            'sort_order' => 1,
+        ]);
+
+        $service = Service::create([
+            'category_id' => $category->id,
+            'key' => 'data',
+            'name' => 'Data',
+            'enabled' => true,
+        ]);
+
+        $product = ServiceProduct::create([
+            'service_id' => $service->id,
+            'key' => 'quote-plan',
+            'name' => '1GB Data',
+            'provider_cost' => '100.00',
+            'currency' => 'NGN',
+            'enabled' => true,
+        ]);
+
+        $this->mock(VtuPayloadValidator::class, function ($mock): void {
+            $mock->shouldReceive('validate')->once()->andReturn([]);
+        });
+
+        $this->mock(VtuTransactionService::class, function ($mock): void {
+            $mock->shouldReceive('quote')->once()->andReturn([
+                'customer_price' => '150.00',
+                'currency' => 'NGN',
+            ]);
+        });
+
+        $this->expectException(\\Illuminate\\Validation\\ValidationException::class);
+        $this->expectExceptionMessage('expired or changed');
+
+        app(VtuBulkService::class)->execute($user->id, [[
+            'product_id' => $product->id,
+            'idempotency_key' => 'quote-item-1',
+            'payload' => ['phone' => '08012345678', 'network' => 'mtn', 'plan' => '1GB Data'],
+        ]], 'USER', 'bulk-quote-key', str_repeat('a', 64));
+    }
+
     public function test_duplicate_airtime_or_data_recipients_are_rejected_server_side(): void
     {
         $user = User::create([
