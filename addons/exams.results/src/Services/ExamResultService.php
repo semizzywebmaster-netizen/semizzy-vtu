@@ -49,7 +49,7 @@ final class ExamResultService {
     DB::transaction(function()use($item,&$count){
      $tx=ExamTransaction::whereKey($item->id)->lockForUpdate()->first();
      if(!$tx||!in_array($tx->status,['pending','processing','unknown'],true)||!$tx->provider_reference)return;
-     try{$result=$this->providers->execute('exams.results','transaction_status',['reference'=>$tx->reference,'provider_reference'=>$tx->provider_reference],$tx->reference.':status');}catch(\\Throwable){return;}
+     try{$result=$this->providers->execute('exams.results','transaction_status',['reference'=>$tx->reference,'provider_reference'=>$tx->provider_reference],$tx->reference.':status');}catch(\Throwable){return;}
      $status=strtoupper($result->status);
      if(in_array($status,['SUCCESS','SUCCESSFUL','COMPLETED','DELIVERED'],true)){$tx->update(['status'=>'successful','result_payload'=>is_array($result->data)?$result->data:$tx->result_payload,'error'=>null]);$count++;return;}
      if(in_array($status,['FAILED','REJECTED','CANCELLED'],true)){$wallet=WalletAccount::where('user_id',$tx->user_id)->where('currency',$tx->currency)->lockForUpdate()->first();if($wallet)$this->refund($tx,$wallet,'Provider reconciliation failure.');$tx->update(['status'=>'failed']);$count++;}
