@@ -62,7 +62,7 @@ class EscrowAddonTest extends TestCase
         $this->assertStringContainsString('permission:escrow.create', $routes);
         $this->assertStringContainsString('permission:escrow.release', $routes);
         $this->assertStringContainsString('permission:escrow.dispute', $routes);
-        $this->assertStringContainsString('permission:escrow.manage', $routes);
+        $this->assertStringContainsString('permission:escrow.refund', $routes);
     }
 
     public function test_escrow_service_has_idempotency_fee_and_lifecycle_safeguards(): void
