@@ -37,11 +37,18 @@ export default function Services({ services = [] }: { services: Service[] }) {
     return '';
   };
   const parseBulkRows = () => {
+    const seen = new Set<string>();
     const rows = bulkInput.split(/\\r?\\n/).map(line => line.trim()).filter(Boolean).map(line => {
       const [phone, amount] = line.split(/[,;\\t]/).map(value => value.trim());
       return { phone: phone || '', amount: amount || '', network: detectNetwork(phone || '') };
     }).filter(row => row.phone);
-    setBulkRows(rows);
+    const normalized = rows.filter(row => {
+      const key = row.phone.replace(/\D/g, '').replace(/^234/, '0');
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 500);
+    setBulkRows(normalized);
     setBulkResult(null);
   };
   const submitBulk = async () => {
