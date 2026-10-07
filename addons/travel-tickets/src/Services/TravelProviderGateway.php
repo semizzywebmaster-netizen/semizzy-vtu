@@ -114,6 +114,12 @@ class TravelProviderGateway
             ->first();
     }
 
+    public function validateEndpoint(string $capability, string $operation, ApiProvider $provider): bool
+    {
+        return in_array($capability, $provider->capabilities ?: [], true)
+            && (bool) $this->endpoint($provider->id, $operation);
+    }
+
     private function requestClient(ApiProvider $provider, ProviderEndpoint $endpoint, array $payload): PendingRequest
     {
         $timeout = min(120, max(1, (int) ($provider->timeout_seconds ?: 30)));
