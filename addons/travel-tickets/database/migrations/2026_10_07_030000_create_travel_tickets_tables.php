@@ -1,0 +1,11 @@
+<?php
+use Illuminate\Database\Migrations\Migration; use Illuminate\Database\Schema\Blueprint; use Illuminate\Support\Facades\Schema;
+return new class extends Migration {
+ public function up():void {
+  Schema::create('travel_services',function(Blueprint $t){$t->id();$t->string('type',30);$t->string('name');$t->string('code')->unique();$t->text('description')->nullable();$t->boolean('enabled')->default(true);$t->json('requirements')->nullable();$t->timestamps();$t->index(['type','enabled']);});
+  Schema::create('travel_bookings',function(Blueprint $t){$t->id();$t->foreignId('user_id')->constrained()->cascadeOnDelete();$t->foreignId('travel_service_id')->nullable()->constrained('travel_services')->nullOnDelete();$t->string('type',30);$t->string('status',30)->default('pending');$t->string('idempotency_key',100)->unique();$t->string('provider_reference')->nullable()->index();$t->string('booking_reference')->nullable()->index();$t->string('provider_code')->nullable();$t->decimal('amount',18,2);$t->decimal('fee',18,2)->default(0);$t->decimal('total',18,2);$t->string('currency',10)->default('NGN');$t->json('search_data')->nullable();$t->json('passengers')->nullable();$t->json('booking_data')->nullable();$t->text('failure_reason')->nullable();$t->timestamp('confirmed_at')->nullable();$t->timestamp('cancelled_at')->nullable();$t->timestamps();$t->index(['user_id','status']);});
+  Schema::create('travel_booking_attempts',function(Blueprint $t){$t->id();$t->foreignId('travel_booking_id')->constrained()->cascadeOnDelete();$t->string('provider_code');$t->string('operation',40);$t->string('status',30);$t->string('provider_reference')->nullable();$t->text('error')->nullable();$t->json('response')->nullable();$t->timestamps();});
+  Schema::create('travel_refunds',function(Blueprint $t){$t->id();$t->foreignId('travel_booking_id')->constrained()->cascadeOnDelete();$t->foreignId('user_id')->constrained()->cascadeOnDelete();$t->decimal('amount',18,2);$t->string('status',30)->default('pending');$t->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();$t->text('note')->nullable();$t->timestamps();});
+ }
+ public function down():void {Schema::dropIfExists('travel_refunds');Schema::dropIfExists('travel_booking_attempts');Schema::dropIfExists('travel_bookings');Schema::dropIfExists('travel_services');}
+};
