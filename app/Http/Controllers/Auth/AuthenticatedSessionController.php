@@ -8,6 +8,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -86,7 +88,29 @@ class AuthenticatedSessionController extends Controller
             throw ValidationException::withMessages([$this->loginErrorKey($request) => 'This phone number is not verified. Please use your email or username, or verify your phone first.']);
         }
 
+        $deviceKey = hash('sha256', (string) $request->cookie('semizzy_device_key', ''));
+        if ($deviceKey === hash('sha256', '')) {
+            $deviceKey = hash('sha256', Str::uuid()->toString());
+        }
+        $activeDevice = $user->devices()->whereNull('revoked_at')->latest('id')->first();
+        if (!$admin && $activeDevice && $activeDevice->device_key !== $deviceKey) {
+            throw ValidationException::withMessages(['login' => 'This account is already signed in on another device. Sign out there before signing in here.']);
+        }
         Auth::login($user, (bool) ($credentials['remember'] ?? false));
+        $sessionToken = Str::random(64);
+        $device = $activeDevice ?: $user->devices()->create([
+            'device_key' => $deviceKey,
+            'name' => substr((string)$request->userAgent(),0,190),
+            'ip_address' => $request->ip(),
+        ]);
+        $device->forceFill([
+            'last_seen_at' => now(),
+            'authenticated_at' => now(),
+            'auth_method' => 'password',
+            'session_token_hash' => Hash::make($sessionToken),
+        ])->saveOrFail();
+        $request->session()->put('device_session_token', $sessionToken);
+        $request->session()->put('device_id', $device->id);
 
         if ($admin && ! $request->user()->hasRole(['ADMIN','STAFF','SUPPORT'])) {
             $this->securityEvents->record('auth.admin_login.denied', 'warning', ['admin' => true], $request);
@@ -96,6 +120,7 @@ class AuthenticatedSessionController extends Controller
 
         RateLimiter::clear($key);
         $request->session()->regenerate();
+        $request->cookie('semizzy_device_key') || $request->session()->put('set_device_cookie', $deviceKey);
         $this->securityEvents->record($admin ? 'auth.admin_login.success' : 'auth.login.success', 'info', ['admin' => $admin], $request);
     }
 
