@@ -8,9 +8,9 @@ use Illuminate\Http\JsonResponse;
 
 class CommunicationCampaignController
 {
- public function index(): JsonResponse
+ public function index(Request $request): JsonResponse
  {
-  return response()->json(Campaign::with('template')->withCount(['messages'])->latest()->paginate(25));
+  $q=Campaign::with('template')->withCount(['messages'])->latest();\n  if($request->filled('status')) $q->where('status',$request->string('status'));\n  if($request->filled('channel')) $q->where('channel',$request->string('channel'));\n  return response()->json($q->paginate(min(max((int)$request->input('per_page',25),1),100)));
  }
  public function store(Request $request,CommunicationCampaignService $service): JsonResponse
  {
