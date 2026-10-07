@@ -3,6 +3,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Semizzy\Addons\Smm\Models\SmmService;
 use Semizzy\Addons\Smm\Models\SmmServiceCategory;
+use App\Models\ApiProvider;
+use App\Models\ProviderServiceMapping;
 
 Route::middleware(['web','auth','ensure.addon:smm.services'])->prefix('/admin/smm')->group(function(){
  Route::get('/',function(){return inertia('Admin/SMM/Index',['services'=>SmmService::with('category')->orderBy('platform')->orderBy('name')->paginate(50),'categories'=>SmmServiceCategory::where('active',true)->orderBy('name')->get()]);})->middleware('permission:smm.view')->name('admin.smm.index');
