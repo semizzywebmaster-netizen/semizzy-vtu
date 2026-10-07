@@ -148,6 +148,18 @@ final class MarketplaceOrderService
         });
     }
 
+    public function cancel(MarketplaceOrder $order, int $buyerId): MarketplaceOrder
+    {
+        return DB::transaction(function () use ($order, $buyerId): MarketplaceOrder {
+            $order = MarketplaceOrder::query()->lockForUpdate()->findOrFail($order->id);
+            if ((int)$order->buyer_id !== $buyerId) throw new RuntimeException('You are not allowed to cancel this order.');
+            if ($order->status === 'cancelled') return $order;
+            if ($order->status !== 'pending') throw new RuntimeException('Only pending orders can be cancelled.');
+            $order->forceFill(['status'=>'cancelled','cancelled_at'=>now()])->save();
+            return $order->fresh(['product','buyer','seller']);
+        });
+    }
+
     public function refund(MarketplaceOrder $order, int $actorId, bool $isAdmin = false): MarketplaceOrder
     {
         return DB::transaction(function () use ($order, $actorId, $isAdmin): MarketplaceOrder {
