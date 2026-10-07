@@ -6,12 +6,16 @@ use RuntimeException;
 use Semizzy\Addons\SpinToWin\Models\SpinCampaign;
 use Semizzy\Addons\SpinToWin\Models\SpinPrize;
 use Semizzy\Addons\SpinToWin\Models\SpinPlay;
+use App\Models\User;
 class SpinToWinService {
  public function play(int $userId,int $campaignId,string $operationKey):SpinPlay {
   return DB::transaction(function()use($userId,$campaignId,$operationKey){
    $existing=SpinPlay::query()->where('operation_key',$operationKey)->lockForUpdate()->first();
    if($existing)return $existing->load('prize');
    $campaign=SpinCampaign::query()->where('status','active')->lockForUpdate()->findOrFail($campaignId);
+   $user=User::query()->findOrFail($userId);
+   $allowedTiers=$campaign->tier_restrictions;
+   if(is_array($allowedTiers)&&$allowedTiers!==[]&&!in_array((int)$user->tier,array_map('intval',$allowedTiers),true))throw new RuntimeException('You are not eligible for this campaign.');
    $now=now();
    if($campaign->starts_at&&$now->lt($campaign->starts_at))throw new RuntimeException('This campaign has not started.');
    if($campaign->ends_at&&$now->gt($campaign->ends_at))throw new RuntimeException('This campaign has ended.');
@@ -20,6 +24,7 @@ class SpinToWinService {
    if($daily>=$campaign->daily_play_limit)throw new RuntimeException('Your daily spin limit has been reached.');
    $prizes=$campaign->prizes()->where('active',true)->where(function($q){$q->whereNull('max_wins')->orWhereColumn('wins_count','<','max_wins');})->where('weight','>',0)->get();
    $total=(float)$prizes->sum(fn($p)=>(float)$p->weight);
+   if($total<=0)throw new RuntimeException('This campaign has no valid prize weights.');
    $roll=$total>0?random_int(0,1000000)/1000000*$total:0;
    $cursor=0;$selected=null;
    foreach($prizes as $prize){$cursor+=(float)$prize->weight;if($roll<=$cursor){$selected=$prize;break;}}
