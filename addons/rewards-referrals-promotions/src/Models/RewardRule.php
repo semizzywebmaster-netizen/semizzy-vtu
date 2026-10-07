@@ -5,4 +5,5 @@ class RewardRule extends Model {
  protected $table='reward_rules';
  protected $fillable=['name','event_key','reward_type','amount','currency','active','max_global_redemptions','max_user_redemptions','conditions','metadata'];
  protected $casts=['active'=>'boolean','conditions'=>'array','metadata'=>'array','amount'=>'decimal:2'];
+ public function events(){return $this->hasMany(RewardEvent::class,'rule_id');}
 }
