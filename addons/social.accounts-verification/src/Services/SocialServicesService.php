@@ -24,6 +24,7 @@ final class SocialServicesService {
   return DB::transaction(function()use($userId,$inventoryId){
    $item=SocialNumberInventory::query()->whereKey($inventoryId)->lockForUpdate()->firstOrFail();
    if($item->status!=='available')throw new RuntimeException('Verification number is no longer available.');
+   if($item->expires_at && $item->expires_at->isPast()){ $item->status='disabled'; $item->save(); throw new RuntimeException('Verification number has expired.'); }
    $item->status='reserved'; $item->save();
    $order=SocialServiceOrder::create(['reference'=>'SOC-N-'.Str::upper(Str::random(20)),'user_id'=>$userId,'order_type'=>'number','inventory_id'=>$item->id,'status'=>'pending_payment','amount'=>$item->price,'currency'=>$item->currency,'expires_at'=>$item->expires_at,'metadata'=>['country_code'=>$item->country_code,'service_key'=>$item->service_key]]);
    return $order;
@@ -67,6 +68,18 @@ final class SocialServicesService {
   $order->save(); return $order->fresh();
  }
  public function canReceiveSms(SocialServiceOrder $order): bool { return $order->order_type==='number' && in_array($order->status,['paid','processing','fulfilled'],true) && (!$order->expires_at || !$order->expires_at->isPast()); }
+ public function releaseExpiredNumberReservation(SocialServiceOrder $order): SocialServiceOrder {
+  if($order->order_type!=='number' || !$order->expires_at || !$order->expires_at->isPast()) return $order;
+  return DB::transaction(function() use($order){
+   $o=SocialServiceOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+   if($o->status==='pending_payment'){
+    $item=SocialNumberInventory::query()->whereKey($o->inventory_id)->lockForUpdate()->first();
+    if($item && $item->status==='reserved'){$item->status='available';$item->save();}
+    $o->status='expired';$o->save();
+   }
+   return $o->fresh();
+  });
+ }
 
  public function ingestSms(SocialServiceOrder $order,string $message,?string $sender=null,?string $providerMessageId=null,array $metadata=[]): SocialNumberSms {
   if($order->order_type!=='number')throw new RuntimeException('SMS can only be attached to a verification-number order.');
