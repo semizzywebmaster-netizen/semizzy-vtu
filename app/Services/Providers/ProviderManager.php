@@ -236,6 +236,11 @@ class ProviderManager
      * Execute against the ordered provider candidates. Definitive failures may fail over;
      * ambiguous provider state must stop immediately to prevent duplicate transactions.
      */
+    /**
+     * Execute a provider operation for an addon-owned service capability.
+     * Addons decide the operation name; Core owns provider selection, secrets,
+     * failover, idempotency and safe ambiguous-state handling.
+     */
     public function execute(string $serviceKey, string $operation, array $payload = [], ?string $idempotencyKey = null): ProviderResult
     {
         $providers = $this->eligible($serviceKey, $operation);
