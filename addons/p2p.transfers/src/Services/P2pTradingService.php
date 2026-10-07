@@ -74,6 +74,7 @@ final class P2pTradingService
                 if ($listing->status !== 'open') throw new RuntimeException('This listing is no longer open.');
                 if ($listing->seller_id === $buyerId) throw new RuntimeException('You cannot make an offer on your own listing.');
                 if ((int) $amountMinor > (int) $listing->amount_minor) throw new RuntimeException('Offer amount exceeds the listing amount.');
+                if (strtoupper((string) $listing->currency) !== 'NGN') throw new RuntimeException('This P2P listing uses an unsupported currency.');
 
                 return P2pTradeOffer::create([
                     'listing_id' => $listing->id,
@@ -110,8 +111,25 @@ final class P2pTradingService
             if ($offer->seller_id !== $sellerId) throw new RuntimeException('Only the listing owner can accept this offer.');
             if ($offer->status !== 'pending') throw new RuntimeException('This offer is not pending.');
             if ($offer->expires_at && $offer->expires_at->isPast()) throw new RuntimeException('This offer has expired.');
+            if (!$offer->listing || $offer->listing->status !== 'open') throw new RuntimeException('This listing is no longer open.');
 
+            // Current escrow settlement model is seller-delivers / buyer-pays.
+            // Buy-side listings require a different asset-delivery state machine and
+            // must not be allowed to enter the current escrow flow accidentally.
+            if ($offer->listing->side !== 'sell') {
+                throw new RuntimeException('Buy-side P2P listings are not yet enabled for escrow settlement.');
+            }
+
+            $this->positive((string) $offer->amount_minor);
+            $this->positive((string) $offer->price_minor);
+            if ((int) $offer->amount_minor > (int) $offer->listing->amount_minor) {
+                throw new RuntimeException('Offer amount exceeds the listing amount.');
+            }
+            if (strtoupper((string) $offer->currency) !== strtoupper((string) $offer->listing->currency)) {
+                throw new RuntimeException('Offer currency does not match the listing currency.');
+            }
             if ($offer->price_minor === '0') throw new RuntimeException('Trade value must be greater than zero.');
+
             $seller = $offer->seller;
             if (!$seller) throw new RuntimeException('Seller account could not be resolved.');
 
