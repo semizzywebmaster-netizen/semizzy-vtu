@@ -214,6 +214,7 @@ class AddonLifecycleService
 
             $from = $addon->status;
             $addon->update(['status' => 'inactive']);
+            $this->setAddonFeatures($addon->manifest ?? [], false);
             $addon->lifecycleEvents()->create([
                 'addon_identifier' => $addon->identifier,
                 'event' => 'disabled',
@@ -244,6 +245,7 @@ class AddonLifecycleService
             $this->recordStep($addon, 'uninstall', 'Addon uninstall contract validated; Core does not execute arbitrary addon code.');
             $from = 'uninstalling';
             $addon->update(['status' => 'archived', 'activated_at' => null, 'last_error' => null]);
+            $this->setAddonFeatures($addon->manifest ?? [], false);
 
             $addon->lifecycleEvents()->create([
                 'addon_identifier' => $addon->identifier,
@@ -357,6 +359,21 @@ class AddonLifecycleService
                 'dependencies' => array_values((array)($control['dependencies'] ?? [])),
                 'source' => $manifest['identifier'],
             ]);
+        }
+    }
+
+    private function setAddonFeatures(array $manifest, bool $enabled): void
+    {
+        $controls = $manifest['feature_controls'] ?? [];
+        if (!is_array($controls)) return;
+        $service = app(FeatureControlService::class);
+        foreach ($controls as $control) {
+            if (!is_array($control) || empty($control['key'])) continue;
+            $rawKey = strtolower(trim((string) $control['key']));
+            $key = str_starts_with($rawKey, strtolower((string)($manifest['identifier'] ?? '')).'.')
+                ? $rawKey
+                : strtolower((string)($manifest['identifier'] ?? 'addon')).'.'.$rawKey;
+            if ($service->feature($key)) $service->setEnabled($key, $enabled);
         }
     }
 
