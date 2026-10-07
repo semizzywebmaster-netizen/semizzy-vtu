@@ -9,5 +9,6 @@ Route::middleware(['web','auth','ensure.addon:social.accounts-verification'])->p
  Route::patch('/numbers/{inventory}',[AdminSocialServicesController::class,'updateNumber'])->middleware(['permission:social.numbers.manage','throttle:60,1']);
  Route::patch('/orders/{order}/status',[AdminSocialServicesController::class,'orderStatus'])->middleware(['permission:social.orders.manage','throttle:60,1']);
  Route::post('/orders/{order}/fulfill',[AdminSocialServicesController::class,'fulfill'])->middleware(['permission:social.orders.manage','throttle:20,1']);
+ Route::get('/orders/{order}',[AdminSocialServicesController::class,'showOrder'])->middleware('permission:social.orders.manage');
  Route::post('/orders/{order}/sms',[AdminSocialServicesController::class,'sms'])->middleware(['permission:social.sms.manage','throttle:60,1']);
 });
