@@ -3,6 +3,7 @@ namespace Addons\\VtuWebsiteBuilder\\Services;
 use Addons\\VtuWebsiteBuilder\\Models\\{WebsiteSite,WebsitePage,WebsiteRevision,WebsiteDomain};
 use Illuminate\\Support\\Facades\\DB;
 use Illuminate\\Support\\Str;
+use Illuminate\\Validation\\ValidationException;
 class WebsiteBuilderService {
  public function createSite(int $userId,array $data): WebsiteSite {
   return DB::transaction(function() use($userId,$data){
@@ -33,6 +34,15 @@ class WebsiteBuilderService {
  }
  public function addDomain(WebsiteSite $site,string $domain): WebsiteDomain {
   $domain=strtolower(trim($domain));
-  return WebsiteDomain::create(['website_site_id'=>$site->id,'domain'=>$domain,'type'=>'custom','status'=>'pending','verification_token'=>Str::random(40)]);
+  $domain=preg_replace('/^https?:\\/\\//','',$domain); $domain=rtrim($domain,'/');
+  if(!filter_var($domain,FILTER_VALIDATE_DOMAIN,FILTER_FLAG_HOSTNAME)) throw ValidationException::withMessages(['domain'=>'Enter a valid domain name.']);
+  $existing=WebsiteDomain::where('domain',$domain)->first();
+  if($existing && $existing->website_site_id!==$site->id) throw ValidationException::withMessages(['domain'=>'This domain is already registered.']);
+  return $existing??WebsiteDomain::create(['website_site_id'=>$site->id,'domain'=>$domain,'type'=>'custom','status'=>'pending','verification_method'=>'dns_txt','verification_token'=>Str::random(40)]);
+ }
+ public function verifyDomain(WebsiteDomain $domain,string $token): WebsiteDomain {
+  if(!hash_equals((string)$domain->verification_token,trim($token))) throw ValidationException::withMessages(['token'=>'Domain verification token is invalid.']);
+  $domain->update(['status'=>'verified','verified_at'=>now(),'verification_token'=>null]);
+  return $domain->fresh();
  }
 }
