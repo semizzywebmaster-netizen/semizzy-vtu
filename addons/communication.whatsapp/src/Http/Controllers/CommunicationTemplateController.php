@@ -14,6 +14,15 @@ class CommunicationTemplateController
   $data=$request->validate(['variables'=>'nullable|array']);
   return response()->json($service->render($template,$data['variables'] ?? []));
  }
+ public function update(Request $request,Template $template): JsonResponse
+ {
+  $data=$request->validate(['name'=>'sometimes|string|max:191','channel'=>'sometimes|string|max:32','event'=>'nullable|string|max:191','language'=>'nullable|string|max:16','subject'=>'nullable|string','body'=>'sometimes|string','variables'=>'nullable|array','enabled'=>'sometimes|boolean']);
+  $template->update($data); return response()->json(['template'=>$template->fresh()]);
+ }
+ public function toggle(Template $template): JsonResponse
+ {
+  $template->update(['enabled'=>!$template->enabled]); return response()->json(['template'=>$template->fresh()]);
+ }
  public function store(Request $request): JsonResponse
  {
   $data=$request->validate(['name'=>'required|string|max:191','channel'=>'required|string|max:32','event'=>'nullable|string|max:191','language'=>'nullable|string|max:16','subject'=>'nullable|string','body'=>'required|string','variables'=>'nullable|array','enabled'=>'nullable|boolean']);
