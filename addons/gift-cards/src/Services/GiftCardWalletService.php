@@ -16,7 +16,7 @@ class GiftCardWalletService {
    if(WalletMovement::where('wallet_account_id',$wallet->id)->where('operation_key',$key)->exists()) return;
    $amount=$this->minor((string)$order->total); $ab=(string)$wallet->available_minor; $hb=(string)$wallet->held_minor;
    if($type==='reserve'){if($this->cmp($ab,$amount)<0) throw new RuntimeException('Insufficient wallet balance.');$aa=$this->sub($ab,$amount);$ha=$this->add($hb,$amount);}
-   elseif($this->cmp($hb,$amount)<0) throw new RuntimeException('Wallet hold is inconsistent.');
+   elseif($type!=='refund' && $this->cmp($hb,$amount)<0) throw new RuntimeException('Wallet hold is inconsistent.');
    elseif($returnHeld && $type==='release'){$aa=$this->add($ab,$amount);$ha=$this->sub($hb,$amount);}
    elseif($type==='refund'){$aa=$this->add($ab,$amount);$ha=$hb;}
    else {$aa=$ab;$ha=$this->sub($hb,$amount);}
