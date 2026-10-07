@@ -54,6 +54,26 @@ final class MarketplaceController
         return response()->json(['success' => true, 'order' => $order]);
     }
 
+    public function refund(Request $request, MarketplaceOrder $order, MarketplaceOrderService $orders)
+    {
+        $isAdmin = $request->user()->hasPermission('marketplace.orders.manage');
+        try {
+            $order = $orders->refund($order, (int)$request->user()->id, $isAdmin);
+        } catch (RuntimeException $e) {
+            return response()->json(['success'=>false,'message'=>$e->getMessage()],422);
+        }
+        return response()->json(['success'=>true,'order'=>$order]);
+    }
+
+    public function reviewStore(Request $request, MarketplaceOrder $order)
+    {
+        $data=$request->validate(['rating'=>['required','integer','min:1','max:5'],'comment'=>['nullable','string','max:2000']]);
+        if((int)$order->buyer_id !== (int)$request->user()->id || $order->status !== 'paid') abort(403);
+        if(\Semizzy\Addons\Marketplace\Models\MarketplaceReview::query()->where('order_id',$order->id)->where('buyer_id',$request->user()->id)->exists()) return response()->json(['success'=>false,'message'=>'This order has already been reviewed.'],422);
+        $review=\Semizzy\Addons\Marketplace\Models\MarketplaceReview::create(['product_id'=>$order->product_id,'buyer_id'=>$request->user()->id,'order_id'=>$order->id,'rating'=>$data['rating'],'comment'=>$data['comment']??null]);
+        return response()->json(['success'=>true,'review'=>$review],201);
+    }
+
     public function productStore(Request $request)
     {
         $data = $request->validate([
