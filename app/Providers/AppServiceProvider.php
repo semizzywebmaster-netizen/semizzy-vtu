@@ -24,8 +24,19 @@ class AppServiceProvider extends ServiceProvider
             $addons = app(AddonRegistry::class);
             $addons->registerAutoloaders();
             $registry = app(CommercialServiceRegistry::class);
-            foreach ($addons->commercialAdapters() as $adapterClass) {
-                $registry->register(app($adapterClass));
+            foreach ($addons->commercialAdapters() as $definition) {
+                $addon = Addon::query()
+                    ->where('identifier', $definition['addon'])
+                    ->where('status', 'active')
+                    ->exists();
+
+                if (!$addon) continue;
+
+                $registry->register(
+                    app($definition['class']),
+                    (int) ($definition['priority'] ?? 100),
+                    (array) ($definition['service_keys'] ?? [])
+                );
             }
         } catch (\Throwable) {
             // Optional addon adapters must never prevent Core boot.
