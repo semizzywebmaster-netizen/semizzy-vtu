@@ -10,7 +10,7 @@ class TravelProviderGateway{
    $request=Http::timeout(max(1,(int)($provider->timeout_seconds?:30)))->acceptJson();
    foreach(($endpoint->headers?:[]) as $k=>$v)$request=$request->withHeaders([$k=>$v]);
    $request=$this->authenticate($request,$provider,$endpoint);
-   try{$response=strtoupper($endpoint->method)==='GET'?$request->get($url,$payload):$request->send(strtoupper($endpoint->method?:'POST'),$url,['json'=>$payload]);if($response->successful())return ['provider'=>$provider,'endpoint'=>$endpoint,'response'=>$response->json()];}
+   try{$response=strtoupper($endpoint->method)==='GET'?$request->get($url,$payload):$request->send(strtoupper($endpoint->method?:'POST'),$url,['json'=>$payload]);if($response->successful()){ $provider->forceFill(['last_successful_request_at'=>now(),'last_test_status'=>'success'])->saveQuietly(); return ['provider'=>$provider,'endpoint'=>$endpoint,'response'=>$response->json()]; }}
    catch(\Throwable $e){continue;}
   }
   throw new \RuntimeException('No eligible travel provider completed the requested operation.');
