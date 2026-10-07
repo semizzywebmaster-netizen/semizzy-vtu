@@ -43,6 +43,26 @@ class KycController extends Controller
         return back()->with('success','KYC application submitted for review.');
     }
 
+    public function lookup(Request $request, KycLookupBillingService $billing): mixed
+    {
+        $data = $request->validate([
+            'identity_type' => ['required', Rule::in(['nin', 'bvn'])],
+            'identity_number' => ['required', 'string', 'min:8', 'max:40'],
+        ]);
+
+        try {
+            $result = $billing->lookup(
+                $request->user(),
+                $data['identity_type'],
+                $data['identity_number']
+            );
+
+            return back()->with('success', strtoupper($data['identity_type']).' verification lookup completed.')->with('kycLookup', $result);
+        } catch (\\Throwable $e) {
+            return back()->withErrors(['identity_number' => $e->getMessage()])->withInput();
+        }
+    }
+
     public function document(Request $request): mixed
     {
         $user=$request->user(); abort_unless($user->identity_document_path && Storage::disk('local')->exists($user->identity_document_path),404);
