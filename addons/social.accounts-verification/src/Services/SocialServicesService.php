@@ -35,12 +35,35 @@ final class SocialServicesService {
   $payload=['reference'=>$order->reference,'inventory_id'=>$order->inventory_id,'metadata'=>$order->metadata]; if($order->order_type==='number'){ $item=SocialNumberInventory::query()->findOrFail($order->inventory_id); $payload['country_code']=$item->country_code; $payload['country_name']=$item->country_name; $payload['service_key']=$item->service_key; }
   $result=$this->providers->execute($order->order_type==='account'?'social_account':'foreign_number',$operation,$payload,$order->reference);
   $status=strtoupper((string)$result->status);
+  $order->provider_id=$result->providerId ?: $order->provider_id;
   $order->provider_reference=$result->providerReference ?: $order->provider_reference;
   $order->metadata=array_merge((array)$order->metadata,['provider_status'=>$status,'message'=>$result->message]);
   if($result->accepted || in_array($status,['SUCCESS','SUCCESSFUL','COMPLETED','VERIFIED'],true)){
    $order->status='fulfilled'; $order->delivered_at=now();
   } elseif(in_array($status,['FAILED','REJECTED','INVALID'],true)){ $order->status='failed'; }
   else { $order->status='processing'; }
+  $order->save(); return $order->fresh();
+ }
+ public function requeryNumber(SocialServiceOrder $order): SocialServiceOrder {
+  if($order->order_type!=='number') throw new RuntimeException('Requery is only available for verification-number orders.');
+  if(!$order->provider_id) throw new RuntimeException('No provider is recorded for this order; automatic requery is unavailable.');
+  if(!$order->provider_reference) throw new RuntimeException('No provider reference is recorded for this order.');
+  $provider=\\App\\Models\\ApiProvider::query()->whereKey((int)$order->provider_id)->firstOrFail();
+  $item=SocialNumberInventory::query()->find($order->inventory_id);
+  $payload=['reference'=>$order->reference,'provider_reference'=>$order->provider_reference,'inventory_id'=>$order->inventory_id,'metadata'=>$order->metadata];
+  if($item){$payload['country_code']=$item->country_code;$payload['country_name']=$item->country_name;$payload['service_key']=$item->service_key;$payload['phone_number']=$item->phone_number;}
+  $result=$this->providers->executeProvider($provider,'foreign_number','foreign_number_status',$payload,$order->reference.':status');
+  $status=strtoupper((string)$result->status);
+  $order->provider_id=$result->providerId ?: $order->provider_id;
+  $order->provider_reference=$result->providerReference ?: $order->provider_reference;
+  $order->metadata=array_merge((array)$order->metadata,['last_requery_status'=>$status,'last_requery_message'=>$result->message,'last_requery_at'=>now()->toIso8601String()]);
+  if($result->accepted || in_array($status,['SUCCESS','SUCCESSFUL','COMPLETED','VERIFIED','ACTIVE'],true)){
+   $order->status='fulfilled'; $order->delivered_at=$order->delivered_at ?: now();
+  } elseif(in_array($status,['FAILED','REJECTED','INVALID','EXPIRED','CANCELLED'],true)){
+   $order->status='failed';
+  } elseif(in_array($status,['UNKNOWN','PENDING','PROCESSING'],true)){
+   $order->status='processing';
+  }
   $order->save(); return $order->fresh();
  }
  public function canReceiveSms(SocialServiceOrder $order): bool { return $order->order_type==='number' && in_array($order->status,['paid','processing','fulfilled'],true) && (!$order->expires_at || !$order->expires_at->isPast()); }
