@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SystemSetting;
 use App\Services\Audit\AuditLogger;
 use App\Services\System\SystemSettingsService;
+use App\Services\System\SettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -81,7 +82,7 @@ class SystemSettingsController extends Controller
         ]);
     }
 
-    public function update(Request $request, AuditLogger $audit): RedirectResponse
+    public function update(Request $request, AuditLogger $audit, SettingsService $registry): RedirectResponse
     {
         $data = $request->validate([
             'platform_name'=>['required','string','min:2','max:80'],
@@ -143,16 +144,23 @@ class SystemSettingsController extends Controller
         $data['smtp']=$this->prepareSmtp($data['smtp']??[]);
 
         try {
-            foreach(['platform_name','support_email','support_notice','default_timezone','theme_key','theme_primary','skin_default','kyc_bvn_lookup_charge_minor','kyc_nin_lookup_charge_minor'] as $key){
-                SystemSetting::query()->updateOrCreate(['key'=>$key],['value'=>$data[$key]??'','type'=>'string','is_secret'=>false]);
-            }
-            foreach(['theme_custom_light','theme_custom_dark','business','social','footer_menu','smtp'] as $key){
-                SystemSetting::query()->updateOrCreate(['key'=>$key],[
-                    'value'=>json_encode($data[$key]??[],JSON_UNESCAPED_SLASHES),
-                    'type'=>'json',
-                    'is_secret'=>$key==='smtp',
-                ]);
-            }
+            $registry->bulkUpdate([
+                'platform.name'=>$data['platform_name'],
+                'platform.support_email'=>$data['support_email'] ?? '',
+                'platform.support_notice'=>$data['support_notice'] ?? '',
+                'platform.timezone'=>$data['default_timezone'],
+                'finance.kyc_bvn_lookup_charge_minor'=>(int)$data['kyc_bvn_lookup_charge_minor'],
+                'finance.kyc_nin_lookup_charge_minor'=>(int)$data['kyc_nin_lookup_charge_minor'],
+                'appearance.theme_key'=>$data['theme_key'],
+                'appearance.theme_primary'=>$data['theme_primary'],
+                'appearance.skin_default'=>$data['skin_default'],
+                'appearance.theme_custom_light'=>$data['theme_custom_light'] ?? [],
+                'appearance.theme_custom_dark'=>$data['theme_custom_dark'] ?? [],
+                'platform.business'=>$data['business'] ?? [],
+                'platform.social'=>$data['social'] ?? [],
+                'appearance.footer_menu'=>$data['footer_menu'] ?? [],
+                'communication.smtp'=>$data['smtp'] ?? [],
+            ]);
             $audit->record('admin.system_settings.updated',null,['setting_keys'=>self::KEYS,'smtp_strategy'=>$data['smtp']['strategy']??'failover'], $request);
             return back()->with('success','System settings saved and published globally.');
         }catch(\Throwable $e){
@@ -163,8 +171,9 @@ class SystemSettingsController extends Controller
 
     private function prepareSmtp(array $smtp): array
     {
-        $existingRaw = SystemSetting::query()->where('key','smtp')->value('value');
-        $existing = is_string($existingRaw) ? (json_decode($existingRaw,true) ?: []) : [];
+        $registry = app(SettingsService::class);
+        $existing = $registry->get('communication.smtp', []);
+        if (!is_array($existing)) $existing = [];
         $existingProfiles = [];
 
         if (isset($existing['profiles']) && is_array($existing['profiles'])) {
@@ -235,7 +244,7 @@ class SystemSettingsController extends Controller
         $old=$assets[$key]??'';
         $path=$request->file('file')->store('platform/'.$key,'public');
         $assets[$key]=Storage::disk('public')->url($path);
-        SystemSetting::query()->updateOrCreate(['key'=>'assets'],['value'=>json_encode($assets),'type'=>'json','is_secret'=>false]);
+        $registry->set('appearance.assets', $assets);
         if($old && str_contains($old,'/storage/')){
             $oldPath=substr($old,strpos($old,'/storage/')+9);
             Storage::disk('public')->delete($oldPath);
@@ -250,8 +259,9 @@ class SystemSettingsController extends Controller
             'email'=>['required','email','max:254'],
         ]);
 
-        $stored = SystemSetting::query()->where('key','smtp')->value('value');
-        $smtp = is_string($stored) ? (json_decode($stored,true) ?: []) : [];
+        $registry = app(SettingsService::class);
+        $smtp = $registry->get('communication.smtp', []);
+        if (!is_array($smtp)) $smtp = [];
         $profiles = $smtp['profiles'] ?? [];
         $health = is_array($smtp['health'] ?? null) ? $smtp['health'] : [];
         $results = [];
@@ -304,10 +314,7 @@ class SystemSettingsController extends Controller
         }
 
         $smtp['health'] = $health;
-        SystemSetting::query()->updateOrCreate(['key'=>'smtp'],[
-            'value'=>json_encode($smtp,JSON_UNESCAPED_SLASHES),
-            'type'=>'json','is_secret'=>true,
-        ]);
+        $registry->set('communication.smtp', $smtp);
 
         $failed = collect($results)->where('status','failed')->count();
         return back()->with($failed ? 'error' : 'success',
@@ -321,8 +328,9 @@ class SystemSettingsController extends Controller
             'profile_key'=>['required','string','max:40'],
         ]);
 
-        $stored=SystemSetting::query()->where('key','smtp')->value('value');
-        $smtp=is_string($stored)?(json_decode($stored,true)?:[]):[];
+        $registry = app(SettingsService::class);
+        $smtp=$registry->get('communication.smtp', []);
+        if (!is_array($smtp)) $smtp = [];
         $profile=collect($smtp['profiles']??[])->firstWhere('key',$data['profile_key']);
 
         if (!is_array($profile)) return back()->with('error','SMTP profile was not found.');
