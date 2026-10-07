@@ -1,9 +1,70 @@
 {
-    "name":"semizzywebmaster/semizzy-one-core","type":"project","description":"SEMIZZY ONE Core V2 integrated fintech and provider platform","keywords":["laravel","fintech","vtu","providers","addons"],"license":"proprietary",
-    "require":{"php":"^8.4","inertiajs/inertia-laravel":"^2.0","laravel/framework":"^12.0","laravel/sanctum":"^4.0","laravel/tinker":"^2.10","brick/math":"^0.12"},
-    "require-dev":{"fakerphp/faker":"^1.23","laravel/pail":"^1.2","laravel/pint":"^1.24","mockery/mockery":"^1.6","nunomaduro/collision":"^8.6","phpunit/phpunit":"^11.5"},
-    "autoload":{"psr-4":{"App\\":"app/","Database\\Factories\\":"database/factories/","Database\\Seeders\\":"database/seeders/","Semizzy\\Addons\\Kyc\\":"addons/kyc.identity-verification/src/","Semizzy\\Addons\\Payments\\":"addons/payments.gateway/src/","Semizzy\\Addons\\Loans\\":"addons/loans.credit/src/","Semizzy\\Addons\\Savings\\":"addons/savings.goals/src/","Semizzy\\Addons\\Investments\\":"addons/investments.wealth/src/","Semizzy\\Addons\\SimHosting\\":"addons/sim-hosting/src/","Semizzy\\Addons\\BulkSms\\":"addons/bulk-sms.communication/src/","Semizzy\\Addons\\Exams\\":"addons/exams.results/src/"}},
-    "autoload-dev":{"psr-4":{"Tests\\":"tests/"}},
-    "scripts":{"post-autoload-dump":["Illuminate\\Foundation\\ComposerScripts::postAutoloadDump","@php artisan package:discover --ansi"],"test":"@php artisan test","post-create-project-cmd":["@php artisan key:generate --ansi"]},
-    "config":{"optimize-autoloader":true,"preferred-install":"dist","sort-packages":true,"allow-plugins":{"php-http/discovery":true}},"minimum-stability":"stable","prefer-stable":true
+  "name": "semizzywebmaster/semizzy-one-core",
+  "type": "project",
+  "description": "SEMIZZY ONE Core V2 integrated fintech and provider platform",
+  "keywords": [
+    "laravel",
+    "fintech",
+    "vtu",
+    "providers",
+    "addons"
+  ],
+  "license": "proprietary",
+  "require": {
+    "php": "^8.4",
+    "inertiajs/inertia-laravel": "^2.0",
+    "laravel/framework": "^12.0",
+    "laravel/sanctum": "^4.0",
+    "laravel/tinker": "^2.10",
+    "brick/math": "^0.12"
+  },
+  "require-dev": {
+    "fakerphp/faker": "^1.23",
+    "laravel/pail": "^1.2",
+    "laravel/pint": "^1.24",
+    "mockery/mockery": "^1.6",
+    "nunomaduro/collision": "^8.6",
+    "phpunit/phpunit": "^11.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/",
+      "Database\\Factories\\": "database/factories/",
+      "Database\\Seeders\\": "database/seeders/",
+      "Semizzy\\Addons\\Kyc\\": "addons/kyc.identity-verification/src/",
+      "Semizzy\\Addons\\Payments\\": "addons/payments.gateway/src/",
+      "Semizzy\\Addons\\Loans\\": "addons/loans.credit/src/",
+      "Semizzy\\Addons\\Savings\\": "addons/savings.goals/src/",
+      "Semizzy\\Addons\\Investments\\": "addons/investments.wealth/src/",
+      "Semizzy\\Addons\\SimHosting\\": "addons/sim-hosting/src/",
+      "Semizzy\\Addons\\BulkSms\\": "addons/bulk-sms.communication/src/",
+      "Semizzy\\Addons\\Exams\\": "addons/exams.results/src/",
+      "Semizzy\\\\Addons\\\\P2p\\\\": "addons/p2p.transfers/src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "post-autoload-dump": [
+      "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+      "@php artisan package:discover --ansi"
+    ],
+    "test": "@php artisan test",
+    "post-create-project-cmd": [
+      "@php artisan key:generate --ansi"
+    ]
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "sort-packages": true,
+    "allow-plugins": {
+      "php-http/discovery": true
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
 }
