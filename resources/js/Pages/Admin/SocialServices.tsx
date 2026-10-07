@@ -1,7 +1,7 @@
 import React,{FormEvent,useState}from'react';
 import{Head,router}from'@inertiajs/react';
 
-type Page<T>=T&{data:T[];current_page:number;last_page:number;links?:{url:string|null;label:string;active:boolean}[]};
+type Page<T>={data:T[];current_page:number;last_page:number;total:number;links?:{url:string|null;label:string;active:boolean}[]};
 type Account={id:number;platform:string;title:string;username?:string;country_code?:string;account_age_days?:number;followers?:number;niche?:string;fulfillment_mode:string;provider_reference?:string;price:string;currency:string;status:string};
 type NumberItem={id:number;country_code:string;country_name:string;service_key?:string;phone_number:string;fulfillment_mode:string;provider_reference?:string;price:string;currency:string;status:string;expires_at?:string};
 type Order={id:number;reference:string;order_type:string;status:string;amount:string;currency:string;provider_reference?:string;provider_id?:string;user?:{id:number;name?:string;email?:string};expires_at?:string;delivered_at?:string};
