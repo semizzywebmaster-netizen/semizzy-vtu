@@ -78,6 +78,23 @@ class EscrowAddonTest extends TestCase
         $this->assertStringContainsString('held_after_minor', $service);
     }
 
+    public function test_escrow_api_resolution_requires_refund_permission(): void
+    {
+        $routes = $this->source('addons/escrow.protection/routes/api.php');
+
+        $this->assertStringContainsString("Route::post('/api/v1/escrow/{escrow}/resolve'", $routes);
+        $this->assertStringContainsString("->middleware('permission:escrow.refund')", $routes);
+        $this->assertStringNotContainsString("resolve'])->middleware('permission:escrow.manage')", $routes);
+    }
+
+    public function test_escrow_creation_requires_an_active_seller_wallet(): void
+    {
+        $service = $this->source('addons/escrow.protection/src/Services/EscrowService.php');
+
+        $this->assertStringContainsString('$sellerWallet=$wallets[$seller->id]??null;', $service);
+        $this->assertStringContainsString("Seller must have an active NGN wallet.", $service);
+    }
+
     public function test_escrow_admin_resolution_is_permission_gated(): void
     {
         $routes = $this->source('addons/escrow.protection/routes/admin.php');
