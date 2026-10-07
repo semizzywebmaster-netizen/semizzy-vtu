@@ -47,7 +47,7 @@ final class SocialServicesService {
 
  public function ingestSms(SocialServiceOrder $order,string $message,?string $sender=null,?string $providerMessageId=null,array $metadata=[]): SocialNumberSms {
   if($order->order_type!=='number')throw new RuntimeException('SMS can only be attached to a verification-number order.');
-  if(!in_array($order->status,['paid','processing','fulfilled'],true))throw new RuntimeException('Number order is not active.');
+  if(!$this->canReceiveSms($order))throw new RuntimeException('Number order is not active or has expired.');
   if($providerMessageId && SocialNumberSms::where('provider_message_id',$providerMessageId)->exists())return SocialNumberSms::where('provider_message_id',$providerMessageId)->firstOrFail();
   return SocialNumberSms::create(['order_id'=>$order->id,'sender'=>$sender,'message'=>$message,'provider_message_id'=>$providerMessageId,'received_at'=>now(),'metadata'=>$metadata]);
  } public function payFromWallet(\App\Models\User $user, SocialServiceOrder $order): SocialServiceOrder {
