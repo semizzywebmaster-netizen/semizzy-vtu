@@ -3,6 +3,7 @@ namespace Addons\BusinessAgentMerchantReseller\Services;
 
 use Addons\BusinessAgentMerchantReseller\Models\BusinessPartner;
 use Illuminate\Support\Facades\DB;
+use App\Models\WalletAccount;
 use RuntimeException;
 
 class BusinessCommercialService
@@ -129,13 +130,13 @@ class BusinessCommercialService
         }
 
         $user = $partner->relationLoaded('user') ? $partner->user : $partner->user()->first();
-        $wallet = $user?->wallet;
+        $wallet = $user ? WalletAccount::query()->where('user_id', $user->id)->first() : null;
 
         if (!$wallet) {
             throw new RuntimeException('Business wallet is unavailable.');
         }
 
-        $available = (int) ($wallet->available_balance_minor ?? $wallet->balance_minor ?? 0);
+        $available = (int) $wallet->available_minor;
         if ($available < (int) $partner->minimum_balance_minor) {
             throw new RuntimeException('Minimum balance requirement not met.');
         }
