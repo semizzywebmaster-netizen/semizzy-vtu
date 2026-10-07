@@ -38,6 +38,11 @@ class CommunicationCampaignController
   if(in_array($campaign->status,['completed','failed','cancelled'],true)) return response()->json(['message'=>'Campaign cannot be paused in its current state.'],422);
   $campaign->update(['status'=>'paused']); return response()->json(['campaign'=>$campaign->fresh()]);
  }
+ public function resume(Campaign $campaign): JsonResponse
+ {
+  if($campaign->status!=='paused') return response()->json(['message'=>'Only paused campaigns can be resumed.'],422);
+  $campaign->update(['status'=>'scheduled','scheduled_at'=>now(),'completed_at'=>null]); return response()->json(['campaign'=>$campaign->fresh()]);
+ }
  public function cancel(Campaign $campaign): JsonResponse
  {
   if(in_array($campaign->status,['completed','cancelled'],true)) return response()->json(['message'=>'Campaign cannot be cancelled in its current state.'],422);
