@@ -43,10 +43,13 @@ class BusinessCommercialService
         }
     }
 
-    public function record(BusinessPartner $partner, int $amountMinor): void
+    public function record(BusinessPartner $partner, int $amountMinor, string $serviceKey = 'unknown', ?string $productKey = null, string $transactionKey = ''): void
     {
         if ($amountMinor < 0) {
             throw new RuntimeException('Invalid transaction amount.');
+        }
+        if ($transactionKey === '') {
+            throw new RuntimeException('A transaction key is required for commercial settlement recording.');
         }
 
         $today = now()->toDateString();
@@ -68,6 +71,7 @@ class BusinessCommercialService
             ->where('period_date', $today)
             ->lockForUpdate()
             ->increment('daily_used_minor', $amountMinor, ['updated_at' => now()]);
+        app(BusinessCommissionService::class)->accrue($partner, $serviceKey, $productKey, $amountMinor, $transactionKey);
     }
 
     public function pricing(BusinessPartner $partner, string $serviceKey, ?string $productKey = null): ?object
