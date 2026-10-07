@@ -3,6 +3,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import type { ComponentType } from 'react';
 import AdminLayout from './Layouts/AdminLayout';
+import GlobalFooterNav from './Components/GlobalFooterNav';
 import { ThemeBridge } from './Utils/ThemeSystem';
 
 type PageModule = { default: ComponentType<Record<string, unknown>> };
@@ -16,14 +17,16 @@ if ((import.meta as ViteImportMeta).env.PROD && 'serviceWorker' in navigator) {
 createInertiaApp({
   resolve: async (name) => {
     const pages = (import.meta as ViteImportMeta).glob('./Pages/**/*.tsx');
-    const page = pages[`./Pages/${name}.tsx`];
-    if (!page) throw new Error(`Inertia page not found: ${name}`);
+    const page = pages[\`./Pages/\${name}.tsx\`];
+    if (!page) throw new Error(\`Inertia page not found: \${name}\`);
     const module = (await page()) as PageModule;
     const ResolvedPage = module.default;
     const isAdminPage = name === 'Dashboard' || name.startsWith('Admin/');
     return (pageProps: Record<string, unknown>) => {
       const platform = pageProps.platform as Platform | undefined;
-      return <ThemeBridge platform={platform}>{isAdminPage ? <AdminLayout><ResolvedPage {...pageProps} /></AdminLayout> : <ResolvedPage {...pageProps} />}</ThemeBridge>;
+      const auth = pageProps.auth as { user?: { role?: string } } | undefined;
+      const isUser = !!auth?.user && !['ADMIN','STAFF','SUPPORT'].includes(auth.user.role || '');
+      return <ThemeBridge platform={platform}>{isUser ? <GlobalFooterNav /> : null}{isAdminPage ? <AdminLayout><ResolvedPage {...pageProps} /></AdminLayout> : <ResolvedPage {...pageProps} />}</ThemeBridge>;
     };
   },
   setup({ el, App, props }) { createRoot(el).render(<App {...props} />); },
