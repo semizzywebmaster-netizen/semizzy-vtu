@@ -75,3 +75,58 @@ CI also validates PHP syntax, application tests, frontend type checking and the 
 ## Verification and release status
 
 GitHub Actions runs PHP lint and feature tests plus frontend TypeScript checking and Vite builds. Passing CI proves only those configured checks. It does not prove a real cPanel deployment, live email/SMS delivery, external provider integration, restore-tested backups, load capacity or production security readiness. Consult docs/IMPLEMENTATION-STATUS.md for the current verified scope and limitations.
+
+
+## SEMIZZY ONE Addon Roadmap / Registry
+
+Status is intentionally separated into **BUILT**, **IN PROGRESS / HARDENING**, and **NOT BUILT**. Addons remain modular and are activated through Core.
+
+### BUILT
+1. VTU & Digital Services — `vtu.digital-services`
+2. CAC Business Services
+3. SIM Hosting
+4. Bulk SMS & Communication
+5. Exams & Results
+6. KYC & Identity Verification
+7. Payments Gateway
+8. Savings & Goals
+9. Loans & Credit
+10. Investments & Wealth
+11. Marketplace & Commerce
+12. P2P Transfers & Trading
+13. Escrow Protection
+14. Government Registration & Certificates
+15. Rewards, Referrals & Promotions
+16. Spin to Win / Rewards Game — `spin-to-win.rewards-game`
+17. Mailer SMTP / SMTP Mailer — `mailer.smtp`
+
+### IN PROGRESS / HARDENING
+1. KYC & Identity Verification — billing/provider-flow hardening
+2. P2P Transfers & Trading — security/financial hardening
+3. Escrow Protection — reconciliation/financial hardening
+4. SMM Services — foundation hardening
+5. Social Media Accounts & Foreign Verification Numbers — foundation/rebuild
+6. Government Registration & Certificates — payment/refund/provider hardening
+7. Rewards, Referrals & Promotions — approval/reward hardening
+8. Spin to Win / Rewards Game — production hardening after CI and database validation
+9. Mailer SMTP / SMTP Mailer — production health/failover hardening after CI and cPanel SMTP verification
+
+### NOT BUILT
+1. Travel & Tickets Booking
+2. Gift Cards Marketplace
+3. Communication & WhatsApp
+4. Insurance & Protection
+5. Business, Agent, Merchant & Reseller
+6. VTU Website Builder
+7. Virtual Cards
+8. Data & Airtime Conversion
+9. Banking & Financial Integrations
+10. Digital Assets & Crypto
+11. Community & Discussion
+12. Group Savings / Contributions
+13. Ads & Monetization
+14. Help & Support Center
+15. AI Assistant — second-to-last
+16. Developer / API Provider — absolute last
+
+Spin to Win and Mailer SMTP are addons, not Core hard-coded features. The Mailer SMTP addon supports an unbounded number of SMTP profiles; any UI pagination or operational limit must not impose a product maximum.
