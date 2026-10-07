@@ -2,8 +2,21 @@ name: SEMIZZY ONE VTU ADDON CI
 on:
   push:
     branches: [main]
+    paths:
+      - 'addons/vtu.digital-services/**'
+      - 'tests/Feature/Vtu*.php'
+      - 'tests/Feature/ProviderRoutingTest.php'
+      - 'composer.json'
+      - 'composer.lock'
   pull_request:
     branches: [main]
+    paths:
+      - 'addons/vtu.digital-services/**'
+      - 'tests/Feature/Vtu*.php'
+      - 'tests/Feature/ProviderRoutingTest.php'
+      - 'composer.json'
+      - 'composer.lock'
+  workflow_dispatch:
 jobs:
   vtu:
     runs-on: ubuntu-latest
