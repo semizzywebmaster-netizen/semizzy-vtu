@@ -47,6 +47,14 @@ class VtuBulkService
 
             $payload = (array) ($item['payload'] ?? []);
             $this->validator->validate($product->service, $payload);
+            if (isset($payload['phone']) && is_string($payload['phone'])) {
+                $network = strtolower(trim((string) ($payload['network'] ?? '')));
+                if ($network === '') {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'items.' . $index . '.payload.network' => 'Network must be selected or resolved before a bulk quote.',
+                    ]);
+                }
+            }
             $q = $this->transactions->quote($product, $tier);
             $price = (float) $q['customer_price'];
 
