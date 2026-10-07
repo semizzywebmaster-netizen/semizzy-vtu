@@ -12,6 +12,11 @@ export default function Services({ services = [] }: { services: Service[] }) {
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [quote, setQuote] = useState<{ customer_price: string; currency: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   const categories = useMemo(() => {
     const map = new Map<string, { key: string; name: string; description?: string | null }>();
@@ -85,8 +90,59 @@ export default function Services({ services = [] }: { services: Service[] }) {
         <div className='flex items-start justify-between gap-4'><div className='flex items-center gap-3'><ServiceIcon name={selectedService.name} icon={(selectedService.metadata as any)?.icon} iconUrl={(selectedService.metadata as any)?.icon_url}/><div><p className='text-lg font-black'>{selectedService.name}</p><p className='text-xs text-slate-500'>{selectedService.category?.name || 'Digital service'}</p></div></div><button type='button' onClick={() => setSelectedService(null)} className='flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 font-bold'>×</button></div>
         <p className='mt-4 text-sm leading-6 text-slate-500'>{selectedService.description || 'Choose an available product below.'}</p>
         <div className='mt-5'><p className='text-xs font-bold uppercase tracking-wider text-slate-400'>Available products</p>
-          {selectedService.products.length === 0 ? <div className='mt-3 rounded-2xl bg-slate-50 p-5 text-sm text-slate-500'>No enabled provider products are currently configured for this service.</div> : <div className='mt-3 space-y-2'>{selectedService.products.map(product => <div key={product.id} className='flex items-center justify-between rounded-2xl border border-slate-200 p-4'><div><p className='text-sm font-bold'>{product.name}</p><p className='mt-0.5 text-[11px] text-slate-400'>Available product</p></div><span className='text-slate-300'>›</span></div>)}</div>}
+          {selectedService.products.length === 0 ? <div className='mt-3 rounded-2xl bg-slate-50 p-5 text-sm text-slate-500'>No enabled provider products are currently configured for this service.</div> : <div className='mt-3 space-y-2'>{selectedService.products.map(product => <button type='button' key={product.id} onClick={() => { setSelectedProduct(product); setQuote(null); setMessage(null); setForm({ plan: product.name }); }} className='flex w-full items-center justify-between rounded-2xl border border-slate-200 p-4 text-left transition hover:border-indigo-200 hover:bg-indigo-50'><div><p className='text-sm font-bold'>{product.name}</p><p className='mt-0.5 text-[11px] text-slate-400'>Select to purchase</p></div><span className='font-black text-indigo-700'>›</span></button>)}</div>}
         </div><p className='mt-5 rounded-2xl bg-amber-50 p-3 text-xs leading-5 text-amber-800'>Prices and transaction options are shown only when the product is fully configured and available. No provider cost is exposed here.</p>
+      </section>
+    </div>}
+    {selectedProduct && selectedService && <div className='fixed inset-0 z-[60] flex items-end bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4' onClick={() => setSelectedProduct(null)}>
+      <section role='dialog' aria-modal='true' aria-label={'Purchase ' + selectedService.name} className='max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-lg sm:rounded-3xl' onClick={event => event.stopPropagation()}>
+        <div className='flex items-start justify-between gap-3'>
+          <div><p className='text-xs font-bold uppercase tracking-wider text-indigo-600'>{selectedService.name}</p><h3 className='mt-1 text-xl font-black'>{selectedProduct.name}</h3></div>
+          <button type='button' onClick={() => setSelectedProduct(null)} className='flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 font-bold'>×</button>
+        </div>
+        <div className='mt-5 space-y-4'>
+          {['airtime','data'].includes(selectedService.key) && <>
+            <label className='block text-sm font-bold'>Network<input value={form.network || ''} onChange={e => setForm({...form, network:e.target.value})} placeholder='e.g. MTN' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none focus:border-indigo-500' /></label>
+            <label className='block text-sm font-bold'>Phone number<input value={form.phone || ''} onChange={e => setForm({...form, phone:e.target.value})} placeholder='0803XXXXXXXX' inputMode='tel' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none focus:border-indigo-500' /></label>
+            {selectedService.key === 'airtime' && <label className='block text-sm font-bold'>Amount<input value={form.amount || ''} onChange={e => setForm({...form, amount:e.target.value})} placeholder='1000' inputMode='decimal' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none focus:border-indigo-500' /></label>}
+          </>}
+          {selectedService.key === 'electricity' && <>
+            <label className='block text-sm font-bold'>Disco<input value={form.disco || ''} onChange={e => setForm({...form, disco:e.target.value})} placeholder='e.g. AEDC' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>
+            <label className='block text-sm font-bold'>Meter number<input value={form.meter_number || ''} onChange={e => setForm({...form, meter_number:e.target.value})} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>
+            <label className='block text-sm font-bold'>Meter type<select value={form.meter_type || 'prepaid'} onChange={e => setForm({...form, meter_type:e.target.value})} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium'><option value='prepaid'>Prepaid</option><option value='postpaid'>Postpaid</option></select></label>
+            <label className='block text-sm font-bold'>Amount<input value={form.amount || ''} onChange={e => setForm({...form, amount:e.target.value})} placeholder='5000' inputMode='decimal' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>
+          </>}
+          {['cable_tv','broadband'].includes(selectedService.key) && <>
+            <label className='block text-sm font-bold'>Provider<input value={form.provider || ''} onChange={e => setForm({...form, provider:e.target.value})} placeholder='Provider' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>
+            <label className='block text-sm font-bold'>{selectedService.key === 'cable_tv' ? 'Customer / IUC number' : 'Account ID'}<input value={form.customer_number || form.account_id || ''} onChange={e => setForm({...form, ...(selectedService.key === 'cable_tv' ? {customer_number:e.target.value} : {account_id:e.target.value})})} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>
+            <label className='block text-sm font-bold'>{selectedService.key === 'cable_tv' ? 'Package' : 'Plan'}<input value={form.package || ''} onChange={e => setForm({...form, package:e.target.value})} placeholder={selectedProduct.name} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>
+          </>}
+          {selectedService.key === 'data' && <label className='block text-sm font-bold'>Plan<input value={form.plan || selectedProduct.name} onChange={e => setForm({...form, plan:e.target.value})} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>}
+          {!['airtime','data','electricity','cable_tv','broadband'].includes(selectedService.key) && <label className='block text-sm font-bold'>Recipient / account details<input value={form.recipient || ''} onChange={e => setForm({...form, recipient:e.target.value})} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>}
+          {message && <div className='rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700'>{message}</div>}
+          {quote && <div className='rounded-2xl bg-slate-50 p-4'><p className='text-xs font-bold uppercase tracking-wider text-slate-400'>Total to pay</p><p className='mt-1 text-2xl font-black'>{quote.currency === 'NGN' ? '₦' : quote.currency + ' '}{(Number(quote.customer_price) / 100).toLocaleString(undefined,{minimumFractionDigits:2})}</p></div>}
+          <button type='button' disabled={busy} onClick={async () => {
+            setBusy(true); setMessage(null);
+            try {
+              const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
+              const response=await fetch('/vtu/quote',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token},body:JSON.stringify({product_id:selectedProduct.id})});
+              const body=await response.json(); if(!response.ok) throw new Error(body.message || 'Unable to get price.');
+              setQuote(body.data);
+            } catch(e) { setMessage(e instanceof Error ? e.message : 'Unable to get price.'); } finally { setBusy(false); }
+          }} className='w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-black text-white disabled:opacity-50'>{busy ? 'Checking price…' : quote ? 'Refresh price' : 'Get price'}</button>
+          {quote && <label className='block text-sm font-bold'>Transaction PIN<input value={form.transaction_pin || ''} onChange={e => setForm({...form, transaction_pin:e.target.value.replace(/\D/g,'').slice(0,4)})} type='password' inputMode='numeric' maxLength={4} placeholder='••••' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-center tracking-[0.5em] outline-none' /></label>}
+          {quote && <button type='button' disabled={busy || (form.transaction_pin || '').length !== 4} onClick={async () => {
+            setBusy(true); setMessage(null);
+            try {
+              const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
+              const {transaction_pin, ...payload}=form;
+              const response=await fetch('/vtu/purchase',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token},body:JSON.stringify({product_id:selectedProduct.id,payload,idempotency_key:crypto.randomUUID(),transaction_pin})});
+              const body=await response.json(); if(!response.ok) throw new Error(body.message || 'Purchase could not be completed.');
+              setMessage('Transaction submitted successfully. Reference: ' + (body.data?.reference || 'pending'));
+              setForm({}); setQuote(null);
+            } catch(e) { setMessage(e instanceof Error ? e.message : 'Purchase could not be completed.'); } finally { setBusy(false); }
+          }} className='w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-black text-white disabled:opacity-50'>{busy ? 'Processing…' : 'Confirm purchase'}</button>}
+        </div>
       </section>
     </div>}
   <CoreMobileNav /></main>;
