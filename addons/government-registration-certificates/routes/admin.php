@@ -5,6 +5,9 @@ Route::middleware(['web','auth','ensure.addon:government.registration-certificat
  Route::get('/',[AdminGovernmentServicesController::class,'index'])->middleware('permission:government.view');
  Route::post('/services',[AdminGovernmentServicesController::class,'storeService'])->middleware(['permission:government.services.manage','throttle:30,1']);
  Route::patch('/services/{service}',[AdminGovernmentServicesController::class,'updateService'])->middleware(['permission:government.services.manage','throttle:60,1']);
+ Route::post('/services/{service}/requirements',[AdminGovernmentServicesController::class,'addRequirement'])->middleware(['permission:government.services.manage','throttle:60,1']);
+ Route::patch('/services/{service}/requirements/{key}',[AdminGovernmentServicesController::class,'updateRequirement'])->middleware(['permission:government.services.manage','throttle:60,1']);
+ Route::delete('/services/{service}/requirements/{key}',[AdminGovernmentServicesController::class,'deleteRequirement'])->middleware(['permission:government.services.manage','throttle:60,1']);
  Route::get('/applications/{application}',[AdminGovernmentServicesController::class,'showApplication'])->middleware('permission:government.orders.manage');
  Route::patch('/applications/{application}/status',[AdminGovernmentServicesController::class,'updateApplicationStatus'])->middleware(['permission:government.orders.manage','throttle:60,1']);
  Route::patch('/documents/{document}/review',[AdminGovernmentServicesController::class,'reviewDocument'])->middleware(['permission:government.documents.manage','throttle:60,1']);
