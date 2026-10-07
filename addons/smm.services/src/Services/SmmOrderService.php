@@ -15,6 +15,7 @@ final class SmmOrderService
  {
   $order->refresh();
   if (in_array(strtolower($order->status), ['completed','failed','cancelled'], true)) return $order;
+  if (!$order->provider_reference) throw new RuntimeException('Provider reference is required before requery.');
   $service=$order->service()->firstOrFail();
   $result=$this->providers->execute($service->service_key,'smm_requery',['provider_reference'=>$order->provider_reference,'reference'=>$order->reference,'service_id'=>$service->service_key],$order->idempotency_key.':requery');
   return $this->applyProviderResult($order,$result);
@@ -24,6 +25,7 @@ final class SmmOrderService
  {
   $order->refresh();
   if (!in_array(strtolower($order->status), ['pending','processing','accepted','cancel_requested'], true)) return $order;
+  if (!$order->provider_reference) throw new RuntimeException('Provider reference is required before cancellation.');
   $service=$order->service()->firstOrFail();
   $result=$this->providers->execute($service->service_key,'smm_cancel',['provider_reference'=>$order->provider_reference,'reference'=>$order->reference],$order->idempotency_key.':cancel');
   $status=strtoupper((string)$result->status);
