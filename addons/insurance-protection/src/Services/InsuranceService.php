@@ -29,8 +29,17 @@ class InsuranceService {
  public function cancel(User $user,InsurancePolicy $p,string $reason): InsurancePolicy {
   if($p->user_id!==$user->id) throw new RuntimeException('Policy not found.');
   if(!in_array($p->status,['active','issued'],true)) throw new RuntimeException('Only active policies can be cancelled.');
-  $p->update(['status'=>'cancelled','cancel_reason'=>$reason,'cancelled_at'=>now()]);
-  return $p->fresh();
+  $result=$this->providers->execute('insurance','insurance_cancel',['provider_reference'=>$p->provider_reference,'policy_reference'=>$p->reference,'reason'=>$reason], 'insurance:cancel:'.$p->id);
+  $state=strtoupper((string)$result->status);
+  if($result->accepted||in_array($state,['CANCELLED','SUCCESS','COMPLETED'],true)){
+   $p->update(['status'=>'cancelled','provider_status'=>$result->status,'provider_reference'=>$result->providerReference?:$p->provider_reference,'cancel_reason'=>$reason,'cancelled_at'=>now()]);
+   return $p->fresh();
+  }
+  if($result->duplicateRisk||in_array($state,['UNKNOWN','PENDING','PROCESSING'],true)){
+   $p->update(['provider_status'=>$result->status,'provider_reference'=>$result->providerReference?:$p->provider_reference,'cancel_reason'=>$reason]);
+   return $p->fresh();
+  }
+  throw new RuntimeException($result->message?:'Insurance cancellation was rejected by the provider.');
  }
  public function renew(User $user,InsurancePolicy $p,string $key): InsurancePolicy {
   if($p->user_id!==$user->id) throw new RuntimeException('Policy not found.');
