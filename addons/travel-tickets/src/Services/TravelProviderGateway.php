@@ -40,7 +40,7 @@ class TravelProviderGateway
                     return [
                         'provider' => $provider,
                         'endpoint' => $endpoint,
-                        'response' => $this->responsePayload($response),
+                        'response' => $this->mappedResponse($response, $endpoint),
                     ];
                 }
             } catch (\Throwable $e) {
@@ -219,9 +219,47 @@ class TravelProviderGateway
     private function responsePayload($response): mixed
     {
         try {
-            return $response->json();
+            $json = $response->json();
+            if ($json !== null) {
+                return $json;
+            }
         } catch (\Throwable $e) {
-            return null;
+            // Fall through to a bounded text payload for non-JSON providers.
         }
+
+        $body = trim((string) $response->body());
+        return $body === '' ? null : mb_substr($body, 0, 20000);
+    }
+
+    private function mappedResponse($response, ProviderEndpoint $endpoint): mixed
+    {
+        $payload = $this->responsePayload($response);
+        $mapping = $endpoint->response_mapping ?: [];
+
+        if (!$mapping || !is_array($mapping)) {
+            return $payload;
+        }
+
+        return $this->applyResponseMapping($payload, $mapping);
+    }
+
+    private function applyResponseMapping(mixed $payload, array $mapping): mixed
+    {
+        $result = [];
+        foreach ($mapping as $target => $source) {
+            if (is_array($source)) {
+                $source = $source['path'] ?? null;
+            }
+            if (!$source || !is_string($source)) {
+                continue;
+            }
+
+            $value = data_get($payload, $source);
+            if ($value !== null) {
+                data_set($result, (string) $target, $value);
+            }
+        }
+
+        return $result ?: $payload;
     }
 }
