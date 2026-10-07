@@ -44,7 +44,7 @@ final class EscrowService {
    $beforeAvailable=(string)$buyer->available_minor; $beforeHeld=(string)$buyer->held_minor;
    $buyer->available_minor=$this->sub($beforeAvailable,$total); $buyer->held_minor=$this->add($beforeHeld,$total); $buyer->save();
    $hours=max(1,(int)($s['default_expiry_hours']??72)); $tx=EscrowTransaction::create(['buyer_id'=>$buyerId,'seller_id'=>$seller->id,'reference'=>'ESC-'.strtoupper(Str::random(20)),'idempotency_key'=>$idempotencyKey,'currency'=>$currency,'amount_minor'=>$amountMinor,'fee_minor'=>$fee,'status'=>'funded','title'=>trim($title),'description'=>$description,'expires_at'=>now()->addHours($hours),'funded_at'=>now(),'metadata'=>['addon'=>'escrow.protection']]);
-   $this->movement($buyer,'escrow:hold:'.$tx->id,$tx->reference,'hold',$total,$beforeAvailable,$buyer->available_minor,$currency,['addon'=>'escrow.protection','escrow_id'=>$tx->id]);
+   $this->movement($buyer,'escrow:hold:'.$tx->id,$tx->reference,'hold',$total,$beforeAvailable,$afterAvailable,$beforeHeld,$afterHeld,$currency,['addon'=>'escrow.protection','escrow_id'=>$tx->id]);
    return $tx->fresh();
   });}catch(QueryException $e){if(str_contains(strtolower($e->getMessage()),'unique')||str_contains(strtolower($e->getMessage()),'duplicate')){$x=EscrowTransaction::where('buyer_id',$buyerId)->where('idempotency_key',$idempotencyKey)->first();if($x)return $x;}throw $e;}
  }
@@ -55,10 +55,10 @@ final class EscrowService {
    if($tx->status==='disputed') throw new RuntimeException('A disputed escrow must be resolved by an administrator.');
    $wallets=$this->lockWallets($tx->buyer_id,$tx->seller_id); $buyer=$wallets[$tx->buyer_id]??null; $seller=$wallets[$tx->seller_id]??null;
    if(!$buyer||!$seller) throw new RuntimeException('Both wallets are required.');
-   $amount=(string)$tx->amount_minor; $beforeSeller=(string)$seller->available_minor; $beforeHeld=(string)$buyer->held_minor;
+   $amount=$this->add((string)$tx->amount_minor,(string)$tx->fee_minor); $beforeSeller=(string)$seller->available_minor; $beforeHeld=(string)$buyer->held_minor;
    if(!$this->gte($beforeHeld,$amount)) throw new RuntimeException('Escrow hold balance is inconsistent.');
-   $buyer->held_minor=$this->sub($beforeHeld,$amount); $seller->available_minor=$this->add((string)$seller->available_minor,$amount); $buyer->save();$seller->save();
-   $this->movement($seller,'escrow:release:credit:'.$tx->id,$tx->reference,'credit',$amount,$beforeSeller,$seller->available_minor,$tx->currency,['addon'=>'escrow.protection','escrow_id'=>$tx->id]);
+   $afterHeld=$this->sub($beforeHeld,$amount); $afterSeller=$this->add($beforeSeller,$amount); $buyer->held_minor=$afterHeld; $seller->available_minor=$afterSeller; $buyer->save();$seller->save();
+   $this->movement($seller,'escrow:release:credit:'.$tx->id,$tx->reference,'credit',$amount,$beforeSeller,$afterSeller,(string)$seller->held_minor,(string)$seller->held_minor,$tx->currency,['addon'=>'escrow.protection','escrow_id'=>$tx->id]);
    $tx->status='released';$tx->released_at=now();$tx->save(); return $tx->fresh();
   });
  }
@@ -67,7 +67,7 @@ final class EscrowService {
    $tx=EscrowTransaction::lockForUpdate()->findOrFail($id); if($tx->buyer_id!==$buyerId) throw new RuntimeException('Only the buyer can cancel escrow.');
    if($tx->status!=='funded') throw new RuntimeException('Only funded escrow can be cancelled.');
    $wallet=WalletAccount::where('user_id',$tx->buyer_id)->where('currency','NGN')->lockForUpdate()->first(); if(!$wallet)throw new RuntimeException('Buyer wallet not found.');
-   $amount=$this->add((string)$tx->amount_minor,(string)$tx->fee_minor);$beforeHeld=(string)$wallet->held_minor;
+   $amount=$this->add((string)$tx->amount_minor,(string)$tx->fee_minor);$beforeAvailable=(string)$wallet->available_minor;$beforeHeld=(string)$wallet->held_minor;
    if(!$this->gte($beforeHeld,$amount))throw new RuntimeException('Escrow hold balance is inconsistent.');
    $wallet->held_minor=$this->sub($beforeHeld,$amount);$wallet->available_minor=$this->add((string)$wallet->available_minor,$amount);$wallet->save();
    $afterAvailable=(string)$wallet->available_minor; $this->movement($wallet,'escrow:cancel:release:'.$tx->id,$tx->reference,'credit',$amount,$this->sub($afterAvailable,$amount),$afterAvailable,$tx->currency,['addon'=>'escrow.protection','escrow_id'=>$tx->id]);
@@ -86,8 +86,8 @@ final class EscrowService {
    $tx=EscrowTransaction::lockForUpdate()->findOrFail($id); if($tx->status!=='disputed')throw new RuntimeException('Only disputed escrow can be resolved.');
    $wallets=$this->lockWallets($tx->buyer_id,$tx->seller_id);$buyer=$wallets[$tx->buyer_id]??null;$seller=$wallets[$tx->seller_id]??null;if(!$buyer||!$seller)throw new RuntimeException('Both wallets are required.');
    $amount=(string)$tx->amount_minor;
-   if($decision==='release'){ $before=(string)$seller->available_minor;$beforeHeld=(string)$buyer->held_minor;if(!$this->gte($beforeHeld,$amount))throw new RuntimeException('Escrow hold balance is inconsistent.');$buyer->held_minor=$this->sub($beforeHeld,$amount);$seller->available_minor=$this->add($before,$amount);$buyer->save();$seller->save();$this->movement($seller,'escrow:resolve:release:'.$tx->id,$tx->reference,'credit',$amount,$before,$seller->available_minor,$tx->currency,['addon'=>'escrow.protection','escrow_id'=>$tx->id]);$tx->status='released';$tx->released_at=now();}
-   elseif($decision==='refund'){ $before=(string)$buyer->available_minor;$beforeHeld=(string)$buyer->held_minor;$total=$this->add($amount,(string)$tx->fee_minor);if(!$this->gte($beforeHeld,$total))throw new RuntimeException('Escrow hold balance is inconsistent.');$buyer->held_minor=$this->sub($beforeHeld,$total);$buyer->available_minor=$this->add($before,$total);$buyer->save();$this->movement($buyer,'escrow:resolve:refund:'.$tx->id,$tx->reference,'credit',$total,$before,$buyer->available_minor,$tx->currency,['addon'=>'escrow.protection','escrow_id'=>$tx->id]);$tx->status='refunded';$tx->refunded_at=now();}
+   if($decision==='release'){ $before=(string)$seller->available_minor;$beforeHeld=(string)$buyer->held_minor;if(!$this->gte($beforeHeld,$amount))throw new RuntimeException('Escrow hold balance is inconsistent.');$afterHeld=$this->sub($beforeHeld,$amount);$afterSeller=$this->add($before,$amount);$buyer->held_minor=$afterHeld;$seller->available_minor=$afterSeller;$buyer->save();$seller->save();$this->movement($seller,'escrow:resolve:release:'.$tx->id,$tx->reference,'credit',$amount,$before,$afterSeller,(string)$seller->held_minor,(string)$seller->held_minor,$tx->currency,['addon'=>'escrow.protection','escrow_id'=>$tx->id]);$tx->status='released';$tx->released_at=now();}
+   elseif($decision==='refund'){ $before=(string)$buyer->available_minor;$beforeHeld=(string)$buyer->held_minor;$total=$amount;if(!$this->gte($beforeHeld,$total))throw new RuntimeException('Escrow hold balance is inconsistent.');$afterHeld=$this->sub($beforeHeld,$total);$afterAvailable=$this->add($before,$total);$buyer->held_minor=$afterHeld;$buyer->available_minor=$afterAvailable;$buyer->save();$this->movement($buyer,'escrow:resolve:refund:'.$tx->id,$tx->reference,'credit',$total,$before,$afterAvailable,$beforeHeld,$afterHeld,$tx->currency,['addon'=>'escrow.protection','escrow_id'=>$tx->id]);$tx->status='refunded';$tx->refunded_at=now();}
    else throw new RuntimeException('Resolution must be release or refund.');
    $tx->metadata=array_merge((array)$tx->metadata,['resolution'=>['admin_id'=>$adminId,'decision'=>$decision,'note'=>$note]]);$tx->save();
    EscrowDispute::where('escrow_transaction_id',$tx->id)->where('status','open')->update(['status'=>'resolved','resolved_by'=>$adminId,'resolved_at'=>now(),'resolution_note'=>$note]);
