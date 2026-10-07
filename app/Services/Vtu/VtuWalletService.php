@@ -10,6 +10,29 @@ use RuntimeException;
 
 class VtuWalletService
 {
+    public function assertAvailableForBulk(int $userId, string $currency, string $totalMinor): void
+    {
+        DB::transaction(function () use ($userId, $currency, $totalMinor): void {
+            $wallet = WalletAccount::query()
+                ->where('user_id', $userId)
+                ->where('currency', strtoupper($currency))
+                ->lockForUpdate()
+                ->first();
+
+            if (!$wallet) {
+                throw new RuntimeException('User wallet is not available.');
+            }
+
+            if ($wallet->status !== 'active') {
+                throw new RuntimeException('User wallet is not active.');
+            }
+
+            if ($this->compareIntegerStrings((string) $wallet->available_minor, (string) $totalMinor) < 0) {
+                throw new RuntimeException('Insufficient wallet balance for the complete bulk request.');
+            }
+        });
+    }
+
     public function reserve(VtuTransaction $tx): void
     {
         DB::transaction(function () use ($tx): void {
