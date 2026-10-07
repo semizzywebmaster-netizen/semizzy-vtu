@@ -112,7 +112,7 @@ class SystemSettingsController extends Controller
             ]);
         } catch (\Throwable $e) {
             report($e);
-            return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+            return response()->json(['ok' => false, 'message' => 'The setting could not be saved. Check the value and try again.'], 422);
         }
     }
 
@@ -266,7 +266,7 @@ class SystemSettingsController extends Controller
         ];
     }
 
-    public function upload(Request $request, AuditLogger $audit): RedirectResponse
+    public function upload(Request $request, AuditLogger $audit, SettingsService $registry): RedirectResponse
     {
         $data=$request->validate([
             'asset'=>['required','in:logo,favicon,banner,hero'],
