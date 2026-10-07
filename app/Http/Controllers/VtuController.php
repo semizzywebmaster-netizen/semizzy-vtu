@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ApiProvider;
 use App\Models\ServiceProduct;
 use App\Models\VtuTransaction;
+use App\Models\VtuBulkOperation;
 use App\Services\Security\WebhookReplayGuard;
 use App\Services\Security\WebhookSignatureService;
 use App\Services\Vtu\VtuBulkService;
@@ -127,6 +128,15 @@ class VtuController extends Controller
         ]);
 
         return response()->json(['data' => $b->execute($r->user()->id, $d['items'], $r->user()->role, $d['idempotency_key'] ?? null)], 201);
+    }
+
+    public function bulkItemRequery(Request $r, VtuBulkOperation $bulk, int $item, VtuBulkService $service)
+    {
+        abort_unless((int) $bulk->user_id === (int) $r->user()->id, 404);
+
+        return response()->json([
+            'data' => $service->requeryItem($r->user()->id, $bulk, $item),
+        ]);
     }
 
     public function history(Request $r)
