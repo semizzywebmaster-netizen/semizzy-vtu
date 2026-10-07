@@ -29,6 +29,48 @@ class VtuBulkIdempotencyTest extends TestCase
         ], 'USER', 'bulk-duplicate-items');
     }
 
+    public function test_duplicate_airtime_or_data_recipients_are_rejected_server_side(): void
+    {
+        $user = User::create([
+            'name' => 'Bulk Recipient Test',
+            'email' => 'bulk-recipient@example.test',
+            'password' => 'password',
+            'role' => 'USER',
+            'status' => 'active',
+        ]);
+
+        $category = ServiceCategory::create([
+            'key' => 'bulk-vtu-test',
+            'name' => 'Bulk VTU Test',
+            'enabled' => true,
+            'sort_order' => 1,
+        ]);
+
+        $service = Service::create([
+            'category_id' => $category->id,
+            'key' => 'data',
+            'name' => 'Data',
+            'enabled' => true,
+        ]);
+
+        $product = ServiceProduct::create([
+            'service_id' => $service->id,
+            'key' => 'data-plan',
+            'name' => '1GB Data',
+            'provider_cost' => '100.00',
+            'currency' => 'NGN',
+            'enabled' => true,
+        ]);
+
+        $this->expectException(\\Illuminate\\Validation\\ValidationException::class);
+        $this->expectExceptionMessage('Duplicate recipient numbers are not allowed');
+
+        app(VtuBulkService::class)->execute($user->id, [
+            ['product_id' => $product->id, 'idempotency_key' => 'data-1', 'payload' => ['phone' => '08012345678', 'network' => 'mtn', 'plan' => '1GB Data']],
+            ['product_id' => $product->id, 'idempotency_key' => 'data-2', 'payload' => ['phone' => '+2348012345678', 'network' => 'mtn', 'plan' => '1GB Data']],
+        ], 'USER', 'bulk-duplicate-recipient');
+    }
+
     public function test_same_bulk_key_with_different_request_is_rejected(): void
     {
         $user = User::create([
