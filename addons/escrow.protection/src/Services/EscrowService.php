@@ -35,7 +35,7 @@ final class EscrowService {
   $idempotencyKey=trim($idempotencyKey); if($idempotencyKey==='') throw new RuntimeException('A valid idempotency key is required.');
   try{return DB::transaction(function()use($buyerId,$sellerQuery,$amountMinor,$title,$description,$idempotencyKey,$currency,$fee,$s){
    $existing=EscrowTransaction::where('buyer_id',$buyerId)->where('idempotency_key',$idempotencyKey)->lockForUpdate()->first();
-   if($existing){ if((string)$existing->amount_minor===$amountMinor && $existing->seller_id===(int)$existing->seller_id) return $existing; throw new RuntimeException('This idempotency key has already been used.');}
+   if($existing){ if((string)$existing->amount_minor===$amountMinor) return $existing; throw new RuntimeException('This idempotency key has already been used for a different escrow.');}
    $q=trim($sellerQuery); $seller=User::query()->where(fn($x)=>$x->where('username',$q)->orWhere('email',$q)->orWhere('phone',$q))->first();
    if(!$seller) throw new RuntimeException('Seller account not found.'); if($seller->id===$buyerId) throw new RuntimeException('You cannot create escrow with yourself as seller.');
    $wallets=$this->lockWallets($buyerId,$seller->id); $buyer=$wallets[$buyerId]??null;
@@ -70,7 +70,7 @@ final class EscrowService {
    $amount=$this->add((string)$tx->amount_minor,(string)$tx->fee_minor);$beforeHeld=(string)$wallet->held_minor;
    if(!$this->gte($beforeHeld,$amount))throw new RuntimeException('Escrow hold balance is inconsistent.');
    $wallet->held_minor=$this->sub($beforeHeld,$amount);$wallet->available_minor=$this->add((string)$wallet->available_minor,$amount);$wallet->save();
-   $this->movement($wallet,'escrow:cancel:release:'.$tx->id,$tx->reference,'credit',$amount,(string)$wallet->available_minor,$wallet->available_minor,$tx->currency,['addon'=>'escrow.protection','escrow_id'=>$tx->id]);
+   $afterAvailable=(string)$wallet->available_minor; $this->movement($wallet,'escrow:cancel:release:'.$tx->id,$tx->reference,'credit',$amount,$this->sub($afterAvailable,$amount),$afterAvailable,$tx->currency,['addon'=>'escrow.protection','escrow_id'=>$tx->id]);
    $tx->status='cancelled';$tx->cancelled_at=now();$tx->save();return $tx->fresh();
   });
  }
