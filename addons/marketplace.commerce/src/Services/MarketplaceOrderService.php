@@ -97,6 +97,8 @@ final class MarketplaceOrderService
             }
 
             $amount = (string) $order->total_minor;
+            $fee = self::calculateFee($amount);
+            $sellerNet = self::subtract($amount, $fee);
             if (self::compare($buyerWallet->available_minor, $amount) < 0) {
                 throw new RuntimeException('Insufficient wallet balance.');
             }
@@ -104,7 +106,7 @@ final class MarketplaceOrderService
             $buyerBefore = (string) $buyerWallet->available_minor;
             $sellerBefore = (string) $sellerWallet->available_minor;
             $buyerAfter = self::subtract($buyerBefore, $amount);
-            $sellerAfter = self::add($sellerBefore, $amount);
+            $sellerAfter = self::add($sellerBefore, $sellerNet);
 
             $buyerWallet->forceFill(['available_minor' => $buyerAfter])->save();
             $sellerWallet->forceFill(['available_minor' => $sellerAfter])->save();
@@ -132,7 +134,7 @@ final class MarketplaceOrderService
                 'operation_key' => 'marketplace:'.$order->reference.':seller',
                 'reference' => $order->reference,
                 'type' => 'marketplace_sale',
-                'amount_minor' => $amount,
+                'amount_minor' => $sellerNet,
                 'currency' => $currency,
                 'available_before_minor' => $sellerBefore,
                 'available_after_minor' => $sellerAfter,
@@ -141,7 +143,7 @@ final class MarketplaceOrderService
                 'metadata' => ['order_id' => $order->id, 'side' => 'seller'],
             ]);
 
-            MarketplaceEarning::create(['order_id'=>$order->id,'seller_id'=>$order->seller_id,'gross_minor'=>$amount,'fee_minor'=>'0','net_minor'=>$amount,'currency'=>$currency,'status'=>'credited']);
+            MarketplaceEarning::create(['order_id'=>$order->id,'seller_id'=>$order->seller_id,'gross_minor'=>$amount,'fee_minor'=>$fee,'net_minor'=>$sellerNet,'currency'=>$currency,'status'=>'credited']);
             $order->forceFill(['status' => 'paid', 'paid_at' => now()])->save();
 
             return $order->fresh(['product', 'buyer', 'seller']);
@@ -186,6 +188,14 @@ final class MarketplaceOrderService
             $order->forceFill(['status'=>'refunded','refunded_at'=>now()])->save();
             return $order->fresh(['product','buyer','seller']);
         });
+    }
+
+    private static function calculateFee(string $amount): string
+    {
+        $bps = (int) config('addons.marketplace.commerce.settings.platform_fee_bps', 0);
+        if ($bps <= 0) return '0';
+        if (function_exists('bcmul')) return bcdiv(bcmul($amount, (string)$bps, 0), '10000', 0);
+        return (string) intdiv((int)$amount * $bps, 10000);
     }
 
     private static function multiply(string $a, string $b): string
