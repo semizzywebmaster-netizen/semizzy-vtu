@@ -16,6 +16,7 @@ class SocialServicesController extends Controller {
  }
  public function buyAccount(Request $r,SocialAccountInventory $inventory,SocialServicesService $service){$order=$service->createAccountOrder($r->user()->id,$inventory->id);return response()->json(['data'=>$order],201);}
  public function buyNumber(Request $r,SocialNumberInventory $inventory,SocialServicesService $service){$order=$service->createNumberOrder($r->user()->id,$inventory->id);return response()->json(['data'=>$order],201);}
+ public function pay(Request $r,SocialServiceOrder $order,SocialServicesService $service){return response()->json(['data'=>$service->payFromWallet($r->user(),$order)]);}
  public function sms(Request $r,SocialServiceOrder $order){
   abort_unless($order->user_id===$r->user()->id && $order->order_type==='number',404);
   $messages=$order->sms()->latest('received_at')->paginate(50);
