@@ -23,6 +23,6 @@ return [
  'web_route_files'=>['addons/escrow.protection/routes/web.php','addons/escrow.protection/routes/admin.php'],
  'api_route_files'=>['addons/escrow.protection/routes/api.php'],
  'routes'=>['/escrow','/admin/escrow'],'api_routes'=>['/api/v1/escrow'],
- 'provider_integrations'=>[],'provider_capabilities'=>[],'scheduled_tasks'=>[],
+ 'provider_integrations'=>[],'provider_capabilities'=>[],'scheduled_tasks'=>['escrow.expiry_reconciliation'],
  'events'=>['escrow.created','escrow.funded','escrow.released','escrow.cancelled','escrow.disputed','escrow.refunded'],
 ];
