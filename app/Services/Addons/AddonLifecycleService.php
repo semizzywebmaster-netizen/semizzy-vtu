@@ -6,6 +6,7 @@ use App\Models\Addon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Services\System\FeatureControlService;
 use Throwable;
 
 class AddonLifecycleService
@@ -49,6 +50,7 @@ class AddonLifecycleService
             $addon->fill($this->manifestAttributes($manifest));
             $addon->status = 'draft';
             $addon->save();
+            $this->syncFeatureControls($manifest);
 
             $addon->lifecycleEvents()->create([
                 'addon_identifier' => $addon->identifier,
@@ -142,6 +144,7 @@ class AddonLifecycleService
                 $addon->status = $wasActive ? 'active' : 'installed';
                 $addon->last_error = null;
                 $addon->save();
+                $this->syncFeatureControls($manifest);
 
                 $addon->lifecycleEvents()->create([
                     'addon_identifier' => $addon->identifier,
@@ -182,6 +185,7 @@ class AddonLifecycleService
 
             $from = 'enabling';
             $addon->update(['status' => 'active', 'activated_at' => now(), 'last_error' => null]);
+            $this->syncFeatureControls($addon->manifest ?? [], true);
             $addon->lifecycleEvents()->create([
                 'addon_identifier' => $addon->identifier,
                 'event' => 'activated',
@@ -210,6 +214,7 @@ class AddonLifecycleService
 
             $from = $addon->status;
             $addon->update(['status' => 'inactive']);
+            $this->setAddonFeatures($addon->manifest ?? [], false);
             $addon->lifecycleEvents()->create([
                 'addon_identifier' => $addon->identifier,
                 'event' => 'disabled',
@@ -240,6 +245,7 @@ class AddonLifecycleService
             $this->recordStep($addon, 'uninstall', 'Addon uninstall contract validated; Core does not execute arbitrary addon code.');
             $from = 'uninstalling';
             $addon->update(['status' => 'archived', 'activated_at' => null, 'last_error' => null]);
+            $this->setAddonFeatures($addon->manifest ?? [], false);
 
             $addon->lifecycleEvents()->create([
                 'addon_identifier' => $addon->identifier,
@@ -332,6 +338,44 @@ class AddonLifecycleService
             }
             return false;
         })->pluck('identifier')->sort()->values()->all();
+    }
+
+    private function syncFeatureControls(array $manifest, bool $active = false): void
+    {
+        $controls = $manifest['feature_controls'] ?? [];
+        if (!is_array($controls)) return;
+        $service = app(FeatureControlService::class);
+        if (!$enabled) usort($controls, fn ($a,$b) => count((array)($b['dependencies'] ?? [])) <=> count((array)($a['dependencies'] ?? [])));
+        foreach ($controls as $control) {
+            if (!is_array($control) || empty($control['key'])) continue;
+            $rawKey = strtolower(trim((string) $control['key']));
+            $key = str_starts_with($rawKey, strtolower($manifest['identifier']).'.')
+                ? $rawKey
+                : strtolower($manifest['identifier']).'.'.$rawKey;
+            $service->register($key, [
+                'name' => $control['name'] ?? $key,
+                'category' => $control['category'] ?? ($manifest['name'] ?? 'Addon'),
+                'description' => $control['description'] ?? '',
+                'default_enabled' => array_key_exists('default_enabled', $control) ? (bool)$control['default_enabled'] : $active,
+                'dependencies' => array_values((array)($control['dependencies'] ?? [])),
+                'source' => $manifest['identifier'],
+            ]);
+        }
+    }
+
+    private function setAddonFeatures(array $manifest, bool $enabled): void
+    {
+        $controls = $manifest['feature_controls'] ?? [];
+        if (!is_array($controls)) return;
+        $service = app(FeatureControlService::class);
+        foreach ($controls as $control) {
+            if (!is_array($control) || empty($control['key'])) continue;
+            $rawKey = strtolower(trim((string) $control['key']));
+            $key = str_starts_with($rawKey, strtolower((string)($manifest['identifier'] ?? '')).'.')
+                ? $rawKey
+                : strtolower((string)($manifest['identifier'] ?? 'addon')).'.'.$rawKey;
+            if ($service->feature($key)) $service->setEnabled($key, $enabled);
+        }
     }
 
     private function manifestAttributes(array $manifest): array
@@ -542,7 +586,7 @@ class AddonLifecycleService
         if (!preg_match('/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/', $manifest['version'])) throw ValidationException::withMessages(['version' => 'Addon version must use semantic-version format.']);
         $manifest['identifier']=strtolower(trim($manifest['identifier']));
 
-        foreach (['dependencies','permissions','navigation','settings','migrations'] as $key) {
+        foreach (['dependencies','permissions','navigation','settings','migrations','feature_controls'] as $key) {
             if (isset($manifest[$key]) && !is_array($manifest[$key])) throw ValidationException::withMessages([$key => "Addon manifest field [{$key}] must be an array."]);
         }
         foreach ($manifest['dependencies'] ?? [] as $index => $dependency) {

@@ -80,7 +80,7 @@ Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
     Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
-    Route::post('/register', [RegisteredUserController::class, 'store'])->name('register.store');
+    Route::post('/register', [RegisteredUserController::class, 'store'])->middleware('feature:registration.enabled')->name('register.store');
     Route::get('/forgot-password', [PasswordRecoveryController::class, 'create'])->name('password.request');
     Route::post('/forgot-password/otp', [PasswordRecoveryController::class, 'requestOtp'])->middleware('throttle:3,10')->name('password.recovery.otp');
     Route::post('/forgot-password/reset', [PasswordRecoveryController::class, 'reset'])->middleware('throttle:5,10')->name('password.recovery.reset');
@@ -111,8 +111,8 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->middleware('verified')->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::get('/kyc', [KycController::class, 'index'])->name('kyc.index');
-    Route::post('/kyc', [KycController::class, 'submit'])->middleware(['throttle:5,1','transaction.pin'])->name('kyc.submit');
-    Route::post('/kyc/lookup', [KycController::class, 'lookup'])->middleware(['throttle:5,1','transaction.pin'])->name('kyc.lookup');
+    Route::post('/kyc', [KycController::class, 'submit'])->middleware(['feature:kyc.enabled','throttle:5,1','transaction.pin'])->name('kyc.submit');
+    Route::post('/kyc/lookup', [KycController::class, 'lookup'])->middleware(['feature:kyc.enabled','throttle:5,1','transaction.pin'])->name('kyc.lookup');
     Route::get('/kyc/document', [KycController::class, 'document'])->name('kyc.document');
     Route::get('/profile/identity-document', [ProfileController::class, 'identityDocument'])->name('profile.identity-document');
     Route::post('/profile', [ProfileController::class, 'update'])->middleware(['throttle:10,1','transaction.pin'])->name('profile.update');
@@ -126,9 +126,9 @@ Route::middleware(['auth'])->group(function (): void {
     Route::delete('/api-access/{token}', [ApiAccessController::class, 'destroy'])->whereNumber('token')->middleware(['throttle:10,1','transaction.pin'])->name('api.access.destroy');
     Route::get('/transactions', [UserTransactionController::class, 'index'])->name('transactions.index');
     Route::get('/transactions/{movement}/receipt', [TransactionReceiptController::class, 'show'])->whereNumber('movement')->name('transactions.receipt');
-    Route::get('/wallet/fund', [WalletFundingController::class, 'index'])->name('wallet.fund');
-    Route::get('/send-money', fn () => Inertia::render('SendMoney'))->name('send-money.index');
-    Route::get('/withdraw', fn () => Inertia::render('Withdraw'))->name('withdraw.index');
+    Route::get('/wallet/fund', [WalletFundingController::class, 'index'])->middleware('feature:finance.enabled')->name('wallet.fund');
+    Route::get('/send-money', fn () => Inertia::render('SendMoney'))->middleware('feature:finance.enabled')->name('send-money.index');
+    Route::get('/withdraw', fn () => Inertia::render('Withdraw'))->middleware('feature:finance.enabled')->name('withdraw.index');
     Route::get('/analytics', [FinancialAnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/analytics/export', [FinancialAnalyticsController::class, 'export'])->middleware('throttle:10,1')->name('analytics.export');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -140,11 +140,11 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/help/articles/{article:slug}', [HelpCenterController::class, 'show'])->name('help.article');
     Route::post('/help/articles/{article:slug}/feedback', [HelpCenterController::class, 'feedback'])->middleware('throttle:20,1')->name('help.feedback');
     Route::post('/help/assistant', [HelpCenterController::class, 'ask'])->middleware('throttle:20,1')->name('help.assistant');
-    Route::get('/support', [SupportTicketController::class, 'index'])->name('support.index');
-    Route::post('/support', [SupportTicketController::class, 'store'])->middleware('throttle:10,1')->name('support.store');
-    Route::get('/support/{ticket}', [SupportTicketController::class, 'show'])->whereNumber('ticket')->name('support.show');
-    Route::post('/support/{ticket}/reply', [SupportTicketController::class, 'reply'])->whereNumber('ticket')->middleware('throttle:20,1')->name('support.reply');
-    Route::patch('/support/{ticket}/status', [SupportTicketController::class, 'updateStatus'])->whereNumber('ticket')->middleware('throttle:30,1')->name('support.status');
+    Route::get('/support', [SupportTicketController::class, 'index'])->middleware('feature:support.enabled')->name('support.index');
+    Route::post('/support', [SupportTicketController::class, 'store'])->middleware(['feature:support.enabled','throttle:10,1'])->name('support.store');
+    Route::get('/support/{ticket}', [SupportTicketController::class, 'show'])->whereNumber('ticket')->middleware('feature:support.enabled')->name('support.show');
+    Route::post('/support/{ticket}/reply', [SupportTicketController::class, 'reply'])->whereNumber('ticket')->middleware(['feature:support.enabled','throttle:20,1'])->name('support.reply');
+    Route::patch('/support/{ticket}/status', [SupportTicketController::class, 'updateStatus'])->whereNumber('ticket')->middleware(['feature:support.enabled','throttle:30,1'])->name('support.status');
 
     Route::prefix('admin')->middleware(['role:ADMIN,STAFF,SUPPORT', 'verified'])->group(function (): void {
         Route::get('/audit-events', [AuditEventController::class, 'index'])->middleware('permission:audit.view')->name('admin.audit-events.index');
@@ -167,6 +167,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::put('/platform-controls', [PlatformControlController::class, 'update'])->middleware(['permission:system.manage','throttle:20,1'])->name('admin.platform-controls.update');
         Route::get('/settings', [SystemSettingsController::class, 'index'])->middleware('permission:system.manage')->name('admin.settings.index');
         Route::put('/settings', [SystemSettingsController::class, 'update'])->middleware(['permission:system.manage', 'throttle:20,1'])->name('admin.settings.update');
+        Route::patch('/settings/registry/{key}', [SystemSettingsController::class, 'updateRegistrySetting'])->middleware(['permission:system.manage', 'throttle:60,1'])->name('admin.settings.registry.update');
         Route::post('/settings/asset', [SystemSettingsController::class, 'upload'])->middleware(['permission:system.manage', 'throttle:20,1'])->name('admin.settings.asset');
         Route::post('/settings/smtp-test', [SystemSettingsController::class, 'testSmtp'])->middleware(['permission:system.manage', 'throttle:5,10'])->name('admin.settings.smtp-test');
         Route::post('/settings/smtp-health', [SystemSettingsController::class, 'smtpHealth'])->middleware(['permission:system.manage', 'throttle:5,10'])->name('admin.settings.smtp-health');

@@ -55,7 +55,8 @@ class KycController extends Controller
             $result = $billing->lookup(
                 $request->user(),
                 $data['identity_type'],
-                $data['identity_number']
+                $data['identity_number'],
+                $request->header('Idempotency-Key', $request->input('idempotency_key'))
             );
 
             return back()->with('success', strtoupper($data['identity_type']).' verification lookup completed.')->with('kycLookup', $result);

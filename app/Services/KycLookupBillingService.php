@@ -8,6 +8,8 @@ use App\Models\WalletAccount;
 use App\Models\WalletMovement;
 use App\Services\Providers\ProviderManager;
 use App\Services\System\SystemSettingsService;
+use App\Services\System\FeatureControlService;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -17,14 +19,19 @@ class KycLookupBillingService
     public function __construct(
         private ProviderManager $providers,
         private SystemSettingsService $settings,
+        private FeatureControlService $features,
+        private AuditLogger $audit,
     ) {}
 
-    public function lookup(User $user, string $identityType, string $identityNumber): array
+    public function lookup(User $user, string $identityType, string $identityNumber, ?string $idempotencyKey = null): array
     {
         $type = strtolower(trim($identityType));
         if (!in_array($type, ['bvn', 'nin'], true)) {
             throw new RuntimeException('Only BVN and NIN provider lookups are billable KYC lookups.');
         }
+
+        if (!$this->features->enabled('kyc.enabled')) throw new RuntimeException('KYC is temporarily unavailable.');
+        if (!$this->features->enabled('kyc.lookup.'.$type)) throw new RuntimeException(strtoupper($type).' verification lookup is temporarily unavailable.');
 
         $identity = trim($identityNumber);
         if ($identity === '') {
@@ -37,7 +44,10 @@ class KycLookupBillingService
         }
 
         $hash = hash('sha256', strtoupper($type).'|'.$identity);
-        $operationKey = 'kyc:lookup:'.$user->id.':'.$type.':'.$hash;
+        $key = trim((string) ($idempotencyKey ?: ''));
+        if ($key === '') $key = (string) Str::uuid();
+        if (!preg_match('/^[A-Za-z0-9._:-]{8,160}$/', $key)) throw new RuntimeException('Invalid KYC lookup idempotency key.');
+        $operationKey = 'kyc:lookup:'.$user->id.':'.$type.':'.$key;
 
         $existing = KycLookupCharge::query()->where('operation_key', $operationKey)->first();
         if ($existing && in_array($existing->status, ['charged', 'completed', 'processing'], true)) {
@@ -140,6 +150,7 @@ class KycLookupBillingService
                 'provider_status' => $result->status,
                 'metadata' => array_merge((array) $attempt->metadata, ['provider_data' => $result->data]),
             ])->saveOrFail();
+            try { $this->audit->record('kyc.lookup.completed', $user->id, ['identity_type'=>$type,'charge_minor'=>$charge,'reference'=>$attempt->wallet_reference,'provider_reference'=>$result->providerReference], request()); } catch (\Throwable $e) { report($e); }
 
             return [
                 'status' => 'completed',
@@ -222,6 +233,7 @@ class KycLookupBillingService
                 'refunded_at' => now(),
                 'metadata' => array_merge((array) $attempt->metadata, ['refund_reason' => $reason]),
             ])->saveOrFail();
+            try { $this->audit->record('kyc.lookup.refunded', $attempt->user_id, ['identity_type'=>$attempt->identity_type,'charge_minor'=>$attempt->charge_minor,'reason'=>$reason,'wallet_reference'=>$attempt->wallet_reference], request()); } catch (\Throwable $e) { report($e); }
         });
     }
 }
