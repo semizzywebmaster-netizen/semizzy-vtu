@@ -21,6 +21,48 @@ public function test_duplicate_provider_sms_is_idempotent_within_same_order(): v
  $b=$s->ingestSms($o,'Code 123456','Service','provider-msg-1');
  $this->assertSame($a->id,$b->id);
  $this->assertSame(1,\Semizzy\Addons\Social\Models\SocialNumberSms::where('order_id',$o->id)->count());
+
+public function test_number_order_cannot_be_created_from_reserved_inventory(): void {
+ $u=User::factory()->create();
+ $n=SocialNumberInventory::create(['country_code'=>'US','country_name'=>'United States','phone_number'=>'+15550000002','phone_hash'=>hash('sha256','15550000002'),'service_key'=>'test','fulfillment_mode'=>'manual','price'=>'10.00','currency'=>'NGN','status'=>'reserved']);
+ $this->expectException(\\RuntimeException::class);
+ app(SocialServicesService::class)->createNumberOrder($u->id,$n->id);
+}
+
+public function test_user_cannot_pay_another_users_order(): void {
+ $owner=User::factory()->create(); $other=User::factory()->create();
+ $o=SocialServiceOrder::create(['reference'=>'SOC-OWNERSHIP','user_id'=>$owner->id,'order_type'=>'number','status'=>'pending_payment','amount'=>'100.00','currency'=>'NGN']);
+ \\App\\Models\\WalletAccount::create(['user_id'=>$other->id,'currency'=>'NGN','available_minor'=>'50000','held_minor'=>'0','status'=>'active']);
+ $this->expectException(\\RuntimeException::class);
+ app(SocialServicesService::class)->payFromWallet($other,$o);
+}
+
+public function test_insufficient_wallet_balance_does_not_mark_order_paid(): void {
+ $u=User::factory()->create();
+ \\App\\Models\\WalletAccount::create(['user_id'=>$u->id,'currency'=>'NGN','available_minor'=>'999','held_minor'=>'0','status'=>'active']);
+ $o=SocialServiceOrder::create(['reference'=>'SOC-INSUFFICIENT','user_id'=>$u->id,'order_type'=>'number','status'=>'pending_payment','amount'=>'100.00','currency'=>'NGN']);
+ $this->expectException(\\RuntimeException::class);
+ app(SocialServicesService::class)->payFromWallet($u,$o);
+ $this->assertSame('pending_payment',$o->fresh()->status);
+ $this->assertSame('unpaid',$o->fresh()->payment_status);
+}
+
+public function test_currency_mismatch_does_not_mark_order_paid(): void {
+ $u=User::factory()->create();
+ \\App\\Models\\WalletAccount::create(['user_id'=>$u->id,'currency'=>'USD','available_minor'=>'500000','held_minor'=>'0','status'=>'active']);
+ $o=SocialServiceOrder::create(['reference'=>'SOC-CURRENCY','user_id'=>$u->id,'order_type'=>'number','status'=>'pending_payment','amount'=>'100.00','currency'=>'NGN']);
+ $this->expectException(\\RuntimeException::class);
+ app(SocialServicesService::class)->payFromWallet($u,$o);
+ $this->assertSame('pending_payment',$o->fresh()->status);
+}
+
+public function test_sms_is_rejected_for_pending_payment_order(): void {
+ $u=User::factory()->create();
+ $o=SocialServiceOrder::create(['reference'=>'SOC-SMS-PENDING','user_id'=>$u->id,'order_type'=>'number','status'=>'pending_payment','amount'=>'100','currency'=>'NGN']);
+ $this->expectException(\\RuntimeException::class);
+ app(SocialServicesService::class)->ingestSms($o,'Code 000000','Service','pending-msg');
+}
+
 }
 
 public function test_provider_sms_identifier_cannot_cross_orders(): void {
