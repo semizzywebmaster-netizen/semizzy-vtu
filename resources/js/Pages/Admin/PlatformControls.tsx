@@ -30,8 +30,6 @@ export default function PlatformControls({tiers,features,settings=[]}:Props){
    return value;
  };
 
- const markDirty=(key:string)=>setSaveState(x=>({...x,[key]:'dirty'}));
-
  const saveSetting=async(s:Setting)=>{
    if(s.is_secret) return;
    const raw=form.data.settings[s.key];
