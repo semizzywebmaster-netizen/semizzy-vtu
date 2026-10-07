@@ -10,6 +10,7 @@ use Semizzy\Addons\GiftCards\Models\{GiftCardOrder,GiftCardProduct,GiftCardRefun
 
 class GiftCardsController extends Controller
 {
+ public function __construct(private GiftCardWalletService $wallet){}
  public function index(){return Inertia::render('Admin/GiftCards',['products'=>GiftCardProduct::latest()->paginate(30),'orders'=>GiftCardOrder::latest()->paginate(30),'refunds'=>GiftCardRefund::latest()->paginate(30)]);}
  public function storeProduct(Request $request){$data=$request->validate(['name'=>'required|string|max:150','brand'=>'required|string|max:100','code'=>'required|string|max:100','country_code'=>'nullable|string|max:8','currency'=>'required|string|max:8','denomination_type'=>'required|in:fixed,variable','denominations'=>'nullable|array','min_amount'=>'nullable|numeric|min:0','max_amount'=>'nullable|numeric|min:0','provider_price'=>'required|numeric|min:0','sale_price'=>'required|numeric|min:0','fulfillment_mode'=>'required|in:provider,inventory','metadata'=>'nullable|array']); GiftCardProduct::create($data+['enabled'=>true]); return back()->with('success','Gift-card product created.');}
  public function toggleProduct(GiftCardProduct $product){$product->update(['enabled'=>!$product->enabled]);return back()->with('success','Gift-card product status updated.');}
