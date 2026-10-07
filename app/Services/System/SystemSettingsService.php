@@ -27,6 +27,13 @@ class SystemSettingsService
             'business' => ['phone'=>'','whatsapp'=>'','email'=>'','address'=>'','website'=>''],
             'social' => ['facebook'=>'','instagram'=>'','x'=>'','youtube'=>'','tiktok'=>'','linkedin'=>''],
             'assets' => ['logo'=>'','favicon'=>'','banner'=>'','hero'=>''],
+            'footer_menu' => [
+                ['key'=>'home','label'=>'Home','href'=>'/dashboard','icon'=>'⌂'],
+                ['key'=>'services','label'=>'Services','href'=>'/vtu','icon'=>'✦'],
+                ['key'=>'transactions','label'=>'Transactions','href'=>'/transactions','icon'=>'↔'],
+                ['key'=>'notifications','label'=>'Alerts','href'=>'/notifications','icon'=>'♧'],
+                ['key'=>'profile','label'=>'Profile','href'=>'/profile','icon'=>'◎'],
+            ],
             'smtp' => [
                 'enabled'=>false,
                 'strategy'=>'failover',
@@ -42,7 +49,7 @@ class SystemSettingsService
                     if (isset($stored[$key]) && is_string($stored[$key]) && $stored[$key] !== '') $settings[$key] = $stored[$key];
                 }
 
-                foreach (['theme_custom_light','theme_custom_dark','business','social','assets','smtp'] as $key) {
+                foreach (['theme_custom_light','theme_custom_dark','business','social','assets','footer_menu','smtp'] as $key) {
                     if (!isset($stored[$key]) || !is_string($stored[$key])) continue;
                     $decoded = json_decode($stored[$key], true);
                     if (!is_array($decoded)) continue;
@@ -86,8 +93,15 @@ class SystemSettingsService
         if (!in_array($settings['default_timezone'], timezone_identifiers_list(), true)) $settings['default_timezone'] = 'UTC';
         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $settings['theme_primary'])) $settings['theme_primary'] = '#2563EB';
 
-        $allowedThemes = ['opay-inspired','palmpay-inspired','kuda-inspired','moniepoint-inspired','stripe-inspired','premium-fintech','modern-corporate','clean-saas','vibrant-tech','luxury-executive','custom'];
+        $allowedThemes = ['opay-inspired','palmpay-inspired','modern-corporate','clean-saas','luxury-executive','custom'];
         if (!in_array($settings['theme_key'], $allowedThemes, true)) $settings['theme_key'] = 'modern-corporate';
+        if (!is_array($settings['footer_menu']) || count($settings['footer_menu']) !== 5) $settings['footer_menu'] = [
+            ['key'=>'home','label'=>'Home','href'=>'/dashboard','icon'=>'⌂'],
+            ['key'=>'services','label'=>'Services','href'=>'/vtu','icon'=>'✦'],
+            ['key'=>'transactions','label'=>'Transactions','href'=>'/transactions','icon'=>'↔'],
+            ['key'=>'notifications','label'=>'Alerts','href'=>'/notifications','icon'=>'♧'],
+            ['key'=>'profile','label'=>'Profile','href'=>'/profile','icon'=>'◎'],
+        ];
         if (!in_array($settings['skin_default'], ['light','dark'], true)) $settings['skin_default'] = 'light';
         if (!in_array($settings['smtp']['strategy'] ?? 'failover', ['failover','roundrobin'], true)) $settings['smtp']['strategy'] = 'failover';
         if (!is_array($settings['smtp']['health'] ?? null)) $settings['smtp']['health'] = [];
