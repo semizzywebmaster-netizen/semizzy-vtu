@@ -25,13 +25,14 @@ class CommunicationCampaignService
  public function process(Campaign $campaign, int $limit=500): array
  {
   if(!in_array($campaign->status,['draft','scheduled','running'],true)) return ['processed'=>0,'sent'=>0,'failed'=>0,'skipped'=>0];
-  if($campaign->status==='scheduled' && $campaign->scheduled_at && $campaign->scheduled_at->isFuture()) return ['processed'=>0,'sent'=>0,'failed'=>0,'skipped'=>0];
+  if($campaign->scheduled_at && $campaign->scheduled_at->isFuture()) return ['processed'=>0,'sent'=>0,'failed'=>0,'skipped'=>0];
   $campaign->loadMissing('template');
   if(!$campaign->template && !$campaign->content) throw new RuntimeException('Campaign needs a template or content.');
   $campaign->update(['status'=>'running','started_at'=>$campaign->started_at ?: now()]);
 
   $sent=$failed=$skipped=$processed=0;
-  $users=$this->audience($campaign->audience ?: [])->limit($limit)->get();
+  $users=$this->audience($campaign->audience ?: [])->whereNotExists(function($q)use($campaign){$q->selectRaw('1')->from('communication_messages as cm')->whereColumn('cm.user_id','users.id')->where('cm.campaign_id',$campaign->id);});
+  $users=$users->limit(max(1,$limit))->get();
   $renderer=app(CommunicationTemplateService::class);
   $gateway=app(CommunicationProviderGateway::class);
 
@@ -51,7 +52,7 @@ class CommunicationCampaignService
     $gateway->send($message); $sent++;
    }catch(\Throwable $e){$failed++;}
   }
-  if($users->count() < $limit) $campaign->update(['status'=>$failed?'failed':'completed','completed_at'=>now()]);
+  if($users->isEmpty()) $campaign->update(['status'=>'completed','completed_at'=>now()]);
   return compact('processed','sent','failed','skipped');
  }
 
