@@ -1,11 +1,13 @@
 <?php
 namespace Addons\CommunicationWhatsapp\Http\Controllers;
 use App\Models\Communication\Provider;
+use Inertia\Inertia;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 class CommunicationProviderController
 {
+ public function page() { return Inertia::render('CommunicationAdmin'); }
  public function index(): JsonResponse {
   return response()->json(['providers'=>Provider::orderBy('channel')->orderBy('priority')->get()->map(fn($p)=>[
    'id'=>$p->id,'channel'=>$p->channel,'name'=>$p->name,'driver'=>$p->driver,'capabilities'=>$p->capabilities,
