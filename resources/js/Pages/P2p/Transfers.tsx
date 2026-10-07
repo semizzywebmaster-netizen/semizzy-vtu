@@ -1,0 +1,3 @@
+import React,{useState} from 'react';
+import {Head} from '@inertiajs/react';
+export default function Transfers(){const [recipient,setRecipient]=useState('');const [amount,setAmount]=useState('');return <div className="p-6 space-y-6"><Head title="P2P Transfers"/><h1 className="text-2xl font-semibold">P2P Transfers</h1><form method="post" action="/p2p/transfers" className="space-y-3"><input value={recipient} onChange={e=>setRecipient(e.target.value)} placeholder="Username, email or phone"/><input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Amount in minor units" inputMode="numeric"/><button type="submit">Send Transfer</button></form></div>}
