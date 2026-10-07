@@ -79,10 +79,11 @@ class VtuBulkService
             'currency' => $currency ?? 'NGN',
             'total_items' => count($rows),
             'items' => $rows,
+            'quote_fingerprint' => $this->quoteFingerprint($items, $tier, $rows),
         ];
     }
 
-    public function execute(int $uid, array $items, string $tier = 'USER', ?string $operationKey = null): VtuBulkOperation
+    public function execute(int $uid, array $items, string $tier = 'USER', ?string $operationKey = null, ?string $quoteFingerprint = null): VtuBulkOperation
     {
         if (count($items) < 1 || count($items) > self::MAX_ITEMS) {
             throw \Illuminate\Validation\ValidationException::withMessages([
@@ -144,6 +145,21 @@ class VtuBulkService
                         $seenRecipients[$canonical] = true;
                     }
                 }
+            }
+        }
+
+        if ($quoteFingerprint !== null && !preg_match('/^[a-f0-9]{64}$/', $quoteFingerprint)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'quote_fingerprint' => 'The bulk quote fingerprint is invalid.',
+            ]);
+        }
+
+        if ($quoteFingerprint !== null) {
+            $quote = $this->quote($items, $tier);
+            if (!hash_equals($quoteFingerprint, $quote['quote_fingerprint'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'quote_fingerprint' => 'The bulk quote has expired or changed. Please request a new quote before purchasing.',
+                ]);
             }
         }
 
@@ -425,6 +441,31 @@ class VtuBulkService
         }
 
         return $recovered;
+    }
+
+    private function quoteFingerprint(array $items, string $tier, array $rows): string
+    {
+        $canonical = [
+            'tier' => strtoupper($tier),
+            'items' => array_values(array_map(
+                static fn (array $item): array => [
+                    'product_id' => (int) $item['product_id'],
+                    'payload' => (array) ($item['payload'] ?? []),
+                ],
+                $items,
+            )),
+            'prices' => array_values(array_map(
+                static fn (array $row): array => [
+                    'index' => (int) $row['index'],
+                    'product_id' => (int) $row['product_id'],
+                    'customer_price' => (string) $row['customer_price'],
+                    'currency' => (string) $row['currency'],
+                ],
+                $rows,
+            )),
+        ];
+
+        return hash('sha256', json_encode($canonical, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
     }
 
     private function syncItemFromTransaction($row, VtuTransaction $transaction): void
