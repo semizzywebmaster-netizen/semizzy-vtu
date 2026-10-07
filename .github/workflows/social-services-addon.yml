@@ -1,0 +1,52 @@
+name: SOCIAL SERVICES ADDON CI
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'addons/social.accounts-verification/**'
+      - 'app/Http/Controllers/SocialServicesController.php'
+      - 'app/Http/Controllers/AdminSocialServicesController.php'
+      - 'resources/js/Pages/SocialServices/**'
+      - 'resources/js/Pages/Admin/SocialServices.tsx'
+      - 'tests/Feature/SocialServicesTest.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'addons/social.accounts-verification/**'
+      - 'app/Http/Controllers/SocialServicesController.php'
+      - 'app/Http/Controllers/AdminSocialServicesController.php'
+      - 'resources/js/Pages/SocialServices/**'
+      - 'resources/js/Pages/Admin/SocialServices.tsx'
+      - 'tests/Feature/SocialServicesTest.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+jobs:
+  addon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, pdo_sqlite, sqlite3
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: mkdir -p bootstrap/cache storage/app storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs
+      - run: composer validate --strict
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm run build
+      - run: find addons/social.accounts-verification app/Http/Controllers -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: cp .env.example .env
+      - run: php artisan key:generate
+      - run: php artisan test --filter='SocialServices'
