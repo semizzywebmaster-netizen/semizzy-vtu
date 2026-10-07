@@ -99,10 +99,16 @@ class TravelRefundService
 
     private function minor(string|float|int $amount): string
     {
-        $value = number_format((float) $amount, 2, '.', '');
-        [$whole, $fraction] = array_pad(explode('.', $value, 2), 2, '0');
+        $value = trim((string) $amount);
 
-        return ltrim(($whole ?: '0') . str_pad($fraction, 2, '0'), '0') ?: '0';
+        if (!preg_match('/^\\d+(?:\\.\\d{1,2})?$/', $value)) {
+            throw new RuntimeException('Invalid refund amount.');
+        }
+
+        [$whole, $fraction] = array_pad(explode('.', $value, 2), 2, '0');
+        $fraction = str_pad($fraction, 2, '0');
+
+        return ltrim(($whole ?: '0') . $fraction, '0') ?: '0';
     }
 
     private function add(string $a, string $b): string
