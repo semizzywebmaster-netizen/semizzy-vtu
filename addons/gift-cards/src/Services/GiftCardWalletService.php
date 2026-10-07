@@ -9,6 +9,7 @@ class GiftCardWalletService {
  public function reserve(GiftCardOrder $order): void { $this->move($order,'reserve',false); }
  public function settle(GiftCardOrder $order): void { $this->move($order,'settle',false); }
  public function release(GiftCardOrder $order): void { $this->move($order,'release',true); }
+ public function refund(GiftCardOrder $order): void { $this->move($order,'refund',true); }
  private function move(GiftCardOrder $order,string $type,bool $returnHeld): void {
   DB::transaction(function() use($order,$type,$returnHeld){
    $wallet=$this->wallet($order); $key="giftcard:{$order->id}:{$type}";
@@ -16,7 +17,8 @@ class GiftCardWalletService {
    $amount=$this->minor((string)$order->total); $ab=(string)$wallet->available_minor; $hb=(string)$wallet->held_minor;
    if($type==='reserve'){if($this->cmp($ab,$amount)<0) throw new RuntimeException('Insufficient wallet balance.');$aa=$this->sub($ab,$amount);$ha=$this->add($hb,$amount);}
    elseif($this->cmp($hb,$amount)<0) throw new RuntimeException('Wallet hold is inconsistent.');
-   elseif($returnHeld){$aa=$this->add($ab,$amount);$ha=$this->sub($hb,$amount);}
+   elseif($returnHeld && $type==='release'){$aa=$this->add($ab,$amount);$ha=$this->sub($hb,$amount);}
+   elseif($type==='refund'){$aa=$this->add($ab,$amount);$ha=$hb;}
    else {$aa=$ab;$ha=$this->sub($hb,$amount);}
    $wallet->available_minor=$aa;$wallet->held_minor=$ha;$wallet->save();
    WalletMovement::create(['wallet_account_id'=>$wallet->id,'operation_key'=>$key,'reference'=>$order->order_reference,'type'=>$type,'amount_minor'=>$amount,'currency'=>$wallet->currency,'available_before_minor'=>$ab,'available_after_minor'=>$aa,'held_before_minor'=>$hb,'held_after_minor'=>$ha,'metadata'=>['gift_card_order_id'=>$order->id]]);
