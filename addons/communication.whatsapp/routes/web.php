@@ -18,6 +18,7 @@ Route::middleware(['auth','verified','permission:communication.send'])->group(fu
 
 Route::middleware(['auth','verified','permission:communication.view'])->group(function () { Route::get('/communication',[\Addons\CommunicationWhatsapp\Http\Controllers\CommunicationCenterController::class,'page'])->name('communication.page');
  Route::get('/communication/conversations',[CommunicationCenterController::class,'conversations'])->name('communication.conversations');
+ Route::get('/communication/delivery-attempts',[CommunicationCenterController::class,'attempts'])->name('communication.delivery-attempts');
  Route::get('/communication/conversations/{conversation}',[CommunicationCenterController::class,'show'])->name('communication.conversations.show');
 });
 Route::middleware(['auth','verified','permission:communication.conversations.manage'])->group(function () {
