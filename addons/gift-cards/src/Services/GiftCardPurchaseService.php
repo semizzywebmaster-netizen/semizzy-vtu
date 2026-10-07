@@ -41,6 +41,6 @@ class GiftCardPurchaseService {
    return $order->fresh(['product','delivery']);
   });
  }
- private function money(string $v):string{if(!preg_match('/^\d+(?:\.\d{1,2})?$/',$v))throw new RuntimeException('Invalid monetary amount.');[$w,$f]=array_pad(explode('.',$v,2),2,'');$f=str_pad($f,2,'0');return ltrim($w,'0').'.'.$f==='.'?'0.00':(ltrim($w,'0')?:'0').'.'.$f;}
+ private function money(string $v):string{if(!preg_match('/^\d+(?:\.\d{1,2})?$/',$v))throw new RuntimeException('Invalid monetary amount.');[$w,$f]=array_pad(explode('.',$v,2),2,'');$f=str_pad($f,2,'0');return (ltrim($w,'0')?:'0').'.'.$f;}
  private function compareMoney(string $a,string $b):int{$a=$this->money($a);$b=$this->money($b);[$aw,$af]=explode('.',$a);[$bw,$bf]=explode('.',$b);$aw=ltrim($aw,'0')?:'0';$bw=ltrim($bw,'0')?:'0';return strlen($aw)!==strlen($bw)?(strlen($aw)<=>strlen($bw)):strcmp($aw.$af,$bw.$bf);}
 }
