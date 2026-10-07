@@ -310,6 +310,13 @@ class SettingsService
             'security.referral_device_limit' => ['name'=>'Referral registrations per device','category'=>'security','description'=>'Maximum referral registrations from one device.','type'=>'integer','default'=>2,'min'=>1,'max'=>20],
             'communication.email.enabled' => ['name'=>'Transactional email','category'=>'communication','description'=>'Allow transactional email delivery.','type'=>'boolean','default'=>true],
             'communication.email.from_name' => ['name'=>'Email sender name','category'=>'communication','description'=>'Default sender display name.','type'=>'string','default'=>'SEMIZZY ONE','max'=>120],
+            'appearance.theme_custom_light' => ['name'=>'Custom light palette','category'=>'appearance','description'=>'Custom light theme palette.','type'=>'json','default'=>[]],
+            'appearance.theme_custom_dark' => ['name'=>'Custom dark palette','category'=>'appearance','description'=>'Custom dark theme palette.','type'=>'json','default'=>[]],
+            'platform.business' => ['name'=>'Business information','category'=>'platform','description'=>'Platform business contact and address information.','type'=>'json','default'=>[]],
+            'platform.social' => ['name'=>'Social links','category'=>'platform','description'=>'Official platform social media links.','type'=>'json','default'=>[]],
+            'appearance.assets' => ['name'=>'Brand assets','category'=>'appearance','description'=>'Logo, favicon, banner and hero assets.','type'=>'json','default'=>[]],
+            'appearance.footer_menu' => ['name'=>'Footer menu','category'=>'appearance','description'=>'Global footer navigation.','type'=>'json','default'=>[]],
+            'communication.smtp' => ['name'=>'SMTP profiles','category'=>'communication','description'=>'Transactional email SMTP profiles. Individual passwords are encrypted before storage.','type'=>'json','default'=>[]],
         ];
     }
 }
