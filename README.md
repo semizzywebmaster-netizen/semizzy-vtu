@@ -97,7 +97,7 @@ Status is intentionally separated into **BUILT**, **IN PROGRESS / HARDENING**, a
 13. Escrow Protection
 14. Government Registration & Certificates
 15. Rewards, Referrals & Promotions
-16. Spin to Win / Rewards Game — `spin-to-win.rewards-game`
+16. Spin to Win / Rewards Game — `spin.to-win`
 17. Mailer SMTP / SMTP Mailer — `mailer.smtp`
 
 ### IN PROGRESS / HARDENING
