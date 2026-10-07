@@ -33,6 +33,8 @@ Route::middleware(['auth','verified','permission:communication.view'])->group(fu
 });
 Route::middleware(['auth','verified','permission:communication.templates.manage'])->group(function () {
  Route::post('/communication/templates',[CommunicationTemplateController::class,'store'])->name('communication.templates.store');
+ Route::patch('/communication/templates/{template}',[CommunicationTemplateController::class,'update'])->name('communication.templates.update');
+ Route::post('/communication/templates/{template}/toggle',[CommunicationTemplateController::class,'toggle'])->name('communication.templates.toggle');
 });
 Route::middleware(['auth','verified','permission:communication.consent.manage'])->group(function () {
  Route::post('/communication/consents',[CommunicationConsentController::class,'set'])->name('communication.consents.set');
