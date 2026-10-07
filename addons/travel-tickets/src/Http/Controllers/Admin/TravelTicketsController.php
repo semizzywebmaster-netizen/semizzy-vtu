@@ -31,34 +31,27 @@ class TravelTicketsController extends Controller
             'enabled' => 'boolean',
             'requirements' => 'nullable|array',
         ]);
-
         TravelService::create($d);
-
         return back()->with('success', 'Travel service created.');
     }
 
     public function toggleService(TravelService $service)
     {
         $service->update(['enabled' => ! $service->enabled]);
-
         return back()->with('success', 'Travel service status updated.');
     }
 
     public function requestRefund(Request $request, TravelRefundService $refunds, TravelBooking $booking)
     {
         $d = $request->validate(['note' => 'nullable|string|max:1000']);
-
-        return response()->json([
-            'refund' => $refunds->request($booking, $d['note'] ?? null),
-        ], 201);
+        $refunds->request($booking, $d['note'] ?? null);
+        return back()->with('success', 'Refund request created.');
     }
 
     public function approveRefund(Request $request, TravelRefundService $refunds, TravelRefund $refund)
     {
         $d = $request->validate(['note' => 'nullable|string|max:1000']);
-
-        return response()->json([
-            'refund' => $refunds->approve($refund, $request->user(), $d['note'] ?? null),
-        ]);
+        $refunds->approve($refund, $request->user(), $d['note'] ?? null);
+        return back()->with('success', 'Refund approved and wallet credited.');
     }
 }
