@@ -279,8 +279,20 @@ class AddonLifecycleService
                 throw ValidationException::withMessages(['migrations' => "Invalid addon migration filename [{$migration}]."]);
             }
 
-            $path = 'database/migrations/'.$migration;
-            $exit = Artisan::call('migrate', ['--path' => $path, '--force' => true]);
+            $rootPath = base_path('database/migrations/'.$migration);
+            $addonMatches = glob(base_path('addons/*/database/migrations/'.$migration)) ?: [];
+            if (count($addonMatches) > 1) {
+                throw new \RuntimeException("Ambiguous addon migration filename: {$migration}");
+            }
+            $path = $addonMatches[0] ?? $rootPath;
+            if (!is_file($path)) {
+                throw new \RuntimeException("Addon migration file not found: {$migration}");
+            }
+            $arguments = ['--path' => $path, '--force' => true];
+            if ($path !== $rootPath) {
+                $arguments['--realpath'] = true;
+            }
+            $exit = Artisan::call('migrate', $arguments);
             if ($exit !== 0) {
                 throw new \RuntimeException("Addon migration failed: {$migration}");
             }
