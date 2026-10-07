@@ -23,6 +23,8 @@ export default function Services({ services = [] }: { services: Service[] }) {
   const [bulkPin, setBulkPin] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResult, setBulkResult] = useState<string | null>(null);
+  const [bulkQuote, setBulkQuote] = useState<{ total_customer_price: string; currency: string; total_items: number; items: Array<{ index: number; product_id: number; customer_price: string; currency: string }> } | null>(null);
+  const [bulkQuoting, setBulkQuoting] = useState(false);
 
   const airtimeService = useMemo(() => services.find(service => service.key === 'airtime'), [services]);
   const airtimeProduct = airtimeService?.products?.[0] ?? null;
@@ -49,8 +51,28 @@ export default function Services({ services = [] }: { services: Service[] }) {
       return true;
     }).slice(0, 500);
     setBulkRows(normalized);
+    setBulkQuote(null);
     setBulkResult(null);
   };
+  const quoteBulk = async () => {
+    if (!airtimeProduct || !bulkRows.length) return;
+    setBulkQuoting(true); setBulkResult(null);
+    try {
+      const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
+      const items=bulkRows.map(row=>({
+        product_id: airtimeProduct.id,
+        payload: { network: row.network, phone: row.phone, amount: row.amount },
+      }));
+      const response=await fetch('/vtu/bulk-quote',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token},body:JSON.stringify({items})});
+      const body=await response.json();
+      if(!response.ok) throw new Error(body.message || 'Bulk quote could not be calculated.');
+      setBulkQuote(body.data);
+    } catch(e) {
+      setBulkQuote(null);
+      setBulkResult(e instanceof Error ? e.message : 'Bulk quote could not be calculated.');
+    } finally { setBulkQuoting(false); }
+  };
+
   const submitBulk = async () => {
     if (!airtimeProduct || !bulkRows.length || bulkPin.length !== 4) return;
     setBulkBusy(true); setBulkResult(null);
@@ -212,11 +234,14 @@ export default function Services({ services = [] }: { services: Service[] }) {
       </div>
       {bulkRows.length > 0 && <div className='mt-4 overflow-x-auto rounded-2xl border border-slate-200'><table className='w-full text-left text-xs'><thead className='bg-slate-50'><tr><th className='p-3'>Phone</th><th className='p-3'>Amount</th><th className='p-3'>Detected network</th></tr></thead><tbody>{bulkRows.map((row,index) => <tr key={index} className='border-t'><td className='p-3 font-mono'>{row.phone}</td><td className='p-3'>₦{Number(row.amount || 0).toLocaleString()}</td><td className='p-3 font-bold'>{row.network ? row.network.toUpperCase() : <span className='text-amber-600'>Unknown — review</span>}</td></tr>)}</tbody></table></div>}
       {bulkRows.length > 0 && <div className='mt-4 rounded-2xl border border-slate-200 p-4'>
+        <button type='button' onClick={quoteBulk} disabled={bulkQuoting || bulkRows.some(row => !row.network || !/^\+?(234|0)\d{10}$/.test(row.phone.replace(/\s|-/g,'')) || !(Number(row.amount) > 0))} className='w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white disabled:opacity-40'>{bulkQuoting ? 'Calculating secure quote…' : 'Get exact bulk quote'}</button>
+        {bulkQuote && <div className='mt-3 rounded-xl bg-indigo-50 p-3 text-sm'><div className='flex justify-between'><span className='text-slate-600'>{bulkQuote.total_items} purchases</span><strong>{bulkQuote.currency} {Number(bulkQuote.total_customer_price).toLocaleString()}</strong></div><p className='mt-1 text-[11px] text-slate-500'>Final total from the server-side Price Engine.</p></div>}
+        <div className='mt-4'>
         <p className='text-sm font-black'>Confirm bulk purchase</p><p className='mt-1 text-xs text-slate-500'>{bulkRows.length} recipients · estimated airtime value ₦{bulkRows.reduce((sum,row) => sum + (Number(row.amount) || 0), 0).toLocaleString()}</p>
         <label className='mt-4 block text-sm font-bold'>Transaction PIN<input value={bulkPin} onChange={e => setBulkPin(e.target.value.replace(/\D/g,'').slice(0,4))} type='password' inputMode='numeric' maxLength={4} placeholder='••••' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-center tracking-[0.5em] outline-none' /></label>
         <p className='mt-2 text-[11px] leading-5 text-slate-500'>Network detection uses a safe prefix fallback. Where the provider supports current-network/MNP verification, that provider result should take precedence before fulfillment.</p>
         {bulkResult && <div className='mt-3 rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700'>{bulkResult}</div>}
-        <button type='button' onClick={submitBulk} disabled={bulkBusy || bulkPin.length !== 4 || bulkRows.some(row => !row.network || !/^\+?(234|0)\d{10}$/.test(row.phone.replace(/\s|-/g,'')) || !(Number(row.amount) > 0))} className='mt-4 w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-black text-white disabled:opacity-40'>{bulkBusy ? 'Processing bulk airtime…' : 'Confirm & purchase all'}</button>
+        <button type='button' onClick={submitBulk} disabled={bulkBusy || !bulkQuote || bulkPin.length !== 4 || bulkRows.some(row => !row.network || !/^\+?(234|0)\d{10}$/.test(row.phone.replace(/\s|-/g,'')) || !(Number(row.amount) > 0))} className='mt-4 w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-black text-white disabled:opacity-40'>{bulkBusy ? 'Processing bulk airtime…' : 'Confirm & purchase all'}</button>
       </div>}
     </section>
   </div>}
