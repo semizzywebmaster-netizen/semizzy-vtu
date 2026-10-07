@@ -419,6 +419,30 @@ class VtuBulkService
         ]);
     }
 
+    public function requeryItem(int $uid, VtuBulkOperation $bulk, int $itemId): VtuBulkOperation
+    {
+        if ((int) $bulk->user_id !== $uid) {
+            throw new RuntimeException('Bulk operation not found.');
+        }
+
+        $item = $bulk->items()->whereKey($itemId)->firstOrFail();
+        $transaction = $item->transaction;
+
+        if (!$transaction) {
+            throw new \RuntimeException('This bulk item has no transaction to requery yet.');
+        }
+
+        if ($transaction->isTerminal()) {
+            return $this->recalculate($bulk->fresh('items'));
+        }
+
+        // Requery is the only safe recovery path for an ambiguous provider state.
+        // Never re-initiate a pending/unknown provider transaction from the bulk worker.
+        $this->transactions->requery($transaction);
+
+        return $this->recalculate($bulk->fresh('items'));
+    }
+
     public function recalculate(VtuBulkOperation $bulk): VtuBulkOperation
     {
         return DB::transaction(function () use ($bulk): VtuBulkOperation {
