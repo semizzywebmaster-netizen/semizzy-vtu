@@ -6,6 +6,7 @@ use Addons\CommunicationWhatsapp\Http\Controllers\CommunicationConsentController
 use Addons\CommunicationWhatsapp\Http\Controllers\CommunicationMessageController;
 use Addons\CommunicationWhatsapp\Http\Controllers\WhatsAppWebhookController;
 use Addons\CommunicationWhatsapp\Http\Controllers\CommunicationProviderController;
+use Addons\CommunicationWhatsapp\Http\Controllers\CommunicationCampaignController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/webhooks/communication/whatsapp/{provider}',[WhatsAppWebhookController::class,'verify'])->name('communication.whatsapp.webhook.verify');
@@ -49,6 +50,7 @@ Route::middleware(['auth','verified','permission:communication.campaigns.manage'
 
 Route::middleware(['auth','verified','permission:communication.providers.manage'])->group(function () {
  Route::get('/admin/communication/providers',[CommunicationProviderController::class,'index']);
+ Route::get('/admin/communication',[CommunicationProviderController::class,'page'])->name('admin.communication');
  Route::post('/admin/communication/providers',[CommunicationProviderController::class,'store']);
  Route::patch('/admin/communication/providers/{provider}',[CommunicationProviderController::class,'update']);
  Route::post('/admin/communication/providers/{provider}/test',[CommunicationProviderController::class,'test']);
