@@ -97,6 +97,7 @@ final class EscrowService {
    $eventName=$decision==='release'?'escrow.released':'escrow.refunded'; DB::afterCommit(fn()=>event($eventName,[$tx]));
    return $tx->fresh();
   });
+ }
  public function expire(int $id): EscrowTransaction {
   return DB::transaction(function()use($id){
    $tx=EscrowTransaction::lockForUpdate()->findOrFail($id);
