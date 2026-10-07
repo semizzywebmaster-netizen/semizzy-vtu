@@ -1,0 +1,6 @@
+<?php
+use Addons\CommunicationWhatsapp\Http\Controllers\WhatsAppWebhookController;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/webhooks/communication/whatsapp/{provider}',[WhatsAppWebhookController::class,'verify'])->name('communication.whatsapp.webhook.verify');
+Route::post('/webhooks/communication/whatsapp/{provider}',[WhatsAppWebhookController::class,'receive'])->name('communication.whatsapp.webhook.receive');
