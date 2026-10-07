@@ -125,9 +125,10 @@ class VtuController extends Controller
             'items.*.payload' => ['required', 'array'],
             'items.*.idempotency_key' => ['nullable', 'string', 'max:120'],
             'idempotency_key' => ['nullable', 'string', 'max:160'],
+            'quote_fingerprint' => ['required', 'string', 'size:64', 'regex:/^[a-f0-9]{64}$/'],
         ]);
 
-        return response()->json(['data' => $b->execute($r->user()->id, $d['items'], $r->user()->role, $d['idempotency_key'] ?? null)], 201);
+        return response()->json(['data' => $b->execute($r->user()->id, $d['items'], $r->user()->role, $d['idempotency_key'] ?? null, $d['quote_fingerprint'])], 201);
     }
 
     public function bulkItemRequery(Request $r, VtuBulkOperation $bulk, int $item, VtuBulkService $service)
