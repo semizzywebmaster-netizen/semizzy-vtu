@@ -7,14 +7,32 @@ use App\Models\VtuTransaction;
 use App\Models\VtuBulkOperationItem;
 use App\Services\Audit\AuditLogger;
 use App\Services\Pricing\PriceEngine;
+use Addons\BusinessAgentMerchantReseller\Models\BusinessPartner;
+use Addons\BusinessAgentMerchantReseller\Services\BusinessCommercialService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
 class VtuTransactionService{
- public function __construct(private PriceEngine $pricing,private VtuProviderGateway $gateway,private VtuWalletService $wallet,private AuditLogger $audit){}
- public function quote(ServiceProduct $p,string $tier='USER'):array{return $this->pricing->quote($p,$this->normalizeTier($tier));}
+ public function __construct(private PriceEngine $pricing,private VtuProviderGateway $gateway,private VtuWalletService $wallet,private AuditLogger $audit,private BusinessCommercialService $commercial){}
+ public function quote(ServiceProduct $p,string $tier='USER'):array{
+  $tier=$this->normalizeTier($tier);
+  $quote=$this->pricing->quote($p,$tier);
+  $partner=$this->partnerForTier(auth()->id(),$tier);
+  if($partner){
+   $this->commercial->assertCanTransact($partner,$this->toMinor($quote['customer_price']));
+   $rule=$this->commercial->pricing($partner,(string)$p->service?->key,(string)$p->key);
+   $quote['customer_price']=number_format($this->commercial->applyPricing($this->toMinor($quote['customer_price']),$rule)/100,2,'.','');
+   $quote['business_partner_id']=$partner->id;
+  }
+  return $quote;
+}
  public function normalizeTier(string $role): string { $tier=strtoupper(trim($role)); return in_array($tier,['USER','AGENT','RESELLER','MERCHANT','CUSTOM'],true) ? $tier : 'USER'; }
- public function create(int $uid,ServiceProduct $p,array $payload,string $tier='USER',?string $key=null):VtuTransaction{$p->loadMissing('service.category');if(!$p->service||$p->service->category?->key!=='vtu-digital-services')throw new RuntimeException('Only products belonging to the active VTU & Digital Services addon can be transacted.');if(!Addon::query()->where('identifier','vtu.digital-services')->where('status','active')->exists())throw new RuntimeException('The VTU & Digital Services addon is not active.');$key=$key?:'vtu_'.Str::uuid();return DB::transaction(function()use($uid,$p,$payload,$tier,$key){$existing=VtuTransaction::query()->where('idempotency_key',$key)->lockForUpdate()->first();if($existing){if((int)$existing->user_id!==$uid||(int)$existing->service_product_id!==(int)$p->id||$existing->request_payload!==$payload)throw new RuntimeException('Idempotency key has already been used for a different transaction.');return $existing;}$q=$this->pricing->quote($p,$this->normalizeTier($tier));$minor=$this->toMinor($q['customer_price']);$ref='VTU-'.strtoupper(Str::random(20));$tx=VtuTransaction::create(['uuid'=>(string)Str::uuid(),'reference'=>$ref,'user_id'=>$uid,'service_id'=>$p->service_id,'service_product_id'=>$p->id,'api_provider_id'=>$q['provider_id'],'idempotency_key'=>$key,'status'=>'pending','amount_minor'=>$minor,'fee_minor'=>'0','total_minor'=>$minor,'currency'=>$q['currency'],'customer_tier'=>$this->normalizeTier($tier),'recipient'=>$this->recipient($payload),'request_payload'=>$payload,'metadata'=>['price_rule_id'=>$q['rule_id']]]);$op=FinancialOperation::create(['uuid'=>(string)Str::uuid(),'reference'=>$ref,'user_id'=>$uid,'type'=>'vtu.purchase','status'=>'pending','amount_minor'=>$minor,'currency'=>$q['currency'],'idempotency_key'=>$key,'metadata'=>['vtu_transaction_id'=>$tx->id]]);$tx->financial_operation_id=$op->id;$tx->save();$this->wallet->reserve($tx);$op->status='processing';$op->save();$tx->status='processing';$tx->processed_at=now();$tx->save();return $tx->fresh();});}
+ public function create(int $uid,ServiceProduct $p,array $payload,string $tier='USER',?string $key=null):VtuTransaction{$p->loadMissing('service.category');if(!$p->service||$p->service->category?->key!=='vtu-digital-services')throw new RuntimeException('Only products belonging to the active VTU & Digital Services addon can be transacted.');if(!Addon::query()->where('identifier','vtu.digital-services')->where('status','active')->exists())throw new RuntimeException('The VTU & Digital Services addon is not active.');$key=$key?:'vtu_'.Str::uuid();return DB::transaction(function()use($uid,$p,$payload,$tier,$key){$existing=VtuTransaction::query()->where('idempotency_key',$key)->lockForUpdate()->first();if($existing){if((int)$existing->user_id!==$uid||(int)$existing->service_product_id!==(int)$p->id||$existing->request_payload!==$payload)throw new RuntimeException('Idempotency key has already been used for a different transaction.');return $existing;}$normalizedTier=$this->normalizeTier($tier);$q=$this->pricing->quote($p,$normalizedTier);$partner=$this->partnerForTier($uid,$normalizedTier);$baseMinor=$this->toMinor($q['customer_price']);if($partner){$this->commercial->assertCanTransact($partner,$baseMinor);$rule=$this->commercial->pricing($partner,(string)$p->service?->key,(string)$p->key);$minor=$this->commercial->applyPricing($baseMinor,$rule);$this->commercial->record($partner,$minor);}else{$minor=$baseMinor;}$ref='VTU-'.strtoupper(Str::random(20));$tx=VtuTransaction::create(['uuid'=>(string)Str::uuid(),'reference'=>$ref,'user_id'=>$uid,'service_id'=>$p->service_id,'service_product_id'=>$p->id,'api_provider_id'=>$q['provider_id'],'idempotency_key'=>$key,'status'=>'pending','amount_minor'=>$minor,'fee_minor'=>'0','total_minor'=>$minor,'currency'=>$q['currency'],'customer_tier'=>$normalizedTier,'recipient'=>$this->recipient($payload),'request_payload'=>$payload,'metadata'=>['price_rule_id'=>$q['rule_id'],'business_partner_id'=>$partner?->id,'base_customer_price_minor'=>$baseMinor,'commercial_price_rule_id'=>$rule->id??null]]);$op=FinancialOperation::create(['uuid'=>(string)Str::uuid(),'reference'=>$ref,'user_id'=>$uid,'type'=>'vtu.purchase','status'=>'pending','amount_minor'=>$minor,'currency'=>$q['currency'],'idempotency_key'=>$key,'metadata'=>['vtu_transaction_id'=>$tx->id]]);$tx->financial_operation_id=$op->id;$tx->save();$this->wallet->reserve($tx);$op->status='processing';$op->save();$tx->status='processing';$tx->processed_at=now();$tx->save();return $tx->fresh();});}
+ private function partnerForTier(?int $userId,string $tier):?BusinessPartner{
+  if(!$userId || !in_array($tier,['AGENT','MERCHANT','RESELLER'],true)) return null;
+  return BusinessPartner::query()->where('user_id',$userId)->where('type',strtolower($tier))->where('status','active')->latest('id')->first();
+ }
+
  public function process(VtuTransaction $tx):VtuTransaction{
   if($tx->isTerminal())return $tx;
 
