@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -63,6 +64,16 @@ class RegisteredUserController extends Controller
             }
         }
 
+        $deviceCookie = (string) $request->cookie('semizzy_device_key', '');
+        if ($deviceCookie === '') {
+            $deviceCookie = Str::uuid()->toString();
+        }
+        $deviceKey = hash('sha256', $deviceCookie);
+        $registeredUserCount = \App\Models\UserDevice::query()->where('device_key', $deviceKey)->distinct('user_id')->count('user_id');
+        if ($registeredUserCount >= 2) {
+            return back()->withErrors(['registration' => 'This device has reached the maximum of 2 registered user accounts.'])->withInput();
+        }
+
         $user = User::create([
             'name' => $data['name'],
             'username' => $username,
@@ -83,8 +94,9 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+        $user->devices()->create(['device_key'=>$deviceKey,'name'=>substr((string)$request->userAgent(),0,190),'ip_address'=>$request->ip(),'user_agent'=>substr((string)$request->userAgent(),0,500),'last_seen_at'=>now(),'authenticated_at'=>now(),'auth_method'=>'registration']);
 
-        return redirect()->route('verification.notice')->with('success', 'Account created successfully. Please verify your email before continuing.');
+        return redirect()->route('verification.notice')->withCookie(cookie('semizzy_device_key', $deviceCookie, 525600, null, null, true, true, false, 'lax'))->with('success', 'Account created successfully. Please verify your email before continuing.');
     }
 
     private function makeReferralCode(string $username): string
