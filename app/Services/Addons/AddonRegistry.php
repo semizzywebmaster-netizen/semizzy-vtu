@@ -28,6 +28,38 @@ class AddonRegistry
         return array_values($manifests);
     }
 
+    public function registerAutoloaders(): void
+    {
+        foreach ($this->all() as $manifest) {
+            $prefix = trim((string) ($manifest['autoload_namespace'] ?? ''), '\\') . '\\';
+            $source = (string) ($manifest['source'] ?? '');
+            if ($prefix === '\\' || $source === '') continue;
+
+            $base = base_path('addons/' . $source . '/src/');
+            if (!is_dir($base)) continue;
+
+            spl_autoload_register(static function (string $class) use ($prefix, $base): void {
+                if (!str_starts_with($class, $prefix)) return;
+                $relative = substr($class, strlen($prefix));
+                $file = $base . str_replace('\\', '/', $relative) . '.php';
+                if (is_file($file)) require_once $file;
+            }, true, true);
+        }
+    }
+
+    public function commercialAdapters(): array
+    {
+        $adapters = [];
+        foreach ($this->all() as $manifest) {
+            $classes = $manifest['commercial_adapters'] ?? [];
+            if (!is_array($classes)) continue;
+            foreach ($classes as $class) {
+                if (is_string($class) && class_exists($class)) $adapters[] = $class;
+            }
+        }
+        return array_values(array_unique($adapters));
+    }
+
     public function find(string $identifier): ?array
     {
         $identifier = strtolower(trim($identifier));
