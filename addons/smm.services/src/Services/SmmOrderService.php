@@ -11,6 +11,46 @@ use Semizzy\Addons\Smm\Models\SmmService;
 final class SmmOrderService
 {
  public function __construct(private ProviderManager $providers, private SmmWalletService $wallets){}
+ public function requery(SmmOrder $order): SmmOrder
+ {
+  $order->refresh();
+  if (in_array(strtolower($order->status), ['completed','failed','cancelled'], true)) return $order;
+  $service=$order->service()->firstOrFail();
+  $result=$this->providers->execute($service->service_key,'smm_requery',['provider_reference'=>$order->provider_reference,'reference'=>$order->reference,'service_id'=>$service->service_key],$order->idempotency_key.':requery');
+  return $this->applyProviderResult($order,$result);
+ }
+
+ public function cancel(SmmOrder $order): SmmOrder
+ {
+  $order->refresh();
+  if (!in_array(strtolower($order->status), ['pending','processing','accepted','cancel_requested'], true)) return $order;
+  $service=$order->service()->firstOrFail();
+  $result=$this->providers->execute($service->service_key,'smm_cancel',['provider_reference'=>$order->provider_reference,'reference'=>$order->reference],$order->idempotency_key.':cancel');
+  $status=strtoupper((string)$result->status);
+  if ($result->accepted || in_array($status,['CANCELLED','CANCELED','REFUNDED'],true)) {
+   $order->status='cancelled'; $this->wallets->settle($order,false); $order->metadata=array_merge((array)$order->metadata,['cancel'=>$result->message]); $order->save();
+  } elseif (in_array($status,['UNKNOWN','PENDING','PROCESSING','IN_PROGRESS'],true)) {
+   $order->status='cancel_requested'; $order->metadata=array_merge((array)$order->metadata,['cancel_status'=>$status]); $order->save();
+  }
+  return $order->fresh();
+ }
+
+ private function applyProviderResult(SmmOrder $order, $result): SmmOrder
+ {
+  $status=strtoupper((string)$result->status);
+  $order->provider_reference=$result->providerReference ?: $order->provider_reference;
+  $order->metadata=array_merge((array)$order->metadata,['requery_status'=>$status,'message'=>$result->message]);
+  if ($result->accepted || in_array($status,['SUCCESS','SUCCESSFUL','ACCEPTED','COMPLETED'],true)) {
+   $order->status='completed'; $order->completed_at=$order->completed_at ?: now(); $this->wallets->settle($order,true);
+  } elseif (in_array($status,['FAILED','REJECTED','ERROR'],true)) {
+   $order->status='failed'; $this->wallets->settle($order,false);
+  } else {
+   $order->status='pending';
+  }
+  $order->save();
+  return $order->fresh();
+ }
+
  public function create(int $userId,int $serviceId,int $quantity,string $target,string $idempotencyKey): SmmOrder
  {
   $order=DB::transaction(function() use($userId,$serviceId,$quantity,$target,$idempotencyKey){
