@@ -19,6 +19,11 @@ Route::prefix('admin/travel-tickets')
             ->middleware('permission:travel.services.manage')
             ->name('admin.travel.services.toggle');
 
+        Route::post('/bookings/{booking}/requery', [TravelTicketsController::class, 'requeryBooking'])
+            ->whereNumber('booking')
+            ->middleware('permission:travel.bookings.manage')
+            ->name('admin.travel.bookings.requery');
+
         Route::post('/bookings/{booking}/refund', [TravelTicketsController::class, 'requestRefund'])
             ->whereNumber('booking')
             ->middleware('permission:travel.refunds.manage')
