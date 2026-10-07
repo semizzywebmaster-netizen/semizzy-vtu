@@ -1,0 +1,34 @@
+<?php
+return [
+ 'identifier'=>'insurance.protection','name'=>'Insurance & Protection','version'=>'1.0.0',
+ 'description'=>'Provider-driven insurance marketplace for configurable protection products, policy issuance, renewals and claims.',
+ 'core_compatibility'=>'>=2.0.0','dependencies'=>[],
+ 'permissions'=>['insurance.view','insurance.buy','insurance.manage','insurance.providers.manage','insurance.policies.manage','insurance.claims.manage','insurance.refunds.manage','insurance.settings.manage','insurance.audit'],
+ 'role_permissions'=>[
+  'ADMIN'=>['insurance.view','insurance.buy','insurance.manage','insurance.providers.manage','insurance.policies.manage','insurance.claims.manage','insurance.refunds.manage','insurance.settings.manage','insurance.audit'],
+  'STAFF'=>['insurance.view','insurance.manage','insurance.policies.manage','insurance.claims.manage'],
+  'SUPPORT'=>['insurance.view','insurance.claims.manage'],
+  'USER'=>['insurance.view','insurance.buy'],
+ ],
+ 'navigation'=>[['id'=>'insurance','label'=>'Insurance & Protection','url'=>'/insurance','icon'=>'shield-check','permission'=>'insurance.view','section'=>'services','order'=>91]],
+ 'admin_navigation'=>[['id'=>'admin-insurance','label'=>'Insurance & Protection','url'=>'/admin/insurance','icon'=>'shield-check','permission'=>'insurance.view','section'=>'addons','order'=>91]],
+ 'settings'=>[
+  ['key'=>'enabled','type'=>'boolean','default'=>true],
+  ['key'=>'default_currency','type'=>'string','default'=>'NGN'],
+  ['key'=>'provider_failover_enabled','type'=>'boolean','default'=>true],
+  ['key'=>'claims_enabled','type'=>'boolean','default'=>true],
+  ['key'=>'renewals_enabled','type'=>'boolean','default'=>true],
+ ],
+ 'migrations'=>[
+  '2026_10_07_060000_create_insurance_providers.php',
+  '2026_10_07_060001_create_insurance_products.php',
+  '2026_10_07_060002_create_insurance_policies.php',
+  '2026_10_07_060003_create_insurance_claims.php',
+  '2026_10_07_060004_create_insurance_delivery_attempts.php',
+ ],
+ 'web_route_files'=>['addons/insurance-protection/routes/web.php','addons/insurance-protection/routes/admin.php'],
+ 'api_route_files'=>['addons/insurance-protection/routes/api.php'],
+ 'provider_integrations'=>['Core ProviderManager','Core wallet/ledger','Core KYC','Core notifications','Core audit'],
+ 'provider_capabilities'=>['insurance_catalog','insurance_quote','insurance_purchase','insurance_policy_status','insurance_renew','insurance_claim'],
+ 'events'=>['insurance.quote.created','insurance.policy.purchased','insurance.policy.issued','insurance.policy.renewed','insurance.claim.submitted','insurance.claim.updated'],
+];
