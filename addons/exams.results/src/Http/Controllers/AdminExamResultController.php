@@ -12,7 +12,7 @@ final class AdminExamResultController extends Controller
 {
  public function index(){return Inertia::render('Admin/Exams/Results',['products'=>ExamProduct::with('provider')->withCount('transactions')->latest()->get(),'providers'=>ApiProvider::query()->orderBy('display_name')->get(['id','identifier','display_name']),'transactions'=>ExamTransaction::with('product','user')->latest()->paginate(25)]);}
  public function store(Request $request){
-  $data=$request->validate(['key'=>['required','string','max:100'],'exam_body'=>['required','string','max:100'],'name'=>['required','string','max:150'],'currency'=>['required','string','size:3'],'price_minor'=>['required','integer','min:0'],'max_attempts'=>['required','integer','min:1','max:100'],'provider_id'=>['nullable','integer','exists:api_providers,id'],'active'=>['boolean']]);
+  $data=$request->validate(['key'=>['required','string','max:100'],'exam_body'=>['required','string','max:100'],'name'=>['required','string','max:150'],'currency'=>['required','string','size:3'],'price_minor'=>['required','integer','min:1'],'max_attempts'=>['required','integer','min:1','max:100'],'provider_id'=>['nullable','integer','exists:api_providers,id'],'active'=>['boolean']]);
   $data['key']=strtolower(trim($data['key'])); $data['currency']=strtoupper($data['currency']); $data['active']=(bool)($data['active']??true);
   $product=ExamProduct::create($data);
   return back()->with('success','Exam product created.');
