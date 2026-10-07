@@ -8,12 +8,12 @@ use Semizzy\Addons\Social\Models\SocialServiceOrder;
 use Semizzy\Addons\Social\Services\SocialServicesService;
 
 class AdminSocialServicesController extends Controller {
- public function index(){
-  return Inertia::render('Admin/SocialServices',[
-   'accounts'=>SocialAccountInventory::latest()->paginate(30),
-   'numbers'=>SocialNumberInventory::latest()->paginate(30),
-   'orders'=>SocialServiceOrder::with('user')->latest()->paginate(30),
-  ]);
+ public function index(Request $r){
+  $q=trim((string)$r->query('q','')); $status=$r->query('status');
+  $accounts=SocialAccountInventory::query()->when($q,fn($x)=>$x->where(fn($w)=>$w->where('platform','like','%'.$q.'%')->orWhere('title','like','%'.$q.'%')->orWhere('username','like','%'.$q.'%')->orWhere('provider_reference','like','%'.$q.'%')))->when($status,fn($x)=>$x->where('status',$status))->latest()->paginate(30)->withQueryString();
+  $numbers=SocialNumberInventory::query()->when($q,fn($x)=>$x->where(fn($w)=>$w->where('country_name','like','%'.$q.'%')->orWhere('country_code','like','%'.$q.'%')->orWhere('service_key','like','%'.$q.'%')->orWhere('provider_reference','like','%'.$q.'%')))->when($status,fn($x)=>$x->where('status',$status))->latest()->paginate(30)->withQueryString();
+  $orders=SocialServiceOrder::with('user')->when($q,fn($x)=>$x->where(fn($w)=>$w->where('reference','like','%'.$q.'%')->orWhere('provider_reference','like','%'.$q.'%')))->when($status,fn($x)=>$x->where('status',$status))->latest()->paginate(30)->withQueryString();
+  return Inertia::render('Admin/SocialServices',['accounts'=>$accounts,'numbers'=>$numbers,'orders'=>$orders,'filters'=>['q'=>$q,'status'=>$status]]);
  }
  public function account(Request $r){
   $d=$r->validate(['platform'=>'required|string|max:60','title'=>'required|string|max:160','username'=>'nullable|string|max:160','country_code'=>'nullable|string|max:8','account_age_days'=>'nullable|integer|min:0','followers'=>'nullable|integer|min:0','niche'=>'nullable|string|max:120','description'=>'nullable|string','fulfillment_mode'=>'required|in:api,manual,api_or_manual','provider_reference'=>'nullable|string|max:255','price'=>'required|numeric|min:0','currency'=>'required|string|size:3','status'=>'required|in:available,reserved,sold,disabled','credentials'=>'nullable|array','metadata'=>'nullable|array']);
