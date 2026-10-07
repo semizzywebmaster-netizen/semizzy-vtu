@@ -1,5 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use Semizzy\Addons\Social\Models\SocialAccount;
 use Semizzy\Addons\Social\Models\SocialVerificationRequest;
 use Semizzy\Addons\Social\Models\SocialPlatform;
