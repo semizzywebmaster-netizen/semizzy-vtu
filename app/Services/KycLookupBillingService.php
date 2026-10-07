@@ -8,6 +8,7 @@ use App\Models\WalletAccount;
 use App\Models\WalletMovement;
 use App\Services\Providers\ProviderManager;
 use App\Services\System\SystemSettingsService;
+use App\Services\System\FeatureControlService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -17,14 +18,18 @@ class KycLookupBillingService
     public function __construct(
         private ProviderManager $providers,
         private SystemSettingsService $settings,
+        private FeatureControlService $features,
     ) {}
 
-    public function lookup(User $user, string $identityType, string $identityNumber): array
+    public function lookup(User $user, string $identityType, string $identityNumber, ?string $idempotencyKey = null): array
     {
         $type = strtolower(trim($identityType));
         if (!in_array($type, ['bvn', 'nin'], true)) {
             throw new RuntimeException('Only BVN and NIN provider lookups are billable KYC lookups.');
         }
+
+        if (!$this->features->enabled('kyc.enabled')) throw new RuntimeException('KYC is temporarily unavailable.');
+        if (!$this->features->enabled('kyc.lookup.'.$type)) throw new RuntimeException(strtoupper($type).' verification lookup is temporarily unavailable.');
 
         $identity = trim($identityNumber);
         if ($identity === '') {
@@ -37,7 +42,10 @@ class KycLookupBillingService
         }
 
         $hash = hash('sha256', strtoupper($type).'|'.$identity);
-        $operationKey = 'kyc:lookup:'.$user->id.':'.$type.':'.$hash;
+        $key = trim((string) ($idempotencyKey ?: ''));
+        if ($key === '') $key = (string) Str::uuid();
+        if (!preg_match('/^[A-Za-z0-9._:-]{8,160}$/', $key)) throw new RuntimeException('Invalid KYC lookup idempotency key.');
+        $operationKey = 'kyc:lookup:'.$user->id.':'.$type.':'.$key;
 
         $existing = KycLookupCharge::query()->where('operation_key', $operationKey)->first();
         if ($existing && in_array($existing->status, ['charged', 'completed', 'processing'], true)) {
