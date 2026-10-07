@@ -25,7 +25,7 @@ class AppServiceProvider extends ServiceProvider
         try {
             $registry = app(CommercialServiceRegistry::class);
             $registry->register(app(BusinessCommercialAdapter::class));
-        } catch (\\Throwable) {
+        } catch (\Throwable) {
             // Business commercial addon is optional; Core remains usable without it.
         }
 
