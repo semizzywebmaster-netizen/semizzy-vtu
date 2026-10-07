@@ -7,6 +7,9 @@ use Semizzy\Addons\TravelTickets\Models\TravelBookingAttempt;
 
 class TravelBookingQueryService
 {
+    private const CONFIRMED = ['confirmed', 'success', 'successful', 'booked', 'ticketed', 'completed', 'complete'];
+    private const FAILED = ['failed', 'rejected', 'declined', 'error', 'cancelled', 'canceled'];
+
     public function __construct(private TravelProviderGateway $gateway, private TravelWalletService $wallet) {}
 
     public function requery(TravelBooking $booking): TravelBooking
@@ -37,10 +40,10 @@ class TravelBookingQueryService
             return $booking->fresh();
         }
 
-        $response = is_array($result['response'] ?? null) ? $result['response'] : [];
+        $response = $this->responseArray($result['response'] ?? null);
         $provider = $result['provider'] ?? null;
         $providerCode = $provider?->code ?? $provider?->identifier ?? $booking->provider_code;
-        $status = strtolower((string) ($response['status'] ?? $response['booking_status'] ?? $response['bookingStatus'] ?? 'pending'));
+        $status = $this->normalizeStatus($response);
         $providerReference = $this->reference($response) ?: $booking->provider_reference;
         $bookingReference = $this->bookingReference($response) ?: $booking->booking_reference;
 
@@ -53,7 +56,7 @@ class TravelBookingQueryService
             'response' => $response,
         ]);
 
-        if (in_array($status, ['confirmed', 'success', 'successful', 'booked', 'ticketed'], true)) {
+        if (in_array($status, self::CONFIRMED, true)) {
             try {
                 $this->wallet->settle($booking);
             } catch (\Throwable $e) {
@@ -79,7 +82,7 @@ class TravelBookingQueryService
             return $booking->fresh();
         }
 
-        if (in_array($status, ['failed', 'rejected', 'declined', 'error'], true)) {
+        if (in_array($status, self::FAILED, true)) {
             $this->wallet->release($booking);
             $booking->update([
                 'status' => 'failed',
@@ -100,11 +103,32 @@ class TravelBookingQueryService
         return $booking->fresh();
     }
 
+    private function responseArray(mixed $response): array
+    {
+        if (!is_array($response)) return [];
+        if (isset($response['data']) && is_array($response['data'])) {
+            $nested = $response['data'];
+            foreach (['status', 'booking_status', 'bookingStatus', 'provider_reference', 'providerReference', 'reference', 'booking_reference', 'bookingReference', 'pnr'] as $key) {
+                if (array_key_exists($key, $nested) && !array_key_exists($key, $response)) {
+                    $response[$key] = $nested[$key];
+                }
+            }
+        }
+        return $response;
+    }
+
+    private function normalizeStatus(array $response): string
+    {
+        $status = $response['status'] ?? $response['booking_status'] ?? $response['bookingStatus'] ?? $response['state'] ?? 'pending';
+        $status = strtolower(trim((string) $status));
+        return $status !== '' ? $status : 'pending';
+    }
+
     private function attemptStatus(string $status): string
     {
-        return in_array($status, ['confirmed', 'success', 'successful', 'booked', 'ticketed'], true)
+        return in_array($status, self::CONFIRMED, true)
             ? 'accepted'
-            : ($status === 'pending' ? 'pending' : 'failed');
+            : (in_array($status, self::FAILED, true) ? 'failed' : 'pending');
     }
 
     private function reference(array $response): ?string
