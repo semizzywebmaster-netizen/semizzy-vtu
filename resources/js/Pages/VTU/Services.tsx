@@ -25,6 +25,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
   const [bulkResult, setBulkResult] = useState<string | null>(null);
   const [bulkQuote, setBulkQuote] = useState<{ total_customer_price: string; currency: string; total_items: number; items: Array<{ index: number; product_id: number; customer_price: string; currency: string }> } | null>(null);
   const [bulkQuoting, setBulkQuoting] = useState(false);
+  const [bulkResolving, setBulkResolving] = useState(false);
   const [bulkResultItems, setBulkResultItems] = useState<Array<{ sequence?: number; recipient?: string; status?: string; reference?: string | null; error_message?: string | null }>>([]);
 
   const airtimeService = useMemo(() => services.find(service => service.key === 'airtime'), [services]);
@@ -63,6 +64,25 @@ export default function Services({ services = [] }: { services: Service[] }) {
     setBulkQuote(null);
     setBulkResult(null);
     setBulkResultItems([]);
+  };
+
+  const resolveBulkNetworks = async () => {
+    if (!bulkRows.length) return;
+    setBulkResolving(true); setBulkQuote(null); setBulkResult(null);
+    try {
+      const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
+      const rows = await Promise.all(bulkRows.map(async row => {
+        if (row.network) return row;
+        const response=await fetch('/vtu/network-lookup',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token},body:JSON.stringify({phone:row.phone})});
+        const body=await response.json();
+        return response.ok && body?.data?.network ? {...row, network: body.data.network} : row;
+      }));
+      setBulkRows(rows);
+      const unresolved=rows.filter(row=>!row.network).length;
+      if (unresolved) setBulkResult(unresolved + ' recipient' + (unresolved === 1 ? '' : 's') + ' could not be verified. Review the network before quoting.');
+    } catch(e) {
+      setBulkResult(e instanceof Error ? e.message : 'Network verification could not be completed.');
+    } finally { setBulkResolving(false); }
   };
 
   const quoteBulk = async () => {
@@ -248,6 +268,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
       </div>
       {bulkRows.length > 0 && <div className='mt-4 overflow-x-auto rounded-2xl border border-slate-200'><table className='w-full text-left text-xs'><thead className='bg-slate-50'><tr><th className='p-3'>Phone</th><th className='p-3'>Amount</th><th className='p-3'>Detected network</th></tr></thead><tbody>{bulkRows.map((row,index) => <tr key={index} className='border-t'><td className='p-3 font-mono'>{row.phone}</td><td className='p-3'>₦{Number(row.amount || 0).toLocaleString()}</td><td className='p-3 font-bold'>{row.network ? row.network.toUpperCase() : <span className='text-amber-600'>Unknown — review</span>}</td></tr>)}</tbody></table></div>}
       {bulkRows.length > 0 && <div className='mt-4 rounded-2xl border border-slate-200 p-4'>
+        <button type='button' onClick={resolveBulkNetworks} disabled={bulkResolving || !bulkRows.length} className='mb-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 disabled:opacity-40'>{bulkResolving ? 'Checking current networks…' : 'Verify current networks'}</button>
         <button type='button' onClick={quoteBulk} disabled={bulkQuoting || bulkRows.some(row => !row.network || !/^\+?(234|0)\d{10}$/.test(row.phone.replace(/\s|-/g,'')) || !(Number(row.amount) > 0))} className='w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white disabled:opacity-40'>{bulkQuoting ? 'Calculating secure quote…' : 'Get exact bulk quote'}</button>
         {bulkQuote && <div className='mt-3 rounded-xl bg-indigo-50 p-3 text-sm'><div className='flex justify-between'><span className='text-slate-600'>{bulkQuote.total_items} purchases</span><strong>{bulkQuote.currency} {Number(bulkQuote.total_customer_price).toLocaleString()}</strong></div><p className='mt-1 text-[11px] text-slate-500'>Final total from the server-side Price Engine.</p></div>}
         <div className='mt-4'>
