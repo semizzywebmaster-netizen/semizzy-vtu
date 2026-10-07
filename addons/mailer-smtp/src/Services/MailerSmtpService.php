@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use RuntimeException;
+use App\Models\SystemSetting;
 use Semizzy\Addons\MailerSmtp\Models\MailerSmtpProfile;
 use Semizzy\Addons\MailerSmtp\Models\MailerSmtpAttempt;
 class MailerSmtpService {
@@ -14,7 +14,7 @@ class MailerSmtpService {
   $profiles=MailerSmtpProfile::query()->where('enabled',true)->where(function($q){$q->whereNull('cooldown_until')->orWhere('cooldown_until','<=',now());})->whereNotNull('username')->whereNotNull('password')->where('host','!=','')->orderBy('priority')->orderByDesc('weight')->get();
   if($profiles->isEmpty())return false;
   $mailers=[];$names=[];
-  foreach($profiles as $p){$name='addon_smtp_'.$p->id;$mailers[$name]=['transport'=>'smtp','host'=>$p->host,'port'=>$p->port,'encryption'=>$p->encryption==='null'?null:$p->encryption,'username'=>$p->username,'password'=>$p->password,'timeout'=>15,'auth_mode'=>null];$names[]=$name;}
+  foreach($profiles as $p){$name='addon_smtp_'.$p->id;$mailers[$name]=['transport'=>'smtp','host'=>$p->host,'port'=>$p->port,'encryption'=>$p->encryption==='null'?null:$p->encryption,'username'=>$p->username,'password'=>$p->getRawOriginal('password'),'timeout'=>15,'auth_mode'=>null];$names[]=$name;}
   $stored=SystemSetting::query()->where('key','mailer_smtp')->value('value');$settings=is_string($stored)?json_decode($stored,true):[];$strategy=in_array((string)($settings['strategy']??config('mailer_smtp.strategy','failover')),['failover','roundrobin'],true)?($settings['strategy']??'failover'):'failover';
   config(['mail.mailers'=>array_merge(config('mail.mailers',[]),$mailers,['mailer_smtp_pool'=>['transport'=>$strategy,'mailers'=>$names,'retry_after'=>60]]),'mail.default'=>'mailer_smtp_pool']);
   $first=$profiles->first();config(['mail.from.address'=>$first->from_address,'mail.from.name'=>$first->from_name ?: config('mail.from.name')]);
