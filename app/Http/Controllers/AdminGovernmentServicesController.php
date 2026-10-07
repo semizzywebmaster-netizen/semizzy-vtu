@@ -8,9 +8,15 @@ use Semizzy\Addons\Government\Models\GovernmentApplication;
 use Semizzy\Addons\Government\Models\GovernmentDocument;
 use Semizzy\Addons\Government\Models\GovernmentCertificate;
 class AdminGovernmentServicesController extends Controller {
- public function index(){
+ public function index(Request $r){
+  $q=GovernmentService::query();
+  if($r->filled('search')){ $s=$r->string('search')->toString(); $q->where(fn($x)=>$x->where('name','like',"%$s%")->orWhere('service_key','like',"%$s%")->orWhere('agency','like',"%$s%")); }
+  if($r->filled('status') && in_array($r->status,['active','inactive'],true)) $q->where('status',$r->status);
+  if($r->filled('agency')) $q->where('agency',$r->agency);
+  if($r->filled('fulfillment_mode') && in_array($r->fulfillment_mode,['api','manual','api_or_manual'],true)) $q->where('fulfillment_mode',$r->fulfillment_mode);
+  $services=$q->latest()->paginate(30)->withQueryString();
   return Inertia::render('Admin/GovernmentServices',[
-   'services'=>GovernmentService::latest()->paginate(30),
+   'services'=>$services,
    'applications'=>GovernmentApplication::with(['service','documents','certificates'])->latest()->paginate(30),
   ]);
  }
