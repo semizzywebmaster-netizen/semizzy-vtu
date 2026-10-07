@@ -41,9 +41,9 @@ class AuthenticatedSessionController extends Controller
             throw ValidationException::withMessages(['login' => 'The login field is required.']);
         }
 
-        $this->authenticate($request, $credentials, false);
+        $deviceKey = $this->authenticate($request, $credentials, false);
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended(route('dashboard'))->withCookie(cookie('semizzy_device_key', $deviceKey, 525600, null, null, true, true, false, 'lax'));
     }
 
     public function storeAdmin(Request $request): RedirectResponse
@@ -54,7 +54,7 @@ class AuthenticatedSessionController extends Controller
         return redirect()->intended(route('dashboard'));
     }
 
-    private function authenticate(Request $request, array $credentials, bool $admin): void
+    private function authenticate(Request $request, array $credentials, bool $admin): string
     {
         $login = strtolower(trim((string) ($credentials['login'] ?? $credentials['email'] ?? '')));
         $query = \App\Models\User::query()->where('status', 'active');
@@ -120,8 +120,8 @@ class AuthenticatedSessionController extends Controller
 
         RateLimiter::clear($key);
         $request->session()->regenerate();
-        $request->cookie('semizzy_device_key') || $request->session()->put('set_device_cookie', $deviceKey);
         $this->securityEvents->record($admin ? 'auth.admin_login.success' : 'auth.login.success', 'info', ['admin' => $admin], $request);
+        return $deviceKey;
     }
 
     private function loginErrorKey(Request $request): string
