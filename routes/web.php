@@ -112,6 +112,7 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::get('/kyc', [KycController::class, 'index'])->name('kyc.index');
     Route::post('/kyc', [KycController::class, 'submit'])->middleware(['throttle:5,1','transaction.pin'])->name('kyc.submit');
+    Route::post('/kyc/lookup', [KycController::class, 'lookup'])->middleware(['throttle:5,1','transaction.pin'])->name('kyc.lookup');
     Route::get('/kyc/document', [KycController::class, 'document'])->name('kyc.document');
     Route::get('/profile/identity-document', [ProfileController::class, 'identityDocument'])->name('profile.identity-document');
     Route::post('/profile', [ProfileController::class, 'update'])->middleware(['throttle:10,1','transaction.pin'])->name('profile.update');
