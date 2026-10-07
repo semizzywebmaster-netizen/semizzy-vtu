@@ -4,9 +4,8 @@ namespace App\Providers;
 
 use App\Models\SystemSetting;
 use App\Models\Addon;
+use App\Services\Addons\AddonRegistry;
 use App\Services\Commercial\CommercialServiceRegistry;
-use Addons\BusinessAgentMerchantReseller\Services\BusinessCommercialAdapter;
-use Addons\BusinessAgentMerchantReseller\Services\BusinessCommercialService;
 use Semizzy\Addons\MailerSmtp\Services\MailerSmtpService;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Schema;
@@ -17,16 +16,19 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(CommercialServiceRegistry::class, fn () => new CommercialServiceRegistry());
-        $this->app->singleton(BusinessCommercialService::class, fn () => new BusinessCommercialService());
     }
 
     public function boot(): void
     {
         try {
+            $addons = app(AddonRegistry::class);
+            $addons->registerAutoloaders();
             $registry = app(CommercialServiceRegistry::class);
-            $registry->register(app(BusinessCommercialAdapter::class));
+            foreach ($addons->commercialAdapters() as $adapterClass) {
+                $registry->register(app($adapterClass));
+            }
         } catch (\Throwable) {
-            // Business commercial addon is optional; Core remains usable without it.
+            // Optional addon adapters must never prevent Core boot.
         }
 
         try {
