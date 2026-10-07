@@ -1,6 +1,6 @@
 <?php
 namespace Addons\\VtuWebsiteBuilder\\Http\\Controllers;
-use Addons\\VtuWebsiteBuilder\\Models\\{WebsiteSite,WebsitePage};
+use Addons\\VtuWebsiteBuilder\\Models\\{WebsiteSite,WebsitePage,WebsiteDomain};
 use Addons\\VtuWebsiteBuilder\\Services\\WebsiteBuilderService;
 use Illuminate\\Http\\Request;
 use Illuminate\\Routing\\Controller;
