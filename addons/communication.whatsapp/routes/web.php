@@ -1,6 +1,8 @@
 <?php
 use Addons\CommunicationWhatsapp\Http\Controllers\WhatsAppStatusController;
 use Addons\CommunicationWhatsapp\Http\Controllers\CommunicationCenterController;
+use Addons\CommunicationWhatsapp\Http\Controllers\CommunicationTemplateController;
+use Addons\CommunicationWhatsapp\Http\Controllers\CommunicationConsentController;
 use Addons\CommunicationWhatsapp\Http\Controllers\CommunicationMessageController;
 use Addons\CommunicationWhatsapp\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
@@ -19,4 +21,16 @@ Route::middleware(['auth','verified','permission:communication.view'])->group(fu
 });
 Route::middleware(['auth','verified','permission:communication.conversations.manage'])->group(function () {
  Route::post('/communication/conversations/{conversation}/reply',[CommunicationCenterController::class,'reply'])->name('communication.conversations.reply');
+});
+
+Route::middleware(['auth','verified','permission:communication.view'])->group(function () {
+ Route::get('/communication/templates',[CommunicationTemplateController::class,'index'])->name('communication.templates');
+ Route::post('/communication/templates/{template}/render',[CommunicationTemplateController::class,'render'])->name('communication.templates.render');
+ Route::get('/communication/consents',[CommunicationConsentController::class,'mine'])->name('communication.consents.mine');
+});
+Route::middleware(['auth','verified','permission:communication.templates.manage'])->group(function () {
+ Route::post('/communication/templates',[CommunicationTemplateController::class,'store'])->name('communication.templates.store');
+});
+Route::middleware(['auth','verified','permission:communication.consent.manage'])->group(function () {
+ Route::post('/communication/consents',[CommunicationConsentController::class,'set'])->name('communication.consents.set');
 });
