@@ -4,7 +4,7 @@ namespace Addons\CommunicationWhatsapp\Http\Controllers;
 use App\Models\Communication\Conversation;
 use App\Models\Communication\Message;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\JsonResponse;\nuse Inertia\Inertia;
 
 class CommunicationCenterController
 {
