@@ -21,6 +21,11 @@ export const THEMES: ThemeDefinition[] = [
   { ...p('#1D4ED8','#1E3A8A','#38BDF8',commonLight,{...commonDark,background:'#07142B',surface:'#10213D'}), key:'modern-corporate', name:'Ocean Corporate', description:'Professional blue enterprise theme built for trust and clarity' },
   { ...p('#4F46E5','#3730A3','#06B6D4',commonLight,{...commonDark,background:'#0D1024',surface:'#171A35'}), key:'clean-saas', name:'Indigo Tech', description:'Modern digital-platform look with clean hierarchy and bright accents' },
   { ...p('#111827','#1F2937','#D4AF37',{...commonLight,background:'#FAF9F6',surface:'#FFFFFF',text:'#111827',muted:'#6B7280',border:'#E5E7EB'}, {...commonDark,background:'#090A0D',surface:'#141519',text:'#F9FAFB'}), key:'luxury-executive', name:'Midnight Gold', description:'Distinctive premium business aesthetic with restrained gold highlights' },
+  { ...p('#0EA5E9','#0369A1','#22D3EE',commonLight,{...commonDark,background:'#061827',surface:'#0C2234'}), key:'sky-enterprise', name:'Sky Enterprise', description:'Clean enterprise blue with a modern digital-services feel' },
+  { ...p('#059669','#065F46','#6EE7B7',commonLight,{...commonDark,background:'#061B15',surface:'#0D2A21'}), key:'forest-growth', name:'Forest Growth', description:'Balanced green identity for savings, rewards and growth products' },
+  { ...p('#E11D48','#9F1239','#FB7185',commonLight,{...commonDark,background:'#240B13',surface:'#35111C'}), key:'crimson-modern', name:'Crimson Modern', description:'Confident red-accented professional fintech theme' },
+  { ...p('#F97316','#C2410C','#FDBA74',commonLight,{...commonDark,background:'#241106',surface:'#34190B'}), key:'sunset-commerce', name:'Sunset Commerce', description:'Warm commerce-focused palette with strong conversion accents' },
+  { ...p('#334155','#0F172A','#94A3B8',commonLight,{...commonDark,background:'#080D16',surface:'#111827'}), key:'slate-professional', name:'Slate Professional', description:'Neutral executive interface optimized for dense administration screens' },
 ];
 
 export const DEFAULT_CUSTOM: Record<Skin, Palette> = {
