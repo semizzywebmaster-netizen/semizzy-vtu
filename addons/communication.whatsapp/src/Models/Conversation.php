@@ -6,4 +6,5 @@ class Conversation extends Model {
  protected $casts=['last_message_at'=>'datetime'];
  public function user(){return $this->belongsTo(\App\Models\User::class);}
  public function messages(){return $this->hasMany(Message::class,'conversation_id');}
+ public function assignedAgent(){return $this->belongsTo(\App\Models\User::class,'assigned_to');}
 }
