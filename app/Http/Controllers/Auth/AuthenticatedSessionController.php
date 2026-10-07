@@ -105,7 +105,8 @@ class AuthenticatedSessionController extends Controller
                 throw ValidationException::withMessages(['otp_code' => 'Enter the verification code sent to your email.']);
             }
             $this->otp->verifyForUser($user, 'new_device_login', (string)$credentials['otp_code']);
-            $user->devices()->whereNull('revoked_at')->whereKeyNot($activeDevice->id)->update(['revoked_at'=>now()]);
+            $user->devices()->whereNull('revoked_at')->update(['revoked_at'=>now()]);
+            $activeDevice = null;
             $request->session()->forget(['device_login_pending','device_login_user_id']);
         }
         Auth::login($user, (bool) ($credentials['remember'] ?? false));
