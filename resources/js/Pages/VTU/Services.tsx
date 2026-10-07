@@ -38,7 +38,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
   };
   const parseBulkRows = () => {
     const seen = new Set<string>();
-    const rows = bulkInput.split(/\\r?\\n/).map(line => line.trim()).filter(Boolean).map(line => {
+    const rows = bulkInput.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
       const [phone, amount] = line.split(/[,;\\t]/).map(value => value.trim());
       return { phone: phone || '', amount: amount || '', network: detectNetwork(phone || '') };
     }).filter(row => row.phone);
@@ -216,7 +216,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
         <label className='mt-4 block text-sm font-bold'>Transaction PIN<input value={bulkPin} onChange={e => setBulkPin(e.target.value.replace(/\D/g,'').slice(0,4))} type='password' inputMode='numeric' maxLength={4} placeholder='••••' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-center tracking-[0.5em] outline-none' /></label>
         <p className='mt-2 text-[11px] leading-5 text-slate-500'>Network detection uses a safe prefix fallback. Where the provider supports current-network/MNP verification, that provider result should take precedence before fulfillment.</p>
         {bulkResult && <div className='mt-3 rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700'>{bulkResult}</div>}
-        <button type='button' onClick={submitBulk} disabled={bulkBusy || bulkPin.length !== 4 || bulkRows.some(row => !row.network || !/^\\+?(234|0)\\d{10}$/.test(row.phone.replace(/\\s|-/g,'')) || !(Number(row.amount) > 0))} className='mt-4 w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-black text-white disabled:opacity-40'>{bulkBusy ? 'Processing bulk airtime…' : 'Confirm & purchase all'}</button>
+        <button type='button' onClick={submitBulk} disabled={bulkBusy || bulkPin.length !== 4 || bulkRows.some(row => !row.network || !/^\+?(234|0)\d{10}$/.test(row.phone.replace(/\s|-/g,'')) || !(Number(row.amount) > 0))} className='mt-4 w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-black text-white disabled:opacity-40'>{bulkBusy ? 'Processing bulk airtime…' : 'Confirm & purchase all'}</button>
       </div>}
     </section>
   </div>}
