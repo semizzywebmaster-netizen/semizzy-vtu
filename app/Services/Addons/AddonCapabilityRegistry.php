@@ -10,6 +10,9 @@ final class AddonCapabilityRegistry
 
     public function all(): Collection
     {
+        // Only installed manifests are discoverable here. Runtime activation is
+        // enforced by the caller when executing a capability.
+
         return collect($this->addons->all())
             ->flatMap(function (array $manifest): array {
                 $capabilities = $manifest['capabilities'] ?? [];
@@ -58,6 +61,7 @@ final class AddonCapabilityRegistry
 
     public function apiCapabilities(): Collection
     {
+
         return $this->all()->filter(
             fn (array $capability): bool => ($capability['api_exposed'] ?? true) === true
         )->values();
