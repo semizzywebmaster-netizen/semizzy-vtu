@@ -34,3 +34,11 @@ Route::middleware(['auth','verified','permission:communication.templates.manage'
 Route::middleware(['auth','verified','permission:communication.consent.manage'])->group(function () {
  Route::post('/communication/consents',[CommunicationConsentController::class,'set'])->name('communication.consents.set');
 });
+
+
+Route::middleware(['auth','verified','permission:communication.campaigns.manage'])->group(function () {
+ Route::get('/communication/campaigns',[CommunicationCampaignController::class,'index'])->name('communication.campaigns');
+ Route::post('/communication/campaigns',[CommunicationCampaignController::class,'store'])->name('communication.campaigns.store');
+ Route::get('/communication/campaigns/{campaign}',[CommunicationCampaignController::class,'show'])->name('communication.campaigns.show');
+ Route::post('/communication/campaigns/{campaign}/run',[CommunicationCampaignController::class,'run'])->name('communication.campaigns.run');
+});
