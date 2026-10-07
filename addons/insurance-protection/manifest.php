@@ -27,6 +27,7 @@ return [
   '2026_10_07_060004_create_insurance_delivery_attempts.php',
   '2026_10_07_060005_harden_insurance_purchase_idempotency.php',
   '2026_10_07_060006_harden_insurance_policy_lifecycle.php',
+  '2026_10_07_060007_harden_insurance_claims.php',
  ],
  'web_route_files'=>['addons/insurance-protection/routes/web.php','addons/insurance-protection/routes/admin.php'],
  'api_route_files'=>['addons/insurance-protection/routes/api.php'],
