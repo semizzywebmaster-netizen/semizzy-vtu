@@ -80,7 +80,7 @@ class OtpChallengeService
     private function normalizePurpose(string $purpose): string
     {
         return match ($purpose) {
-            'transaction_pin_change', 'password_change', 'password_forgot' => $purpose,
+            'transaction_pin_change', 'password_change', 'password_forgot', 'new_device_login' => $purpose,
             default => throw new \InvalidArgumentException('Unsupported OTP purpose.'),
         };
     }
