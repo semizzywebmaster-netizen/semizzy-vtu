@@ -32,7 +32,7 @@ final class SocialServicesService {
  public function purchaseViaProvider(SocialServiceOrder $order): SocialServiceOrder {
   if($order->status!=='paid')throw new RuntimeException('Order must be paid before provider fulfillment.');
   $operation=$order->order_type==='account'?'social_account_purchase':'foreign_number_purchase';
-  $payload=['reference'=>$order->reference,'inventory_id'=>$order->inventory_id,'metadata'=>$order->metadata];
+  $payload=['reference'=>$order->reference,'inventory_id'=>$order->inventory_id,'metadata'=>$order->metadata]; if($order->order_type==='number'){ $item=SocialNumberInventory::query()->findOrFail($order->inventory_id); $payload['country_code']=$item->country_code; $payload['country_name']=$item->country_name; $payload['service_key']=$item->service_key; }
   $result=$this->providers->execute($order->order_type==='account'?'social_account':'foreign_number',$operation,$payload,$order->reference);
   $status=strtoupper((string)$result->status);
   $order->provider_reference=$result->providerReference ?: $order->provider_reference;
