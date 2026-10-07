@@ -20,9 +20,7 @@ return [
         'USER'=>[],
     ],
     'navigation'=>[],
-    'admin_navigation'=>[
-        ['id'=>'admin-sim-hosting','label'=>'SIM Hosting Provider','url'=>'/admin/sim-hosting','icon'=>'server','permission'=>'sim_hosting.view','section'=>'addons','order'=>70]
-    ],
+    'admin_navigation'=>[],
     'settings'=>[
         ['key'=>'enabled','type'=>'boolean','default'=>true],
         ['key'=>'default_currency','type'=>'string','default'=>'NGN'],
