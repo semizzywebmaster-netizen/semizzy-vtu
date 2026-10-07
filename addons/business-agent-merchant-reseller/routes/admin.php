@@ -8,4 +8,8 @@ Route::middleware(['auth','verified','ensure.addon:business.agent-merchant-resel
  Route::patch('/admin/business/partners/{partner}',[BusinessAdminController::class,'update'])->middleware('permission:business.manage');
  Route::get('/admin/business/partners/{partner}/pricing',[BusinessAdminController::class,'pricing'])->middleware('permission:business.pricing.manage');
  Route::post('/admin/business/partners/{partner}/pricing',[BusinessAdminController::class,'savePricing'])->middleware('permission:business.pricing.manage');
+ Route::delete('/admin/business/partners/{partner}/pricing/{rule}',[BusinessAdminController::class,'deletePricing'])->middleware('permission:business.pricing.manage');
+ Route::get('/admin/business/partners/{partner}/hierarchy',[BusinessAdminController::class,'hierarchy'])->middleware('permission:business.manage');
+ Route::get('/admin/business/settlements',[BusinessAdminController::class,'settlements'])->middleware('permission:business.audit');
+ Route::post('/admin/business/settlements/{settlement}/settle',[BusinessAdminController::class,'settle'])->middleware('permission:business.manage');
 });
