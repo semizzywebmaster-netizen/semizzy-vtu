@@ -7,6 +7,7 @@ Route::middleware(['api','auth:sanctum','ensure.addon:marketplace.commerce','tra
   Route::post('/api/v1/marketplace/orders',[MarketplaceController::class,'store'])->name('api.marketplace.orders.store');
   Route::post('/api/v1/marketplace/orders/{order}/pay',[MarketplaceController::class,'pay'])->name('api.marketplace.orders.pay');
   Route::post('/api/v1/marketplace/orders/{order}/review',[MarketplaceController::class,'reviewStore'])->name('api.marketplace.orders.review');
+  Route::post('/api/v1/marketplace/orders/{order}/cancel',[MarketplaceController::class,'cancel'])->name('api.marketplace.orders.cancel');
  });
  Route::middleware('permission:marketplace.orders.manage')->post('/api/v1/marketplace/orders/{order}/refund',[MarketplaceController::class,'refund'])->name('api.marketplace.orders.refund');
 });
