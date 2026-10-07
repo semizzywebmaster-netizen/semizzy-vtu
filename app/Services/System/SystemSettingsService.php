@@ -53,6 +53,12 @@ class SystemSettingsService
                     if (isset($stored[$key]) && is_string($stored[$key]) && $stored[$key] !== '') $settings[$key] = $stored[$key];
                 }
 
+                foreach (['kyc_bvn_lookup_charge_minor','kyc_nin_lookup_charge_minor'] as $key) {
+                    if (isset($stored[$key]) && is_numeric($stored[$key])) {
+                        $settings[$key] = max(0, (int) $stored[$key]);
+                    }
+                }
+
                 foreach (['theme_custom_light','theme_custom_dark','business','social','assets','footer_menu','smtp'] as $key) {
                     if (!isset($stored[$key]) || !is_string($stored[$key])) continue;
                     $decoded = json_decode($stored[$key], true);
