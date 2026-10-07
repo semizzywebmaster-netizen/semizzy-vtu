@@ -10,4 +10,5 @@ Route::middleware(['web','auth','ensure.addon:government.registration-certificat
  Route::post('/government-services/applications/{application}/requery',[GovernmentServicesController::class,'requery'])->middleware(['permission:government.orders.manage','throttle:20,1']);
  Route::post('/government-services/applications/{application}/submit',[GovernmentServicesController::class,'submit'])->middleware(['permission:government.orders.manage','throttle:10,1']);
  Route::get('/government-services/applications/{application}',[GovernmentServicesController::class,'show'])->middleware('permission:government.orders.manage');
+ Route::get('/government-services/certificates/{certificate}/download',[GovernmentServicesController::class,'downloadCertificate'])->middleware('permission:government.orders.manage');
 });
