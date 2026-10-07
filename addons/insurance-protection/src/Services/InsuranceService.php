@@ -35,10 +35,14 @@ class InsuranceService {
  public function renew(User $user,InsurancePolicy $p,string $key): InsurancePolicy {
   if($p->user_id!==$user->id) throw new RuntimeException('Policy not found.');
   if(!in_array($p->status,['active','issued'],true)) throw new RuntimeException('Policy is not eligible for renewal.');
-  $result=$this->providers->execute('insurance','insurance_renew',['provider_reference'=>$p->provider_reference,'policy_reference'=>$p->reference,'premium_minor'=>$p->premium_minor],$key);
-  if(!$result->accepted && !$result->duplicateRisk) throw new RuntimeException($result->message?:'Insurance renewal was rejected.');
-  $p->update(['status'=>$result->accepted?'active':'provider_pending','provider_reference'=>$result->providerReference?:$p->provider_reference,'renewed_at'=>now(),'renewal_due_at'=>now()->addYear(),'expires_at'=>now()->addYear()]);
-  return $p->fresh();
+  $this->wallet->reserveRenewal($p,$key);
+  try {
+   $result=$this->providers->execute('insurance','insurance_renew',['provider_reference'=>$p->provider_reference,'policy_reference'=>$p->reference,'premium_minor'=>$p->premium_minor],$key);
+   if($result->accepted){$p->update(['status'=>'active','provider_reference'=>$result->providerReference?:$p->provider_reference,'renewed_at'=>now(),'renewal_due_at'=>now()->addYear(),'expires_at'=>now()->addYear()]);$this->wallet->settleRenewal($p,$key);return $p->fresh();}
+   if($result->duplicateRisk||in_array(strtoupper((string)$result->status),['UNKNOWN','PENDING','PROCESSING'],true)){$p->update(['status'=>'provider_pending','provider_status'=>$result->status,'provider_reference'=>$result->providerReference?:$p->provider_reference]);return $p->fresh();}
+   $this->wallet->releaseRenewal($p,$key);
+   throw new RuntimeException($result->message?:'Insurance renewal was rejected.');
+  } catch(\Throwable $e) { if($p->status!=='provider_pending'){try{$this->wallet->releaseRenewal($p,$key);}catch(\Throwable $ignored){}} throw $e; }
  }
  public function claim(User $user,InsurancePolicy $policy,array $data,string $key): InsuranceClaim { if($policy->user_id!==$user->id||!in_array($policy->status,['active','issued'],true)) throw new RuntimeException('Policy is not eligible for a claim.'); $existing=InsuranceClaim::where('idempotency_key',$key)->where('user_id',$user->id)->first(); if($existing) return $existing; $claim=InsuranceClaim::create(['insurance_policy_id'=>$policy->id,'user_id'=>$user->id,'reference'=>'CLM-'.strtoupper(Str::random(18)),'idempotency_key'=>$key,'status'=>'submitted','claim_type'=>$data['claim_type']??null,'amount_minor'=>$data['amount_minor']??null,'description'=>$data['description'],'documents'=>$data['documents']??[],'submitted_at'=>now()]); try { $result=$this->providers->execute('insurance','insurance_claim',['policy_reference'=>$policy->reference,'provider_reference'=>$policy->provider_reference,'claim_reference'=>$claim->reference,'claim_type'=>$claim->claim_type,'amount_minor'=>$claim->amount_minor,'description'=>$claim->description,'documents'=>$claim->documents],$key); $claim->update(['provider_status'=>$result->status,'provider_reference'=>$result->providerReference,'submitted_to_provider_at'=>now()]); if($result->accepted) $claim->update(['status'=>'under_review']); elseif($result->duplicateRisk||in_array(strtoupper((string)$result->status),['UNKNOWN','PENDING','PROCESSING'],true)) $claim->update(['status'=>'submitted']); else $claim->update(['status'=>'rejected']); } catch(\Throwable $e) { $claim->update(['provider_status'=>'PENDING']); } return $claim->fresh(); }
 }
