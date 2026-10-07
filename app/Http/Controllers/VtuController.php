@@ -11,6 +11,7 @@ use App\Services\Vtu\VtuBulkService;
 use App\Services\Vtu\VtuPayloadValidator;
 use App\Services\Vtu\VtuServiceRegistry;
 use App\Services\Vtu\VtuTransactionService;
+use App\Services\Vtu\VtuNetworkResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -58,6 +59,22 @@ class VtuController extends Controller
                 'metadata' => $p->metadata,
             ]),
         ])]);
+    }
+
+    public function networkLookup(Request $r, VtuNetworkResolver $resolver)
+    {
+        $d = $r->validate([
+            'phone' => ['required', 'string', 'regex:/^\\+?(?:234|0)\\d{10}$/'],
+        ]);
+
+        $network = $resolver->resolve($d['phone']);
+
+        return response()->json([
+            'data' => [
+                'network' => $network,
+                'resolved' => $network !== null,
+            ],
+        ]);
     }
 
     public function quote(Request $r, VtuTransactionService $s)
