@@ -5,5 +5,6 @@ Route::middleware(['auth:sanctum','ensure.addon:social.accounts-verification'])-
  Route::get('/',[SocialServicesController::class,'index'])->middleware('permission:social.view');
  Route::post('/accounts/{inventory}/buy',[SocialServicesController::class,'buyAccount'])->middleware(['permission:social.orders.manage','throttle:10,1']);
  Route::post('/numbers/{inventory}/buy',[SocialServicesController::class,'buyNumber'])->middleware(['permission:social.orders.manage','throttle:10,1']);
+ Route::post('/orders/{order}/pay',[SocialServicesController::class,'pay'])->middleware(['permission:social.orders.manage','throttle:10,1']);
  Route::get('/numbers/{order}/sms',[SocialServicesController::class,'sms'])->middleware(['permission:social.sms.view','throttle:60,1']);
 });
