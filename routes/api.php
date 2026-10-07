@@ -10,18 +10,18 @@ Route::get('/v1/health', fn () => response()->json([
     'timestamp' => now()->toIso8601String(),
 ]))->name('api.v1.health');
 
-Route::middleware(['auth:sanctum', 'ensure.api.user', 'ensure.active.api', 'api.token:core.read'])->get('/v1/me', fn (Request $request) => response()->json([
+Route::middleware(['feature:api.enabled', 'auth:sanctum', 'ensure.api.user', 'ensure.active.api', 'api.token:core.read'])->get('/v1/me', fn (Request $request) => response()->json([
     'data' => $request->user()->only(['id', 'name', 'email', 'role', 'status', 'email_verified_at', 'created_at', 'updated_at']),
 ]))->name('api.v1.me');
 
-Route::middleware(['auth', 'verified', 'ensure.api.user', 'ensure.active.api', 'security.throttle:api.tokens,10,60'])->group(function (): void {
+Route::middleware(['feature:api.enabled', 'auth', 'verified', 'ensure.api.user', 'ensure.active.api', 'security.throttle:api.tokens,10,60'])->group(function (): void {
     Route::post('/v1/tokens', [ApiTokenController::class, 'store'])->name('api.v1.tokens.store');
     Route::get('/v1/tokens', [ApiTokenController::class, 'index'])->name('api.v1.tokens.index');
     Route::delete('/v1/tokens/{token}', [ApiTokenController::class, 'destroy'])->whereNumber('token')->name('api.v1.tokens.destroy');
     Route::delete('/v1/tokens', [ApiTokenController::class, 'revokeAll'])->name('api.v1.tokens.revoke-all');
 });
 
-Route::middleware(['auth:sanctum', 'ensure.active.api', 'api.token:core.read'])->get('/v1/core-check', fn () => response()->json(['status' => 'ok']))->name('api.v1.core-check');
+Route::middleware(['feature:api.enabled', 'auth:sanctum', 'ensure.active.api', 'api.token:core.read'])->get('/v1/core-check', fn () => response()->json(['status' => 'ok']))->name('api.v1.core-check');
 
 
 app(\App\Services\Addons\AddonRouteRegistrar::class)->registerApiRoutes();
