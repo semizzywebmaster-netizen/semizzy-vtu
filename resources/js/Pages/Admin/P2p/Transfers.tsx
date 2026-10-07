@@ -1,9 +1,8 @@
-import React from 'react';
 import { Head } from '@inertiajs/react';
 
 type Transfer = {
   id:number; reference:string; amount_minor:string; fee_minor:string; currency:string; status:string; note?:string|null; created_at:string;
-  sender?:{username?:string;email?:string}|null; recipient?:{username?:string;email?:string}|null;
+  sender?:{id?:number;username?:string;email?:string}|null; recipient?:{id?:number;username?:string;email?:string}|null;
 };
 export default function Transfers({transfers}:{transfers:{data:Transfer[];links?:any[]}}){
  return <div className="p-6 space-y-6"><Head title="P2P Transfers" />
