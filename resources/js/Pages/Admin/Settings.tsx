@@ -92,7 +92,7 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
   };
 
   return <><Head title="System settings"/><main className="min-h-screen bg-slate-50 p-4 md:p-8"><div className="mx-auto max-w-6xl">
-    <header><p className="text-sm font-semibold text-indigo-700">{safeSettings.platform_name || 'SEMIZZY ONE'} · ADMIN</p><h1 className="mt-1 text-2xl font-extrabold text-slate-900">System settings</h1><p className="mt-2 max-w-3xl text-sm text-slate-600">Global identity, business information, media, theme and production email delivery.</p></header>
+    <header><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-semibold text-indigo-700">{safeSettings.platform_name || 'SEMIZZY ONE'} · ADMIN</p></div><a href="/admin/platform-controls" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white">Global Feature Control</a></div><h1 className="mt-1 text-2xl font-extrabold text-slate-900">System settings</h1><p className="mt-2 max-w-3xl text-sm text-slate-600">Global identity, business information, media, theme and production email delivery.</p></header>
 
     <form onSubmit={submit} className="mt-6 space-y-6">
       <section className="rounded-2xl border bg-white p-5 shadow-sm">
