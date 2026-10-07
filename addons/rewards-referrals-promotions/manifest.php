@@ -1,0 +1,33 @@
+<?php
+return [
+ 'identifier'=>'rewards.referrals-promotions',
+ 'name'=>'Rewards, Referrals & Promotions',
+ 'version'=>'0.1.0',
+ 'description'=>'Configurable referral, rewards, promotions, coupons and campaign engine using Core wallet/ledger primitives.',
+ 'compatibility'=>'>=2.0.0',
+ 'dependencies'=>[],
+ 'permissions'=>['rewards.view','rewards.manage','referrals.manage','promotions.manage','coupons.manage','rewards.settings.manage'],
+ 'role_permissions'=>[
+  'ADMIN'=>['rewards.view','rewards.manage','referrals.manage','promotions.manage','coupons.manage','rewards.settings.manage'],
+  'STAFF'=>['rewards.view','rewards.manage','referrals.manage','promotions.manage','coupons.manage'],
+  'SUPPORT'=>['rewards.view','rewards.manage'],
+  'USER'=>['rewards.view'],
+ ],
+ 'navigation'=>[['id'=>'rewards','label'=>'Rewards & Promotions','url'=>'/rewards','icon'=>'gift','permission'=>'rewards.view','section'=>'services','order'=>170]],
+ 'admin_navigation'=>[['id'=>'admin-rewards','label'=>'Rewards & Promotions','url'=>'/admin/rewards','icon'=>'gift','permission'=>'rewards.view','section'=>'addons','order'=>170]],
+ 'settings'=>[
+  ['key'=>'enabled','type'=>'boolean','default'=>true],
+  ['key'=>'referrals_enabled','type'=>'boolean','default'=>true],
+  ['key'=>'rewards_enabled','type'=>'boolean','default'=>true],
+  ['key'=>'promotions_enabled','type'=>'boolean','default'=>true],
+  ['key'=>'coupons_enabled','type'=>'boolean','default'=>true],
+ ],
+ 'migrations'=>['2026_10_07_010000_create_rewards_referrals_promotions_tables.php'],
+ 'web_route_files'=>['addons/rewards-referrals-promotions/routes/web.php','addons/rewards-referrals-promotions/routes/admin.php'],
+ 'api_route_files'=>['addons/rewards-referrals-promotions/routes/api.php'],
+ 'routes'=>['/rewards','/admin/rewards'],
+ 'api_routes'=>['/api/v1/rewards'],
+ 'provider_integrations'=>[],
+ 'provider_capabilities'=>[],
+ 'capabilities'=>['referral_codes','referral_attribution','reward_rules','campaigns','coupons','redemption_limits','wallet_reward_events','admin_controls','audit_metadata'],
+];
