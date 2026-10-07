@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Services\Security\SecurityEventLogger;
+use App\Services\Security\OtpChallengeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +17,7 @@ use Inertia\Response;
 
 class AuthenticatedSessionController extends Controller
 {
-    public function __construct(private readonly SecurityEventLogger $securityEvents)
+    public function __construct(private readonly SecurityEventLogger $securityEvents, private readonly OtpChallengeService $otp)
     {
     }
 
@@ -31,6 +32,7 @@ class AuthenticatedSessionController extends Controller
             'email' => 'nullable|email|max:190',
             'password' => 'required|string',
             'remember' => 'nullable|boolean',
+            'otp_code' => 'nullable|digits:6',
         ]);
 
         if (! filled($credentials['login'] ?? null) && filled($credentials['email'] ?? null)) {
@@ -94,7 +96,17 @@ class AuthenticatedSessionController extends Controller
         }
         $activeDevice = $user->devices()->whereNull('revoked_at')->latest('id')->first();
         if (!$admin && $activeDevice && $activeDevice->device_key !== $deviceKey) {
-            throw ValidationException::withMessages(['login' => 'This account is already signed in on another device. Sign out there before signing in here.']);
+            if (!$request->session()->get('device_login_pending') || (int) $request->session()->get('device_login_user_id') !== (int) $user->id) {
+                $this->otp->sendToUser($user, 'new_device_login', 'new device login');
+                $request->session()->put(['device_login_pending' => true, 'device_login_user_id' => $user->id]);
+                throw ValidationException::withMessages(['login' => 'A verification code was sent to your email. Enter it to approve this new device.']);
+            }
+            if (!filled($credentials['otp_code'] ?? null)) {
+                throw ValidationException::withMessages(['otp_code' => 'Enter the verification code sent to your email.']);
+            }
+            $this->otp->verifyForUser($user, 'new_device_login', (string)$credentials['otp_code']);
+            $user->devices()->whereNull('revoked_at')->whereKeyNot($activeDevice->id)->update(['revoked_at'=>now()]);
+            $request->session()->forget(['device_login_pending','device_login_user_id']);
         }
         Auth::login($user, (bool) ($credentials['remember'] ?? false));
         $sessionToken = Str::random(64);
