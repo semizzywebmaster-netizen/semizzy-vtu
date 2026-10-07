@@ -40,6 +40,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
             'products' => ['products', 'catalogue_retrieval', 'catalogue'],
             'categories' => ['categories', 'catalogue_retrieval', 'catalogue'],
             'kyc_verification' => ['kyc_verification', 'identity_verification', 'kyc_check'],
+            'network_lookup' => ['network_lookup', 'mnp_lookup', 'operator_lookup'],
             default => [$operation],
         };
 
