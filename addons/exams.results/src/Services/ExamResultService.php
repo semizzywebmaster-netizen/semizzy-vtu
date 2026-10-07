@@ -23,6 +23,8 @@ final class ExamResultService {
    $existing=ExamTransaction::where('user_id',$userId)->where('idempotency_key',$idempotencyKey)->lockForUpdate()->first();
    if($existing)return $existing;
    $product=ExamProduct::whereKey($productId)->where('active',true)->lockForUpdate()->firstOrFail();
+   $attempts=ExamTransaction::where('user_id',$userId)->where('product_id',$product->id)->where('candidate_identifier',$identifier)->where('status','!=','failed')->lockForUpdate()->count();
+   if($attempts >= (int)$product->max_attempts)throw new RuntimeException('Maximum result-check attempts reached for this candidate.');
    $wallet=$this->wallet($userId,$product->currency);$amount=(string)$product->price_minor;
    if(!$this->gte((string)$wallet->available_minor,$amount))throw new RuntimeException('Insufficient wallet balance.');
    $before=(string)$wallet->available_minor;$wallet->available_minor=$this->sub($before,$amount);$wallet->save();
@@ -43,11 +45,15 @@ final class ExamResultService {
  }
  public function reconcile():int{
   $count=0;ExamTransaction::whereIn('status',['pending','processing','unknown'])->whereNotNull('provider_reference')->chunkById(50,function($items)use(&$count){
-   foreach($items as $item){$tx=ExamTransaction::whereKey($item->id)->lockForUpdate()->first();if(!$tx||!in_array($tx->status,['pending','processing','unknown'],true))continue;
-    try{$result=$this->providers->execute('exams.results','transaction_status',['reference'=>$tx->reference,'provider_reference'=>$tx->provider_reference],$tx->reference.':status');}catch(\Throwable){continue;}
-    $status=strtoupper($result->status);
-    if(in_array($status,['SUCCESS','SUCCESSFUL','COMPLETED','DELIVERED'],true)){$tx->update(['status'=>'successful','result_payload'=>is_array($result->data)?$result->data:$tx->result_payload,'error'=>null]);$count++;continue;}
-    if(in_array($status,['FAILED','REJECTED','CANCELLED'],true)){DB::transaction(function()use($tx){$wallet=WalletAccount::where('user_id',$tx->user_id)->where('currency',$tx->currency)->lockForUpdate()->first();if($wallet)$this->refund($tx,$wallet,'Provider reconciliation failure.');$tx->update(['status'=>'failed']);});$count++;}
+   foreach($items as $item){
+    DB::transaction(function()use($item,&$count){
+     $tx=ExamTransaction::whereKey($item->id)->lockForUpdate()->first();
+     if(!$tx||!in_array($tx->status,['pending','processing','unknown'],true)||!$tx->provider_reference)return;
+     try{$result=$this->providers->execute('exams.results','transaction_status',['reference'=>$tx->reference,'provider_reference'=>$tx->provider_reference],$tx->reference.':status');}catch(\\Throwable){return;}
+     $status=strtoupper($result->status);
+     if(in_array($status,['SUCCESS','SUCCESSFUL','COMPLETED','DELIVERED'],true)){$tx->update(['status'=>'successful','result_payload'=>is_array($result->data)?$result->data:$tx->result_payload,'error'=>null]);$count++;return;}
+     if(in_array($status,['FAILED','REJECTED','CANCELLED'],true)){$wallet=WalletAccount::where('user_id',$tx->user_id)->where('currency',$tx->currency)->lockForUpdate()->first();if($wallet)$this->refund($tx,$wallet,'Provider reconciliation failure.');$tx->update(['status'=>'failed']);$count++;}
+    });
    }
   });return $count;
  }
