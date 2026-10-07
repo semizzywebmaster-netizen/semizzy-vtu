@@ -54,6 +54,16 @@ final class MarketplaceController
         return response()->json(['success' => true, 'order' => $order]);
     }
 
+    public function cancel(Request $request, MarketplaceOrder $order, MarketplaceOrderService $orders)
+    {
+        try {
+            $order=$orders->cancel($order,(int)$request->user()->id);
+        } catch (RuntimeException $e) {
+            return response()->json(['success'=>false,'message'=>$e->getMessage()],422);
+        }
+        return response()->json(['success'=>true,'order'=>$order]);
+    }
+
     public function refund(Request $request, MarketplaceOrder $order, MarketplaceOrderService $orders)
     {
         $isAdmin = $request->user()->hasPermission('marketplace.orders.manage');
