@@ -7,19 +7,12 @@ use Semizzy\Addons\TravelTickets\Models\TravelBookingAttempt;
 
 class TravelBookingQueryService
 {
-    public function __construct(
-        private TravelProviderGateway $gateway,
-        private TravelWalletService $wallet,
-    ) {
-    }
+    public function __construct(private TravelProviderGateway $gateway, private TravelWalletService $wallet) {}
 
     public function requery(TravelBooking $booking): TravelBooking
     {
         $booking = $booking->fresh();
-
-        if (!$booking || $booking->status !== 'provider_pending') {
-            return $booking;
-        }
+        if (!$booking || $booking->status !== 'provider_pending') return $booking;
 
         $type = strtolower((string) $booking->type);
         $operation = $type . '_requery';
@@ -41,18 +34,19 @@ class TravelBookingQueryService
                 'status' => 'pending',
                 'error' => $e->getMessage(),
             ]);
-
             return $booking->fresh();
         }
 
         $response = is_array($result['response'] ?? null) ? $result['response'] : [];
+        $provider = $result['provider'] ?? null;
+        $providerCode = $provider?->code ?? $provider?->identifier ?? $booking->provider_code;
         $status = strtolower((string) ($response['status'] ?? $response['booking_status'] ?? $response['bookingStatus'] ?? 'pending'));
         $providerReference = $this->reference($response) ?: $booking->provider_reference;
         $bookingReference = $this->bookingReference($response) ?: $booking->booking_reference;
 
         TravelBookingAttempt::create([
             'travel_booking_id' => $booking->id,
-            'provider_code' => $booking->provider_code,
+            'provider_code' => $providerCode,
             'operation' => $operation,
             'status' => $this->attemptStatus($status),
             'provider_reference' => $providerReference,
@@ -60,39 +54,49 @@ class TravelBookingQueryService
         ]);
 
         if (in_array($status, ['confirmed', 'success', 'successful', 'booked', 'ticketed'], true)) {
+            try {
+                $this->wallet->settle($booking);
+            } catch (\Throwable $e) {
+                $booking->update([
+                    'provider_code' => $providerCode,
+                    'provider_reference' => $providerReference,
+                    'booking_reference' => $bookingReference,
+                    'booking_data' => array_merge($booking->booking_data ?? [], ['requery_response' => $response]),
+                    'failure_reason' => 'Provider confirmed booking but wallet settlement is pending: ' . $e->getMessage(),
+                ]);
+                return $booking->fresh();
+            }
+
             $booking->update([
                 'status' => 'confirmed',
+                'provider_code' => $providerCode,
                 'provider_reference' => $providerReference,
                 'booking_reference' => $bookingReference,
                 'booking_data' => array_merge($booking->booking_data ?? [], ['requery_response' => $response]),
                 'confirmed_at' => now(),
                 'failure_reason' => null,
             ]);
-
-            $this->wallet->settle($booking);
-
             return $booking->fresh();
         }
 
         if (in_array($status, ['failed', 'rejected', 'declined', 'error'], true)) {
             $this->wallet->release($booking);
-
             $booking->update([
                 'status' => 'failed',
+                'provider_code' => $providerCode,
                 'provider_reference' => $providerReference,
                 'failure_reason' => 'Provider requery reported a failed booking.',
             ]);
-
             return $booking->fresh();
         }
 
         $booking->update([
+            'provider_code' => $providerCode,
             'provider_reference' => $providerReference,
             'booking_reference' => $bookingReference,
             'booking_data' => array_merge($booking->booking_data ?? [], ['requery_response' => $response]),
             'failure_reason' => 'Provider booking status remains pending.',
         ]);
-
         return $booking->fresh();
     }
 
@@ -106,22 +110,16 @@ class TravelBookingQueryService
     private function reference(array $response): ?string
     {
         foreach (['provider_reference', 'providerReference', 'reference', 'transaction_id', 'transactionId', 'id'] as $key) {
-            if (isset($response[$key]) && is_scalar($response[$key])) {
-                return (string) $response[$key];
-            }
+            if (isset($response[$key]) && is_scalar($response[$key])) return (string) $response[$key];
         }
-
         return null;
     }
 
     private function bookingReference(array $response): ?string
     {
         foreach (['booking_reference', 'bookingReference', 'booking_ref', 'pnr', 'confirmation_code', 'confirmationCode'] as $key) {
-            if (isset($response[$key]) && is_scalar($response[$key])) {
-                return (string) $response[$key];
-            }
+            if (isset($response[$key]) && is_scalar($response[$key])) return (string) $response[$key];
         }
-
         return null;
     }
 }
