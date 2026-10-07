@@ -3,4 +3,7 @@ use Illuminate\Support\Facades\Route;
 use Semizzy\Addons\Marketplace\Http\Controllers\MarketplaceController;
 Route::middleware(['web','auth','ensure.addon:marketplace.commerce','permission:marketplace.manage'])->group(function(){
  Route::get('/admin/marketplace',[MarketplaceController::class,'admin'])->name('admin.marketplace.index');
+ Route::post('/admin/marketplace/products',[MarketplaceController::class,'productStore'])->name('admin.marketplace.products.store');
+ Route::patch('/admin/marketplace/products/{product}',[MarketplaceController::class,'productUpdate'])->name('admin.marketplace.products.update');
+ Route::delete('/admin/marketplace/products/{product}',[MarketplaceController::class,'productDestroy'])->name('admin.marketplace.products.destroy');
 });
