@@ -17,6 +17,55 @@ export default function Services({ services = [] }: { services: Service[] }) {
   const [quote, setQuote] = useState<{ customer_price: string; currency: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkRows, setBulkRows] = useState<Array<{ phone: string; amount: string; network: string }>>([]);
+  const [bulkInput, setBulkInput] = useState('');
+  const [bulkPin, setBulkPin] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResult, setBulkResult] = useState<string | null>(null);
+
+  const airtimeService = useMemo(() => services.find(service => service.key === 'airtime'), [services]);
+  const airtimeProduct = airtimeService?.products?.[0] ?? null;
+  const detectNetwork = (phone: string) => {
+    const normalized = phone.replace(/\D/g, '');
+    if (normalized.startsWith('234')) return detectNetwork('0' + normalized.slice(3));
+    if (/^0724\d{7}$/.test(normalized)) return 'lebara';
+    if (/^(0803|0806|0810|0813|0814|0816|0703|0706|0903|0906)\d{7}$/.test(normalized)) return 'mtn';
+    if (/^(0802|0808|0812|0701|0708|0810|0818|0901|0907)\d{7}$/.test(normalized)) return 'airtel';
+    if (/^(0805|0807|0811|0815|0705|0905|0915)\d{7}$/.test(normalized)) return 'glo';
+    if (/^(0809|0817|0818|0908|0909)\d{7}$/.test(normalized)) return '9mobile';
+    return '';
+  };
+  const parseBulkRows = () => {
+    const rows = bulkInput.split(/\\r?\\n/).map(line => line.trim()).filter(Boolean).map(line => {
+      const [phone, amount] = line.split(/[,;\\t]/).map(value => value.trim());
+      return { phone: phone || '', amount: amount || '', network: detectNetwork(phone || '') };
+    }).filter(row => row.phone);
+    setBulkRows(rows);
+    setBulkResult(null);
+  };
+  const submitBulk = async () => {
+    if (!airtimeProduct || !bulkRows.length || bulkPin.length !== 4) return;
+    setBulkBusy(true); setBulkResult(null);
+    try {
+      const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
+      const items=bulkRows.map((row,index)=>({
+        product_id: airtimeProduct.id,
+        payload: { network: row.network, phone: row.phone, amount: row.amount },
+        idempotency_key: `bulk-airtime-${Date.now()}-${index}-${row.phone}`,
+      }));
+      const response=await fetch('/vtu/bulk',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token},body:JSON.stringify({
+        items, idempotency_key: crypto.randomUUID(), transaction_pin: bulkPin,
+      })});
+      const body=await response.json();
+      if(!response.ok) throw new Error(body.message || 'Bulk airtime could not be processed.');
+      const data=body.data;
+      setBulkResult(`Bulk ${data.reference || 'request'}: ${data.successful_items ?? 0} successful, ${data.failed_items ?? 0} failed, ${data.total_items ?? bulkRows.length} total.`);
+      setBulkPin('');
+    } catch(e) {
+      setBulkResult(e instanceof Error ? e.message : 'Bulk airtime could not be processed.');
+    } finally { setBulkBusy(false); }
+  };
 
   const categories = useMemo(() => {
     const map = new Map<string, { key: string; name: string; description?: string | null }>();
@@ -102,7 +151,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
         </div>
         <div className='mt-5 space-y-4'>
           {['airtime','data'].includes(selectedService.key) && <>
-            <label className='block text-sm font-bold'>Network<select value={form.network || ''} onChange={e => setForm({...form, network:e.target.value})} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none focus:border-indigo-500'><option value=''>Select network</option><option>MTN</option><option>Airtel</option><option>Glo</option><option>9mobile</option></select></label>
+            <label className='block text-sm font-bold'>Network<select value={form.network || ''} onChange={e => setForm({...form, network:e.target.value})} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none focus:border-indigo-500'><option value=''>Select network</option><option value='mtn'>MTN</option><option value='airtel'>Airtel</option><option value='glo'>Glo</option><option value='9mobile'>9mobile</option><option value='lebara'>Lebara</option></select></label>
             <label className='block text-sm font-bold'>Phone number<input value={form.phone || ''} onChange={e => setForm({...form, phone:e.target.value})} placeholder='0803XXXXXXXX' inputMode='tel' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none focus:border-indigo-500' /></label>
             {selectedService.key === 'airtime' && <label className='block text-sm font-bold'>Amount<input value={form.amount || ''} onChange={e => setForm({...form, amount:e.target.value})} placeholder='1000' inputMode='decimal' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none focus:border-indigo-500' /><div className='mt-2 flex flex-wrap gap-2'>{['100','200','500','1000','2000','5000'].map(v => <button key={v} type='button' onClick={() => setForm({...form, amount:v})} className='rounded-full bg-slate-100 px-3 py-2 text-xs font-bold'>₦{v}</button>)}</div></label>}
           </>}
@@ -145,5 +194,24 @@ export default function Services({ services = [] }: { services: Service[] }) {
         </div>
       </section>
     </div>}
+  {bulkOpen && airtimeProduct && <div className='fixed inset-0 z-[70] flex items-end bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4' onClick={() => !bulkBusy && setBulkOpen(false)}>
+    <section role='dialog' aria-modal='true' aria-label='Bulk Airtime' className='max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-2xl sm:rounded-3xl' onClick={event => event.stopPropagation()}>
+      <div className='flex items-start justify-between gap-4'><div><p className='text-xs font-black uppercase tracking-wider text-indigo-600'>Bulk Airtime</p><h3 className='mt-1 text-2xl font-black'>Auto-detect & recharge</h3><p className='mt-1 text-sm text-slate-500'>All rows use the configured airtime product. Mixed networks are supported.</p></div><button type='button' onClick={() => setBulkOpen(false)} disabled={bulkBusy} className='flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 font-bold'>×</button></div>
+      <div className='mt-5 rounded-2xl bg-slate-50 p-4'>
+        <p className='text-xs font-black uppercase tracking-wider text-slate-500'>Paste list</p>
+        <p className='mt-1 text-xs text-slate-500'>Format: <span className='font-mono'>08012345678,1000</span> — one recipient per line. CSV-style commas, semicolons and tabs are accepted.</p>
+        <textarea value={bulkInput} onChange={e => setBulkInput(e.target.value)} placeholder={'08012345678,1000\n08123456789,2000\n0724xxxxxxx,1500'} rows={6} className='mt-3 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-indigo-500' />
+        <button type='button' onClick={parseBulkRows} className='mt-3 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-black text-white'>Validate & preview</button>
+      </div>
+      {bulkRows.length > 0 && <div className='mt-4 overflow-x-auto rounded-2xl border border-slate-200'><table className='w-full text-left text-xs'><thead className='bg-slate-50'><tr><th className='p-3'>Phone</th><th className='p-3'>Amount</th><th className='p-3'>Detected network</th></tr></thead><tbody>{bulkRows.map((row,index) => <tr key={index} className='border-t'><td className='p-3 font-mono'>{row.phone}</td><td className='p-3'>₦{Number(row.amount || 0).toLocaleString()}</td><td className='p-3 font-bold'>{row.network ? row.network.toUpperCase() : <span className='text-amber-600'>Unknown — review</span>}</td></tr>)}</tbody></table></div>}
+      {bulkRows.length > 0 && <div className='mt-4 rounded-2xl border border-slate-200 p-4'>
+        <p className='text-sm font-black'>Confirm bulk purchase</p><p className='mt-1 text-xs text-slate-500'>{bulkRows.length} recipients · estimated airtime value ₦{bulkRows.reduce((sum,row) => sum + (Number(row.amount) || 0), 0).toLocaleString()}</p>
+        <label className='mt-4 block text-sm font-bold'>Transaction PIN<input value={bulkPin} onChange={e => setBulkPin(e.target.value.replace(/\D/g,'').slice(0,4))} type='password' inputMode='numeric' maxLength={4} placeholder='••••' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-center tracking-[0.5em] outline-none' /></label>
+        <p className='mt-2 text-[11px] leading-5 text-slate-500'>Network detection uses a safe prefix fallback. Where the provider supports current-network/MNP verification, that provider result should take precedence before fulfillment.</p>
+        {bulkResult && <div className='mt-3 rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700'>{bulkResult}</div>}
+        <button type='button' onClick={submitBulk} disabled={bulkBusy || bulkPin.length !== 4 || bulkRows.some(row => !row.network || !/^\\+?(234|0)\\d{10}$/.test(row.phone.replace(/\\s|-/g,'')) || !(Number(row.amount) > 0))} className='mt-4 w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-black text-white disabled:opacity-40'>{bulkBusy ? 'Processing bulk airtime…' : 'Confirm & purchase all'}</button>
+      </div>}
+    </section>
+  </div>}
   <CoreMobileNav /></main>;
 }
