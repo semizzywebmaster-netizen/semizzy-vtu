@@ -6,7 +6,7 @@ return new class extends Migration {
  public function up(): void {
   Schema::create('exam_transactions',function(Blueprint $t){
    $t->id(); $t->foreignId('user_id')->constrained()->cascadeOnDelete();
-   $t->foreignId('product_id')->constrained('exam_products')->cascadeOnDelete();
+   $t->foreignId('product_id')->constrained('exam_products')->restrictOnDelete();
    $t->string('reference',100)->unique(); $t->string('candidate_identifier',120);
    $t->string('candidate_name')->nullable(); $t->string('status',30)->default('pending');
    $t->string('provider_reference',150)->nullable(); $t->unsignedBigInteger('amount_minor');
