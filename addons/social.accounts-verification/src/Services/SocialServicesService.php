@@ -43,6 +43,8 @@ final class SocialServicesService {
   else { $order->status='processing'; }
   $order->save(); return $order->fresh();
  }
+ public function canReceiveSms(SocialServiceOrder $order): bool { return $order->order_type==='number' && in_array($order->status,['paid','processing','fulfilled'],true) && (!$order->expires_at || !$order->expires_at->isPast()); }
+
  public function ingestSms(SocialServiceOrder $order,string $message,?string $sender=null,?string $providerMessageId=null,array $metadata=[]): SocialNumberSms {
   if($order->order_type!=='number')throw new RuntimeException('SMS can only be attached to a verification-number order.');
   if(!in_array($order->status,['paid','processing','fulfilled'],true))throw new RuntimeException('Number order is not active.');
