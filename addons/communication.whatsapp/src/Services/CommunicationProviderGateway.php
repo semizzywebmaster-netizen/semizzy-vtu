@@ -1,9 +1,9 @@
 <?php
 namespace Addons\CommunicationWhatsapp\Services;
 
-use Addons\CommunicationWhatsapp\Models\DeliveryAttempt;
-use Addons\CommunicationWhatsapp\Models\Message;
-use Addons\CommunicationWhatsapp\Models\Provider;
+use App\Models\Communication\DeliveryAttempt;
+use App\Models\Communication\Message;
+use App\Models\Communication\Provider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
