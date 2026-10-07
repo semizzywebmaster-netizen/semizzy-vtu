@@ -31,8 +31,7 @@ class SpinToWinService {
  public function issueMonetaryReward(SpinPlay $play,int $adminId):void {
   if(!$play->prize||$play->prize->prize_type!=='wallet')return;
   $eventKey=$play->reward_event_key ?: 'spin:'.$play->operation_key;
-  $service=app(\Semizzy\Addons\Rewards\Services\RewardsService::class);
-  $service->issueReward($play->user_id,'spin_to_win',$eventKey,null,['spin_play_id'=>$play->id,'prize_id'=>$play->prize_id]);
+  DB::table('reward_events')->updateOrInsert(['operation_key'=>$eventKey],['user_id'=>$play->user_id,'rule_id'=>null,'event_key'=>'spin_to_win','status'=>'pending','approval_status'=>'pending','amount'=>(string)$play->prize->amount,'currency'=>strtoupper($play->prize->currency),'metadata'=>json_encode(['spin_play_id'=>$play->id,'prize_id'=>$play->prize_id]),'created_at'=>now(),'updated_at'=>now()]);
   $play->update(['status'=>'reward_pending_approval']);
  }
 }
