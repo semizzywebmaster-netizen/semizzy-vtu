@@ -16,16 +16,11 @@ const commonLight = { background: '#F7F9FC', surface: '#FFFFFF', text: '#142235'
 const commonDark = { background: '#0B1020', surface: '#121A2A', text: '#F8FAFC', muted: '#94A3B8', border: '#263247', success: '#4ADE80', warning: '#FBBF24', danger: '#F87171' };
 
 export const THEMES: ThemeDefinition[] = [
-  { ...p('#10B981','#047857','#34D399',commonLight,{...commonDark,background:'#071A16',surface:'#0D2720'}), key:'opay-inspired', name:'OPay Inspired', description:'Original super-app fintech style with confident green energy' },
-  { ...p('#7C3AED','#5B21B6','#A78BFA',commonLight,{...commonDark,background:'#160C2B',surface:'#21133D'}), key:'palmpay-inspired', name:'PalmPay Inspired', description:'Original consumer-fintech style with energetic premium accents' },
-  { ...p('#7C3AED','#4338CA','#22C55E',commonLight,{...commonDark,background:'#0F1020',surface:'#17182C'}), key:'kuda-inspired', name:'Kuda Inspired', description:'Original neobank style with clean spacing and crisp hierarchy' },
-  { ...p('#F97316','#EA580C','#F59E0B',commonLight,{...commonDark,background:'#1A1008',surface:'#25180D'}), key:'moniepoint-inspired', name:'Moniepoint Inspired', description:'Original merchant-fintech style built for business operations' },
-  { ...p('#635BFF','#4338CA','#A78BFA',commonLight,{...commonDark,background:'#0D0D1A',surface:'#17172A'}), key:'stripe-inspired', name:'Stripe Inspired', description:'Original premium SaaS-fintech language with refined surfaces' },
-  { ...p('#0F766E','#115E59','#14B8A6',commonLight,{...commonDark,background:'#071918',surface:'#0E2523'}), key:'premium-fintech', name:'Premium Fintech', description:'Executive banking aesthetic with disciplined information density' },
-  { ...p('#2563EB','#1D4ED8','#38BDF8',commonLight,{...commonDark,background:'#08152C',surface:'#102140'}), key:'modern-corporate', name:'Modern Corporate', description:'Confident enterprise interface for serious business platforms' },
-  { ...p('#4F46E5','#3730A3','#06B6D4',commonLight,{...commonDark,background:'#0D1024',surface:'#161A35'}), key:'clean-saas', name:'Clean SaaS', description:'Modern software dashboard with calm, scalable component styling' },
-  { ...p('#0891B2','#0E7490','#F59E0B',commonLight,{...commonDark,background:'#07151A',surface:'#10252C'}), key:'vibrant-tech', name:'Vibrant Tech', description:'Advanced technology look with controlled, professional colour energy' },
-  { ...p('#111827','#1F2937','#D4AF37',{...commonLight,background:'#FAF9F6',surface:'#FFFFFF',text:'#111827',muted:'#6B7280',border:'#E5E7EB'}, {...commonDark,background:'#090A0D',surface:'#141519',text:'#F9FAFB'}), key:'luxury-executive', name:'Luxury Executive', description:'Sophisticated high-end business aesthetic with restrained accents' },
+  { ...p('#10B981','#047857','#34D399',commonLight,{...commonDark,background:'#071A16',surface:'#0D2720'}), key:'opay-inspired', name:'Emerald Fintech', description:'Fresh Nigerian fintech energy with a polished, trustworthy green identity' },
+  { ...p('#7C3AED','#5B21B6','#A78BFA',commonLight,{...commonDark,background:'#160C2B',surface:'#21133D'}), key:'palmpay-inspired', name:'Royal Purple', description:'Bold consumer-fintech personality with premium purple accents' },
+  { ...p('#1D4ED8','#1E3A8A','#38BDF8',commonLight,{...commonDark,background:'#07142B',surface:'#10213D'}), key:'modern-corporate', name:'Ocean Corporate', description:'Professional blue enterprise theme built for trust and clarity' },
+  { ...p('#4F46E5','#3730A3','#06B6D4',commonLight,{...commonDark,background:'#0D1024',surface:'#171A35'}), key:'clean-saas', name:'Indigo Tech', description:'Modern digital-platform look with clean hierarchy and bright accents' },
+  { ...p('#111827','#1F2937','#D4AF37',{...commonLight,background:'#FAF9F6',surface:'#FFFFFF',text:'#111827',muted:'#6B7280',border:'#E5E7EB'}, {...commonDark,background:'#090A0D',surface:'#141519',text:'#F9FAFB'}), key:'luxury-executive', name:'Midnight Gold', description:'Distinctive premium business aesthetic with restrained gold highlights' },
 ];
 
 export const DEFAULT_CUSTOM: Record<Skin, Palette> = {
@@ -66,9 +61,9 @@ export function applyTheme(themeKey: string, skin: Skin, custom?: Record<Skin, P
   root.dataset.theme = themeKey;
   root.dataset.skin = skin;
   Object.entries(base).forEach(([key,value]) => root.style.setProperty('--so-' + key, value));
-  root.style.setProperty('--so-primary-soft', `color-mix(in srgb, var(--so-primary) 10%, var(--so-surface))`);
-  root.style.setProperty('--so-primary-medium', `color-mix(in srgb, var(--so-primary) 18%, var(--so-surface))`);
-  root.style.setProperty('--so-primary-dark', `color-mix(in srgb, var(--so-primary) 82%, #000)`);
+  root.style.setProperty('--so-primary-soft', 'color-mix(in srgb, var(--so-primary) 10%, var(--so-surface))');
+  root.style.setProperty('--so-primary-medium', 'color-mix(in srgb, var(--so-primary) 18%, var(--so-surface))');
+  root.style.setProperty('--so-primary-dark', 'color-mix(in srgb, var(--so-primary) 82%, #000)');
   root.style.colorScheme = skin;
 }
 
@@ -78,14 +73,7 @@ export function ThemeControls({ defaultSkin = 'light', themeKey = 'modern-corpor
     const saved=window.localStorage.getItem('semizzy.skin'); return saved === 'dark' || saved === 'light' ? saved : defaultSkin;
   });
   useEffect(() => { applyTheme(themeKey,skin,custom); window.localStorage.setItem('semizzy.skin',skin); }, [themeKey,skin,custom]);
-  return (
-    <button type="button" onClick={() => setSkin(s => s === 'light' ? 'dark' : 'light')}
-      aria-label={skin === 'light' ? 'Switch to dark skin' : 'Switch to light skin'}
-      title={skin === 'light' ? 'Switch to dark skin' : 'Switch to light skin'}
-      className="so-skin-switch">
-      <span aria-hidden="true">{skin === 'light' ? '☀' : '☾'}</span><span>{skin === 'light' ? 'Light' : 'Dark'}</span>
-    </button>
-  );
+  return <button type="button" onClick={() => setSkin(s => s === 'light' ? 'dark' : 'light')} aria-label={skin === 'light' ? 'Switch to dark skin' : 'Switch to light skin'} title={skin === 'light' ? 'Switch to dark skin' : 'Switch to light skin'} className="so-skin-switch"><span aria-hidden="true">{skin === 'light' ? '☀' : '☾'}</span><span>{skin === 'light' ? 'Light' : 'Dark'}</span></button>;
 }
 
 export function ThemeBridge({ children, platform }: { children: React.ReactNode; platform?: { theme_key?: string; theme_custom_light?: Partial<Palette>; theme_custom_dark?: Partial<Palette>; skin_default?: Skin } }) {
@@ -95,9 +83,6 @@ export function ThemeBridge({ children, platform }: { children: React.ReactNode;
     if (typeof window === 'undefined') return platform?.skin_default === 'dark' ? 'dark' : 'light';
     const saved=window.localStorage.getItem('semizzy.skin'); return saved === 'dark' || saved === 'light' ? saved : (platform?.skin_default === 'dark' ? 'dark' : 'light');
   });
-  useEffect(() => {
-    applyTheme(themeKey,skin,custom);
-    window.localStorage.setItem('semizzy.skin',skin);
-  }, [themeKey,skin,custom]);
+  useEffect(() => { applyTheme(themeKey,skin,custom); window.localStorage.setItem('semizzy.skin',skin); }, [themeKey,skin,custom]);
   return <><div className="so-global-skin-control"><button type="button" onClick={() => setSkin(s => s === 'light' ? 'dark' : 'light')} className="so-skin-switch" aria-label="Toggle light and dark skin"><span>{skin === 'light' ? '☀' : '☾'}</span><span>{skin === 'light' ? 'Light' : 'Dark'}</span></button></div>{children}</>;
 }
