@@ -18,7 +18,15 @@ export default function Services({ services = [] }: { services: Service[] }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkDataOpen, setBulkDataOpen] = useState(false);
   const [bulkRows, setBulkRows] = useState<Array<{ phone: string; amount: string; network: string }>>([]);
+  const [bulkDataProduct, setBulkDataProduct] = useState<Product | null>(null);
+  const [bulkDataRows, setBulkDataRows] = useState<Array<{ phone: string; network: string }>>([]);
+  const [bulkDataInput, setBulkDataInput] = useState('');
+  const [bulkDataPin, setBulkDataPin] = useState('');
+  const [bulkDataBusy, setBulkDataBusy] = useState(false);
+  const [bulkDataQuote, setBulkDataQuote] = useState<{ total_customer_price: string; currency: string; total_items: number } | null>(null);
+  const [bulkDataResult, setBulkDataResult] = useState<string | null>(null);
   const [bulkInput, setBulkInput] = useState('');
   const [bulkPin, setBulkPin] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -30,6 +38,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
 
   const airtimeService = useMemo(() => services.find(service => service.key === 'airtime'), [services]);
   const airtimeProduct = airtimeService?.products?.[0] ?? null;
+  const dataService = useMemo(() => services.find(service => service.key === 'data'), [services]);
   const detectNetwork = (phone: string) => {
     const normalized = phone.replace(/\D/g, '');
     if (normalized.startsWith('234')) return detectNetwork('0' + normalized.slice(3));
@@ -128,6 +137,67 @@ export default function Services({ services = [] }: { services: Service[] }) {
     } finally { setBulkBusy(false); }
   };
 
+  const parseBulkDataRows = () => {
+    const seen = new Set<string>();
+    const rows = bulkDataInput.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
+      const [phone] = line.split(/[,;\\t]/).map(value => value.trim());
+      return { phone: phone || '', network: detectNetwork(phone || '') };
+    }).filter(row => row.phone);
+    const normalized = rows.filter(row => {
+      const key = row.phone.replace(/\D/g, '').replace(/^234/, '0');
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 500);
+    setBulkDataRows(normalized);
+    setBulkDataQuote(null);
+    setBulkDataResult(null);
+  };
+
+  const resolveBulkDataNetworks = async () => {
+    if (!bulkDataRows.length) return;
+    try {
+      setBulkDataResult('Checking current networks…');
+      const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
+      const rows=await Promise.all(bulkDataRows.map(async row=>{
+        const response=await fetch('/vtu/network-lookup',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token},body:JSON.stringify({phone:row.phone})});
+        const body=await response.json();
+        return response.ok && body?.data?.network ? {...row,network:body.data.network} : row;
+      }));
+      setBulkDataRows(rows);
+      const unresolved=rows.filter(row=>!row.network).length;
+      setBulkDataResult(unresolved ? unresolved+' recipient'+(unresolved===1?'':'s')+' could not be verified.' : 'All recipient networks verified.');
+      setBulkDataQuote(null);
+    } catch(e) { setBulkDataResult(e instanceof Error ? e.message : 'Network verification failed.'); }
+  };
+
+  const quoteBulkData = async () => {
+    if (!bulkDataProduct || !bulkDataRows.length) return;
+    try {
+      setBulkDataBusy(true); setBulkDataResult(null);
+      const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
+      const items=bulkDataRows.map(row=>({product_id:bulkDataProduct.id,payload:{network:row.network,phone:row.phone,plan:bulkDataProduct.name}}));
+      const response=await fetch('/vtu/bulk-quote',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token},body:JSON.stringify({items})});
+      const body=await response.json(); if(!response.ok) throw new Error(body.message || 'Bulk data quote could not be calculated.');
+      setBulkDataQuote(body.data); 
+    } catch(e) { setBulkDataQuote(null); setBulkDataResult(e instanceof Error ? e.message : 'Bulk data quote could not be calculated.'); }
+    finally { setBulkDataBusy(false); }
+  };
+
+  const submitBulkData = async () => {
+    if (!bulkDataProduct || !bulkDataRows.length || bulkDataPin.length !== 4 || !bulkDataQuote) return;
+    try {
+      setBulkDataBusy(true); setBulkDataResult(null);
+      const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
+      const items=bulkDataRows.map((row,index)=>({product_id:bulkDataProduct.id,payload:{network:row.network,phone:row.phone,plan:bulkDataProduct.name},idempotency_key:'bulk-data-'+Date.now()+'-'+index+'-'+row.phone}));
+      const response=await fetch('/vtu/bulk',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token},body:JSON.stringify({items,idempotency_key:crypto.randomUUID(),transaction_pin:bulkDataPin})});
+      const body=await response.json(); if(!response.ok) throw new Error(body.message || 'Bulk data could not be processed.');
+      const data=body.data; setBulkDataResult('Bulk '+(data.reference||'request')+': '+(data.successful_items??0)+' successful, '+(data.failed_items??0)+' failed, '+(data.total_items??bulkDataRows.length)+' total.');
+      setBulkDataPin('');
+    } catch(e) { setBulkDataResult(e instanceof Error ? e.message : 'Bulk data could not be processed.'); }
+    finally { setBulkDataBusy(false); }
+  };
+
   const categories = useMemo(() => {
     const map = new Map<string, { key: string; name: string; description?: string | null }>();
     services.forEach(service => {
@@ -192,6 +262,11 @@ export default function Services({ services = [] }: { services: Service[] }) {
         </button>)}
       </section>}
 
+      {dataService?.products?.length ? <section className='mt-5 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200'>
+        <p className='text-xs font-black uppercase tracking-wider text-indigo-600'>Bulk Purchase</p><h3 className='mt-1 text-lg font-black'>Bulk Data</h3><p className='mt-1 text-sm text-slate-500'>Send the same selected data plan to up to 500 verified recipients.</p>
+        <button type='button' onClick={()=>{setBulkDataOpen(true);setBulkDataProduct(dataService.products[0]??null);setBulkDataResult(null);}} className='mt-4 w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-black text-white'>Open Bulk Data</button>
+      </section> : null}
+
       <section className='mt-8 rounded-3xl bg-slate-900 p-5 text-white sm:p-6'><div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'><div><p className='text-xs font-bold uppercase tracking-wider text-indigo-300'>Need help?</p><h3 className='mt-1 text-lg font-black'>Not sure which service to choose?</h3><p className='mt-1 text-sm text-slate-400'>Our support team can help you with an available service or product.</p></div><Link href='/support' className='rounded-xl bg-white px-4 py-2.5 text-center text-sm font-bold text-slate-900'>Contact support</Link></div></section>
     </div>
 
@@ -255,7 +330,15 @@ export default function Services({ services = [] }: { services: Service[] }) {
         </div>
       </section>
     </div>}
-  {bulkOpen && airtimeProduct && <div className='fixed inset-0 z-[70] flex items-end bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4' onClick={() => !bulkBusy && setBulkOpen(false)}>
+  {bulkDataOpen && bulkDataProduct && <div className='fixed inset-0 z-[75] flex items-end bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4' onClick={()=>!bulkDataBusy&&setBulkDataOpen(false)}>
+    <section role='dialog' aria-modal='true' aria-label='Bulk Data' className='max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-2xl sm:rounded-3xl' onClick={event=>event.stopPropagation()}>
+      <div className='flex items-start justify-between gap-4'><div><p className='text-xs font-black uppercase tracking-wider text-indigo-600'>Bulk Data</p><h3 className='mt-1 text-2xl font-black'>Send one plan to many numbers</h3></div><button type='button' onClick={()=>setBulkDataOpen(false)} disabled={bulkDataBusy} className='flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 font-bold'>×</button></div>
+      <label className='mt-5 block text-sm font-bold'>Data plan<select value={bulkDataProduct.id} onChange={e=>{const p=dataService?.products.find(x=>x.id===Number(e.target.value))||null;setBulkDataProduct(p);setBulkDataQuote(null);}} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium'>{dataService?.products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+      <div className='mt-4 rounded-2xl bg-slate-50 p-4'><p className='text-xs font-black uppercase tracking-wider text-slate-500'>Recipients</p><p className='mt-2 text-xs text-slate-500'>One phone number per line, or CSV/TXT with the phone in the first column. Duplicates are removed. Maximum 500.</p><textarea value={bulkDataInput} onChange={e=>setBulkDataInput(e.target.value)} placeholder={'08012345678\n08123456789\n0724xxxxxxx'} rows={6} className='mt-3 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none'/><button type='button' onClick={parseBulkDataRows} className='mt-3 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-black text-white'>Validate & preview</button></div>
+      {bulkDataRows.length>0 && <div className='mt-4 overflow-x-auto rounded-2xl border border-slate-200'><table className='w-full text-left text-xs'><thead className='bg-slate-50'><tr><th className='p-3'>Phone</th><th className='p-3'>Current network</th></tr></thead><tbody>{bulkDataRows.map((row,i)=><tr key={i} className='border-t'><td className='p-3 font-mono'>{row.phone}</td><td className='p-3 font-bold'>{row.network?row.network.toUpperCase():<span className='text-amber-600'>Unknown</span>}</td></tr>)}</tbody></table></div>}
+      {bulkDataRows.length>0 && <div className='mt-4 rounded-2xl border border-slate-200 p-4'><button type='button' onClick={resolveBulkDataNetworks} disabled={bulkDataBusy} className='w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black'>Verify current networks</button><button type='button' onClick={quoteBulkData} disabled={bulkDataBusy||bulkDataRows.some(r=>!r.network||!/^\\+?(234|0)\\d{10}$/.test(r.phone.replace(/\\s|-/g,'')))} className='mt-2 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white disabled:opacity-40'>{bulkDataBusy?'Working…':'Get exact bulk quote'}</button>{bulkDataQuote&&<div className='mt-3 rounded-xl bg-indigo-50 p-3 text-sm flex justify-between'><span>{bulkDataQuote.total_items} data purchases</span><strong>{bulkDataQuote.currency} {Number(bulkDataQuote.total_customer_price).toLocaleString()}</strong></div>}<label className='mt-4 block text-sm font-bold'>Transaction PIN<input value={bulkDataPin} onChange={e=>setBulkDataPin(e.target.value.replace(/\\D/g,'').slice(0,4))} type='password' inputMode='numeric' maxLength={4} placeholder='••••' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-center tracking-[0.5em]'/></label>{bulkDataResult&&<div className='mt-3 rounded-xl bg-slate-50 p-3 text-sm font-semibold'>{bulkDataResult}</div>}<button type='button' onClick={submitBulkData} disabled={bulkDataBusy||!bulkDataQuote||bulkDataPin.length!==4} className='mt-4 w-full rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-black text-white disabled:opacity-40'>{bulkDataBusy?'Processing bulk data…':'Confirm & purchase all'}</button></div>}
+    </section></div>}
+\n  {bulkOpen && airtimeProduct && <div className='fixed inset-0 z-[70] flex items-end bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4' onClick={() => !bulkBusy && setBulkOpen(false)}>
     <section role='dialog' aria-modal='true' aria-label='Bulk Airtime' className='max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-2xl sm:rounded-3xl' onClick={event => event.stopPropagation()}>
       <div className='flex items-start justify-between gap-4'><div><p className='text-xs font-black uppercase tracking-wider text-indigo-600'>Bulk Airtime</p><h3 className='mt-1 text-2xl font-black'>Auto-detect & recharge</h3><p className='mt-1 text-sm text-slate-500'>All rows use the configured airtime product. Mixed networks are supported.</p></div><button type='button' onClick={() => setBulkOpen(false)} disabled={bulkBusy} className='flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 font-bold'>×</button></div>
       <div className='mt-5 rounded-2xl bg-slate-50 p-4'>
