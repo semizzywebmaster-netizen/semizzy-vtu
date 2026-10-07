@@ -30,7 +30,18 @@ class CommunicationCampaignController
  }
  public function run(Request $request,Campaign $campaign,CommunicationCampaignService $service): JsonResponse
  {
-  return response()->json(['campaign'=>$campaign->fresh(),'result'=>$service->process($campaign,(int)$request->input('limit',500))]);
+  $limit=min(max((int)$request->input('limit',500),1),500);
+  return response()->json(['campaign'=>$campaign->fresh(),'result'=>$service->process($campaign,$limit)]);
+ }
+ public function pause(Campaign $campaign): JsonResponse
+ {
+  if(in_array($campaign->status,['completed','failed','cancelled'],true)) return response()->json(['message'=>'Campaign cannot be paused in its current state.'],422);
+  $campaign->update(['status'=>'paused']); return response()->json(['campaign'=>$campaign->fresh()]);
+ }
+ public function cancel(Campaign $campaign): JsonResponse
+ {
+  if(in_array($campaign->status,['completed','cancelled'],true)) return response()->json(['message'=>'Campaign cannot be cancelled in its current state.'],422);
+  $campaign->update(['status'=>'cancelled','completed_at'=>now()]); return response()->json(['campaign'=>$campaign->fresh()]);
  }
  public function runDue(CommunicationCampaignService $service): JsonResponse
  {
