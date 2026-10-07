@@ -122,8 +122,8 @@ class KycLookupBillingService
 
         try {
             $result = $this->providers->execute(
-                'kyc.'.$type.'.lookup',
-                'kyc_identity_lookup',
+                'kyc.'.$type,
+                'kyc_verification',
                 ['identity_type' => $type, 'identity_number' => $identity],
                 $attempt->operation_key
             );
