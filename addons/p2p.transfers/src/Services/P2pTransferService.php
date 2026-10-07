@@ -48,7 +48,8 @@ final class P2pTransferService
                 $existing = P2pTransfer::where('sender_id', $senderId)
                     ->where('idempotency_key', $idempotencyKey)
                     ->lockForUpdate()->first();
-                if ($existing) return $existing;
+                if ($existing && (string) $existing->amount_minor === $amountMinor) return $existing;
+                if ($existing) throw new RuntimeException('This idempotency key has already been used for a different transfer.');
 
                 $recipientQuery = trim($recipientQuery);
                 $recipient = User::query()
