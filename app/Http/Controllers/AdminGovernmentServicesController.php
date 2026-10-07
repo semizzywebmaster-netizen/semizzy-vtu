@@ -1,0 +1,14 @@
+<?php
+namespace App\Http\Controllers;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Semizzy\Addons\Government\Models\GovernmentService;
+use Semizzy\Addons\Government\Models\GovernmentApplication;
+use Semizzy\Addons\Government\Models\GovernmentDocument;
+class AdminGovernmentServicesController extends Controller {
+ public function index(){return Inertia::render('Admin/GovernmentServices',['services'=>GovernmentService::latest()->paginate(30),'applications'=>GovernmentApplication::with('service')->latest()->paginate(30)]);}
+ public function storeService(Request $r){$d=$r->validate(['service_key'=>'required|string|max:120|unique:government_services,service_key','name'=>'required|string|max:180','agency'=>'nullable|string|max:180','description'=>'nullable|string','fulfillment_mode'=>'required|in:api,manual,api_or_manual','provider_reference'=>'nullable|string|max:255','price'=>'required|numeric|min:0','currency'=>'required|string|size:3','status'=>'required|in:active,inactive','requirements'=>'nullable|array','metadata'=>'nullable|array']);$d['currency']=strtoupper($d['currency']);return response()->json(['data'=>GovernmentService::create($d)],201);}
+ public function updateService(Request $r,GovernmentService $service){$d=$r->validate(['name'=>'sometimes|required|string|max:180','agency'=>'nullable|string|max:180','description'=>'nullable|string','fulfillment_mode'=>'sometimes|required|in:api,manual,api_or_manual','provider_reference'=>'nullable|string|max:255','price'=>'sometimes|required|numeric|min:0','currency'=>'sometimes|required|string|size:3','status'=>'sometimes|required|in:active,inactive','requirements'=>'nullable|array','metadata'=>'nullable|array']);if(isset($d['currency']))$d['currency']=strtoupper($d['currency']);$service->fill($d)->save();return response()->json(['data'=>$service->fresh()]);}
+ public function updateApplicationStatus(Request $r,GovernmentApplication $application){$d=$r->validate(['status'=>'required|in:draft,pending_payment,paid,processing,awaiting_documents,submitted,completed,failed,cancelled']);$application->status=$d['status'];if($d['status']==='submitted'&&!$application->submitted_at)$application->submitted_at=now();if($d['status']==='completed'&&!$application->completed_at)$application->completed_at=now();$application->save();return response()->json(['data'=>$application->fresh()]);}
+ public function reviewDocument(Request $r,GovernmentDocument $document){$d=$r->validate(['status'=>'required|in:pending,approved,rejected','review_note'=>'nullable|string|max:2000']);$document->status=$d['status'];$document->review_note=$d['review_note']??null;$document->reviewed_by=$r->user()->id;$document->reviewed_at=now();$document->save();return response()->json(['data'=>$document->fresh()]);}
+}
