@@ -9,4 +9,5 @@ Route::middleware(['auth','verified','ensure.addon:vtu.website-builder'])->group
  Route::patch('/website-builder/sites/{site}/pages/{page}',[WebsiteBuilderController::class,'savePage'])->middleware('permission:website.manage');
  Route::post('/website-builder/sites/{site}/publish',[WebsiteBuilderController::class,'publish'])->middleware('permission:website.publish');
  Route::post('/website-builder/sites/{site}/domains',[WebsiteBuilderController::class,'domain'])->middleware('permission:website.domains.manage');
+ Route::post('/website-builder/sites/{site}/domains/{domain}/verify',[WebsiteBuilderController::class,'verifyDomain'])->middleware('permission:website.domains.manage');
 });
