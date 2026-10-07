@@ -18,6 +18,8 @@ class SocialServicesController extends Controller {
  public function buyNumber(Request $r,SocialNumberInventory $inventory,SocialServicesService $service){$order=$service->createNumberOrder($r->user()->id,$inventory->id);return response()->json(['data'=>$order],201);}
  public function sms(Request $r,SocialServiceOrder $order){
   abort_unless($order->user_id===$r->user()->id && $order->order_type==='number',404);
-  return response()->json(['data'=>$order->sms()->latest('received_at')->get()]);
+  $messages=$order->sms()->latest('received_at')->paginate(50);
+  if($r->expectsJson()) return response()->json(['data'=>$messages]);
+  return Inertia::render('SocialServices/SmsInbox',['order'=>$order->only(['id','reference','status','expires_at']),'messages'=>$messages]);
  }
 }
