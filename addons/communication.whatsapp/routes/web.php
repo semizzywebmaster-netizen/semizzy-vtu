@@ -47,6 +47,7 @@ Route::middleware(['auth','verified','permission:communication.campaigns.manage'
  Route::get('/communication/campaigns/{campaign}',[CommunicationCampaignController::class,'show'])->name('communication.campaigns.show');
  Route::post('/communication/campaigns/{campaign}/run',[CommunicationCampaignController::class,'run'])->name('communication.campaigns.run');
  Route::post('/communication/campaigns/{campaign}/pause',[CommunicationCampaignController::class,'pause'])->name('communication.campaigns.pause');
+ Route::post('/communication/campaigns/{campaign}/resume',[CommunicationCampaignController::class,'resume'])->name('communication.campaigns.resume');
  Route::post('/communication/campaigns/{campaign}/cancel',[CommunicationCampaignController::class,'cancel'])->name('communication.campaigns.cancel');
 });
 
