@@ -8,10 +8,4 @@ Route::middleware(['web','auth','ensure.addon:escrow.protection'])->group(functi
  Route::post('/escrow/{escrow}/release',[EscrowController::class,'release'])->middleware(['permission:escrow.release','transaction.pin'])->name('escrow.release');
  Route::post('/escrow/{escrow}/cancel',[EscrowController::class,'cancel'])->middleware(['permission:escrow.create','transaction.pin'])->name('escrow.cancel');
  Route::post('/escrow/{escrow}/dispute',[EscrowController::class,'dispute'])->middleware(['permission:escrow.dispute','transaction.pin'])->name('escrow.dispute');
-
- Route::middleware(['permission:escrow.admin'])->group(function(){
-  Route::get('/admin/escrow',[EscrowController::class,'admin'])->name('admin.escrow');
-  Route::post('/admin/escrow/{escrow}/expire',[EscrowController::class,'expire'])->middleware('transaction.pin')->name('admin.escrow.expire');
-  Route::post('/admin/escrow/{escrow}/resolve',[EscrowController::class,'resolve'])->middleware('transaction.pin')->name('admin.escrow.resolve');
- });
 });
