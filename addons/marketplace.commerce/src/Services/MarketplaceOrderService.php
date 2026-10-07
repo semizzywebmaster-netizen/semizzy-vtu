@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use RuntimeException;
 use Semizzy\Addons\Marketplace\Models\MarketplaceOrder;
 use Semizzy\Addons\Marketplace\Models\MarketplaceProduct;
+use Semizzy\Addons\Marketplace\Models\MarketplaceEarning;
 
 final class MarketplaceOrderService
 {
@@ -88,8 +89,9 @@ final class MarketplaceOrderService
                 throw new RuntimeException('Only NGN marketplace settlement is currently supported.');
             }
 
-            $buyerWallet = WalletAccount::query()->where('user_id', $buyerId)->where('currency', $currency)->lockForUpdate()->first();
-            $sellerWallet = WalletAccount::query()->where('user_id', $order->seller_id)->where('currency', $currency)->lockForUpdate()->first();
+            $wallets = WalletAccount::query()->whereIn('user_id', [$buyerId, (int) $order->seller_id])->where('currency', $currency)->orderBy('user_id')->lockForUpdate()->get()->keyBy('user_id');
+            $buyerWallet = $wallets->get($buyerId);
+            $sellerWallet = $wallets->get((int) $order->seller_id);
             if (!$buyerWallet || !$sellerWallet) {
                 throw new RuntimeException('Required marketplace wallet is unavailable.');
             }
@@ -139,12 +141,38 @@ final class MarketplaceOrderService
                 'metadata' => ['order_id' => $order->id, 'side' => 'seller'],
             ]);
 
-            $order->forceFill([
-                'status' => 'paid',
-                'paid_at' => now(),
-            ])->save();
+            MarketplaceEarning::create(['order_id'=>$order->id,'seller_id'=>$order->seller_id,'gross_minor'=>$amount,'fee_minor'=>'0','net_minor'=>$amount,'currency'=>$currency,'status'=>'credited']);
+            $order->forceFill(['status' => 'paid', 'paid_at' => now()])->save();
 
             return $order->fresh(['product', 'buyer', 'seller']);
+        });
+    }
+
+    public function refund(MarketplaceOrder $order, int $actorId, bool $isAdmin = false): MarketplaceOrder
+    {
+        return DB::transaction(function () use ($order, $actorId, $isAdmin): MarketplaceOrder {
+            $order = MarketplaceOrder::query()->lockForUpdate()->findOrFail($order->id);
+            if (!$isAdmin && (int)$order->buyer_id !== $actorId) throw new RuntimeException('You are not allowed to refund this order.');
+            if ($order->status === 'refunded') return $order;
+            if ($order->status !== 'paid') throw new RuntimeException('Only paid orders can be refunded.');
+            $currency = strtoupper((string)$order->currency);
+            $wallets = WalletAccount::query()->whereIn('user_id', [(int)$order->buyer_id,(int)$order->seller_id])->where('currency',$currency)->orderBy('user_id')->lockForUpdate()->get()->keyBy('user_id');
+            $buyer = $wallets->get((int)$order->buyer_id);
+            $seller = $wallets->get((int)$order->seller_id);
+            if (!$buyer || !$seller) throw new RuntimeException('Required refund wallet is unavailable.');
+            $amount=(string)$order->total_minor;
+            if (self::compare($seller->available_minor,$amount)<0) throw new RuntimeException('Seller balance is insufficient for this refund.');
+            $buyerBefore=(string)$buyer->available_minor; $sellerBefore=(string)$seller->available_minor;
+            $buyerAfter=self::add($buyerBefore,$amount); $sellerAfter=self::subtract($sellerBefore,$amount);
+            $buyer->forceFill(['available_minor'=>$buyerAfter])->save();
+            $seller->forceFill(['available_minor'=>$sellerAfter])->save();
+            WalletMovement::create(['wallet_account_id'=>$buyer->id,'operation_key'=>'marketplace:'.$order->reference.':refund:buyer','reference'=>$order->reference,'type'=>'marketplace_refund','amount_minor'=>$amount,'currency'=>$currency,'available_before_minor'=>$buyerBefore,'available_after_minor'=>$buyerAfter,'held_before_minor'=>(string)$buyer->held_minor,'held_after_minor'=>(string)$buyer->held_minor,'metadata'=>['order_id'=>$order->id,'side'=>'buyer']]);
+            WalletMovement::create(['wallet_account_id'=>$seller->id,'operation_key'=>'marketplace:'.$order->reference.':refund:seller','reference'=>$order->reference,'type'=>'marketplace_refund','amount_minor'=>$amount,'currency'=>$currency,'available_before_minor'=>$sellerBefore,'available_after_minor'=>$sellerAfter,'held_before_minor'=>(string)$seller->held_minor,'held_after_minor'=>(string)$seller->held_minor,'metadata'=>['order_id'=>$order->id,'side'=>'seller']]);
+            $product=MarketplaceProduct::query()->lockForUpdate()->find($order->product_id);
+            if($product){$product->forceFill(['stock_quantity'=>self::add((string)$product->stock_quantity,(string)$order->quantity)])->save();}
+            MarketplaceEarning::query()->where('order_id',$order->id)->update(['status'=>'refunded']);
+            $order->forceFill(['status'=>'refunded','refunded_at'=>now()])->save();
+            return $order->fresh(['product','buyer','seller']);
         });
     }
 
