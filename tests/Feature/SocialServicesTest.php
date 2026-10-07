@@ -12,4 +12,12 @@ class SocialServicesTest extends TestCase {
  public function test_sms_is_scoped_to_number_order():void{$u=User::factory()->create();$o=SocialServiceOrder::create(['reference'=>'SOC-N-TEST','user_id'=>$u->id,'order_type'=>'number','status'=>'fulfilled','amount'=>'100','currency'=>'NGN']);$sms=app(SocialServicesService::class)->ingestSms($o,'Your code is 123456','Service','msg-1');$this->assertSame($o->id,$sms->order_id);}
  public function test_wallet_payment_is_idempotent():void{$u=User::factory()->create();\App\Models\WalletAccount::create(['user_id'=>$u->id,'currency'=>'NGN','available_minor'=>'50000','held_minor'=>'0','status'=>'active']);$o=SocialServiceOrder::create(['reference'=>'SOC-PAY-TEST','user_id'=>$u->id,'order_type'=>'number','status'=>'pending_payment','amount'=>'100.00','currency'=>'NGN']);$s=app(SocialServicesService::class);$first=$s->payFromWallet($u,$o);$second=$s->payFromWallet($u,$o);$this->assertSame($first->id,$second->id);$this->assertSame('paid',$second->payment_status);$this->assertSame('40000',(string)\App\Models\WalletAccount::where('user_id',$u->id)->value('available_minor'));$this->assertSame(1,\App\Models\WalletMovement::where('operation_key','social:payment:'.$o->reference)->count());}
  public function test_user_cannot_read_another_users_sms():void{$a=User::factory()->create();$b=User::factory()->create();$o=SocialServiceOrder::create(['reference'=>'SOC-N-TEST2','user_id'=>$a->id,'order_type'=>'number','status'=>'fulfilled','amount'=>'100','currency'=>'NGN']);$this->actingAs($b)->get('/social-services/numbers/'.$o->id.'/sms')->assertNotFound();}
+public function test_expired_number_cannot_be_purchased(): void {
+ $u=User::factory()->create();
+ $n=SocialNumberInventory::create(['country_code'=>'+1','country_name'=>'United States','service_key'=>'test','phone_number'=>'+15550000001','phone_hash'=>hash('sha256','15550000001'),'fulfillment_mode'=>'manual','price'=>'10.00','currency'=>'NGN','status'=>'available','expires_at'=>now()->subMinute()]);
+ $this->expectException(\\RuntimeException::class);
+ app(SocialServicesService::class)->createNumberOrder($u->id,$n->id);
+ $this->assertDatabaseHas('social_number_inventory',['id'=>$n->id,'status'=>'disabled']);
+}
+
 }
