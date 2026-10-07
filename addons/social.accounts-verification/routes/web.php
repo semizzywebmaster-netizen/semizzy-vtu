@@ -6,5 +6,6 @@ Route::middleware(['web','auth','ensure.addon:social.accounts-verification'])->g
  Route::post('/social-services/accounts/{inventory}/buy',[SocialServicesController::class,'buyAccount'])->middleware(['permission:social.orders.manage','throttle:10,1']);
  Route::post('/social-services/numbers/{inventory}/buy',[SocialServicesController::class,'buyNumber'])->middleware(['permission:social.orders.manage','throttle:10,1']);
  Route::post('/social-services/orders/{order}/pay',[SocialServicesController::class,'pay'])->middleware(['permission:social.orders.manage','throttle:10,1']);
+ Route::post('/social-services/numbers/{order}/requery',[SocialServicesController::class,'requery'])->middleware(['permission:social.orders.manage','throttle:20,1']);
  Route::get('/social-services/numbers/{order}/sms',[SocialServicesController::class,'sms'])->middleware(['permission:social.sms.view','throttle:60,1']);
 });
