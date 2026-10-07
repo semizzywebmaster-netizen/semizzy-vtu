@@ -93,12 +93,20 @@ class BusinessCommercialService
             return $baseMinor;
         }
 
-        $value = $baseMinor;
-        if ($rule->amount_minor !== null) {
-            $value += (int) $rule->amount_minor;
-        } elseif ($rule->rate_bps !== null) {
-            $value += intdiv($baseMinor * (int) $rule->rate_bps + 5000, 10000);
-        }
+        $type = strtolower((string) ($rule->rule_type ?? 'markup'));
+        $adjustment = $rule->amount_minor !== null
+            ? (int) $rule->amount_minor
+            : ($rule->rate_bps !== null
+                ? intdiv($baseMinor * (int) $rule->rate_bps + 5000, 10000)
+                : 0);
+
+        // Commission is tracked as a commercial rule but must not silently
+        // change the customer's payable amount.
+        $value = match ($type) {
+            'discount' => $baseMinor - $adjustment,
+            'commission' => $baseMinor,
+            default => $baseMinor + $adjustment,
+        };
 
         if ($rule->min_amount_minor !== null) {
             $value = max($value, (int) $rule->min_amount_minor);
