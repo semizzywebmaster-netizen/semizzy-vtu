@@ -16,7 +16,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
     public function supports(string $operation): bool
     {
-        return in_array($operation, ['health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories','transaction_initiation','transaction_status','refund','reversal','sms_send','whatsapp_send','kyc_verification','network_lookup'], true);
+        return in_array($operation, ['health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories','transaction_initiation','transaction_status','refund','reversal','sms_send','whatsapp_send','social_account_purchase','foreign_number_purchase','foreign_number_status','foreign_number_sms','kyc_verification','network_lookup'], true);
     }
 
     public function execute(ApiProvider $provider, string $operation, array $payload = [], ?string $idempotencyKey = null): ProviderResult
@@ -41,6 +41,8 @@ class RestJsonProviderAdapter implements ProviderAdapter
             'categories' => ['categories', 'catalogue_retrieval', 'catalogue'],
             'kyc_verification' => ['kyc_verification', 'identity_verification', 'kyc_check'],
             'network_lookup' => ['network_lookup', 'mnp_lookup', 'operator_lookup'],
+            'foreign_number_status' => ['foreign_number_status', 'number_status', 'status'],
+            'foreign_number_sms' => ['foreign_number_sms', 'sms_status', 'messages'],
             'network_lookup' => ['network_lookup', 'mnp_lookup', 'operator_lookup'],
             default => [$operation],
         };
