@@ -38,3 +38,6 @@ Schedule::call(function (): void {
         app(\Semizzy\Addons\Escrow\Services\EscrowService::class)->expire((int) $id);
     }
 })->everyFiveMinutes()->name('escrow-expiry-reconciliation')->withoutOverlapping()->onOneServer();
+
+Schedule::command('communication:campaigns')->everyMinute()->withoutOverlapping(2)->onOneServer();
+Artisan::command('communication:campaigns',function(\Addons\CommunicationWhatsapp\Services\CommunicationCampaignService $service){$count=0; \App\Models\Communication\Campaign::query()->whereIn('status',['draft','scheduled'])->where(fn($q)=>$q->whereNull('scheduled_at')->orWhere('scheduled_at','<=',now()))->orderBy('id')->limit(50)->get()->each(function($campaign)use($service,&$count){$service->process($campaign,500);$count++;}); $this->info("Processed {$count} communication campaigns.");});
