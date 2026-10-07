@@ -41,9 +41,9 @@
       "Semizzy\\Addons\\Marketplace\\": "addons/marketplace.commerce/src/",
       "Semizzy\\Addons\\P2p\\": "addons/p2p.transfers/src/",
       "Semizzy\\Addons\\Escrow\\": "addons/escrow.protection/src/",
-      "Semizzy\\\\Addons\\\\Rewards\\\\": "addons/rewards-referrals-promotions/src/",
-      "Semizzy\\\\Addons\\\\SpinToWin\\\\": "addons/spin-to-win/src/",
-      "Semizzy\\\\Addons\\\\MailerSmtp\\\\": "addons/mailer-smtp/src/"
+      "Semizzy\\Addons\\Rewards\\": "addons/rewards-referrals-promotions/src/",
+      "Semizzy\\Addons\\SpinToWin\\": "addons/spin-to-win/src/",
+      "Semizzy\\Addons\\MailerSmtp\\": "addons/mailer-smtp/src/"
     }
   },
   "autoload-dev": {
