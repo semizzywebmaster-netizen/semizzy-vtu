@@ -5,6 +5,7 @@ Route::middleware(['auth','verified','ensure.addon:insurance.protection','permis
  Route::get('/admin/insurance',[InsuranceAdminController::class,'page']);
  Route::get('/admin/insurance/providers',[InsuranceAdminController::class,'providers']);
  Route::post('/admin/insurance/providers',[InsuranceAdminController::class,'storeProvider'])->middleware('permission:insurance.providers.manage');
+ Route::post('/admin/insurance/providers/{provider}/test',[InsuranceAdminController::class,'testProvider'])->middleware('permission:insurance.providers.manage');
  Route::patch('/admin/insurance/providers/{provider}',[InsuranceAdminController::class,'updateProvider'])->middleware('permission:insurance.providers.manage');
  Route::get('/admin/insurance/products',[InsuranceAdminController::class,'products']);
  Route::post('/admin/insurance/products',[InsuranceAdminController::class,'storeProduct'])->middleware('permission:insurance.manage');
