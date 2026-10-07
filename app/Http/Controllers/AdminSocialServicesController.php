@@ -25,7 +25,9 @@ class AdminSocialServicesController extends Controller {
  }
  public function updateAccount(Request $r,SocialAccountInventory $inventory){
   $d=$r->validate(['title'=>'sometimes|required|string|max:160','platform'=>'sometimes|required|string|max:60','username'=>'nullable|string|max:160','country_code'=>'nullable|string|max:8','account_age_days'=>'nullable|integer|min:0','followers'=>'nullable|integer|min:0','niche'=>'nullable|string|max:120','description'=>'nullable|string','fulfillment_mode'=>'sometimes|required|in:api,manual,api_or_manual','provider_reference'=>'nullable|string|max:255','price'=>'sometimes|required|numeric|min:0','currency'=>'sometimes|required|string|size:3','status'=>'sometimes|required|in:available,reserved,sold,disabled','metadata'=>'nullable|array']);
-  if(isset($d['currency']))$d['currency']=strtoupper($d['currency']); unset($d['credentials']); $inventory->fill($d)->save(); return response()->json(['data'=>$inventory->fresh()]);
+  if(isset($d['currency']))$d['currency']=strtoupper($d['currency']); unset($d['credentials']);
+  if(in_array($inventory->status,['reserved','sold'],true) && (array_key_exists('price',$d)||array_key_exists('currency',$d))) abort(422,'Reserved or sold inventory cannot have its price or currency changed.');
+  $inventory->fill($d)->save(); return response()->json(['data'=>$inventory->fresh()]);
  }
  public function updateNumber(Request $r,SocialNumberInventory $inventory){
   $d=$r->validate(['country_code'=>'sometimes|required|string|max:8','country_name'=>'sometimes|required|string|max:100','service_key'=>'nullable|string|max:120','phone_number'=>'sometimes|required|string|max:64','fulfillment_mode'=>'sometimes|required|in:api,manual,api_or_manual','provider_reference'=>'nullable|string|max:255','price'=>'sometimes|required|numeric|min:0','currency'=>'sometimes|required|string|size:3','status'=>'sometimes|required|in:available,reserved,sold,disabled','expires_at'=>'nullable|date','metadata'=>'nullable|array']);
