@@ -1,0 +1,4 @@
+<?php
+namespace Addons\InsuranceProtection\Models;
+use Illuminate\Database\Eloquent\Model;
+class InsurancePolicy extends Model { protected $table='insurance_policies'; protected $guarded=[]; protected $casts=['holder_snapshot'=>'array','product_snapshot'=>'array','provider_snapshot'=>'array','starts_at'=>'datetime','expires_at'=>'datetime','issued_at'=>'datetime','cancelled_at'=>'datetime']; public function product(){return $this->belongsTo(InsuranceProduct::class,'insurance_product_id');} public function provider(){return $this->belongsTo(InsuranceProvider::class,'insurance_provider_id');} public function claims(){return $this->hasMany(InsuranceClaim::class);} }
