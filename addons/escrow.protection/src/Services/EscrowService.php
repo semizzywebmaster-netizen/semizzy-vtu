@@ -39,8 +39,9 @@ final class EscrowService {
    if($existing){ if((string)$existing->amount_minor===$amountMinor) return $existing; throw new RuntimeException('This idempotency key has already been used for a different escrow.');}
    $q=trim($sellerQuery); $seller=User::query()->where(fn($x)=>$x->where('username',$q)->orWhere('email',$q)->orWhere('phone',$q))->first();
    if(!$seller) throw new RuntimeException('Seller account not found.'); if($seller->id===$buyerId) throw new RuntimeException('You cannot create escrow with yourself as seller.');
-   $wallets=$this->lockWallets($buyerId,$seller->id); $buyer=$wallets[$buyerId]??null;
+   $wallets=$this->lockWallets($buyerId,$seller->id); $buyer=$wallets[$buyerId]??null; $sellerWallet=$wallets[$seller->id]??null;
    if(!$buyer||$buyer->status!=='active') throw new RuntimeException('Buyer must have an active NGN wallet.');
+   if(!$sellerWallet||$sellerWallet->status!=='active') throw new RuntimeException('Seller must have an active NGN wallet.');
    $total=$this->add($amountMinor,$fee); if(!$this->gte((string)$buyer->available_minor,$total)) throw new RuntimeException('Insufficient wallet balance.');
    $beforeAvailable=(string)$buyer->available_minor; $beforeHeld=(string)$buyer->held_minor;
    $afterAvailable=$this->sub($beforeAvailable,$total); $afterHeld=$this->add($beforeHeld,$total);
