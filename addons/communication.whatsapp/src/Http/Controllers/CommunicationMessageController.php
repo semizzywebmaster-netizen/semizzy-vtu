@@ -11,6 +11,14 @@ use Illuminate\Support\Facades\DB;
 
 class CommunicationMessageController
 {
+ public function retry(Request $request, Message $message, CommunicationProviderGateway $gateway): JsonResponse
+ {
+  if($message->status!=='failed') return response()->json(['message'=>'Only failed messages can be retried.'],422);
+  $message->update(['status'=>'queued','failed_at'=>null]);
+  try { $attempt=$gateway->send($message); return response()->json(['message'=>$message->fresh(),'attempt'=>$attempt],202); }
+  catch(\Throwable $e) { return response()->json(['message'=>$message->fresh(),'error'=>'All configured providers failed.'],502); }
+ }
+
  public function sendWhatsApp(Request $request,CommunicationProviderGateway $gateway): JsonResponse
  {
   $data=$request->validate([
