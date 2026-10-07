@@ -82,9 +82,17 @@ final class SocialServicesService {
  }
 
  public function ingestSms(SocialServiceOrder $order,string $message,?string $sender=null,?string $providerMessageId=null,array $metadata=[]): SocialNumberSms {
+  $order=SocialServiceOrder::query()->whereKey($order->id)->firstOrFail();
   if($order->order_type!=='number')throw new RuntimeException('SMS can only be attached to a verification-number order.');
+  $message=trim($message);
+  if($message==='')throw new RuntimeException('SMS message cannot be empty.');
   if(!$this->canReceiveSms($order))throw new RuntimeException('Number order is not active or has expired.');
-  if($providerMessageId && SocialNumberSms::where('provider_message_id',$providerMessageId)->exists())return SocialNumberSms::where('provider_message_id',$providerMessageId)->firstOrFail();
+  if($providerMessageId){
+   $existing=SocialNumberSms::query()->where('order_id',$order->id)->where('provider_message_id',$providerMessageId)->first();
+   if($existing)return $existing;
+   $collision=SocialNumberSms::query()->where('provider_message_id',$providerMessageId)->where('order_id','!=',$order->id)->exists();
+   if($collision)throw new RuntimeException('Provider message identifier is already attached to another order.');
+  }
   return SocialNumberSms::create(['order_id'=>$order->id,'sender'=>$sender,'message'=>$message,'provider_message_id'=>$providerMessageId,'received_at'=>now(),'metadata'=>$metadata]);
  } public function payFromWallet(\App\Models\User $user, SocialServiceOrder $order): SocialServiceOrder {
   return DB::transaction(function () use ($user,$order) {
