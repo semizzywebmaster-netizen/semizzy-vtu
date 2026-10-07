@@ -26,5 +26,19 @@ class InsuranceService {
   else $p->update(['status'=>'provider_pending','provider_status'=>$result->status,'provider_reference'=>$result->providerReference?:$p->provider_reference]);
   return $p->fresh();
  }
+ public function cancel(User $user,InsurancePolicy $p,string $reason): InsurancePolicy {
+  if($p->user_id!==$user->id) throw new RuntimeException('Policy not found.');
+  if(!in_array($p->status,['active','issued'],true)) throw new RuntimeException('Only active policies can be cancelled.');
+  $p->update(['status'=>'cancelled','cancel_reason'=>$reason,'cancelled_at'=>now()]);
+  return $p->fresh();
+ }
+ public function renew(User $user,InsurancePolicy $p,string $key): InsurancePolicy {
+  if($p->user_id!==$user->id) throw new RuntimeException('Policy not found.');
+  if(!in_array($p->status,['active','issued'],true)) throw new RuntimeException('Policy is not eligible for renewal.');
+  $result=$this->providers->execute('insurance','insurance_renew',['provider_reference'=>$p->provider_reference,'policy_reference'=>$p->reference,'premium_minor'=>$p->premium_minor],$key);
+  if(!$result->accepted && !$result->duplicateRisk) throw new RuntimeException($result->message?:'Insurance renewal was rejected.');
+  $p->update(['status'=>$result->accepted?'active':'provider_pending','provider_reference'=>$result->providerReference?:$p->provider_reference,'renewed_at'=>now(),'renewal_due_at'=>now()->addYear(),'expires_at'=>now()->addYear()]);
+  return $p->fresh();
+ }
  public function claim(User $user,InsurancePolicy $policy,array $data): InsuranceClaim {if($policy->user_id!==$user->id||!in_array($policy->status,['active','issued'],true))throw new RuntimeException('Policy is not eligible for a claim.');return InsuranceClaim::create(['insurance_policy_id'=>$policy->id,'user_id'=>$user->id,'reference'=>'CLM-'.strtoupper(Str::random(18)),'status'=>'submitted','claim_type'=>$data['claim_type']??null,'amount_minor'=>$data['amount_minor']??null,'description'=>$data['description'],'documents'=>$data['documents']??[],'submitted_at'=>now()]);}
 }
