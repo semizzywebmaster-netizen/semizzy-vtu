@@ -31,7 +31,7 @@ return new class extends Migration {
 
     public function down(): void
     {
-        if (!Schema::hasTable('system_settings')) return;
-        Schema::whereRaw('1 = 0'); // intentional no-op; feature settings may be user-created and must not be destructively removed.
+        // Feature definitions live in the shared settings registry. Do not delete
+        // them on rollback because admins/addons may have registered additional keys.
     }
 };
