@@ -7,6 +7,7 @@ use App\Models\SystemSetting;
 use App\Services\Audit\AuditLogger;
 use App\Services\Platform\TierLimitService;
 use App\Services\System\FeatureControlService;
+use App\Services\System\SettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,6 +23,7 @@ class PlatformControlController extends Controller
         return Inertia::render('Admin/PlatformControls', [
             'features' => array_values($features->all()),
             'tiers' => $tiers->all(),
+            'settings' => array_values($settings->all(false)),
         ]);
     }
 
@@ -32,10 +34,15 @@ class PlatformControlController extends Controller
             'features.*.key' => ['required','string','max:128'],
             'features.*.enabled' => ['required','boolean'],
             'tiers' => ['nullable','array'],
+            'settings' => ['nullable','array'],
         ]);
 
         try {
             $changed = [];
+            if (!empty($data['settings'])) {
+                $settings->bulkUpdate($data['settings']);
+            }
+
             foreach (($data['features'] ?? []) as $item) {
                 $before = $features->feature($item['key']);
                 $after = $features->setEnabled($item['key'], (bool) $item['enabled']);
@@ -58,6 +65,7 @@ class PlatformControlController extends Controller
 
             $audit->record('admin.global_controls.updated', null, [
                 'feature_changes'=>$changed,
+                'settings_changed'=>array_keys($data['settings'] ?? []),
                 'tier_limits_changed'=>array_keys($data['tiers'] ?? []),
             ], $request);
 
