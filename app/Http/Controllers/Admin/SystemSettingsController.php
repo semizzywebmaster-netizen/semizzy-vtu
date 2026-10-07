@@ -18,7 +18,7 @@ use Inertia\Response;
 class SystemSettingsController extends Controller
 {
     private const KEYS = [
-        'platform_name','support_email','support_notice','default_timezone','theme_key','theme_primary','skin_default',
+        'platform_name','support_email','support_notice','default_timezone','theme_key','theme_primary','skin_default','kyc_bvn_lookup_charge_minor','kyc_nin_lookup_charge_minor',
         'theme_custom_light','theme_custom_dark','business','social','assets','footer_menu','smtp',
     ];
 
@@ -87,6 +87,8 @@ class SystemSettingsController extends Controller
             'platform_name'=>['required','string','min:2','max:80'],
             'support_email'=>['nullable','email','max:254'],
             'support_notice'=>['nullable','string','max:500'],
+            'kyc_bvn_lookup_charge_minor'=>['required','integer','min:0','max:9223372036854775807'],
+            'kyc_nin_lookup_charge_minor'=>['required','integer','min:0','max:9223372036854775807'],
             'default_timezone'=>['required','timezone'],
             'theme_key'=>['required','in:opay-inspired,palmpay-inspired,modern-corporate,clean-saas,luxury-executive,custom'],
             'theme_primary'=>['required','regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -141,7 +143,7 @@ class SystemSettingsController extends Controller
         $data['smtp']=$this->prepareSmtp($data['smtp']??[]);
 
         try {
-            foreach(['platform_name','support_email','support_notice','default_timezone','theme_key','theme_primary','skin_default'] as $key){
+            foreach(['platform_name','support_email','support_notice','default_timezone','theme_key','theme_primary','skin_default','kyc_bvn_lookup_charge_minor','kyc_nin_lookup_charge_minor'] as $key){
                 SystemSetting::query()->updateOrCreate(['key'=>$key],['value'=>$data[$key]??'','type'=>'string','is_secret'=>false]);
             }
             foreach(['theme_custom_light','theme_custom_dark','business','social','footer_menu','smtp'] as $key){
