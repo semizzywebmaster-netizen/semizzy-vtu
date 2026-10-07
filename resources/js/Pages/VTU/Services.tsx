@@ -72,7 +72,6 @@ export default function Services({ services = [] }: { services: Service[] }) {
     try {
       const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
       const rows = await Promise.all(bulkRows.map(async row => {
-        if (row.network) return row;
         const response=await fetch('/vtu/network-lookup',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token},body:JSON.stringify({phone:row.phone})});
         const body=await response.json();
         return response.ok && body?.data?.network ? {...row, network: body.data.network} : row;
