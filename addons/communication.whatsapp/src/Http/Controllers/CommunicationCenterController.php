@@ -3,11 +3,20 @@ namespace Addons\CommunicationWhatsapp\Http\Controllers;
 
 use App\Models\Communication\Conversation;
 use App\Models\Communication\Message;
+use App\Models\Communication\DeliveryAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;\nuse Inertia\Inertia;
 
 class CommunicationCenterController
 {
+ public function attempts(Request $request): JsonResponse
+ {
+  $q=DeliveryAttempt::with(['provider:id,name,channel','message:id,channel,recipient,status,body'])->latest('id');
+  if($request->filled('status')) $q->where('status',$request->string('status'));
+  if($request->filled('provider_id')) $q->where('provider_id',(int)$request->input('provider_id'));
+  return response()->json($q->paginate(min(max((int)$request->input('per_page',50),1),100)));
+ }
+
  public function conversations(Request $request): JsonResponse
  {
   $q=Conversation::query()->with(['user:id,name,phone'])->withCount('messages')->orderByDesc('last_message_at')->orderByDesc('id');
