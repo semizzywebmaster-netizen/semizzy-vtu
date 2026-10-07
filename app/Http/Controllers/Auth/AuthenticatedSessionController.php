@@ -131,6 +131,9 @@ class AuthenticatedSessionController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        if ($request->user() && $request->session()->get('device_id')) {
+            $request->user()->devices()->whereKey($request->session()->get('device_id'))->update(['revoked_at' => now()]);
+        }
         $this->securityEvents->record('auth.logout', 'info', [], $request);
         Auth::logout();
         $request->session()->invalidate();
