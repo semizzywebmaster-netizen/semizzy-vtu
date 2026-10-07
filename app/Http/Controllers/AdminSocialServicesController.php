@@ -43,7 +43,11 @@ class AdminSocialServicesController extends Controller {
   $updated=$service->purchaseViaProvider($order);
   return response()->json(['data'=>$updated]);
  }
- public function sms(Request $r,SocialServiceOrder $order,SocialServicesService $service){
+ public function showOrder(SocialServiceOrder $order){
+  $order->load(['user','sms'=>fn($q)=>$q->latest('received_at')]);
+  return response()->json(['data'=>$order]);
+ }
+ public function sms(SocialServiceOrder $order,Request $r,SocialServicesService $service){
   $d=$r->validate(['message'=>'required|string|max:10000','sender'=>'nullable|string|max:160','provider_message_id'=>'nullable|string|max:160','metadata'=>'nullable|array']);
   return response()->json(['data'=>$service->ingestSms($order,$d['message'],$d['sender']??null,$d['provider_message_id']??null,$d['metadata']??[])],201);
  }
