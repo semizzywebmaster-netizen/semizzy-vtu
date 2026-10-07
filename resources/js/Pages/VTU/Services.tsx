@@ -25,13 +25,13 @@ export default function Services({ services = [] }: { services: Service[] }) {
   const [bulkDataInput, setBulkDataInput] = useState('');
   const [bulkDataPin, setBulkDataPin] = useState('');
   const [bulkDataBusy, setBulkDataBusy] = useState(false);
-  const [bulkDataQuote, setBulkDataQuote] = useState<{ total_customer_price: string; currency: string; total_items: number } | null>(null);
+  const [bulkDataQuote, setBulkDataQuote] = useState<{ total_customer_price: string; currency: string; total_items: number; quote_fingerprint: string } | null>(null);
   const [bulkDataResult, setBulkDataResult] = useState<string | null>(null);
   const [bulkInput, setBulkInput] = useState('');
   const [bulkPin, setBulkPin] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResult, setBulkResult] = useState<string | null>(null);
-  const [bulkQuote, setBulkQuote] = useState<{ total_customer_price: string; currency: string; total_items: number; items: Array<{ index: number; product_id: number; customer_price: string; currency: string }> } | null>(null);
+  const [bulkQuote, setBulkQuote] = useState<{ total_customer_price: string; currency: string; total_items: number; quote_fingerprint: string; items: Array<{ index: number; product_id: number; customer_price: string; currency: string }> } | null>(null);
   const [bulkQuoting, setBulkQuoting] = useState(false);
   const [bulkResolving, setBulkResolving] = useState(false);
   const [bulkResultItems, setBulkResultItems] = useState<Array<{ sequence?: number; recipient?: string; status?: string; reference?: string | null; error_message?: string | null }>>([]);
@@ -123,7 +123,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
         idempotency_key: `bulk-airtime-${Date.now()}-${index}-${row.phone}`,
       }));
       const response=await fetch('/vtu/bulk',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token},body:JSON.stringify({
-        items, idempotency_key: crypto.randomUUID(), transaction_pin: bulkPin,
+        items, idempotency_key: crypto.randomUUID(), quote_fingerprint: bulkQuote?.quote_fingerprint, transaction_pin: bulkPin,
       })});
       const body=await response.json();
       if(!response.ok) throw new Error(body.message || 'Bulk airtime could not be processed.');
@@ -190,7 +190,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
       setBulkDataBusy(true); setBulkDataResult(null);
       const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
       const items=bulkDataRows.map((row,index)=>({product_id:bulkDataProduct.id,payload:{network:row.network,phone:row.phone,plan:bulkDataProduct.name},idempotency_key:'bulk-data-'+Date.now()+'-'+index+'-'+row.phone}));
-      const response=await fetch('/vtu/bulk',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token},body:JSON.stringify({items,idempotency_key:crypto.randomUUID(),transaction_pin:bulkDataPin})});
+      const response=await fetch('/vtu/bulk',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token},body:JSON.stringify({items,idempotency_key:crypto.randomUUID(),quote_fingerprint:bulkDataQuote?.quote_fingerprint,transaction_pin:bulkDataPin})});
       const body=await response.json(); if(!response.ok) throw new Error(body.message || 'Bulk data could not be processed.');
       const data=body.data; setBulkDataResult('Bulk '+(data.reference||'request')+': '+(data.successful_items??0)+' successful, '+(data.failed_items??0)+' failed, '+(data.total_items??bulkDataRows.length)+' total.');
       setBulkDataPin('');
