@@ -8,7 +8,7 @@ export default function PlatformControls({tiers,features,settings=[]}:Props){
  const initialSettings=Object.fromEntries((settings||[]).filter(s=>s.editable&&!s.is_secret).map(s=>[s.key,s.type==='json'?JSON.stringify(s.value??s.default??{},null,2):s.value??s.default??'']));
  const form=useForm({features:features.map(f=>({key:f.key,enabled:f.enabled})),tiers:Object.fromEntries((tiers||[]).map((t:any)=>[t.id,{daily_limit_minor:t.daily_limit_minor??'',balance_limit_minor:t.balance_limit_minor??''}])),settings:initialSettings});
  const toggle=(key:string,enabled:boolean)=>form.setData('features',form.data.features.map(f=>f.key===key?{...f,enabled}:f));
- const submit=(e:React.FormEvent)=>{e.preventDefault();form.put('/admin/platform-controls',{preserveScroll:true});};
+ const submit=(e:React.FormEvent)=>{e.preventDefault();form.transform(data=>({...data,settings:Object.fromEntries((settings||[]).filter(s=>s.editable&&!s.is_secret).map(s=>[s.key,s.type==='json'?(()=>{try{return JSON.parse(data.settings[s.key]??'{}')}catch{return null}})():data.settings[s.key]]))})).put('/admin/platform-controls',{preserveScroll:true});};
  const grouped=features.reduce((a,f)=>(a[f.category]??=[]).push(f)&&a,{} as Record<string,Feature[]>);
  const setValue=(key:string,value:any)=>form.setData('settings',{...form.data.settings,[key]:value});
  return <><Head title="Global Feature Control"/><main className="min-h-screen bg-slate-50 p-4 md:p-8"><div className="mx-auto max-w-7xl">
