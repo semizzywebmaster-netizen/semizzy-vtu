@@ -39,7 +39,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
 
   const totalProducts = services.reduce((sum, service) => sum + service.products.length, 0);
 
-  return <main className='min-h-screen bg-slate-50 pb-10 text-slate-900'>
+  return <main className='min-h-screen bg-slate-50 pb-24 text-slate-900'>
     <Head title='Services' />
     <section className='bg-slate-950 text-white'>
       <div className='mx-auto max-w-6xl px-4 pb-7 pt-5 sm:px-8'>
@@ -102,9 +102,9 @@ export default function Services({ services = [] }: { services: Service[] }) {
         </div>
         <div className='mt-5 space-y-4'>
           {['airtime','data'].includes(selectedService.key) && <>
-            <label className='block text-sm font-bold'>Network<input value={form.network || ''} onChange={e => setForm({...form, network:e.target.value})} placeholder='e.g. MTN' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none focus:border-indigo-500' /></label>
+            <label className='block text-sm font-bold'>Network<select value={form.network || ''} onChange={e => setForm({...form, network:e.target.value})} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none focus:border-indigo-500'><option value=''>Select network</option><option>MTN</option><option>Airtel</option><option>Glo</option><option>9mobile</option></select></label>
             <label className='block text-sm font-bold'>Phone number<input value={form.phone || ''} onChange={e => setForm({...form, phone:e.target.value})} placeholder='0803XXXXXXXX' inputMode='tel' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none focus:border-indigo-500' /></label>
-            {selectedService.key === 'airtime' && <label className='block text-sm font-bold'>Amount<input value={form.amount || ''} onChange={e => setForm({...form, amount:e.target.value})} placeholder='1000' inputMode='decimal' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none focus:border-indigo-500' /></label>}
+            {selectedService.key === 'airtime' && <label className='block text-sm font-bold'>Amount<input value={form.amount || ''} onChange={e => setForm({...form, amount:e.target.value})} placeholder='1000' inputMode='decimal' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none focus:border-indigo-500' /><div className='mt-2 flex flex-wrap gap-2'>{['100','200','500','1000','2000','5000'].map(v => <button key={v} type='button' onClick={() => setForm({...form, amount:v})} className='rounded-full bg-slate-100 px-3 py-2 text-xs font-bold'>₦{v}</button>)}</div></label>}
           </>}
           {selectedService.key === 'electricity' && <>
             <label className='block text-sm font-bold'>Disco<input value={form.disco || ''} onChange={e => setForm({...form, disco:e.target.value})} placeholder='e.g. AEDC' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>
