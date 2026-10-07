@@ -18,7 +18,7 @@ class SocialServicesController extends Controller {
  public function buyNumber(Request $r,SocialNumberInventory $inventory,SocialServicesService $service){$order=$service->createNumberOrder($r->user()->id,$inventory->id);return response()->json(['data'=>$order],201);}
  public function pay(Request $r,SocialServiceOrder $order,SocialServicesService $service){return response()->json(['data'=>$service->payFromWallet($r->user(),$order)]);}
  public function sms(Request $r,SocialServiceOrder $order){
-  abort_unless($order->user_id===$r->user()->id && $order->order_type==='number',404);
+  abort_unless($order->user_id===$r->user()->id && $order->order_type==='number',404); if(!app(SocialServicesService::class)->canReceiveSms($order)) abort(410,'This verification number is expired or inactive.');
   $messages=$order->sms()->latest('received_at')->paginate(50);
   if($r->expectsJson()) return response()->json(['data'=>$messages]);
   return Inertia::render('SocialServices/SmsInbox',['order'=>$order->only(['id','reference','status','expires_at']),'messages'=>$messages]);
