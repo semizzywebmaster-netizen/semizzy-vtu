@@ -37,6 +37,7 @@ class CommunicationCampaignService
   $gateway=app(CommunicationProviderGateway::class);
 
   foreach($users as $user){
+   if(in_array($campaign->fresh()->status,['paused','cancelled'],true)) break;
    $processed++;
    $recipient=$this->recipient($user,$campaign->channel);
    if(!$recipient){$skipped++;continue;}
