@@ -43,7 +43,8 @@
       "Semizzy\\Addons\\Escrow\\": "addons/escrow.protection/src/",
       "Semizzy\\Addons\\Rewards\\": "addons/rewards-referrals-promotions/src/",
       "Semizzy\\Addons\\SpinToWin\\": "addons/spin-to-win/src/",
-      "Semizzy\\Addons\\MailerSmtp\\": "addons/mailer-smtp/src/"
+      "Semizzy\\Addons\\MailerSmtp\\": "addons/mailer-smtp/src/",
+      "Semizzy\\Addons\\TravelTickets\\": "addons/travel-tickets/src/"
     }
   },
   "autoload-dev": {
