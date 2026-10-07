@@ -1,4 +1,3 @@
-import React from 'react';
 import { Head, router } from '@inertiajs/react';
 type Escrow={id:number;reference:string;title:string;amount_minor:string;currency:string;status:string;buyer?:{name:string};seller?:{name:string};dispute?:{reason:string;details?:string|null}|null;expires_at?:string|null};
 export default function Index({escrows}:{escrows:{data:Escrow[]}}){
