@@ -22,13 +22,14 @@ class CommunicationCenterController
   return response()->json($conversation->load(['user:id,name,phone','messages'=>fn($q)=>$q->with('attempts')->orderBy('id')]));
  }
 
- public function reply(Request $request,Conversation $conversation): JsonResponse
+ public function reply(Request $request,Conversation $conversation,\Addons\CommunicationWhatsapp\Services\CommunicationProviderGateway $gateway): JsonResponse
  {
   $data=$request->validate(['body'=>'required|string|max:10000','idempotency_key'=>'required|string|max:191']);
   $message=Message::firstOrCreate(
    ['channel'=>$conversation->channel,'idempotency_key'=>$data['idempotency_key']],
    ['conversation_id'=>$conversation->id,'user_id'=>$conversation->user_id,'channel'=>$conversation->channel,'direction'=>'outbound','recipient'=>$conversation->external_contact,'body'=>$data['body'],'status'=>'queued']
   );
-  return response()->json(['message'=>$message],202);
+  $attempt=$gateway->send($message);
+  return response()->json(['message'=>$message->fresh(),'attempt'=>$attempt],202);
  }
 }
