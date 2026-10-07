@@ -14,7 +14,7 @@ class GiftCardPurchaseService {
    if(strtoupper($currency)!=='NGN')throw new RuntimeException('Only NGN wallet settlement is currently supported.');
    $denomination=$product->denominationOptions()->where('enabled',true)->where('face_currency',$faceCurrency)->whereRaw('CAST(face_value AS DECIMAL(20,2)) = ?',[$value])->lockForUpdate()->first();
    if($product->denomination_type==='fixed' && !$denomination)throw new RuntimeException('Selected denomination is not available.');
-   if($product->denomination_type==='variable' && (($product->min_amount!==null&&bccomp($value,(string)$product->min_amount,2)<0)||($product->max_amount!==null&&bccomp($value,(string)$product->max_amount,2)>0)))throw new RuntimeException('Gift-card amount is outside the allowed range.');
+   if($product->denomination_type==='variable' && (($product->min_amount!==null&&$this->compareMoney($value,(string)$product->min_amount)<0)||($product->max_amount!==null&&$this->compareMoney($value,(string)$product->max_amount)>0)))throw new RuntimeException('Gift-card amount is outside the allowed range.');
    $total=$denomination?(string)$denomination->sale_price:(string)$product->sale_price; $total=$this->money($total);
    if($total==='0.00')throw new RuntimeException('Gift-card sale price is not configured.');
    $order=GiftCardOrder::create([
@@ -41,5 +41,6 @@ class GiftCardPurchaseService {
    return $order->fresh(['product','delivery']);
   });
  }
- private function money(string $v):string{if(!preg_match('/^\d+(?:\.\d{1,2})?$/',$v))throw new RuntimeException('Invalid monetary amount.');return number_format((float)$v,2,'.','');}
+ private function money(string $v):string{if(!preg_match('/^\d+(?:\.\d{1,2})?$/',$v))throw new RuntimeException('Invalid monetary amount.');[$w,$f]=array_pad(explode('.',$v,2),2,'');$f=str_pad($f,2,'0');return ltrim($w,'0').'.'.$f==='.'?'0.00':(ltrim($w,'0')?:'0').'.'.$f;}
+ private function compareMoney(string $a,string $b):int{$a=$this->money($a);$b=$this->money($b);[$aw,$af]=explode('.',$a);[$bw,$bf]=explode('.',$b);$aw=ltrim($aw,'0')?:'0';$bw=ltrim($bw,'0')?:'0';return strlen($aw)!==strlen($bw)?(strlen($aw)<=>strlen($bw)):strcmp($aw.$af,$bw.$bf);}
 }
