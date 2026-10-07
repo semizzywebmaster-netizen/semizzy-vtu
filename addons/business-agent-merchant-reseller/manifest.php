@@ -1,6 +1,6 @@
 <?php
 return [
- 'identifier'=>'business.agent-merchant-reseller','name'=>'Business, Agent, Merchant & Reseller','version'=>'1.0.0',
+ 'identifier'=>'business.agent-merchant-reseller','autoload_namespace'=>'Addons\\BusinessAgentMerchantReseller','commercial_adapters'=>['Addons\\BusinessAgentMerchantReseller\\Services\\BusinessCommercialAdapter'],'name'=>'Business, Agent, Merchant & Reseller','version'=>'1.0.0',
  'description'=>'Configurable business accounts, agents, merchants and resellers with tiered commercial controls, pricing profiles and transaction limits.',
  'core_compatibility'=>'>=2.0.0','dependencies'=>[],
  'permissions'=>['business.view','business.manage','business.approve','business.agents.manage','business.merchants.manage','business.resellers.manage','business.pricing.manage','business.limits.manage','business.audit'],
