@@ -14,36 +14,38 @@ class SystemSettingsService
     {
         if ($this->resolved !== null) return $this->resolved;
 
+        $registry = app(SettingsService::class);
+
         $settings = [
-            'platform_name' => (string) config('app.name', 'SEMIZZY ONE'),
-            'support_email' => '',
-            'support_notice' => '',
-            'kyc_bvn_lookup_charge_minor' => 0,
-            'kyc_nin_lookup_charge_minor' => 0,
+            'platform_name' => (string) $registry->get('platform.name', config('app.name', 'SEMIZZY ONE')),
+            'support_email' => (string) $registry->get('platform.support_email', ''),
+            'support_notice' => (string) $registry->get('platform.support_notice', ''),
+            'kyc_bvn_lookup_charge_minor' => (int) $registry->get('finance.kyc_bvn_lookup_charge_minor', 0),
+            'kyc_nin_lookup_charge_minor' => (int) $registry->get('finance.kyc_nin_lookup_charge_minor', 0),
             'kyc_bvn_lookup_charge' => '0.00',
             'kyc_nin_lookup_charge' => '0.00',
-            'default_timezone' => (string) config('app.default_timezone', config('app.timezone', 'UTC')),
-            'theme_key' => 'modern-corporate',
-            'theme_primary' => '#2563EB',
-            'skin_default' => 'light',
-            'theme_custom_light' => [],
-            'theme_custom_dark' => [],
-            'business' => ['phone'=>'','whatsapp'=>'','email'=>'','address'=>'','website'=>''],
-            'social' => ['facebook'=>'','instagram'=>'','x'=>'','youtube'=>'','tiktok'=>'','linkedin'=>''],
-            'assets' => ['logo'=>'','favicon'=>'','banner'=>'','hero'=>''],
-            'footer_menu' => [
+            'default_timezone' => (string) $registry->get('platform.timezone', config('app.default_timezone', config('app.timezone', 'UTC'))),
+            'theme_key' => (string) $registry->get('appearance.theme_key', 'modern-corporate'),
+            'theme_primary' => (string) $registry->get('appearance.theme_primary', '#2563EB'),
+            'skin_default' => (string) $registry->get('appearance.skin_default', 'light'),
+            'theme_custom_light' => (array) $registry->get('appearance.theme_custom_light', []),
+            'theme_custom_dark' => (array) $registry->get('appearance.theme_custom_dark', []),
+            'business' => (array) $registry->get('platform.business', ['phone'=>'','whatsapp'=>'','email'=>'','address'=>'','website'=>'']),
+            'social' => (array) $registry->get('platform.social', ['facebook'=>'','instagram'=>'','x'=>'','youtube'=>'','tiktok'=>'','linkedin'=>'']),
+            'assets' => (array) $registry->get('appearance.assets', ['logo'=>'','favicon'=>'','banner'=>'','hero'=>'']),
+            'footer_menu' => (array) $registry->get('appearance.footer_menu', [
                 ['key'=>'home','label'=>'Home','href'=>'/dashboard','icon'=>'⌂'],
                 ['key'=>'services','label'=>'Services','href'=>'/vtu','icon'=>'✦'],
                 ['key'=>'transactions','label'=>'Transactions','href'=>'/transactions','icon'=>'↔'],
                 ['key'=>'notifications','label'=>'Alerts','href'=>'/notifications','icon'=>'♧'],
                 ['key'=>'profile','label'=>'Profile','href'=>'/profile','icon'=>'◎'],
-            ],
-            'smtp' => [
+            ]),
+            'smtp' => (array) $registry->get('communication.smtp', [
                 'enabled'=>false,
                 'strategy'=>'failover',
                 'profiles'=>[],
                 'health'=>[],
-            ],
+            ]),
         ];
 
         try {
