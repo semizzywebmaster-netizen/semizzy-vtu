@@ -32,6 +32,6 @@ return [
  'web_route_files'=>['addons/insurance-protection/routes/web.php','addons/insurance-protection/routes/admin.php'],
  'api_route_files'=>['addons/insurance-protection/routes/api.php'],
  'provider_integrations'=>['Core ProviderManager','Core wallet/ledger','Core KYC','Core notifications','Core audit'],
- 'provider_capabilities'=>['insurance_catalog','insurance_quote','insurance_purchase','insurance_policy_status','insurance_renew','insurance_cancel','insurance_claim'],
+ 'provider_capabilities'=>['insurance_catalog','insurance_quote','insurance_purchase','insurance_policy_status','insurance_renew','insurance_cancel','insurance_claim','insurance_claim_status'],
  'events'=>['insurance.quote.created','insurance.policy.purchased','insurance.policy.issued','insurance.policy.renewed','insurance.claim.submitted','insurance.claim.updated','insurance.policy.cancelled'],
 ];
