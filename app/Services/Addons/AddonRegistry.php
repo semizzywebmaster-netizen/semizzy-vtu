@@ -53,11 +53,29 @@ class AddonRegistry
         foreach ($this->all() as $manifest) {
             $classes = $manifest['commercial_adapters'] ?? [];
             if (!is_array($classes)) continue;
-            foreach ($classes as $class) {
-                if (is_string($class) && class_exists($class)) $adapters[] = $class;
+
+            foreach ($classes as $key => $definition) {
+                if (is_string($definition)) {
+                    $adapters[] = [
+                        'class' => $definition,
+                        'priority' => 100,
+                        'service_keys' => [],
+                        'addon' => $manifest['identifier'],
+                    ];
+                    continue;
+                }
+
+                if (!is_array($definition) || empty($definition['class'])) continue;
+                $adapters[] = [
+                    'class' => (string) $definition['class'],
+                    'priority' => (int) ($definition['priority'] ?? 100),
+                    'service_keys' => is_array($definition['service_keys'] ?? null) ? $definition['service_keys'] : [],
+                    'addon' => $manifest['identifier'],
+                ];
             }
         }
-        return array_values(array_unique($adapters));
+
+        return array_values(array_filter($adapters, static fn (array $item): bool => class_exists($item['class'])));
     }
 
     public function find(string $identifier): ?array
