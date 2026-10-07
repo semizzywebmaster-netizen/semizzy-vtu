@@ -16,7 +16,7 @@ Route::middleware(['auth','verified','permission:communication.send'])->group(fu
  Route::post('/communication/whatsapp/send',[CommunicationMessageController::class,'sendWhatsApp'])->name('communication.whatsapp.send');
 });
 
-Route::middleware(['auth','verified','permission:communication.view'])->group(function () {\n Route::get('/communication',[\Addons\CommunicationWhatsapp\Http\Controllers\CommunicationCenterController::class,'page'])->name('communication.page');
+Route::middleware(['auth','verified','permission:communication.view'])->group(function () { Route::get('/communication',[\Addons\CommunicationWhatsapp\Http\Controllers\CommunicationCenterController::class,'page'])->name('communication.page');
  Route::get('/communication/conversations',[CommunicationCenterController::class,'conversations'])->name('communication.conversations');
  Route::get('/communication/conversations/{conversation}',[CommunicationCenterController::class,'show'])->name('communication.conversations.show');
 });
@@ -42,6 +42,8 @@ Route::middleware(['auth','verified','permission:communication.campaigns.manage'
  Route::post('/communication/campaigns',[CommunicationCampaignController::class,'store'])->name('communication.campaigns.store');
  Route::get('/communication/campaigns/{campaign}',[CommunicationCampaignController::class,'show'])->name('communication.campaigns.show');
  Route::post('/communication/campaigns/{campaign}/run',[CommunicationCampaignController::class,'run'])->name('communication.campaigns.run');
+ Route::post('/communication/campaigns/{campaign}/pause',[CommunicationCampaignController::class,'pause'])->name('communication.campaigns.pause');
+ Route::post('/communication/campaigns/{campaign}/cancel',[CommunicationCampaignController::class,'cancel'])->name('communication.campaigns.cancel');
 });
 
 Route::middleware(['auth','verified','permission:communication.providers.manage'])->group(function () {
