@@ -7,7 +7,7 @@ return [
     'compatibility' => '>=2.0.0',
     'dependencies' => [],
     'role_permissions' => [
-        'ADMIN' => ['payments.view', 'payments.manage', 'payments.providers.manage', 'payments.refunds.manage', 'payments.webhooks.manage', 'payments.settings.manage', 'payments.manual_deposits.manage', 'payments.manual_deposits.create', 'payments.manual_deposits.manage'],
+        'ADMIN' => ['payments.view', 'payments.manage', 'payments.providers.manage', 'payments.refunds.manage', 'payments.webhooks.manage', 'payments.settings.manage', 'payments.manual_deposits.manage'],
         'STAFF' => ['payments.view', 'payments.refunds.manage'],
         'SUPPORT' => ['payments.view'],
         'USER' => ['payments.view', 'payments.create', 'payments.manual_deposits.create'],
@@ -20,6 +20,8 @@ return [
         'payments.refunds.manage',
         'payments.webhooks.manage',
         'payments.settings.manage',
+        'payments.manual_deposits.manage',
+        'payments.manual_deposits.create',
     ],
     'navigation' => [
         [
