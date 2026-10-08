@@ -3,7 +3,7 @@ import {router} from '@inertiajs/react';
 
 type Page={id:number,title:string,slug:string,is_home:boolean,status:string,sort_order:number,content?:{sections?:Section[]}};
 type Section={id:string,type:string,data:Record<string,any>};
-type Site={id:number,name:string,slug:string,status:string,template_key:string,settings?:Record<string,any>,pages?:Page[],domains?:Array<{id:number,domain:string,status:string}>};
+type Site={id:number,name:string,slug:string,status:string,template_key:string,subdomain?:string|null,settings?:Record<string,any>,pages?:Page[],domains?:Array<{id:number,domain:string,status:string}>};
 
 const templates=['modern-corporate','clean-saas','opay-inspired','palmpay-inspired','luxury-executive','sky-enterprise','forest-growth','crimson-modern','sunset-commerce','slate-professional'];
 
@@ -16,6 +16,7 @@ export default function WebsiteBuilder({sites=[]}:{sites:Site[]}) {
  const [form,setForm]=useState<any>({});
  const openSettings=(site:Site)=>{const s=site.settings||{};setEditing(site.id);setForm({name:site.name,template_key:site.template_key,branding:{...(s.branding||{})},theme:{...(s.theme||{})},seo:{...(s.seo||{})}})};
  const saveSettings=(site:Site)=>{router.patch('/website-builder/sites/'+site.id,{name:form.name,template_key:form.template_key,settings:{branding:form.branding,theme:form.theme,seo:form.seo}},{onSuccess:()=>setEditing(null)});};
+ const saveSubdomain=(site:Site)=>{const value=window.prompt('Published subdomain hostname (for example shop.example.com)',site.subdomain||'');if(value?.trim())router.post('/website-builder/sites/'+site.id+'/subdomain',{subdomain:value.trim()});};
  return <div className="p-6 space-y-6">
   <div><h1 className="text-2xl font-bold">Website Builder</h1><p className="text-sm opacity-70">Build professional multi-page websites with structured sections.</p></div>
   <div className="rounded-xl border p-4 space-y-3">
@@ -28,8 +29,8 @@ export default function WebsiteBuilder({sites=[]}:{sites:Site[]}) {
   </div>
   <div className="grid gap-4">
    {sites.map(site=>{const pages=[...(site.pages??[])].sort((a,b)=>a.sort_order-b.sort_order);return <div key={site.id} className="rounded-xl border p-4 space-y-4">
-    <div className="flex flex-wrap justify-between gap-3"><div><h3 className="font-semibold">{site.name}</h3><p className="text-xs opacity-60">/{site.slug} · {site.template_key}</p></div><span className="text-xs uppercase">{site.status}</span></div>
-    <div className="flex flex-wrap gap-2"><button className="border rounded-lg px-3 py-2 text-sm" onClick={()=>addPage(site)}>+ Add page</button><button className="border rounded-lg px-3 py-2 text-sm" onClick={()=>openSettings(site)}>Branding / Theme / SEO</button><button className="border rounded-lg px-3 py-2 text-sm" onClick={()=>router.get('/website-builder/sites/'+site.id+'/preview')}>Preview</button><button className="border rounded-lg px-3 py-2 text-sm" onClick={()=>router.post('/website-builder/sites/'+site.id+'/publish')}>Publish</button><button className="border rounded-lg px-3 py-2 text-sm" onClick={()=>{const d=window.prompt('Custom domain');if(d)router.post('/website-builder/sites/'+site.id+'/domains',{domain:d});}}>Add domain</button></div>
+    <div className="flex flex-wrap justify-between gap-3"><div><h3 className="font-semibold">{site.name}</h3><p className="text-xs opacity-60">/{site.slug} · {site.template_key}{site.subdomain?' · '+site.subdomain:''}</p></div><span className="text-xs uppercase">{site.status}</span></div>
+    <div className="flex flex-wrap gap-2"><button className="border rounded-lg px-3 py-2 text-sm" onClick={()=>addPage(site)}>+ Add page</button><button className="border rounded-lg px-3 py-2 text-sm" onClick={()=>openSettings(site)}>Branding / Theme / SEO</button><button className="border rounded-lg px-3 py-2 text-sm" onClick={()=>router.get('/website-builder/sites/'+site.id+'/preview')}>Preview</button><button className="border rounded-lg px-3 py-2 text-sm" onClick={()=>saveSubdomain(site)}>{site.subdomain?'Edit subdomain':'Set subdomain'}</button><button className="border rounded-lg px-3 py-2 text-sm" onClick={()=>router.post('/website-builder/sites/'+site.id+'/publish')}>Publish</button><button className="border rounded-lg px-3 py-2 text-sm" onClick={()=>{const d=window.prompt('Custom domain');if(d)router.post('/website-builder/sites/'+site.id+'/domains',{domain:d});}}>Add domain</button></div>
     {editing===site.id&&<div className="rounded-xl border p-4 space-y-4">
       <div className="flex justify-between"><h4 className="font-semibold">Website settings</h4><button onClick={()=>setEditing(null)}>×</button></div>
       <div className="grid md:grid-cols-2 gap-3">
