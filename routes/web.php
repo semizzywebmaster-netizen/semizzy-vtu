@@ -19,6 +19,7 @@ use App\Http\Controllers\Auth\PasswordRecoveryController;
 use App\Http\Controllers\Auth\UpdatePasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\RegistrationVerificationController;
+use App\Http\Controllers\Auth\PinRecoveryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\Admin\KycController as AdminKycController;
@@ -90,6 +91,9 @@ Route::middleware('guest')->group(function (): void {
     Route::get('/forgot-password', [PasswordRecoveryController::class, 'create'])->name('password.request');
     Route::post('/forgot-password/otp', [PasswordRecoveryController::class, 'requestOtp'])->middleware('throttle:3,10')->name('password.recovery.otp');
     Route::post('/forgot-password/reset', [PasswordRecoveryController::class, 'reset'])->middleware('throttle:5,10')->name('password.recovery.reset');
+    Route::get('/forgot-pin', [PinRecoveryController::class, 'create'])->name('pin.request');
+    Route::post('/forgot-pin/otp', [PinRecoveryController::class, 'requestOtp'])->middleware('throttle:3,10')->name('pin.recovery.otp');
+    Route::post('/forgot-pin/reset', [PinRecoveryController::class, 'reset'])->middleware('throttle:5,10')->name('pin.recovery.reset');
 });
 
 app(\App\Services\Addons\AddonRouteRegistrar::class)->registerWebRoutes();
