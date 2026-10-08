@@ -10,6 +10,33 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ResolvePublishedWebsiteHost
 {
+    private const RESERVED_PREFIXES = [
+        'admin',
+        'api',
+        'login',
+        'register',
+        'logout',
+        'dashboard',
+        'profile',
+        'kyc',
+        'transactions',
+        'wallet',
+        'send-money',
+        'withdraw',
+        'analytics',
+        'notifications',
+        'realtime',
+        'help',
+        'support',
+        'setup',
+        'email',
+        'security',
+        'manifest.webmanifest',
+        'up',
+        'website-builder',
+        'sites',
+    ];
+
     public function __construct(private WebsiteBuilderService $service)
     {
     }
@@ -21,6 +48,12 @@ class ResolvePublishedWebsiteHost
         }
 
         $path = trim($request->path(), '/');
+        $firstSegment = strtolower((string) strtok($path, '/'));
+
+        if ($firstSegment !== '' && in_array($firstSegment, self::RESERVED_PREFIXES, true)) {
+            return $next($request);
+        }
+
         if ($path !== '' && str_contains($path, '.')) {
             return $next($request);
         }
