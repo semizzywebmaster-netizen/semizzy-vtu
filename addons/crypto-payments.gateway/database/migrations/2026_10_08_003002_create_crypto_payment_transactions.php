@@ -10,6 +10,8 @@ return new class extends Migration {
         Schema::create('crypto_payment_transactions', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('idempotency_key')->nullable()->unique();
             $table->foreignId('crypto_payment_provider_id')->nullable()->constrained('crypto_payment_providers')->nullOnDelete();
             $table->string('provider_payment_id')->nullable()->index();
             $table->string('reference')->unique();
