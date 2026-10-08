@@ -4,8 +4,8 @@
 
 ## Current project
 - Repository: `semizzywebmaster-netizen/semizzy-vtu`
-- Current work branch: `feat/education-addon`
-- **Current active addon: #1 Education**
+- Current work branch: `feat/events-addon`
+- **Current active addon: #2 Events & Entertainment**
 - Do not rebuild, rename, or treat existing addons as missing.
 
 ## Remaining addon sequence
@@ -65,7 +65,14 @@ The repository already contains the following addon directories and they must no
 
 The list above reflects the repository state checked while establishing this roadmap. Verify the actual branch/tree before making claims about implementation status.
 
-## Education — current focus
+## Events & Entertainment — current focus
+
+Events & Entertainment is now the active addon. The initial architecture is based on researched ticketing/event-platform patterns: physical, virtual and recurring events; event categories; organiser verification; ticket types; order/ticket lifecycle; QR-based check-in; and event discovery. Do not copy any third-party platform implementation; use these capabilities only as product research.
+
+Research references used for the initial model included Tix Africa's live/virtual/recurring event model, ticket types and QR tickets, and Eventbrite's category/format discovery filters. citeturn0search0turn0search3turn0search8turn0search12
+
+## Education — previous addon
+
 
 Education is being developed as four strictly separated categories:
 
@@ -86,5 +93,5 @@ Separation rules:
 
 ## Continuation rule
 
-When the user says **“Next bulk action”** or **“Continue with #1”**, first inspect the current `feat/education-addon` branch and continue Education from the actual repository state. Fix pending errors before moving to the next implementation action. Do not restart completed work or jump to another addon.
+When the user says **“Next bulk action”**, first inspect the current active addon branch and continue from the actual repository state. Fix pending errors before moving to the next implementation action. Do not restart completed work or jump ahead of the active addon.
 
