@@ -650,15 +650,19 @@ class VtuBulkService
         return DB::transaction(function () use ($bulk): VtuBulkOperation {
             $locked = VtuBulkOperation::query()->lockForUpdate()->findOrFail($bulk->id);
             $successful = $locked->items()->where('status', 'successful')->count();
-            $failed = $locked->items()->whereIn('status', ['failed', 'reversed', 'cancelled'])->count();
-            $pending = max(0, $locked->total_items - $successful - $failed);
+            $failed = $locked->items()->whereIn('status', ['failed', 'reversed'])->count();
+            $cancelled = $locked->items()->where('status', 'cancelled')->count();
+            $pending = max(0, $locked->total_items - $successful - $failed - $cancelled);
 
             $locked->successful_items = $successful;
             $locked->failed_items = $failed;
-            $locked->processed_items = $successful + $failed;
+            $locked->processed_items = $successful + $failed + $cancelled;
             $locked->status = match (true) {
                 $pending > 0 => 'pending',
+                $cancelled === $locked->total_items => 'cancelled',
                 $failed > 0 && $successful > 0 => 'partial',
+                $failed > 0 && $cancelled > 0 => 'partial',
+                $cancelled > 0 && $successful > 0 => 'partial',
                 $failed > 0 => 'failed',
                 default => 'successful',
             };
