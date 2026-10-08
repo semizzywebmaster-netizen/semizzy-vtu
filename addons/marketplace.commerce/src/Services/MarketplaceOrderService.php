@@ -101,7 +101,7 @@ final class MarketplaceOrderService
             }
 
             $amount = (string) $order->total_minor;
-            $fee = self::calculateFee($amount);
+            $fee = self::calculateCategoryFee($product, $amount);
             $sellerNet = self::subtract($amount, $fee);
             if (self::compare($buyerWallet->available_minor, $amount) < 0) {
                 throw new RuntimeException('Insufficient wallet balance.');
