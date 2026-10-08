@@ -74,6 +74,15 @@ export default function BulkOperations({
     });
   };
 
+  const unarchiveSelected = () => {
+    if (!selectedIds.length) return;
+    if (!window.confirm('Restore the selected archived bulk operations to active history?')) return;
+    router.post('/admin/vtu/bulk/unarchive-selected', { bulk_ids: selectedIds }, {
+      preserveScroll: true,
+      onSuccess: () => setSelectedIds([]),
+    });
+  };
+
   const exportSelected = () => {
     if (!selectedIds.length) return;
     const params = selectedIds.map((id) => `bulk_ids[]=${encodeURIComponent(String(id))}`).join('&');
@@ -238,6 +247,7 @@ export default function BulkOperations({
               </a>
 
             <button type="button" onClick={exportSelected} disabled={!selectedIds.length} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">Export selected ({selectedIds.length})</button>
+            <button type="button" onClick={unarchiveSelected} disabled={!selectedIds.length} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">Unarchive selected ({selectedIds.length})</button>
             <button type="button" onClick={archiveSelected} disabled={!selectedIds.length} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">Archive selected ({selectedIds.length})</button>
             <button type="button" onClick={toggleAll} disabled={!selectableIds.length} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{allSelected ? 'Clear selection' : 'Select pending'}</button>
             <button type="button" onClick={auditSelected} disabled={!selectedIds.length || bulkAuditing} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{bulkAuditing ? 'Auditing selected…' : `Audit selected (${selectedIds.length})`}</button>
