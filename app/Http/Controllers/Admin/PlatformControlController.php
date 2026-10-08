@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\SystemSetting;
 use App\Services\Audit\AuditLogger;
 use App\Services\Platform\TierLimitService;
+use App\Models\Service;
+use App\Models\Addon;
+use App\Services\Addons\AddonLifecycleService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -21,7 +24,28 @@ class PlatformControlController extends Controller
         $stored=SystemSetting::query()->whereIn('key',$keys)->pluck('value','key');
         $features=[];
         foreach(self::FEATURES as $key) $features[$key]=filter_var($stored->get($key, $key==='maintenance_mode'?'0':'1'),FILTER_VALIDATE_BOOL);
-        return Inertia::render('Admin/PlatformControls',['tiers'=>$tiers->all(),'features'=>$features]);
+        return Inertia::render('Admin/PlatformControls',['tiers'=>$tiers->all(),'features'=>$features,'services'=>Service::query()->with('category')->orderBy('name')->get(['id','category_id','key','name','description','enabled','metadata'])->map(fn(Service $s)=>['id'=>$s->id,'key'=>$s->key,'name'=>$s->name,'description'=>$s->description,'enabled'=>(bool)$s->enabled,'category'=>$s->category?->name])->values(),'addons'=>Addon::query()->orderBy('name')->get(['id','identifier','name','version','status'])->map(fn(Addon $a)=>['id'=>$a->id,'identifier'=>$a->identifier,'name'=>$a->name,'version'=>$a->version,'status'=>$a->status,'enabled'=>$a->status==='active'])->values()]);
+    }
+
+    public function toggleService(Request $request, Service $service, AuditLogger $audit): RedirectResponse
+    {
+        $data=$request->validate(['enabled'=>'required|boolean']);
+        $before=(bool)$service->enabled; $after=(bool)$data['enabled'];
+        $service->updateOrFail(['enabled'=>$after]);
+        $audit->record('admin.platform.service_toggled',$service,['service_id'=>$service->id,'key'=>$service->key,'from'=>$before,'to'=>$after],$request);
+        return back()->with('success',($after?'Enabled ':'Disabled ').$service->name.'.');
+    }
+
+    public function toggleAddon(Request $request, Addon $addon, AddonLifecycleService $lifecycle, AuditLogger $audit): RedirectResponse
+    {
+        $data=$request->validate(['enabled'=>'required|boolean']);
+        $want=(bool)$data['enabled'];
+        try {
+            if($want && $addon->status!=='active') $lifecycle->activate($addon,auth()->id());
+            if(!$want && $addon->status==='active') $lifecycle->disable($addon,auth()->id());
+            $audit->record('admin.platform.addon_toggled',$addon,['addon_id'=>$addon->id,'identifier'=>$addon->identifier,'enabled'=>$want],$request);
+            return back()->with('success',($want?'Enabled ':'Disabled ').$addon->name.'.');
+        } catch (\Throwable $e) { report($e); return back()->with('error','Addon state could not be changed safely.'); }
     }
 
     public function update(Request $request, TierLimitService $tiers, AuditLogger $audit): RedirectResponse
