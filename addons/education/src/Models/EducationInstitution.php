@@ -7,4 +7,7 @@ final class EducationInstitution extends Model {
  protected $table='education_institutions'; protected $guarded=[];
  protected $casts=['active'=>'boolean','metadata'=>'array','classification'=>'array','accrediting_bodies'=>'array'];
  public function products(){return $this->hasMany(EducationProduct::class,'institution_id');}
+ public function academicUnits(){return $this->hasMany(EducationAcademicUnit::class,'institution_id');}
+ public function departments(){return $this->hasMany(EducationDepartment::class,'institution_id');}
+ public function programmes(){return $this->hasMany(EducationProgramme::class,'institution_id');}
 }
