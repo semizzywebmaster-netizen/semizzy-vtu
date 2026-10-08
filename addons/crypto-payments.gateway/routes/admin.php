@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Semizzy\Addons\CryptoPayments\Http\Controllers\CryptoPaymentProviderAdminController;
+use Semizzy\Addons\CryptoPayments\Http\Controllers\CryptoFundingSettingsAdminController;
 
 Route::middleware(['auth', 'verified', 'permission:crypto.providers.manage'])
     ->prefix('admin/crypto-payments/providers')
@@ -14,7 +15,6 @@ Route::middleware(['auth', 'verified', 'permission:crypto.providers.manage'])
         Route::post('/{provider}/test', [CryptoPaymentProviderAdminController::class, 'test'])->name('test');
     });
 
-use Semizzy\Addons\CryptoPayments\Http\Controllers\CryptoFundingSettingsAdminController;
 
 Route::middleware(['auth', 'verified', 'permission:crypto.settings.manage'])
     ->prefix('admin/crypto-payments/settings')
