@@ -124,11 +124,33 @@ class VtuAdminController extends Controller
   return Inertia::render('Admin/VTU/BulkOperations',['operations'=>$q->paginate(50)->withQueryString()]);
  }
  public function reconcileBulk(VtuBulkOperation $bulk,VtuTransactionService $service,VtuBulkService $bulkService){
+
   $items=$bulk->items()->with('transaction')->whereIn('status',['pending','processing'])->whereNotNull('vtu_transaction_id')->limit(50)->get();$attempted=0;$reconciled=0;
   foreach($items as $item){if(!$item->transaction||!$item->transaction->provider_reference)continue;$attempted++;try{$tx=$service->requery($item->transaction);if($tx->status!==$item->status)$reconciled++;}catch(\Throwable $e){}}
   $bulkService->recalculate($bulk);
   return back()->with('success',"Bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
  }
+ public function auditBulk(VtuBulkOperation $bulk, VtuBulkReconciliationService $reconciliation): JsonResponse{
+  $result=$reconciliation->audit($bulk);
+  return response()->json($result, $result['healthy'] ? 200 : 409);
+ }
+
+ public function recoverStaleBulk(Request $r, VtuBulkService $bulkService): JsonResponse|\\Illuminate\\Http\\RedirectResponse{
+  $data=$r->validate([
+   'limit'=>['nullable','integer','min:1','max:100'],
+   'stale_minutes'=>['nullable','integer','min:5','max:1440'],
+  ]);
+  try{
+   $count=$bulkService->recoverStaleOperations((int)($data['limit']??50),(int)($data['stale_minutes']??10));
+   $message="Bulk recovery checked and reconciled {$count} item(s).";
+   return $r->expectsJson()?response()->json(['status'=>'completed','recovered'=>$count,'message'=>$message]):back()->with('success',$message);
+  }catch(\\Throwable $e){
+   report($e);
+   $message='Bulk recovery failed safely. No destructive recovery was applied.';
+   return $r->expectsJson()?response()->json(['message'=>$message],500):back()->with('error',$message);
+  }
+ }
+
  public function reconcileSelectedBulk(Request $r,VtuTransactionService $service,VtuBulkService $bulkService): JsonResponse|\Illuminate\Http\RedirectResponse{
   $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id']]);
   $attempted=0;$reconciled=0;
