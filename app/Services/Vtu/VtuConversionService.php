@@ -6,6 +6,7 @@ use App\Models\FinancialOperation;
 use App\Models\VtuConversionRequest;
 use App\Models\WalletAccount;
 use App\Models\WalletMovement;
+use App\Models\Service;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -35,13 +36,11 @@ class VtuConversionService
             throw new RuntimeException('Source amount must be greater than zero.');
         }
 
-        $rate = (float) ($data['rate'] ?? 0);
-        if ($rate <= 0) {
-            throw new RuntimeException('A valid conversion rate is required.');
-        }
-
-        $feeMinor = $this->minor((string) ($data['fee'] ?? '0'));
-        $targetMinor = max(0, (int) round($sourceMinor * $rate / 10000) - $feeMinor);
+        $settings = $this->settingsFor($type);
+        $rate = (float) ($settings['rate_percent'] ?? 0);
+        if ($rate <= 0) throw new RuntimeException('This conversion service is not currently configured.');
+        $feeMinor = (int) ($settings['fee_minor'] ?? 0);
+        $targetMinor = max(0, (int) round($sourceMinor * $rate / 100) - $feeMinor);
 
         $proofPath = $proof?->store('vtu-conversions', 'public');
 
@@ -73,6 +72,7 @@ class VtuConversionService
                 'proof_path'=>$proofPath,
                 'metadata'=>[
                     'manual_workflow'=>true,
+                    'rate_source'=>'admin_configuration',
                     'submitted_at'=>now()->toIso8601String(),
                 ],
             ]);
@@ -87,6 +87,15 @@ class VtuConversionService
         });
     }
 
+    public function settingsFor(string $type): array
+    {
+        $serviceId=Service::query()->where('key',$type)->value('id');
+        if(!$serviceId)return ['rate_percent'=>0.0,'fee_minor'=>0];
+        $rows=DB::table('vtu_service_configurations')->where('service_id',$serviceId)->whereIn('key',['conversion_rate_percent','conversion_fee_minor'])->get();
+        $rateRow=$rows->firstWhere('key','conversion_rate_percent');$feeRow=$rows->firstWhere('key','conversion_fee_minor');
+        return ['rate_percent'=>$rateRow?(float)data_get(json_decode($rateRow->value,true),'value',0):0.0,'fee_minor'=>$feeRow?(int)data_get(json_decode($feeRow->value,true),'value',0):0];
+    }
+
     public function verify(VtuConversionRequest $request, int $operatorId, string $receivingAccount, ?string $note = null): VtuConversionRequest
     {
         return DB::transaction(function () use ($request, $operatorId, $receivingAccount, $note): VtuConversionRequest {
@@ -97,8 +106,7 @@ class VtuConversionService
 
             $locked->status='verified';
             $locked->operator_id=$operatorId;
-            $locked->receiving_account=trim($receivingAccount);
-            $locked->operator_note=$note;
+            $locked->receiving_account=trim($receivingAccount);            $locked->operator_note=$note;
             $locked->verified_at=now();
             $locked->metadata=array_merge((array)$locked->metadata, ['verified_by'=>$operatorId]);
             $locked->save();
@@ -197,8 +205,7 @@ class VtuConversionService
 
     public function reject(VtuConversionRequest $request, int $operatorId, string $reason): VtuConversionRequest
     {
-        return DB::transaction(function () use ($request, $operatorId, $reason): VtuConversionRequest {
-            $locked=VtuConversionRequest::query()->lockForUpdate()->findOrFail($request->id);
+        return DB::transaction(function () use ($request, $operatorId, $reason): VtuConversionRequest {            $locked=VtuConversionRequest::query()->lockForUpdate()->findOrFail($request->id);
             if (!in_array($locked->status,['pending','under_review','verified'],true)) {
                 throw new RuntimeException('This conversion request cannot be rejected.');
             }
