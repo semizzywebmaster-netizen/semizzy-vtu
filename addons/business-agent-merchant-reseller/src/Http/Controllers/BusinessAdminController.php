@@ -40,7 +40,7 @@ class BusinessAdminController
      if($to==='active'&&$partner->business)$partner->business->update(['status'=>'approved']);
     });
     $changed++;
-   }catch(\\Throwable $e){report($e);$skipped++;}
+   }catch(\Throwable $e){report($e);$skipped++;}
   }
   $message="Bulk partner {$d['status']} completed: {$changed} changed, {$skipped} skipped.";
   return response()->json(['status'=>'completed','changed'=>$changed,'skipped'=>$skipped,'message'=>$message]);
@@ -148,7 +148,7 @@ class BusinessAdminController
      $partner->events()->create(['actor_user_id'=>$actor->id,'action'=>'pricing_rules_bulk_deleted','status'=>$partner->status,'metadata'=>['rule_ids'=>$rows,'service_key'=>$d['service_key'],'product_key'=>$product,'bulk'=>true]]);
      $deleted+=count($rows);
     });
-   }catch(\\Throwable $e){report($e);$skipped++;}
+   }catch(\Throwable $e){report($e);$skipped++;}
   }
   return response()->json(['status'=>'completed','deleted'=>$deleted,'skipped'=>$skipped,'message'=>"Bulk pricing removal completed: {$deleted} rule(s) removed, {$skipped} partner(s) skipped."]);
  }
@@ -241,7 +241,7 @@ class BusinessAdminController
     $partner=BusinessPartner::find($paid->beneficiary_partner_id);
     $partner?->events()->create(['actor_user_id'=>$actor->id,'action'=>'commission_bulk_settled','status'=>'settled','metadata'=>['settlement_id'=>$paid->id,'reference'=>$paid->settlement_reference,'amount_minor'=>$paid->amount_minor,'bulk'=>true]]);
     $settled++;
-   }catch(\\Throwable $e){report($e);$skipped++;$errors[]=['id'=>$row->id,'message'=>$e->getMessage()];}
+   }catch(\Throwable $e){report($e);$skipped++;$errors[]=['id'=>$row->id,'message'=>$e->getMessage()];}
   }
   return response()->json(['status'=>'completed','settled'=>$settled,'skipped'=>$skipped,'errors'=>$errors,'message'=>"Bulk commission settlement completed: {$settled} settled, {$skipped} skipped."]);
  }
