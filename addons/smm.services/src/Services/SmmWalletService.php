@@ -46,7 +46,9 @@ final class SmmWalletService
 
     private function wallet(SmmOrder $order): WalletAccount
     {
-        $wallet=WalletAccount::where('user_id',$order->user_id)->where('currency',$order->currency)->lockForUpdate()->first();
+        $wallet=$order->wallet_account_id
+            ? WalletAccount::whereKey($order->wallet_account_id)->where('user_id',$order->user_id)->where('currency',$order->currency)->lockForUpdate()->first()
+            : WalletAccount::where('user_id',$order->user_id)->where('currency',$order->currency)->lockForUpdate()->first();
         if(!$wallet || $wallet->status!=='active') throw new RuntimeException('User wallet is not available.');
         return $wallet;
     }
