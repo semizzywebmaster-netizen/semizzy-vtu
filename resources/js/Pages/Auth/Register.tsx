@@ -1,8 +1,9 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 
-export default function Register({ referral = '', platform }: { referral?: string; platform?: { platform_name?: string } }) {
-  const form = useForm({ name: '', username: '', email: '', phone: '', referral_code: referral, password: '', password_confirmation: '', terms: false });
+export default function Register({ referral = '', platform, registrationVerification }: { referral?: string; platform?: { platform_name?: string }; registrationVerification?: { enabled?: boolean; channels?: string[] } }) {
+  const channels = registrationVerification?.channels || ['email'];
+  const form = useForm({ name: '', username: '', email: '', phone: '', referral_code: referral, password: '', password_confirmation: '', terms: false, verification_channel: channels[0] || 'email' });
   const submit = (e: FormEvent) => { e.preventDefault(); form.post('/register'); };
 
   return <main className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
@@ -19,6 +20,7 @@ export default function Register({ referral = '', platform }: { referral?: strin
         <label><span className="text-sm font-semibold">Password</span><input required autoComplete="new-password" className="mt-1 w-full rounded-xl border p-3" type="password" value={form.data.password} onChange={e => form.setData('password', e.target.value)} />{form.errors.password && <p className="mt-1 text-sm text-red-600">{form.errors.password}</p>}</label>
         <label><span className="text-sm font-semibold">Confirm password</span><input required autoComplete="new-password" className="mt-1 w-full rounded-xl border p-3" type="password" value={form.data.password_confirmation} onChange={e => form.setData('password_confirmation', e.target.value)} />{form.errors.password_confirmation && <p className="mt-1 text-sm text-red-600">{form.errors.password_confirmation}</p>}</label>
       </div>
+      {registrationVerification?.enabled && <div className="mt-5 rounded-2xl border bg-slate-50 p-4"><p className="text-sm font-black">Registration verification</p><p className="mt-1 text-xs text-slate-600">Choose where your 6-digit verification code should be sent.</p><div className="mt-3 grid gap-2 sm:grid-cols-3">{channels.map(channel => <label key={channel} className="flex cursor-pointer items-center gap-2 rounded-xl border bg-white p-3 text-sm font-semibold"><input type="radio" name="verification_channel" checked={form.data.verification_channel===channel} onChange={()=>form.setData('verification_channel',channel)} />{channel==='email'?'Email OTP':channel==='sms'?'SMS OTP':'WhatsApp OTP'}</label>)}</div>{form.errors.verification_channel && <p className="mt-1 text-sm text-red-600">{form.errors.verification_channel}</p>}</div>}
       <label className="mt-5 flex items-start gap-3 text-sm text-slate-600"><input required type="checkbox" checked={form.data.terms} onChange={e => form.setData('terms', e.target.checked)} className="mt-1" /><span>I agree to the platform terms and confirm the information I provide is accurate.</span></label>
       {form.errors.terms && <p className="mt-1 text-sm text-red-600">{form.errors.terms}</p>}
       <button type="submit" disabled={form.processing} className="mt-6 w-full rounded-xl bg-slate-900 p-3 font-semibold text-white disabled:opacity-50">{form.processing ? 'Creating account…' : 'Create account'}</button>
