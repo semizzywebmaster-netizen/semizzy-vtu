@@ -27,7 +27,6 @@ Route::middleware(['auth', 'role:ADMIN,STAFF,SUPPORT', 'verified', 'ensure.addon
         Route::get('/bulk/export-selected', [VtuAdminController::class, 'exportSelectedBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.export-selected');
         Route::post('/bulk/audit-selected', [VtuAdminController::class, 'auditSelectedBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.audit-selected');
         Route::post('/bulk/archive-selected', [VtuAdminController::class, 'archiveSelectedBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.archive-selected');
-        Route::post('/bulk/audit-selected', [VtuAdminController::class, 'auditSelectedBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.audit-selected');
         Route::post('/bulk/reconcile-selected', [VtuAdminController::class, 'reconcileSelectedBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.reconcile-selected');
         Route::post('/bulk/{bulk}/reconcile', [VtuAdminController::class, 'reconcileBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.reconcile');
         Route::get('/bulk/{bulk}/statement', [VtuAdminController::class, 'bulkStatement'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.statement');
@@ -42,6 +41,7 @@ Route::middleware(['auth', 'role:ADMIN,STAFF,SUPPORT', 'verified', 'ensure.addon
         Route::post('/transactions/{transaction}/refund', [VtuAdminController::class, 'refund'])->whereNumber('transaction')->middleware(['permission:vtu.refunds.manage','throttle:10,1'])->name('admin.vtu.transactions.refund');
 
         Route::get('/conversions', [VtuConversionAdminController::class, 'index'])->middleware('permission:vtu.conversions.view')->name('admin.vtu.conversions');
+        Route::post('/conversions/settings', [VtuConversionAdminController::class, 'saveSettings'])->middleware('permission:vtu.conversions.manage')->name('admin.vtu.conversions.settings');
         Route::post('/conversions/{conversion}/verify', [VtuConversionAdminController::class, 'verify'])->middleware('permission:vtu.conversions.manage')->name('admin.vtu.conversions.verify');
         Route::post('/conversions/{conversion}/approve', [VtuConversionAdminController::class, 'approve'])->middleware('permission:vtu.conversions.manage')->name('admin.vtu.conversions.approve');
         Route::post('/conversions/{conversion}/reject', [VtuConversionAdminController::class, 'reject'])->middleware('permission:vtu.conversions.manage')->name('admin.vtu.conversions.reject');
