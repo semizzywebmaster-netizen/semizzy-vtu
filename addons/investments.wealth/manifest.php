@@ -26,6 +26,7 @@ return [
   '2026_10_06_000604_add_investment_creation_idempotency.php',
   '2026_10_08_004000_create_stock_marketplace_schema.php',
   '2026_10_08_004001_add_provider_provenance_to_market_data.php',
+  '2026_10_08_004002_add_security_provenance.php',
  ],
  'web_route_files'=>['addons/investments.wealth/routes/web.php','addons/investments.wealth/routes/admin.php'],
  'api_route_files'=>['addons/investments.wealth/routes/api.php'],
