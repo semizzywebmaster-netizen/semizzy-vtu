@@ -44,7 +44,8 @@
       "Semizzy\\Addons\\Rewards\\": "addons/rewards-referrals-promotions/src/",
       "Semizzy\\Addons\\SpinToWin\\": "addons/spin-to-win/src/",
       "Semizzy\\Addons\\MailerSmtp\\": "addons/mailer-smtp/src/",
-      "Semizzy\\Addons\\TravelTickets\\": "addons/travel-tickets/src/"
+      "Semizzy\\Addons\\TravelTickets\\": "addons/travel-tickets/src/",
+      "Semizzy\\Addons\\CryptoPayments\\": "addons/crypto-payments.gateway/src/"
     }
   },
   "autoload-dev": {
