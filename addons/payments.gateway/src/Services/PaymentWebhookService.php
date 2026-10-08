@@ -23,7 +23,9 @@ final class PaymentWebhookService
             throw new RuntimeException('Webhook signature is required but not configured or supplied.');
         }
 
-        if ($secret !== '' && $signature !== '') {
+        if ($provider->driver === 'opay') {
+            $this->validateOpayCallback($payload, $secret);
+        } elseif ($secret !== '' && $signature !== '') {
             $candidate = hash_hmac('sha512', $raw, $secret);
             if (!hash_equals(strtolower(trim($candidate)), strtolower(trim($signature)))) {
                 throw new RuntimeException('Invalid payment gateway webhook signature.');
@@ -116,6 +118,7 @@ final class PaymentWebhookService
         return strtolower((string) match ($provider->driver) {
             'paystack' => data_get($data, 'status', ''),
             'monnify' => data_get($data, 'paymentStatus', ''),
+            'opay' => data_get($data, 'payload.status', data_get($data, 'status', '')),
             default => data_get($data, 'status', ''),
         });
     }
@@ -125,6 +128,7 @@ final class PaymentWebhookService
         $amount = match ($provider->driver) {
             'paystack' => data_get($data, 'amount'),
             'monnify' => data_get($data, 'amountPaid', data_get($data, 'totalPayable')),
+            'opay' => data_get($data, 'payload.amount'),
             default => data_get($data, 'amount'),
         };
         if ($amount === null || $amount === '') return null;
@@ -135,6 +139,7 @@ final class PaymentWebhookService
     {
         return strtoupper((string) match ($provider->driver) {
             'monnify' => data_get($data, 'currencyCode', ''),
+            'opay' => data_get($data, 'payload.currency', ''),
             default => data_get($data, 'currency', ''),
         });
     }
@@ -155,6 +160,32 @@ final class PaymentWebhookService
         return '';
     }
 
+    private function validateOpayCallback(array $payload, string $secret): void
+    {
+        if ($secret === '') throw new RuntimeException('OPay webhook secret/private key is not configured.');
+
+        $callback = is_array($payload['payload'] ?? null) ? $payload['payload'] : [];
+        $provided = (string) ($payload['sha512'] ?? '');
+        if ($provided === '' || !$callback) throw new RuntimeException('Invalid OPay callback signature payload.');
+
+        $content = sprintf(
+            '{Amount:"%s",Currency:"%s",Reference:"%s",Refunded:%s,Status:"%s",Timestamp:"%s",Token:"%s",TransactionID:"%s"}',
+            (string) ($callback['amount'] ?? ''),
+            (string) ($callback['currency'] ?? ''),
+            (string) ($callback['reference'] ?? ''),
+            !empty($callback['refunded']) ? 't' : 'f',
+            (string) ($callback['status'] ?? ''),
+            (string) ($callback['timestamp'] ?? ''),
+            (string) ($callback['token'] ?? ''),
+            (string) ($callback['transactionId'] ?? '')
+        );
+
+        $candidate = hash_hmac('sha3-512', $content, $secret);
+        if (!hash_equals(strtolower($candidate), strtolower($provided))) {
+            throw new RuntimeException('Invalid OPay webhook callback signature.');
+        }
+    }
+
     private function config(PaymentGatewayProvider $provider): array
     {
         return is_array($provider->settings) ? $provider->settings : [];
@@ -165,6 +196,7 @@ final class PaymentWebhookService
         return match ($provider->driver) {
             'paystack' => (string) data_get($payload, 'data.reference', data_get($payload, 'reference', '')),
             'monnify' => (string) data_get($payload, 'eventData.paymentReference', ''),
+            'opay' => (string) data_get($payload, 'payload.reference', data_get($payload, 'data.reference', '')),
             default => (string) data_get($payload, 'data.reference', data_get($payload, 'reference', '')),
         };
     }
@@ -174,6 +206,7 @@ final class PaymentWebhookService
         return match ($provider->driver) {
             'paystack' => (string) data_get($payload, 'data.id', hash('sha256', $raw)),
             'monnify' => (string) data_get($payload, 'eventData.transactionReference', hash('sha256', $raw)),
+            'opay' => (string) data_get($payload, 'payload.transactionId', data_get($payload, 'payload.reference', hash('sha256', $raw))),
             default => hash('sha256', $provider->code.'|'.$reference.'|'.$raw),
         };
     }
@@ -188,6 +221,7 @@ final class PaymentWebhookService
         return match ($provider->driver) {
             'paystack' => strtolower((string) data_get($payload, 'data.status', data_get($payload, 'status', ''))),
             'monnify' => strtolower((string) data_get($payload, 'eventData.paymentStatus', data_get($payload, 'eventData.paymentStatus', ''))),
+            'opay' => strtolower((string) data_get($payload, 'payload.status', data_get($payload, 'status', ''))),
             default => strtolower((string) data_get($payload, 'data.status', data_get($payload, 'status', ''))),
         };
     }
@@ -197,6 +231,7 @@ final class PaymentWebhookService
         $amount = match ($provider->driver) {
             'paystack' => data_get($payload, 'data.amount'),
             'monnify' => data_get($payload, 'eventData.amountPaid'),
+            'opay' => data_get($payload, 'payload.amount'),
             default => data_get($payload, 'data.amount', data_get($payload, 'amount')),
         };
         if ($amount === null || $amount === '') return null;
@@ -210,6 +245,7 @@ final class PaymentWebhookService
     {
         return strtoupper((string) match ($provider->driver) {
             'monnify' => data_get($payload, 'eventData.currency', ''),
+            'opay' => data_get($payload, 'payload.currency', ''),
             default => data_get($payload, 'data.currency', data_get($payload, 'currency', '')),
         });
     }
@@ -219,6 +255,7 @@ final class PaymentWebhookService
         return (string) match ($provider->driver) {
             'paystack' => data_get($payload, 'data.id', ''),
             'monnify' => data_get($payload, 'eventData.transactionReference', ''),
+            'opay' => data_get($payload, 'payload.transactionId', ''),
             default => data_get($payload, 'data.id', ''),
         };
     }
