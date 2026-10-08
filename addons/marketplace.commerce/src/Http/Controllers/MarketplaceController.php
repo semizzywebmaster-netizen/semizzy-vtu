@@ -90,10 +90,29 @@ final class MarketplaceController
             'name' => ['required','string','max:180'],
             'description' => ['nullable','string','max:10000'],
             'category' => ['required','string','max:100'],
+            'product_type' => ['required', Rule::in(['physical','digital','service'])],
+            'condition' => ['nullable', Rule::in(['new','used','refurbished','open_box','like_new','pre_owned','for_parts'])],
+            'delivery_type' => ['nullable', Rule::in(['seller_fulfilled','download','license_key','service_delivery'])],
+            'requires_shipping' => ['nullable','boolean'],
+            'download_limit' => ['nullable','integer','min:1','max:1000000'],
+            'service_delivery_days' => ['nullable','integer','min:1','max:3650'],
+            'service_model' => ['nullable', Rule::in(['fixed','hourly','custom','milestone'])],
             'price_minor' => ['required','regex:/^[1-9]\d*$/','max:30'],
             'stock_quantity' => ['required','regex:/^\d+$/','max:30'],
             'currency' => ['required','string','size:3'],
         ]);
+        if ($data['product_type'] === 'physical' && empty($data['condition'])) {
+            $data['condition'] = 'new';
+        }
+        if ($data['product_type'] !== 'physical') {
+            $data['condition'] = null;
+        }
+        $data['delivery_type'] = $data['delivery_type'] ?? match ($data['product_type']) {
+            'digital' => 'download',
+            'service' => 'service_delivery',
+            default => 'seller_fulfilled',
+        };
+        $data['requires_shipping'] = $data['product_type'] === 'physical' && ($data['requires_shipping'] ?? true);
         $data['currency'] = strtoupper($data['currency']);
         $data['slug'] = Str::slug($data['name']).'-'.strtolower(Str::random(8));
         $data['seller_id'] = (int) $request->user()->id;
@@ -108,12 +127,23 @@ final class MarketplaceController
             'name'=>['required','string','max:180'],
             'description'=>['nullable','string','max:10000'],
             'category'=>['required','string','max:100'],
+            'product_type'=>['required',Rule::in(['physical','digital','service'])],
+            'condition'=>['nullable',Rule::in(['new','used','refurbished','open_box','like_new','pre_owned','for_parts'])],
+            'delivery_type'=>['nullable',Rule::in(['seller_fulfilled','download','license_key','service_delivery'])],
+            'requires_shipping'=>['nullable','boolean'],
+            'download_limit'=>['nullable','integer','min:1','max:1000000'],
+            'service_delivery_days'=>['nullable','integer','min:1','max:3650'],
+            'service_model'=>['nullable',Rule::in(['fixed','hourly','custom','milestone'])],
             'price_minor'=>['required','regex:/^[1-9]\d*$/','max:30'],
             'stock_quantity'=>['required','regex:/^\d+$/','max:30'],
             'currency'=>['required','string','size:3'],
             'status'=>['required',Rule::in(['draft','active','paused','archived'])],
         ]);
         $data['currency']=strtoupper($data['currency']);
+        if ($data['product_type'] === 'physical' && empty($data['condition'])) { $data['condition'] = 'new'; }
+        if ($data['product_type'] !== 'physical') { $data['condition'] = null; }
+        $data['delivery_type'] = $data['delivery_type'] ?? match ($data['product_type']) { 'digital' => 'download', 'service' => 'service_delivery', default => 'seller_fulfilled' };
+        $data['requires_shipping'] = $data['product_type'] === 'physical' && ($data['requires_shipping'] ?? true);
         $product->forceFill($data)->save();
         return response()->json(['success'=>true,'product'=>$product->fresh()]);
     }
