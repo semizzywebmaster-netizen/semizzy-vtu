@@ -37,6 +37,7 @@ export default function BulkOperations({
   const [auditResult, setAuditResult] = useState<any>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [requeryingId, setRequeryingId] = useState<number | null>(null);
+  const [bulkCancelling, setBulkCancelling] = useState(false);
 
   const submitFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -109,6 +110,18 @@ export default function BulkOperations({
       window.alert(\`Integrity audit: \${payload.healthy ?? 0} healthy, \${payload.with_issues ?? 0} requiring attention.\`);
     } catch (error) { window.alert(error instanceof Error ? error.message : 'Bulk integrity audit failed.'); }
     finally { setBulkAuditing(false); }
+  };
+
+  const cancelSelected = () => {
+    if (!selectedIds.length) return;
+    const reason = window.prompt('Cancellation reason for selected bulk operations');
+    if (!reason?.trim()) return;
+    setBulkCancelling(true);
+    router.post('/admin/vtu/bulk/cancel-selected', { bulk_ids: selectedIds, reason: reason.trim() }, {
+      preserveScroll: true,
+      onSuccess: () => setSelectedIds([]),
+      onFinish: () => setBulkCancelling(false),
+    });
   };
 
   const recoverStale = () => {
@@ -229,6 +242,7 @@ export default function BulkOperations({
             <button type="button" onClick={toggleAll} disabled={!selectableIds.length} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{allSelected ? 'Clear selection' : 'Select pending'}</button>
             <button type="button" onClick={auditSelected} disabled={!selectedIds.length || bulkAuditing} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{bulkAuditing ? 'Auditing selected…' : `Audit selected (${selectedIds.length})`}</button>
             <button type="button" onClick={reconcileSelected} disabled={!selectedIds.length || bulkReconciling} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">{bulkReconciling ? 'Reconciling selected…' : `Reconcile selected (${selectedIds.length})`}</button>
+            <button type="button" onClick={cancelSelected} disabled={!selectedIds.length || bulkCancelling} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-40">{bulkCancelling ? 'Cancelling selected…' : `Cancel selected (${selectedIds.length})`}</button>
             <button type="button" onClick={recoverStale} disabled={recovering} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{recovering ? 'Recovering stale…' : 'Recover stale operations'}</button>
             {selectedIds.length > 0 && <span className="text-xs text-slate-500">{selectedIds.length} bulk operation(s) selected</span>}
           </div>
