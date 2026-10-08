@@ -7,10 +7,10 @@ return [
     'compatibility' => '>=2.0.0',
     'dependencies' => [],
     'role_permissions' => [
-        'ADMIN' => ['payments.view', 'payments.manage', 'payments.providers.manage', 'payments.refunds.manage', 'payments.webhooks.manage', 'payments.settings.manage'],
+        'ADMIN' => ['payments.view', 'payments.manage', 'payments.providers.manage', 'payments.refunds.manage', 'payments.webhooks.manage', 'payments.settings.manage', 'payments.manual_deposits.manage', 'payments.manual_deposits.create', 'payments.manual_deposits.manage'],
         'STAFF' => ['payments.view', 'payments.refunds.manage'],
         'SUPPORT' => ['payments.view'],
-        'USER' => ['payments.view', 'payments.create'],
+        'USER' => ['payments.view', 'payments.create', 'payments.manual_deposits.create'],
     ],
     'permissions' => [
         'payments.view',
@@ -52,6 +52,8 @@ return [
         '2026_10_08_002007_configure_squad_adapter.php',
         '2026_10_08_002008_harden_ngn_gateway_capabilities.php',
         '2026_10_08_002009_correct_opay_refund_capability.php',
+        '2026_10_08_002010_add_reconciliation_metadata_to_payment_intents.php',
+        '2026_10_08_002011_create_manual_deposit_tables.php',
     ],
     'web_route_files' => [
         'addons/payments.gateway/routes/web.php',
