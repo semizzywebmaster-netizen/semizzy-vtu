@@ -27,7 +27,7 @@ class CryptoPaymentController
             'asset' => ['required', 'string', 'max:32'],
             'network' => ['nullable', 'string', 'max:64'],
             'fiat_amount' => ['required', 'numeric', 'gt:0'],
-            'fiat_currency' => ['nullable', 'string', 'max:16'],
+            'fiat_currency' => ['nullable', 'string', 'max:16', 'in:NGN'],
             'crypto_amount' => ['nullable', 'numeric', 'gt:0'],
             'idempotency_key' => ['required', 'string', 'max:191'],
             'metadata' => ['nullable', 'array'],
@@ -38,6 +38,9 @@ class CryptoPaymentController
         if ($existing) return response()->json(['data' => $existing], 200);
 
         $fiatCurrency = strtoupper($data['fiat_currency'] ?? 'NGN');
+        if ($fiatCurrency !== 'NGN') {
+            throw new RuntimeException('Crypto wallet funding must be requested in NGN.');
+        }
         $asset = strtoupper($data['asset']);
         $network = $data['network'] ? strtoupper($data['network']) : null;
 
