@@ -118,6 +118,24 @@ class VtuAdminController extends Controller
  }
  public function enableProduct(ServiceProduct $product){if(!$product->service || !$product->service->category || $product->service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU products can be managed here.');if(!$product->service->enabled)return back()->with('error','Enable the VTU service before enabling its product.');try{$product->updateOrFail(['enabled'=>true]);return back()->with('success','Product enabled.');}catch(\Throwable $e){report($e);return back()->with('error','Product could not be enabled safely.');}}
  public function disableProduct(ServiceProduct $product){if(!$product->service || !$product->service->category || $product->service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU products can be managed here.');try{$product->updateOrFail(['enabled'=>false]);return back()->with('success','Product disabled.');}catch(\Throwable $e){report($e);return back()->with('error','Product could not be disabled safely.');}}
+ public function exportBulk(Request $r): \Symfony\\Component\\HttpFoundation\\StreamedResponse{
+  $q=VtuBulkOperation::query()->with(['user','items.transaction','items.product'])->latest('id');
+  if($r->filled('status')){$status=(string)$r->input('status');if(in_array($status,['processing','pending','partial','successful','failed','cancelled'],true))$q->where('status',$status);}
+  if($r->filled('reference'))$q->where('reference','like','%'.addcslashes((string)$r->input('reference'),'\\%_').'%');
+  $filename='vtu-bulk-reconciliation-'.now()->format('Ymd-His').'.csv';
+  return response()->streamDownload(function()use($q){
+   $out=fopen('php://output','w');
+   fputcsv($out,['Bulk Reference','Bulk Status','User','Item ID','Sequence','Item Status','Recipient','Product','Amount Minor','Provider Reference','Transaction Reference','Failure Reason','Created At','Updated At']);
+   $q->chunkById(100,function($bulks)use($out){
+    foreach($bulks as $bulk)foreach($bulk->items as $item){
+     $tx=$item->transaction;
+     fputcsv($out,[$bulk->reference,$bulk->status,$bulk->user?->email??$bulk->user?->name??'', $item->id,$item->sequence,$item->status,$item->recipient??'', $item->product?->name??'', $item->amount_minor??'', $tx?->provider_reference??'', $tx?->reference??'', $item->error_message??$tx?->failure_message??'', $item->created_at?->toIso8601String()??'', $item->updated_at?->toIso8601String()??'']);
+    }
+   });
+   fclose($out);
+  },$filename,['Content-Type'=>'text/csv; charset=UTF-8','Cache-Control'=>'no-store']);
+ }
+
  public function bulkOperations(Request $r){
   $q=VtuBulkOperation::with(['user','service'])->latest();
   if($r->filled('status')){$allowed=['processing','pending','partial','successful','failed'];$status=(string)$r->input('status');if(in_array($status,$allowed,true))$q->where('status',$status);else$q->whereRaw('1=0');}
