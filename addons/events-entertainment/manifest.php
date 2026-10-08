@@ -75,7 +75,7 @@ return [
         ['key'=>'allow_virtual_events','type'=>'boolean','default'=>true],
     ],
     'migrations' => [
-        '2026_10_08_003000_create_events_core_schema.php',
+        '2026_10_08_003000_create_events_core_schema.php','2026_10_08_004000_add_api_and_manual_payment_tracking.php',
     ],
     'web_route_files' => ['addons/events-entertainment/routes/web.php','addons/events-entertainment/routes/admin.php','addons/events-entertainment/routes/checkout.php'],
     'api_route_files' => ['addons/events-entertainment/routes/api.php'],
