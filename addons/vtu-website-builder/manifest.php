@@ -20,7 +20,7 @@ return [
   ['key'=>'custom_domains_enabled','type'=>'boolean','default'=>true],
   ['key'=>'subdomains_enabled','type'=>'boolean','default'=>true],
  ],
- 'migrations'=>['2026_10_07_080000_create_website_builder_tables.php','2026_10_07_081000_harden_website_builder_controls.php'],
+ 'migrations'=>['2026_10_07_080000_create_website_builder_tables.php','2026_10_07_081000_harden_website_builder_controls.php','2026_10_08_083000_fix_website_published_at_type.php'],
  'web_route_files'=>['addons/vtu-website-builder/routes/web.php','addons/vtu-website-builder/routes/admin.php'],
  'api_route_files'=>['addons/vtu-website-builder/routes/api.php'],
  'provider_integrations'=>['Core users','Core authentication','Core media/storage','Core notifications','Core audit'],
