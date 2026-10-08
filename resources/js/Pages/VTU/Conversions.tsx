@@ -8,7 +8,7 @@ const TYPES: Record<string,string> = {
   data_to_airtime:'Data → Airtime',
 };
 
-export default function Conversions({ conversionTypes=TYPES, requests }: { conversionTypes?: Record<string,string>; requests?: any }) {
+export default function Conversions({ conversionTypes=TYPES, requests, conversionSettings={} }: { conversionTypes?: Record<string,string>; requests?: any; conversionSettings?: Record<string,{rate_percent?:number|null;fee_minor?:string;configured?:boolean}> }) {
   const [type,setType]=useState('airtime_to_cash');
   const [network,setNetwork]=useState('');
   const [amount,setAmount]=useState('');
@@ -16,6 +16,7 @@ export default function Conversions({ conversionTypes=TYPES, requests }: { conve
   const [proof,setProof]=useState<File|null>(null);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const currentSettings=conversionSettings[type]||{}; const rate=Number(currentSettings.rate_percent||0); const feeMinor=Number(currentSettings.fee_minor||0); const sourceNaira=Number(amount||0); const targetNaira=rate>0?Math.max(0,(sourceNaira*rate/100)-(feeMinor/100)):0;
   const submit=async()=>{
     setBusy(true); setMessage('');
     try {
@@ -23,7 +24,6 @@ export default function Conversions({ conversionTypes=TYPES, requests }: { conve
       const body=new FormData();
       body.append('conversion_type',type); body.append('network',network); body.append('source_amount',amount);
       if(phone) body.append('source_phone',phone); if(proof) body.append('proof',proof);
-      body.append('rate','100'); body.append('fee','0');
       const res=await fetch('/vtu/conversions',{method:'POST',headers:{Accept:'application/json','X-CSRF-TOKEN':token},body});
       const json=await res.json(); if(!res.ok) throw new Error(json.message||'Conversion request failed.');
       setMessage('Request submitted: '+json.data.reference); setAmount(''); setPhone(''); setProof(null);
@@ -38,9 +38,10 @@ export default function Conversions({ conversionTypes=TYPES, requests }: { conve
       <label className="text-sm font-semibold">Conversion type<select value={type} onChange={e=>setType(e.target.value)} className="mt-2 w-full rounded-xl border p-3">{Object.entries(conversionTypes).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
       <label className="text-sm font-semibold">Network<input value={network} onChange={e=>setNetwork(e.target.value)} className="mt-2 w-full rounded-xl border p-3" placeholder="MTN, Airtel, Glo, 9mobile" /></label>
       <label className="text-sm font-semibold">Source amount<input value={amount} onChange={e=>setAmount(e.target.value)} className="mt-2 w-full rounded-xl border p-3" inputMode="decimal" /></label>
+      <div className="sm:col-span-2 rounded-2xl bg-indigo-50 p-4 ring-1 ring-indigo-100"><p className="text-xs font-black uppercase tracking-wider text-indigo-700">Conversion rate</p><p className="mt-1 text-2xl font-black">{rate>0?rate.toFixed(2)+'%':'Not configured'}</p>{rate>0&&sourceNaira>0&&<div className="mt-3 rounded-xl bg-white p-3"><div className="flex justify-between text-sm"><span>Source value</span><strong>₦{sourceNaira.toLocaleString(undefined,{minimumFractionDigits:2})}</strong></div><div className="mt-1 flex justify-between text-sm"><span>Fee</span><strong>₦{(feeMinor/100).toLocaleString(undefined,{minimumFractionDigits:2})}</strong></div><div className="mt-2 flex justify-between border-t pt-2"><span className="font-bold">Estimated amount</span><strong className="text-lg">₦{targetNaira.toLocaleString(undefined,{minimumFractionDigits:2})}</strong></div></div>}<p className="mt-2 text-xs text-slate-600">{rate>0?'Calculation uses the current Admin-configured rate.':'This conversion is unavailable until Admin configures a rate.'}</p></div>
       <label className="text-sm font-semibold">Source phone<input value={phone} onChange={e=>setPhone(e.target.value)} className="mt-2 w-full rounded-xl border p-3" /></label>
       <label className="text-sm font-semibold sm:col-span-2">Proof / transfer evidence<input type="file" onChange={e=>setProof(e.target.files?.[0]??null)} className="mt-2 block w-full" accept=".jpg,.jpeg,.png,.pdf" /></label>
-      <button disabled={busy} onClick={submit} className="rounded-xl bg-slate-950 px-4 py-3 font-bold text-white disabled:opacity-50 sm:col-span-2">{busy?'Submitting…':'Submit conversion request'}</button>
+      <button disabled={busy||rate<=0||sourceNaira<=0} onClick={submit} className="rounded-xl bg-slate-950 px-4 py-3 font-bold text-white disabled:opacity-50 sm:col-span-2">{busy?'Submitting…':'Submit conversion request'}</button>
       {message&&<p className="text-sm font-semibold sm:col-span-2">{message}</p>}
     </div>
   </div></main>;
