@@ -181,15 +181,14 @@ class WebsiteBuilderService
     {
         $subdomain = strtolower(trim($subdomain));
         $subdomain = preg_replace('/^https?:\\/\\//', '', $subdomain);
-        $subdomain = rtrim($subdomain, '/');
+        $subdomain = rtrim((string) $subdomain, '/');
         if (!filter_var($subdomain, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
             throw ValidationException::withMessages(['subdomain' => 'Enter a valid hostname, for example shop.example.com.']);
         }
-        $existing = WebsiteSite::where('subdomain', $subdomain)
-            ->where('id', '!=', $site->id)
-            ->exists();
-        if ($existing) {
-            throw ValidationException::withMessages(['subdomain' => 'This subdomain is already assigned to another website.']);
+        if (WebsiteSite::where('subdomain', $subdomain)->whereKeyNot($site->id)->exists()
+            || WebsiteSite::where('active_domain', $subdomain)->whereKeyNot($site->id)->exists()
+            || WebsiteDomain::where('domain', $subdomain)->whereKeyNot($site->domains()->pluck('id')->all())->exists()) {
+            throw ValidationException::withMessages(['subdomain' => 'This hostname is already assigned to another website or domain.']);
         }
         $site->update(['subdomain' => $subdomain]);
         return $site->fresh(['pages', 'domains']);
