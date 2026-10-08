@@ -4,11 +4,38 @@ namespace Semizzy\Addons\ForexDigitalAssets\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Crypt;
 
 class ForexDigitalAssetProvider extends Model
 {
     protected $table = 'forex_digital_asset_providers';
     protected $guarded = [];
+
+    public function setCredentialsAttribute($value): void
+    {
+        if ($value === null || $value === '') {
+            $this->attributes['credentials'] = null;
+            return;
+        }
+
+        $payload = is_string($value) ? $value : json_encode($value, JSON_THROW_ON_ERROR);
+        $this->attributes['credentials'] = Crypt::encryptString($payload);
+    }
+
+    public function getCredentialsAttribute($value): array
+    {
+        if (! $value) {
+            return [];
+        }
+
+        try {
+            $payload = Crypt::decryptString($value);
+            $decoded = json_decode($payload, true);
+            return is_array($decoded) ? $decoded : [];
+        } catch (\\Throwable) {
+            return [];
+        }
+    }
 
     protected $casts = [
         'capabilities' => 'array',
