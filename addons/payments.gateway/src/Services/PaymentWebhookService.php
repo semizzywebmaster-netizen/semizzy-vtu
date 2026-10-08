@@ -23,7 +23,9 @@ final class PaymentWebhookService
             throw new RuntimeException('Webhook signature is required but not configured or supplied.');
         }
 
-        if ($provider->driver === 'opay') {
+        if ($provider->driver === 'flutterwave') {
+            $this->validateFlutterwaveCallback($signature, $secret);
+        } elseif ($provider->driver === 'opay') {
             $this->validateOpayCallback($payload, $secret);
         } elseif ($provider->driver === 'monnify') {
             $this->validateMonnifyCallback($raw, $signature, $secret);
@@ -127,6 +129,7 @@ final class PaymentWebhookService
             'opay' => data_get($data, 'status', ''),
             'kora' => data_get($data, 'status', ''),
             'squad' => data_get($data, 'transaction_status', data_get($data, 'status', '')),
+            'flutterwave' => data_get($data, 'status', ''),
             default => data_get($data, 'status', ''),
         });
     }
@@ -139,10 +142,11 @@ final class PaymentWebhookService
             'opay' => data_get($data, 'amount.total'),
             'kora' => data_get($data, 'amount'),
             'squad' => data_get($data, 'transaction_amount', data_get($data, 'amount', data_get($data, 'merchant_amount'))),
+            'flutterwave' => data_get($data, 'charged_amount', data_get($data, 'amount')),
             default => data_get($data, 'amount'),
         };
         if ($amount === null || $amount === '') return null;
-        return in_array($provider->driver, ['monnify', 'kora'], true) ? number_format((float) $amount * 100, 0, '.', '') : (string) $amount;
+        return in_array($provider->driver, ['monnify', 'kora', 'flutterwave'], true) ? number_format((float) $amount * 100, 0, '.', '') : (string) $amount;
     }
 
     private function verifiedCurrency(PaymentGatewayProvider $provider, array $data): string
@@ -152,6 +156,7 @@ final class PaymentWebhookService
             'opay' => data_get($data, 'amount.currency', ''),
             'kora' => data_get($data, 'currency', ''),
             'squad' => data_get($data, 'transaction_currency_id', data_get($data, 'currency', '')),
+            'flutterwave' => data_get($data, 'currency', ''),
             default => data_get($data, 'currency', ''),
         });
     }
@@ -170,6 +175,14 @@ final class PaymentWebhookService
             if (strtolower((string) $key) === strtolower($name)) return is_array($value) ? (string) ($value[0] ?? '') : (string) $value;
         }
         return '';
+    }
+
+    private function validateFlutterwaveCallback(string $signature, string $secret): void
+    {
+        if ($secret === '') throw new RuntimeException('Flutterwave webhook secret hash is not configured.');
+        if ($signature === '' || !hash_equals($secret, $signature)) {
+            throw new RuntimeException('Invalid Flutterwave webhook signature.');
+        }
     }
 
     private function validateOpayCallback(array $payload, string $secret): void
@@ -211,6 +224,7 @@ final class PaymentWebhookService
             'opay' => (string) data_get($payload, 'payload.reference', data_get($payload, 'data.reference', '')),
             'kora' => (string) data_get($payload, 'data.reference', ''),
             'squad' => (string) data_get($payload, 'transaction_reference', data_get($payload, 'data.transaction_ref', data_get($payload, 'data.transaction_reference', ''))),
+            'flutterwave' => (string) data_get($payload, 'data.tx_ref', data_get($payload, 'tx_ref', '')),
             default => (string) data_get($payload, 'data.reference', data_get($payload, 'reference', '')),
         };
     }
@@ -223,6 +237,7 @@ final class PaymentWebhookService
             'opay' => (string) data_get($payload, 'payload.transactionId', data_get($payload, 'payload.reference', hash('sha256', $raw))),
             'kora' => (string) data_get($payload, 'data.reference', hash('sha256', $raw)),
             'squad' => (string) data_get($payload, 'transaction_reference', data_get($payload, 'data.transaction_ref', hash('sha256', $raw))),
+            'flutterwave' => (string) data_get($payload, 'data.id', hash('sha256', $raw)),
             default => hash('sha256', $provider->code.'|'.$reference.'|'.$raw),
         };
     }
@@ -238,6 +253,9 @@ final class PaymentWebhookService
             'paystack' => strtolower((string) data_get($payload, 'data.status', data_get($payload, 'status', ''))),
             'monnify' => strtolower((string) data_get($payload, 'eventData.paymentStatus', data_get($payload, 'eventData.paymentStatus', ''))),
             'opay' => strtolower((string) data_get($payload, 'payload.status', data_get($payload, 'status', ''))),
+            'flutterwave' => strtolower((string) data_get($payload, 'data.status', data_get($payload, 'status', ''))),
+            'kora' => strtolower((string) data_get($payload, 'data.status', data_get($payload, 'status', ''))),
+            'squad' => strtolower((string) data_get($payload, 'transaction_status', data_get($payload, 'data.status', data_get($payload, 'status', '')))),
             default => strtolower((string) data_get($payload, 'data.status', data_get($payload, 'status', ''))),
         };
     }
@@ -247,11 +265,14 @@ final class PaymentWebhookService
         $amount = match ($provider->driver) {
             'paystack' => data_get($payload, 'data.amount'),
             'monnify' => data_get($payload, 'eventData.amountPaid'),
-            'opay' => data_get($payload, 'payload.amount'),
+            'opay' => data_get($payload, 'payload.amount.total', data_get($payload, 'payload.amount')),
+            'flutterwave' => data_get($payload, 'data.charged_amount', data_get($payload, 'data.amount')),
+            'kora' => data_get($payload, 'data.amount'),
+            'squad' => data_get($payload, 'transaction_amount', data_get($payload, 'data.amount')),
             default => data_get($payload, 'data.amount', data_get($payload, 'amount')),
         };
         if ($amount === null || $amount === '') return null;
-        if ($provider->driver === 'monnify') {
+        if (in_array($provider->driver, ['monnify', 'kora', 'flutterwave'], true)) {
             return number_format((float) $amount * 100, 0, '.', '');
         }
         return (string) $amount;
@@ -261,7 +282,10 @@ final class PaymentWebhookService
     {
         return strtoupper((string) match ($provider->driver) {
             'monnify' => data_get($payload, 'eventData.currency', ''),
-            'opay' => data_get($payload, 'payload.currency', ''),
+            'opay' => data_get($payload, 'payload.currency', data_get($payload, 'payload.amount.currency', '')),
+            'flutterwave' => data_get($payload, 'data.currency', ''),
+            'kora' => data_get($payload, 'data.currency', ''),
+            'squad' => data_get($payload, 'transaction_currency_id', data_get($payload, 'data.currency', '')),
             default => data_get($payload, 'data.currency', data_get($payload, 'currency', '')),
         });
     }
@@ -272,6 +296,7 @@ final class PaymentWebhookService
             'paystack' => data_get($payload, 'data.id', ''),
             'monnify' => data_get($payload, 'eventData.transactionReference', ''),
             'opay' => data_get($payload, 'payload.transactionId', ''),
+            'flutterwave' => data_get($payload, 'data.id', ''),
             default => data_get($payload, 'data.id', ''),
         };
     }
