@@ -8,6 +8,10 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use RuntimeException;
 use Semizzy\Addons\Marketplace\Models\MarketplaceCategory;
+use Semizzy\Addons\Marketplace\Models\MarketplaceDigitalAsset;
+use Semizzy\Addons\Marketplace\Models\MarketplaceDigitalDelivery;
+use Semizzy\Addons\Marketplace\Models\MarketplaceServiceMilestone;
+use Illuminate\Support\Facades\Storage;
 use Semizzy\Addons\Marketplace\Models\MarketplaceOrder;
 use Semizzy\Addons\Marketplace\Models\MarketplaceProduct;
 use Semizzy\Addons\Marketplace\Services\MarketplaceOrderService;
@@ -143,6 +147,76 @@ final class MarketplaceController
         }
         $product->delete();
         return response()->json(['success'=>true]);
+    }
+
+    public function addDigitalAsset(Request $request, MarketplaceProduct $product)
+    {
+        if ((int)$product->seller_id !== (int)$request->user()->id && !$request->user()->hasPermission('marketplace.manage')) abort(403);
+        if (!$product->isDigital()) abort(422, 'Only digital products can have digital assets.');
+        $data = $request->validate([
+            'asset_type'=>['required',Rule::in(['download','license_key','course','media'])],
+            'disk'=>['nullable','string','max:100'],'path'=>['nullable','string','max:2048'],
+            'external_url'=>['nullable','url','max:2048'],'version'=>['nullable','string','max:80'],
+            'checksum'=>['nullable','string','max:255'],'sort_order'=>['nullable','integer','min:0'],
+        ]);
+        if (empty($data['path']) && empty($data['external_url'])) return response()->json(['success'=>false,'message'=>'A storage path or external URL is required.'],422);
+        if (!empty($data['path']) && empty($data['disk'])) return response()->json(['success'=>false,'message'=>'A storage disk is required for stored assets.'],422);
+        $asset = MarketplaceDigitalAsset::create(array_merge($data, ['product_id'=>$product->id,'active'=>true]));
+        return response()->json(['success'=>true,'asset'=>$asset],201);
+    }
+
+    public function downloadDigitalAsset(Request $request, string $token)
+    {
+        $delivery = MarketplaceDigitalDelivery::query()->with(['order.product','asset'])->where('delivery_token',$token)->firstOrFail();
+        if ((int)$delivery->order->buyer_id !== (int)$request->user()->id) abort(403);
+        if ($delivery->revoked_at || ($delivery->expires_at && $delivery->expires_at->isPast())) abort(410, 'This digital delivery has expired or been revoked.');
+        if ($delivery->download_limit !== null && $delivery->download_count >= $delivery->download_limit) abort(429, 'Download limit reached.');
+        $asset = $delivery->asset;
+        if (!$asset || !$asset->active) abort(404);
+        if ($asset->external_url) { $delivery->increment('download_count'); $delivery->forceFill(['last_downloaded_at'=>now()])->save(); return redirect()->away($asset->external_url); }
+        if (!$asset->disk || !$asset->path || !Storage::disk($asset->disk)->exists($asset->path)) abort(404);
+        $delivery->increment('download_count'); $delivery->forceFill(['last_downloaded_at'=>now()])->save();
+        return Storage::disk($asset->disk)->download($asset->path);
+    }
+
+    public function serviceSubmit(Request $request, MarketplaceOrder $order)
+    {
+        if ((int)$order->seller_id !== (int)$request->user()->id) abort(403);
+        $order->load('product');
+        if ($order->product?->product_type !== 'service' || $order->status !== 'paid') abort(422, 'This order is not an active service order.');
+        $data=$request->validate(['submission'=>['required','string','max:20000']]);
+        $order->forceFill(['seller_submission'=>$data['submission'],'fulfillment_status'=>'submitted','service_status'=>'submitted','fulfilled_at'=>now()])->save();
+        return response()->json(['success'=>true,'order'=>$order->fresh(['product','buyer','seller'])]);
+    }
+
+    public function serviceRevision(Request $request, MarketplaceOrder $order)
+    {
+        if ((int)$order->buyer_id !== (int)$request->user()->id) abort(403);
+        $order->load('product');
+        if ($order->product?->product_type !== 'service' || !in_array($order->service_status,['submitted','in_review'],true)) abort(422, 'This service is not awaiting review.');
+        $data=$request->validate(['requirements'=>['required','string','max:10000']]);
+        $order->forceFill(['buyer_requirements'=>$data['requirements'],'revision_count'=>((int)$order->revision_count)+1,'fulfillment_status'=>'in_progress','service_status'=>'revision_requested'])->save();
+        return response()->json(['success'=>true,'order'=>$order->fresh(['product','buyer','seller'])]);
+    }
+
+    public function serviceAccept(Request $request, MarketplaceOrder $order)
+    {
+        if ((int)$order->buyer_id !== (int)$request->user()->id) abort(403);
+        $order->load('product');
+        if ($order->product?->product_type !== 'service' || $order->status !== 'paid' || !in_array($order->service_status,['submitted','in_review'],true)) abort(422, 'This service is not awaiting acceptance.');
+        $order->forceFill(['fulfillment_status'=>'completed','service_status'=>'completed','accepted_at'=>now(),'completed_at'=>now()])->save();
+        return response()->json(['success'=>true,'order'=>$order->fresh(['product','buyer','seller'])]);
+    }
+
+    public function serviceMilestones(Request $request, MarketplaceOrder $order)
+    {
+        if ((int)$order->buyer_id !== (int)$request->user()->id && (int)$order->seller_id !== (int)$request->user()->id && !$request->user()->hasPermission('marketplace.orders.manage')) abort(403);
+        $order->load('product');
+        if ($order->product?->product_type !== 'service') abort(422, 'This order is not a service order.');
+        $data=$request->validate(['milestones'=>['required','array','min:1','max:50'],'milestones.*.title'=>['required','string','max:180'],'milestones.*.description'=>['nullable','string','max:5000'],'milestones.*.due_at'=>['nullable','date']]);
+        $order->serviceMilestones()->delete();
+        foreach($data['milestones'] as $i=>$milestone) MarketplaceServiceMilestone::create(['order_id'=>$order->id,'sequence'=>$i+1,'title'=>$milestone['title'],'description'=>$milestone['description']??null,'due_at'=>$milestone['due_at']??null]);
+        return response()->json(['success'=>true,'milestones'=>$order->serviceMilestones()->orderBy('sequence')->get()],201);
     }
 
     private function validatedProductData(Request $request, ?MarketplaceProduct $existing = null): array
