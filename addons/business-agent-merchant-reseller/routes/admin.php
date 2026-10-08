@@ -8,6 +8,7 @@ Route::middleware(['auth','verified','ensure.addon:business.agent-merchant-resel
  Route::post('/admin/business/partners/bulk-status',[BusinessAdminController::class,'bulkStatus'])->middleware('permission:business.approve');
  Route::patch('/admin/business/partners/{partner}',[BusinessAdminController::class,'update'])->middleware('permission:business.manage');
  Route::post('/admin/business/partners/bulk-commercial-settings',[BusinessAdminController::class,'bulkCommercialSettings'])->middleware('permission:business.manage');
+ Route::post('/admin/business/partners/bulk-pricing',[BusinessAdminController::class,'bulkPricing'])->middleware('permission:business.pricing.manage');
  Route::get('/admin/business/partners/{partner}/pricing',[BusinessAdminController::class,'pricing'])->middleware('permission:business.pricing.manage');
  Route::post('/admin/business/partners/{partner}/pricing',[BusinessAdminController::class,'savePricing'])->middleware('permission:business.pricing.manage');
  Route::delete('/admin/business/partners/{partner}/pricing/{rule}',[BusinessAdminController::class,'deletePricing'])->middleware('permission:business.pricing.manage');
