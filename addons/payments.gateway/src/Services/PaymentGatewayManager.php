@@ -22,7 +22,10 @@ class PaymentGatewayManager
             })
             ->get()
             ->filter(fn (PaymentGatewayProvider $provider) => $provider->supports($capability) && app(PaymentGatewayAdapterRegistry::class)->has($provider->driver))
-            ->sortBy(fn (PaymentGatewayProvider $provider) => [$provider->priority, -$provider->weight])
+            ->sort(function (PaymentGatewayProvider $a, PaymentGatewayProvider $b): int {
+                $priority = $a->priority <=> $b->priority;
+                return $priority !== 0 ? $priority : ($b->weight <=> $a->weight);
+            })
             ->values()
             ->all();
     }
