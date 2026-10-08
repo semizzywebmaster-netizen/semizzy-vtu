@@ -16,6 +16,7 @@ class MarketplaceCategory extends Model
         return [
             'attribute_schema' => 'array',
             'active' => 'boolean',
+            'sale_profit_bps' => 'integer',
         ];
     }
 
