@@ -51,6 +51,7 @@ class RegisteredUserController extends Controller
             'username' => ['required', 'string', 'min:3', 'max:40', 'regex:/^[a-zA-Z0-9._]+$/', 'unique:users,username'],
             'email' => 'required|email|max:190|unique:users,email',
             'password' => ['required', 'confirmed', Rules\Password::min(12)->mixedCase()->numbers()->symbols()->uncompromised()],
+            'pin' => ['required', 'confirmed', 'digits:4'],
             'terms' => 'accepted',
             'verification_channel' => $verificationEnabled ? 'required|in:email,sms' : 'nullable|in:email,sms',
         ]);
@@ -97,6 +98,7 @@ class RegisteredUserController extends Controller
             'email' => $data['email'],
             'phone' => $phone,
             'password' => Hash::make($data['password']),
+            'transaction_pin_hash' => Hash::make($data['pin']),
             'role' => 'USER',
             'status' => $verificationEnabled ? 'pending_verification' : 'active',
             'referred_by_id' => $referrer?->id,
