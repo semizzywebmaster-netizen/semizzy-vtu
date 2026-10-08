@@ -26,6 +26,12 @@ final class AdminSchoolAdmissionController extends Controller {
  }
  public function cutoff(Request $r){$d=$r->validate(['programme_admission_id'=>'required|exists:education_programme_admissions,id','cutoff_type'=>'required|string|max:40','score'=>'required|numeric|min:0','score_scale'=>'nullable|numeric|min:0','candidate_category'=>'nullable|string|max:80','notes'=>'nullable|string','source_url'=>'required|url','source_title'=>'required|string|max:190']); $d['verified_at']=null; \\Semizzy\\Addons\\Education\\Models\\EducationAdmissionCutoff::create($d); return back()->with('success','Cut-off saved for research/review.');}
  public function screening(Request $r){$d=$r->validate(['programme_admission_id'=>'required|exists:education_programme_admissions,id','required'=>'boolean','screening_type'=>'required|string|max:60','minimum_score'=>'nullable|numeric|min:0','registration_required'=>'boolean','first_choice_required'=>'nullable|boolean','result_upload_required'=>'nullable|boolean','screening_url'=>'nullable|url','start_date'=>'nullable|date','end_date'=>'nullable|date','notes'=>'nullable|string','source_url'=>'required|url','source_title'=>'required|string|max:190']); \\Semizzy\\Addons\\Education\\Models\\EducationAdmissionScreeningRule::create($d); return back()->with('success','Screening rule saved for research/review.');}
+ public function verifyRequirement(\Semizzy\Addons\Education\Models\EducationAdmissionRequirement $requirement){
+  $requirement->load('sources');
+  abort_unless($requirement->sources->isNotEmpty() && $requirement->source_url,422,'Requirement source provenance is required before verification.');
+  $requirement->update(['status'=>'verified','verification_status'=>'verified','verified_at'=>now()]);
+  return back()->with('success','Admission requirement verified.');
+ }
  public function verify(EducationProgrammeAdmission $admission){
   $admission->load(['sources','requirements.sources']);
   abort_unless($admission->official_source_url && $admission->source_title,422,'Official admission source is required before verification.');
