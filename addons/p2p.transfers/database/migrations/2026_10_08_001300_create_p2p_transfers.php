@@ -13,6 +13,7 @@ return new class extends Migration {
             $table->string('idempotency_key', 120);
             $table->unsignedBigInteger('amount_minor');
             $table->unsignedBigInteger('fee_minor')->default(0);
+            $table->unsignedBigInteger('total_debit_minor')->default(0);
             $table->string('currency', 3);
             $table->string('status', 24)->default('completed');
             $table->string('note', 255)->nullable();
