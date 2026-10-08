@@ -46,6 +46,7 @@ return [
         '2026_10_08_002001_seed_payment_gateway_providers.php',
         '2026_10_08_002002_correct_payment_gateway_capabilities.php',
         '2026_10_08_002003_configure_ngn_gateway_adapters.php',
+        '2026_10_08_002004_configure_flutterwave_adapter.php',
     ],
     'web_route_files' => [
         'addons/payments.gateway/routes/web.php',
