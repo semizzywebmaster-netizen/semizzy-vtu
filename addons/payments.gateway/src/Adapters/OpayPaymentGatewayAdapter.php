@@ -16,6 +16,13 @@ final class OpayPaymentGatewayAdapter implements PaymentGatewayAdapter
         return $key;
     }
 
+    private function publicKey(PaymentGatewayProvider $provider): string
+    {
+        $key = (string) ($provider->credentials['public_key'] ?? '');
+        if ($key === '') throw new RuntimeException('OPay public key is required.');
+        return $key;
+    }
+
     private function merchantId(PaymentGatewayProvider $provider): string
     {
         $id = (string) ($provider->credentials['merchant_id'] ?? '');
@@ -23,13 +30,15 @@ final class OpayPaymentGatewayAdapter implements PaymentGatewayAdapter
         return $id;
     }
 
-    private function request(PaymentGatewayProvider $provider, array $payload): \Illuminate\Http\Client\PendingRequest
+    private function request(PaymentGatewayProvider $provider, array $payload, bool $signed = true): \Illuminate\Http\Client\PendingRequest
     {
         $body = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        $signature = hash_hmac('sha512', $body, $this->secret($provider));
+        $authorization = $signed
+            ? 'Bearer '.hash_hmac('sha512', $body, $this->secret($provider))
+            : 'Bearer '.$this->publicKey($provider);
 
         return Http::acceptJson()->asJson()->withHeaders([
-            'Authorization' => 'Bearer '.$signature,
+            'Authorization' => $authorization,
             'MerchantId' => $this->merchantId($provider),
         ])->timeout(30);
     }
@@ -63,8 +72,8 @@ final class OpayPaymentGatewayAdapter implements PaymentGatewayAdapter
             'cancelUrl' => $payload['cancel_url'] ?? null,
         ], fn ($value) => $value !== null);
 
-        return $this->result($this->request($provider, $data)->post(
-            rtrim($provider->base_url ?: 'https://liveapi.opaycheckout.com', '/').'/api/v1/international/payment/create',
+        return $this->result($this->request($provider, $data, false)->post(
+            rtrim($provider->base_url ?: 'https://liveapi.opaycheckout.com', '/').'/api/v1/international/cashier/create',
             $data
         ));
     }
@@ -112,7 +121,7 @@ final class OpayPaymentGatewayAdapter implements PaymentGatewayAdapter
         ], fn ($value) => $value !== null);
 
         return $this->result($this->request($provider, $data)->post(
-            rtrim($provider->base_url ?: 'https://liveapi.opaycheckout.com', '/').'/api/v1/international/payment/refund/create',
+            rtrim($provider->base_url ?: 'https://liveapi.opaycheckout.com', '/').'/api/v1/international/cashier/refund',
             $data
         ));
     }
