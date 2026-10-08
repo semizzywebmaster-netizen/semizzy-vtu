@@ -9,6 +9,8 @@ Route::middleware(['auth','verified','ensure.addon:vtu.website-builder'])->group
  Route::post('/website-builder',[WebsiteBuilderController::class,'store'])->middleware('permission:website.manage')->name('website-builder.store');
  Route::get('/website-builder/sites/{site}/pages/{page}',[WebsiteBuilderController::class,'pageEditor'])->middleware('permission:website.view')->name('website-builder.page');
  Route::get('/website-builder/sites/{site}/pages/{page}/data',[WebsiteBuilderController::class,'page'])->middleware('permission:website.view');
+ Route::get('/website-builder/sites/{site}/pages/{page}/revisions',[WebsiteBuilderController::class,'revisions'])->middleware('permission:website.view');
+ Route::post('/website-builder/sites/{site}/pages/{page}/revisions/{revision}/restore',[WebsiteBuilderController::class,'restoreRevision'])->middleware('permission:website.manage');
  Route::patch('/website-builder/sites/{site}',[WebsiteBuilderController::class,'updateSite'])->middleware('permission:website.manage');
  Route::patch('/website-builder/sites/{site}/pages/{page}',[WebsiteBuilderController::class,'savePage'])->middleware('permission:website.manage');
  Route::post('/website-builder/sites/{site}/pages',[WebsiteBuilderController::class,'addPage'])->middleware('permission:website.manage');
