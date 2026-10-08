@@ -85,6 +85,49 @@ class BusinessAdminController
   return response()->json(['status'=>'completed','changed'=>$changed,'skipped'=>$skipped,'message'=>"Bulk commercial settings completed: {$changed} changed, {$skipped} skipped."]);
  }
 
+ public function bulkPricing(Request $r){
+  $d=$r->validate([
+   'partner_ids'=>['required','array','min:1','max:100'],
+   'partner_ids.*'=>['integer','distinct','exists:business_partners,id'],
+   'service_key'=>['required','string','max:100'],
+   'product_key'=>['nullable','string','max:150'],
+   'rule_type'=>['required','in:markup,commission,discount'],
+   'amount_minor'=>['nullable','integer','min:0'],
+   'rate_bps'=>['nullable','integer','min:0','max:10000'],
+   'min_amount_minor'=>['nullable','integer','min:0'],
+   'max_amount_minor'=>['nullable','integer','min:0'],
+   'enabled'=>['sometimes','boolean'],
+   'replace_existing'=>['sometimes','boolean'],
+  ]);
+  if(($d['amount_minor']??null)===null&&($d['rate_bps']??null)===null) abort(422,'Provide a fixed amount or rate.');
+  if(($d['amount_minor']??null)!==null&&($d['rate_bps']??null)!==null) abort(422,'Use either fixed amount or rate, not both.');
+  if(isset($d['min_amount_minor'],$d['max_amount_minor'])&&$d['min_amount_minor']!==null&&$d['max_amount_minor']!==null&&$d['min_amount_minor']>$d['max_amount_minor']) abort(422,'Minimum amount cannot exceed maximum amount.');
+  $ids=array_map('intval',$d['partner_ids']);
+  $rule=array_intersect_key($d,array_flip(['service_key','product_key','rule_type','amount_minor','rate_bps','min_amount_minor','max_amount_minor','enabled']));
+  $replace=(bool)($d['replace_existing']??false); $actor=$r->user(); $changed=0; $skipped=0;
+  foreach(BusinessPartner::query()->whereIn('id',$ids)->get() as $partner){
+   try{
+    DB::transaction(function()use($partner,$actor,$rule,$replace,&$changed){
+     $query=DB::table('business_pricing_rules')->where('business_partner_id',$partner->id)->where('service_key',$rule['service_key']);
+     $product=$rule['product_key']??null;
+     $query=$product===null?$query->whereNull('product_key'):$query->where('product_key',$product);
+     $existing=$query->orderBy('id')->first();
+     if($existing){
+      if(!$replace) throw new \RuntimeException('Matching pricing rule already exists.');
+      DB::table('business_pricing_rules')->where('id',$existing->id)->update(array_merge($rule,['updated_at'=>now()]));
+      $ruleId=$existing->id; $action='pricing_rule_bulk_replaced';
+     }else{
+      $ruleId=DB::table('business_pricing_rules')->insertGetId(array_merge($rule,['business_partner_id'=>$partner->id,'created_at'=>now(),'updated_at'=>now()]));
+      $action='pricing_rule_bulk_created';
+     }
+     $partner->events()->create(['actor_user_id'=>$actor->id,'action'=>$action,'status'=>$partner->status,'metadata'=>['rule'=>$rule,'rule_id'=>$ruleId,'replace_existing'=>$replace,'bulk'=>true]]);
+     $changed++;
+    });
+   }catch(\Throwable $e){report($e);$skipped++;}
+  }
+  return response()->json(['status'=>'completed','changed'=>$changed,'skipped'=>$skipped,'message'=>"Bulk pricing completed: {$changed} changed, {$skipped} skipped."]);
+ }
+
  public function update(Request $r,BusinessPartner $partner){
   $d=$r->validate([
    'status'=>'sometimes|in:pending,active,suspended,rejected',
