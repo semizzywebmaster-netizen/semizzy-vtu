@@ -10,6 +10,7 @@ Artisan::command('bulk-sms:dispatch {--limit=100}',function(\Semizzy\Addons\Bulk
 Artisan::command('bulk-sms:reconcile {--limit=100}',function(\Semizzy\Addons\BulkSms\Services\BulkSmsService $s){$this->info('Reconciled '.$s->reconcile((int)$this->option('limit')).' SMS messages.');});
 Schedule::command('queue:work database',['--stop-when-empty'=>true,'--max-time'=>50,'--tries'=>3])->everyMinute()->withoutOverlapping(2)->onOneServer();
 Schedule::command('queue:prune-failed',['--hours'=>168])->weekly();
+Schedule::command('vtu:process-scheduled-bulk',['--limit'=>50])->everyMinute()->withoutOverlapping(2)->onOneServer();
 Schedule::command('vtu:reconcile-pending',['--limit'=>50])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
 Schedule::command('vtu:recover-bulk',['--limit'=>50,'--stale-minutes'=>10])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
 Schedule::command('vtu:recover-stale-initiations',['--limit'=>50,'--stale-minutes'=>10])->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
