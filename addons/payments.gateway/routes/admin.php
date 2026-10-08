@@ -8,4 +8,11 @@ Route::middleware(['auth', 'verified', 'role:ADMIN,STAFF,SUPPORT', EnsureAddonAc
     ->prefix('admin/payments')->name('admin.payments.')
     ->group(function (): void {
         Route::get('/', [AdminPaymentsController::class, 'index'])->middleware('permission:payments.view')->name('index');
+
+        Route::middleware('role:ADMIN')->group(function (): void {
+            Route::post('/providers', [AdminPaymentsController::class, 'storeProvider'])->middleware('permission:payments.providers.manage')->name('providers.store');
+            Route::put('/providers/{provider}', [AdminPaymentsController::class, 'updateProvider'])->middleware('permission:payments.providers.manage')->name('providers.update');
+            Route::post('/providers/{provider}/test', [AdminPaymentsController::class, 'testProvider'])->middleware('permission:payments.providers.manage')->name('providers.test');
+            Route::post('/providers/{provider}/state', [AdminPaymentsController::class, 'setState'])->middleware('permission:payments.providers.manage')->name('providers.state');
+        });
     });
