@@ -77,6 +77,7 @@ class DashboardController extends Controller
                 ['label' => 'Addon manager', 'url' => '/admin/addons'],
                 ['label' => 'System health', 'url' => '/admin/health'],
                 ['label' => 'System settings', 'url' => '/admin/settings'],
+                ['label' => 'Internet Data Sync', 'url' => '/admin/data-sync'],
                 ['label' => 'Email & SMTP', 'url' => '/admin/settings#smtp'],
                 ['label' => 'Backup & Maintenance', 'url' => '/admin/settings#maintenance'],
                 ['label' => 'Platform controls & tier limits', 'url' => '/admin/platform-controls'],
