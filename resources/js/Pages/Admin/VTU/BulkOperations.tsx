@@ -116,7 +116,7 @@ export default function BulkOperations({
       const response = await fetch('/admin/vtu/bulk/audit-selected', { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' }, body: JSON.stringify({ bulk_ids: selectedIds }) });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || 'Bulk integrity audit failed.');
-      window.alert(\`Integrity audit: \${payload.healthy ?? 0} healthy, \${payload.with_issues ?? 0} requiring attention.\`);
+      window.alert(`Integrity audit: ${payload.healthy ?? 0} healthy, ${payload.with_issues ?? 0} requiring attention.`);
     } catch (error) { window.alert(error instanceof Error ? error.message : 'Bulk integrity audit failed.'); }
     finally { setBulkAuditing(false); }
   };
