@@ -1,0 +1,34 @@
+<?php
+return [
+ 'identifier'=>'education','name'=>'Education Services','version'=>'1.0.0',
+ 'description'=>'Provider-driven education services including school fees, JAMB/admission services, institution verification, educational products and scholarship opportunities. Examination result checking remains owned by the Exams & Results addon.',
+ 'compatibility'=>'>=2.0.0','dependencies'=>['exams.results'],
+ 'permissions'=>['education.view','education.purchase','education.verify','education.manage','education.institutions.manage','education.providers.manage','education.products.manage','education.transactions.view','education.settings.manage'],
+ 'role_permissions'=>[
+  'ADMIN'=>['education.view','education.purchase','education.verify','education.manage','education.institutions.manage','education.providers.manage','education.products.manage','education.transactions.view','education.settings.manage'],
+  'STAFF'=>['education.view','education.purchase','education.verify','education.manage','education.institutions.manage','education.products.manage','education.transactions.view'],
+  'SUPPORT'=>['education.view','education.transactions.view'],
+  'USER'=>['education.view','education.purchase','education.verify','education.transactions.view'],
+ ],
+ 'navigation'=>[['id'=>'education','label'=>'Education','url'=>'/education','icon'=>'graduation-cap','permission'=>'education.view','section'=>'services','order'=>95]],
+ 'admin_navigation'=>[['id'=>'admin-education','label'=>'Education','url'=>'/admin/education','icon'=>'graduation-cap','permission'=>'education.view','section'=>'addons','order'=>95]],
+ 'settings'=>[
+  ['key'=>'enabled','type'=>'boolean','default'=>true],
+  ['key'=>'default_currency','type'=>'string','default'=>'NGN'],
+  ['key'=>'require_transaction_pin','type'=>'boolean','default'=>true],
+  ['key'=>'allow_scholarship_listings','type'=>'boolean','default'=>true],
+  ['key'=>'max_purchase_quantity','type'=>'integer','default'=>1],
+ ],
+ 'migrations'=>[
+  '2026_10_08_001000_create_education_institutions.php',
+  '2026_10_08_001001_create_education_products.php',
+  '2026_10_08_001002_create_education_transactions.php',
+ ],
+ 'web_route_files'=>['addons/education/routes/web.php','addons/education/routes/admin.php'],
+ 'api_route_files'=>['addons/education/routes/api.php'],
+ 'routes'=>['/education'],'api_routes'=>['/api/v1/education'],
+ 'provider_integrations'=>['Core ProviderManager'],
+ 'provider_capabilities'=>['transaction_initiation','transaction_status','data_sync','verification'],
+ 'scheduled_tasks'=>['Education transaction reconciliation','Education institution/provider catalogue synchronization'],
+ 'events'=>['education.transaction.created','education.transaction.completed','education.transaction.failed','education.verification.completed'],
+];
