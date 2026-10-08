@@ -28,6 +28,9 @@ export default function BulkOperations({
   const [reconcilingId, setReconcilingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkReconciling, setBulkReconciling] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+  const [auditId, setAuditId] = useState<number | null>(null);
+  const [auditResult, setAuditResult] = useState<any>(null);
 
   const submitFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -53,6 +56,21 @@ export default function BulkOperations({
       onSuccess: () => setSelectedIds([]),
       onFinish: () => setBulkReconciling(false),
     });
+  };
+
+  const recoverStale = () => {
+    setRecovering(true);
+    router.post('/admin/vtu/bulk/recover-stale', { limit: 50, stale_minutes: 10 }, { preserveScroll: true, onFinish: () => setRecovering(false) });
+  };
+
+  const audit = async (id: number) => {
+    setAuditId(id); setAuditResult(null);
+    try {
+      const res = await fetch(`/admin/vtu/bulk/${id}/audit`, { headers: { Accept: 'application/json' } });
+      const json = await res.json();
+      setAuditResult(json);
+    } catch { setAuditResult({ healthy: false, issue_count: 1, issues: [{ message: 'Audit request failed.' }] }); }
+    finally { setAuditId(null); }
   };
 
   const toggleSelected = (id: number) => {
@@ -126,6 +144,7 @@ export default function BulkOperations({
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={toggleAll} disabled={!selectableIds.length} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{allSelected ? 'Clear selection' : 'Select pending'}</button>
             <button type="button" onClick={reconcileSelected} disabled={!selectedIds.length || bulkReconciling} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">{bulkReconciling ? 'Reconciling selected…' : `Reconcile selected (${selectedIds.length})`}</button>
+            <button type="button" onClick={recoverStale} disabled={recovering} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{recovering ? 'Recovering stale…' : 'Recover stale operations'}</button>
             {selectedIds.length > 0 && <span className="text-xs text-slate-500">{selectedIds.length} bulk operation(s) selected</span>}
           </div>
         </div>
@@ -196,12 +215,26 @@ export default function BulkOperations({
                             <div className="mt-4">
                               <button
                                 type="button"
+                                onClick={() => audit(operation.id)}
+                                disabled={auditId === operation.id}
+                                className="mr-2 rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50"
+                              >
+                                {auditId === operation.id ? 'Auditing…' : 'Audit integrity'}
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => reconcile(operation.id)}
                                 disabled={reconcilingId === operation.id}
                                 className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50"
                               >
                                 {reconcilingId === operation.id ? 'Reconciling…' : 'Reconcile Pending'}
                               </button>
+                            </div>
+                          )}
+                          {auditResult && auditResult.bulk_operation_id === operation.id && (
+                            <div className={`mt-4 rounded-lg border p-3 ${auditResult.healthy ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}>
+                              <div className="font-bold">Integrity audit: {auditResult.healthy ? 'Healthy' : `${auditResult.issue_count} issue(s)`}</div>
+                              {!auditResult.healthy && <ul className="mt-2 list-disc pl-5">{(auditResult.issues || []).slice(0, 10).map((issue: any, index: number) => <li key={index}>{issue.code}: {issue.message}</li>)}</ul>}
                             </div>
                           )}
                           {operation.created_at && (
