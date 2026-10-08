@@ -41,6 +41,8 @@ return [
     'migrations' => [
         '2026_10_08_003000_create_crypto_payment_providers.php',
         '2026_10_08_003001_seed_crypto_payment_providers.php',
+        '2026_10_08_003002_create_crypto_payment_transactions.php',
+        '2026_10_08_003001_seed_crypto_payment_providers.php',
     ],
     'web_route_files' => [],
     'api_route_files' => [],
