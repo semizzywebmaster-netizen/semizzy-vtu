@@ -1,6 +1,6 @@
 import React from 'react';
 import {Head,useForm,router} from '@inertiajs/react';
-export default function MailerSmtp({profiles,settings}:any){
+export default function MailerSmtp({profiles}:any){
  const {data,setData,post,processing}=useForm({name:'',provider:'custom',host:'',port:587,encryption:'tls',username:'',password:'',from_address:'',from_name:'',enabled:true,priority:1,weight:1});
  const submit=(e:React.FormEvent)=>{e.preventDefault();post('/admin/mailer-smtp/profiles');};
  return <div className="p-6"><Head title="Mailer SMTP"/><h1 className="text-2xl font-bold mb-2">Mailer SMTP</h1><p className="mb-6 opacity-70">Unlimited SMTP profiles with priority failover. Passwords are never returned to the browser.</p>
