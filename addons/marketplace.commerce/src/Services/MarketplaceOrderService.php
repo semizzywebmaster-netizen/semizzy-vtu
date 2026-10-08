@@ -215,6 +215,28 @@ final class MarketplaceOrderService
         });
     }
 
+    private static function calculateCategoryFee(MarketplaceProduct $product, string $amount): string
+    {
+        $category = $product->category()->first();
+        $bps = $category ? (int) $category->sale_profit_bps : 0;
+        $fixed = $category ? (string) ($category->sale_profit_fixed_minor ?? '0') : '0';
+        if ($bps <= 0 && self::compare($fixed, '0') <= 0) {
+            $bps = (int) config('addons.marketplace.commerce.settings.platform_fee_bps', 0);
+            $fixed = '0';
+        }
+        $percentage = '0';
+        if ($bps > 0) {
+            $percentage = function_exists('bcmul')
+                ? bcdiv(bcmul($amount, (string) $bps, 0), '10000', 0)
+                : (string) intdiv((int) $amount * $bps, 10000);
+        }
+        $total = self::add($percentage, $fixed);
+        if (self::compare($total, $amount) > 0) {
+            throw new RuntimeException('Category sales profit cannot exceed the sale amount.');
+        }
+        return $total;
+    }
+
     private static function calculateFee(string $amount): string
     {
         $bps = (int) config('addons.marketplace.commerce.settings.platform_fee_bps', 0);
