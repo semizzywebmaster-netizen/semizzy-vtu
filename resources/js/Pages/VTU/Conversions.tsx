@@ -8,7 +8,7 @@ const TYPES: Record<string,string> = {
   data_to_airtime:'Data → Airtime',
 };
 
-export default function Conversions({ conversionTypes=TYPES, requests, conversionSettings={} }: { conversionTypes?: Record<string,string>; requests?: any; conversionSettings?: Record<string,{rate_percent?:number|null;fee_minor?:string;configured?:boolean}> }) {
+export default function Conversions({ conversionTypes=TYPES, conversionSettings={} }: { conversionTypes?: Record<string,string>; requests?: any; conversionSettings?: Record<string,{rate_percent?:number|null;fee_minor?:string;configured?:boolean}> }) {
   const [type,setType]=useState('airtime_to_cash');
   const [network,setNetwork]=useState('');
   const [amount,setAmount]=useState('');
