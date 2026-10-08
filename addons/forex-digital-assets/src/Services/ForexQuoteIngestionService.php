@@ -2,6 +2,8 @@
 
 namespace Semizzy\Addons\ForexDigitalAssets\Services;
 
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -42,11 +44,11 @@ class ForexQuoteIngestionService
 
         $mid = $quote['mid'] ?? null;
         if ($mid === null && isset($quote['bid'], $quote['ask'])) {
-            $mid = bcdiv(
-                bcadd((string) $quote['bid'], (string) $quote['ask'], 12),
-                '2',
-                12
-            );
+            $mid = BigDecimal::of((string) $quote['bid'])
+                ->plus((string) $quote['ask'])
+                ->dividedBy(2, 12, RoundingMode::HALF_UP)
+                ->toScale(12)
+                ->__toString();
         }
 
         return DB::transaction(function () use ($provider, $instrument, $quote, $observedAt, $expiresAt, $mid) {
