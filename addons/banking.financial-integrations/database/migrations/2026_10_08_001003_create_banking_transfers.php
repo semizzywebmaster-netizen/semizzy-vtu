@@ -16,6 +16,11 @@ return new class extends Migration {
    $table->decimal('amount',20,2);
    $table->string('currency',3)->default('NGN');
    $table->decimal('fee',20,2)->default(0);
+   $table->decimal('transfer_fee',20,2)->default(0);
+   $table->decimal('vat_fee',20,2)->default(0);
+   $table->decimal('other_ng_fee',20,2)->default(0);
+   $table->decimal('total_fee',20,2)->default(0);
+   $table->decimal('total_debit',20,2)->default(0);
    $table->boolean('requires_otp')->default(false);
    $table->boolean('requires_pin')->default(true);
    $table->timestamp('security_verified_at')->nullable();
