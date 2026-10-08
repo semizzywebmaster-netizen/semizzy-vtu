@@ -132,8 +132,10 @@ class VtuAdminController extends Controller
   return back()->with('success',"Bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
  }
  public function requeryBulkItem(Request $r,VtuBulkOperation $bulk,VtuBulkService $bulkService,VtuTransactionService $service): JsonResponse|\\Illuminate\\Http\\RedirectResponse{
-  $data=$r->validate(['item_ids'=>['required','array','min:1','max:100'],'item_ids.*'=>['integer','distinct']]);
-  $items=$bulk->items()->whereIn('id',$data['item_ids'])->with('transaction')->get();
+  $data=$r->validate(['item_ids'=>['nullable','array','max:100'],'item_ids.*'=>['integer','distinct']]);
+  $query=$bulk->items()->with('transaction')->whereIn('status',['pending','processing']);
+  if(!empty($data['item_ids'])) $query->whereIn('id',$data['item_ids']);
+  $items=$query->limit(100)->get();
   $checked=0;$changed=0;$skipped=0;
   foreach($items as $item){
    if(!$item->transaction||!$item->transaction->provider_reference||$item->transaction->isTerminal()){$skipped++;continue;}
