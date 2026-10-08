@@ -93,12 +93,8 @@ return new class extends Migration {
                 'collect_payment',
                 'card_payment',
                 'bank_transfer_collection',
-                'account_name_enquiry',
-                'single_payout',
-                'bulk_payout',
                 'webhook',
                 'requery',
-                'refund',
             ]),
             'settings' => json_encode([
                 'require_webhook_signature' => true,
