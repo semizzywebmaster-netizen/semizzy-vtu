@@ -19,6 +19,8 @@ use Inertia\Inertia;
 
 class VtuAdminController extends Controller
 {
+ public function schedulePolicy(){ $v=(int)(\App\Models\SystemSetting::query()->where('key','vtu_schedule_edit_lock_minutes')->value('value')??120); return Inertia::render('Admin/VTU/SchedulePolicy',['edit_lock_minutes'=>$v,'options'=>[15,30,60,120,180,300,720,1440]]); }
+ public function saveSchedulePolicy(Request $r){ $d=$r->validate(['edit_lock_minutes'=>['required','integer','in:15,30,60,120,180,300,720,1440']]); \App\Models\SystemSetting::updateOrCreate(['key'=>'vtu_schedule_edit_lock_minutes'],['value'=>(string)$d['edit_lock_minutes'],'type'=>'integer','is_secret'=>false]); return response()->json(['status'=>'completed','edit_lock_minutes'=>(int)$d['edit_lock_minutes']]); }
  public function dashboard(){
   $vtuServices=Service::query()->whereHas('category',fn($q)=>$q->where('key','vtu-digital-services'));
   $vtuServiceIds=(clone $vtuServices)->pluck('id');
