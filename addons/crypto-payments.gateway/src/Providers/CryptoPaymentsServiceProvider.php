@@ -4,6 +4,8 @@ namespace Semizzy\Addons\CryptoPayments\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Semizzy\Addons\CryptoPayments\Adapters\NowPaymentsAdapter;
+use Semizzy\Addons\CryptoPayments\Adapters\BinancePayAdapter;
+use Semizzy\Addons\CryptoPayments\Adapters\CoinPaymentsAdapter;
 use Semizzy\Addons\CryptoPayments\Models\CryptoPaymentProvider;
 use Semizzy\Addons\CryptoPayments\Services\CryptoPaymentGatewayAdapterRegistry;
 
@@ -15,6 +17,8 @@ class CryptoPaymentsServiceProvider extends ServiceProvider
             $registry = new CryptoPaymentGatewayAdapterRegistry();
 
             $registry->register('nowpayments', static fn (CryptoPaymentProvider $provider) => new NowPaymentsAdapter($provider));
+            $registry->register('binance_pay', static fn (CryptoPaymentProvider $provider) => new BinancePayAdapter($provider));
+            $registry->register('coinpayments', static fn (CryptoPaymentProvider $provider) => new CoinPaymentsAdapter($provider));
 
             return $registry;
         });
