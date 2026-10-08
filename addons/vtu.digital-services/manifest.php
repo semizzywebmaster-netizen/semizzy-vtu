@@ -24,7 +24,7 @@ return [
     'routes'=>['/vtu','/vtu/conversions'],
     'api_routes'=>['/api/v1/vtu'],
     'services'=>['airtime','data','airtime_to_cash','airtime_to_data','data_to_cash','data_to_airtime','bulk_airtime','bulk_data','broadband_isp','international_airtime','international_data','electricity','cable_tv','digital_subscriptions','gaming','education_digital_products','data_plan_catalogue','provider_requery','refunds','transaction_tracking'],
-    'capabilities'=>[
+    'capabilities'=>['scheduled_bulk_transactions','dual_schedule_edit_countdowns','admin_schedule_edit_policy',
         ['name'=>'airtime_purchase','execution_mode'=>'api_or_provider','api_exposed'=>true],
         ['name'=>'data_purchase','execution_mode'=>'api_or_provider','api_exposed'=>true],
         ['name'=>'airtime_to_cash','execution_mode'=>'manual_verification','api_exposed'=>false],
