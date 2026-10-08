@@ -82,6 +82,7 @@ export default function Index({
               <p className="mt-3 text-sm leading-6 text-white/70 md:text-base">
                 One marketplace for new and used physical items, real estate rentals and sales, digital products, and professional services.
               </p>
+              <a href="/marketplace/sell" className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-white px-5 text-sm font-semibold text-slate-950">Sell on Marketplace</a>
             </div>
             <div className="mt-6 flex flex-col gap-3 md:flex-row">
               <input
