@@ -11,7 +11,7 @@ return [
  'navigation'=>[['id'=>'bulk-sms','label'=>'Bulk SMS','url'=>'/bulk-sms','icon'=>'message-square','permission'=>'bulk_sms.view','section'=>'services','order'=>80]],
  'admin_navigation'=>[['id'=>'admin-bulk-sms','label'=>'Bulk SMS','url'=>'/admin/bulk-sms','icon'=>'message-square','permission'=>'bulk_sms.view','section'=>'addons','order'=>80]],
  'settings'=>[['key'=>'enabled','type'=>'boolean','default'=>true],['key'=>'default_currency','type'=>'string','default'=>'NGN'],['key'=>'max_recipients_per_campaign','type'=>'integer','default'=>10000],['key'=>'delivery_reconciliation_enabled','type'=>'boolean','default'=>true]],
- 'migrations'=>['2026_10_08_000800_create_bulk_sms_products.php','2026_10_08_000801_create_bulk_sms_sender_ids.php','2026_10_08_000802_create_bulk_sms_contacts.php','2026_10_08_000803_create_bulk_sms_campaigns.php','2026_10_08_000804_create_bulk_sms_messages.php'],
+ 'migrations'=>['2026_10_08_000800_create_bulk_sms_products.php','2026_10_08_000801_create_bulk_sms_sender_ids.php','2026_10_08_000802_create_bulk_sms_contacts.php','2026_10_08_000803_create_bulk_sms_campaigns.php','2026_10_08_000804_create_bulk_sms_messages.php','2026_10_08_140001_add_schedule_edit_controls_to_bulk_sms.php'],
  'web_route_files'=>['addons/bulk-sms.communication/routes/web.php','addons/bulk-sms.communication/routes/admin.php'],
  'api_route_files'=>['addons/bulk-sms.communication/routes/api.php'],
  'routes'=>['/bulk-sms'],'api_routes'=>['/api/v1/bulk-sms'],
