@@ -14,5 +14,6 @@ Route::middleware(['auth', 'verified', 'ensure.addon:vtu.digital-services'])->gr
     Route::post('/vtu/network-lookup', [VtuController::class, 'networkLookup'])->middleware('throttle:30,1')->name('vtu.network-lookup');
     Route::post('/vtu/bulk-quote', [VtuController::class, 'bulkQuote'])->middleware('throttle:60,1')->name('vtu.bulk-quote');
     Route::post('/vtu/bulk', [VtuController::class, 'bulk'])->middleware(['throttle:10,1', 'transaction.pin'])->name('vtu.bulk');
+    Route::patch('/vtu/bulk/{bulk}/schedule', [VtuController::class, 'bulkReschedule'])->middleware(['throttle:20,1', 'transaction.pin'])->name('vtu.bulk.reschedule');
     Route::post('/vtu/bulk/{bulk}/items/{item}/requery', [VtuController::class, 'bulkItemRequery'])->middleware('throttle:20,1')->name('vtu.bulk.item-requery');
 });
