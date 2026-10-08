@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 type Payment = {
@@ -75,13 +75,11 @@ export default function Payments({payments,providers=[],available_drivers=[],cap
   };
   const action=(id:number,state:string)=>{
     setBusy(id);
-    const f=useForm({state});
-    f.post('/admin/payments/providers/'+id+'/state',{preserveScroll:true,onFinish:()=>setBusy(null)});
+    router.post('/admin/payments/providers/'+id+'/state',{state},{preserveScroll:true,onFinish:()=>setBusy(null)});
   };
   const test=(id:number)=>{
     setBusy(id);
-    const f=useForm({});
-    f.post('/admin/payments/providers/'+id+'/test',{preserveScroll:true,onFinish:()=>setBusy(null)});
+    router.post('/admin/payments/providers/'+id+'/test',{}, {preserveScroll:true,onFinish:()=>setBusy(null)});
   };
 
   return <>
@@ -108,7 +106,7 @@ export default function Payments({payments,providers=[],available_drivers=[],cap
             <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <label className="text-sm font-semibold">Name<input className="mt-1 w-full rounded-xl border p-3 font-normal" value={form.data.name} onChange={e=>form.setData('name',e.target.value)}/></label>
               <label className="text-sm font-semibold">Code<input className="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="my-gateway" value={form.data.code} onChange={e=>form.setData('code',e.target.value)}/></label>
-              <label className="text-sm font-semibold">Driver<select className="mt-1 w-full rounded-xl border p-3 font-normal" value={form.data.driver} onChange={e=>form.setData('driver',e.target.value)}>{available_drivers.map(d=><option key={d}>{d}</option>)}</select></label>
+              <label className="text-sm font-semibold">Driver<input className="mt-1 w-full rounded-xl border p-3 font-normal" list="payment-gateway-drivers" placeholder="paystack or future-driver" value={form.data.driver} onChange={e=>form.setData('driver',e.target.value)}/><datalist id="payment-gateway-drivers">{available_drivers.map(d=><option key={d} value={d}/>)}</datalist></label>
               <label className="text-sm font-semibold">Base URL<input className="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="https://..." value={form.data.base_url} onChange={e=>form.setData('base_url',e.target.value)}/></label>
               <label className="text-sm font-semibold">Priority<input type="number" min="0" className="mt-1 w-full rounded-xl border p-3 font-normal" value={form.data.priority} onChange={e=>form.setData('priority',Number(e.target.value))}/></label>
               <label className="text-sm font-semibold">Weight<input type="number" min="1" className="mt-1 w-full rounded-xl border p-3 font-normal" value={form.data.weight} onChange={e=>form.setData('weight',Number(e.target.value))}/></label>
@@ -131,7 +129,7 @@ export default function Payments({payments,providers=[],available_drivers=[],cap
             {providers.map(p=><article key={p.id} className="rounded-2xl border p-4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2"><h3 className="font-extrabold text-slate-900">{p.name}</h3><span className="rounded-full px-2.5 py-1 text-xs font-bold {statusClass(p)}">{p.enabled&&!p.paused&&!p.maintenance?'LIVE':p.maintenance?'MAINTENANCE':p.paused?'PAUSED':'DISABLED'}</span><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold">{p.driver}</span>{!p.adapter_registered&&<span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700">NO ADAPTER</span>}</div>
+                  <div className="flex flex-wrap items-center gap-2"><h3 className="font-extrabold text-slate-900">{p.name}</h3><span className={'rounded-full px-2.5 py-1 text-xs font-bold '+statusClass(p)}>{p.enabled&&!p.paused&&!p.maintenance?'LIVE':p.maintenance?'MAINTENANCE':p.paused?'PAUSED':'DISABLED'}</span><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold">{p.driver}</span>{!p.adapter_registered&&<span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700">NO ADAPTER</span>}</div>
                   <p className="mt-1 font-mono text-xs text-slate-500">{p.code} · priority {p.priority} · weight {p.weight}</p>
                   <div className="mt-3 flex flex-wrap gap-1">{p.capabilities.map(c=><span key={c} className="rounded-md bg-slate-100 px-2 py-1 text-[11px]">{c}</span>)}</div>
                   <p className="mt-3 text-xs text-slate-500">Credentials configured: {p.credential_keys.length? p.credential_keys.join(', '):'none'} · failures: {p.failure_count}</p>
