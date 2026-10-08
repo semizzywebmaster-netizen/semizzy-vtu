@@ -51,6 +51,7 @@ export default function Sell() {
     download_limit: '',
     service_delivery_days: '',
     service_model: 'fixed',
+    video_url: '',
   });
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
@@ -114,6 +115,7 @@ export default function Sell() {
       download_limit: productType === 'digital' && form.download_limit ? Number(form.download_limit) : null,
       service_delivery_days: productType === 'service' && form.service_delivery_days ? Number(form.service_delivery_days) : null,
       service_model: productType === 'service' ? form.service_model : null,
+      video_url: form.video_url.trim() || null,
       price_minor: String(Math.round(Number(form.price || 0) * 100)),
       stock_quantity: productType === 'physical' ? form.stock : '0',
       currency: 'NGN',
@@ -183,7 +185,20 @@ export default function Sell() {
                   <label className="text-sm font-medium">Price (NGN)
                     <input required min="0.01" step="0.01" type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border px-3" />
                   </label>
-                  {productType === 'physical' ? (
+                  <section className="rounded-2xl border bg-white p-5 shadow-sm">
+              <h2 className="font-bold">Product/item video (optional)</h2>
+              <p className="mt-2 text-sm text-slate-500">Paste an external HTTPS video link. YouTube and Vimeo links will be embedded as a player; direct MP4/WebM/OGG links use the browser video player.</p>
+              <input
+                type="url"
+                value={form.video_url}
+                onChange={(event) => setForm({ ...form, video_url: event.target.value })}
+                placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/..."
+                className="mt-4 min-h-12 w-full rounded-xl border px-3"
+              />
+              <p className="mt-2 text-xs text-slate-400">For safety and reliability, only HTTPS links are accepted. The marketplace does not upload or host seller videos.</p>
+            </section>
+
+            {productType === 'physical' ? (
                     <label className="text-sm font-medium">Stock quantity
                       <input required min="0" type="number" value={form.stock} onChange={(event) => setForm({ ...form, stock: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border px-3" />
                     </label>
