@@ -10,6 +10,7 @@ use RuntimeException;
 use Semizzy\Addons\Marketplace\Models\MarketplaceOrder;
 use Semizzy\Addons\Marketplace\Models\MarketplaceProduct;
 use Semizzy\Addons\Marketplace\Models\MarketplaceEarning;
+use Semizzy\Addons\Marketplace\Models\MarketplaceDigitalDelivery;
 
 final class MarketplaceOrderService
 {
@@ -153,6 +154,19 @@ final class MarketplaceOrderService
 
             MarketplaceEarning::create(['order_id'=>$order->id,'seller_id'=>$order->seller_id,'gross_minor'=>$amount,'fee_minor'=>$fee,'net_minor'=>$sellerNet,'currency'=>$currency,'status'=>'credited']);
             $order->forceFill(array_merge(['status' => 'paid', 'paid_at' => now()], $fulfillment))->save();
+
+            if ($product->isDigital()) {
+                $assets = $product->digitalAssets()->get();
+                foreach ($assets as $asset) {
+                    MarketplaceDigitalDelivery::query()->firstOrCreate(
+                        ['order_id' => $order->id, 'asset_id' => $asset->id],
+                        [
+                            'delivery_token' => Str::random(64),
+                            'download_limit' => $product->download_limit,
+                        ]
+                    );
+                }
+            }
 
             return $order->fresh(['product', 'buyer', 'seller']);
         });
