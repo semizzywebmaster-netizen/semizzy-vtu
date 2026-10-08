@@ -46,6 +46,49 @@ class BusinessAdminController
   return response()->json(['status'=>'completed','changed'=>$changed,'skipped'=>$skipped,'message'=>$message]);
  }
 
+ public function bulkCommercialSettings(Request $r){
+  $d=$r->validate([
+   'partner_ids'=>['required','array','min:1','max:100'],
+   'partner_ids.*'=>['integer','distinct','exists:business_partners,id'],
+   'commission_rate_bps'=>['nullable','integer','min:0','max:10000'],
+   'daily_limit_minor'=>['nullable','integer','min:0'],
+   'monthly_limit_minor'=>['nullable','integer','min:0'],
+   'parent_partner_id'=>['nullable','integer','exists:business_partners,id'],
+   'settlement_mode'=>['nullable','in:wallet,manual'],
+   'minimum_balance_minor'=>['nullable','integer','min:0'],
+  ]);
+  if(array_key_exists('daily_limit_minor',$d)&&array_key_exists('monthly_limit_minor',$d)&&$d['daily_limit_minor']!==null&&$d['monthly_limit_minor']!==null&&$d['daily_limit_minor']>$d['monthly_limit_minor']) abort(422,'Daily limit cannot exceed monthly limit.');
+  $ids=array_map('intval',$d['partner_ids']);
+  if(isset($d['parent_partner_id'])&&in_array((int)$d['parent_partner_id'],$ids,true)) abort(422,'A selected partner cannot be assigned as the parent of itself or another selected partner.');
+  if($d['parent_partner_id']!==null){
+   $parent=BusinessPartner::findOrFail((int)$d['parent_partner_id']);
+   if($parent->status!=='active') abort(422,'Parent partner must be active.');
+  }
+  $fields=array_filter([
+   'commission_rate_bps'=>$d['commission_rate_bps']??null,
+   'daily_limit_minor'=>array_key_exists('daily_limit_minor',$d)?$d['daily_limit_minor']:null,
+   'monthly_limit_minor'=>array_key_exists('monthly_limit_minor',$d)?$d['monthly_limit_minor']:null,
+   'parent_partner_id'=>array_key_exists('parent_partner_id',$d)?$d['parent_partner_id']:null,
+   'settlement_mode'=>$d['settlement_mode']??null,
+   'minimum_balance_minor'=>array_key_exists('minimum_balance_minor',$d)?$d['minimum_balance_minor']:null,
+  ],fn($v)=>$v!==null);
+  if(!$fields) abort(422,'Provide at least one commercial setting to update.');
+  $actor=$r->user(); $changed=0; $skipped=0;
+  foreach(BusinessPartner::query()->whereIn('id',$ids)->get() as $partner){
+   if(isset($d['parent_partner_id'])&&$d['parent_partner_id']!==null){
+    $this->assertNoCycle($partner,(int)$d['parent_partner_id']);
+   }
+   try{
+    DB::transaction(function()use($partner,$actor,$fields){
+     $partner->updateOrFail($fields);
+     $partner->events()->create(['actor_user_id'=>$actor->id,'action'=>'bulk_commercial_settings_updated','status'=>$partner->status,'metadata'=>['fields'=>array_keys($fields),'values'=>$fields,'bulk'=>true]]);
+    });
+    $changed++;
+   }catch(\Throwable $e){report($e);$skipped++;}
+  }
+  return response()->json(['status'=>'completed','changed'=>$changed,'skipped'=>$skipped,'message'=>"Bulk commercial settings completed: {$changed} changed, {$skipped} skipped."]);
+ }
+
  public function update(Request $r,BusinessPartner $partner){
   $d=$r->validate([
    'status'=>'sometimes|in:pending,active,suspended,rejected',
