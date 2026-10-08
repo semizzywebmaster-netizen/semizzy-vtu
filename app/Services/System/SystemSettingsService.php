@@ -65,7 +65,7 @@ class SystemSettingsService
                     if (!is_array($decoded)) continue;
 
                     if ($key === 'registration_otp_channels') {
-                        $settings[$key] = array_values(array_intersect((array) $decoded, ['email','sms','whatsapp'])) ?: ['email'];
+                        $settings[$key] = array_values(array_intersect((array) $decoded, ['email','sms'])) ?: ['email'];
                         continue;
                     }
                     if ($key === 'smtp') {
