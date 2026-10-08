@@ -12,7 +12,9 @@ class VtuServiceRegistry
         'airtime' => 'Airtime',
         'data' => 'Data',
         'airtime_to_cash' => 'Airtime to Cash',
+        'airtime_to_data' => 'Airtime to Data',
         'data_to_cash' => 'Data to Cash',
+        'data_to_airtime' => 'Data to Airtime',
         'recharge_pin' => 'Recharge PIN / ePIN',
         'electricity' => 'Electricity',
         'cable_tv' => 'Cable TV',
@@ -41,7 +43,7 @@ class VtuServiceRegistry
             ['key' => 'vtu-digital-services'],
             [
                 'name' => 'VTU & Digital Services',
-                'description' => 'Provider-driven digital services.',
+                'description' => 'Provider-driven digital services plus manually verified airtime/data conversion.',
                 'enabled' => true,
                 'sort_order' => 20,
             ]
@@ -49,22 +51,20 @@ class VtuServiceRegistry
 
         foreach (self::MANIFEST as $key => $name) {
             $service = Service::query()->firstOrNew(['key' => $key]);
-
             $wasExisting = $service->exists;
             $service->category_id = $category->id;
             $service->name = $name;
-            $service->description = $name . ' service powered by the SEMIZZY ONE provider engine.';
+            $service->description = $name . ' service powered by the SEMIZZY ONE service engine.';
             $service->metadata = [
                 ...((array) $service->metadata),
                 'addon' => 'vtu.digital-services',
                 'service_type' => $key,
+                'execution_mode' => str_contains($key, '_to_') ? 'manual_conversion' : 'provider_or_manual',
                 'required_fields' => $this->fields($key),
             ];
-
             if (! $wasExisting) {
                 $service->enabled = false;
             }
-
             $service->save();
         }
     }
@@ -74,8 +74,10 @@ class VtuServiceRegistry
         return match ($key) {
             'airtime' => ['network', 'phone', 'amount'],
             'data' => ['network', 'phone', 'plan'],
-            'airtime_to_cash' => ['network', 'source_phone', 'amount'],
-            'data_to_cash' => ['network', 'product', 'quantity'],
+            'airtime_to_cash' => ['network', 'source_phone', 'amount', 'proof'],
+            'airtime_to_data' => ['network', 'source_phone', 'amount', 'target_phone', 'data_plan', 'proof'],
+            'data_to_cash' => ['network', 'source_phone', 'product', 'quantity', 'proof'],
+            'data_to_airtime' => ['network', 'source_phone', 'product', 'quantity', 'target_phone', 'proof'],
             'recharge_pin' => ['network', 'product', 'quantity'],
             'electricity' => ['disco', 'meter_number', 'meter_type', 'amount'],
             'cable_tv' => ['provider', 'customer_number', 'package'],
