@@ -17,7 +17,7 @@ export default function ForgotPin({ platform }: { platform?: { platform_name?: s
   return <main className="mx-auto flex min-h-screen max-w-md items-center px-6 py-10">
     <Head title={`Forgot PIN · ${platform?.platform_name || 'SEMIZZY ONE'}`} />
     <section className="w-full space-y-6 rounded-2xl border bg-white p-6 shadow-sm">
-      <div><h1 className="text-2xl font-semibold">Reset your transaction PIN</h1><p className="mt-2 text-sm text-slate-600">We will send a one-time verification code to your registered email. No old PIN is required.</p></div>
+      <div><h1 className="text-2xl font-semibold">Reset your transaction PIN</h1><p className="mt-2 text-sm text-slate-600">Choose a registered recovery channel. WhatsApp is available only after your WhatsApp number has been verified. No old PIN is required.</p></div>
       <input type="email" required autoComplete="email" className="w-full rounded-lg border px-3 py-2" placeholder="Email address" value={form.data.email} onChange={e=>form.setData('email',e.target.value)} />
       <select className="w-full rounded-lg border px-3 py-2" value={form.data.otp_channel} onChange={e=>form.setData("otp_channel",e.target.value)}><option value="email">Email OTP</option><option value="sms">SMS OTP</option><option value="whatsapp">WhatsApp OTP (verified WhatsApp only)</option></select><button type="button" onClick={requestOtp} disabled={form.processing} className="w-full rounded-lg bg-slate-900 px-4 py-2 text-white">{otpSent ? 'Resend OTP' : 'Send OTP'}</button>
       {otpSent && <form onSubmit={submit} className="space-y-4">
