@@ -21,6 +21,7 @@ Route::middleware(['auth','verified','ensure.addon:vtu.website-builder'])->group
  Route::post('/website-builder/sites/{site}/pages/{page}/sections/reorder',[WebsiteBuilderController::class,'reorderSections'])->middleware('permission:website.manage');
  Route::post('/website-builder/sites/{site}/publish',[WebsiteBuilderController::class,'publish'])->middleware('permission:website.publish');
  Route::post('/website-builder/sites/{site}/domains',[WebsiteBuilderController::class,'domain'])->middleware('permission:website.domains.manage');
+ Route::post('/website-builder/sites/{site}/subdomain',[WebsiteBuilderController::class,'subdomain'])->middleware('permission:website.domains.manage');
  Route::post('/website-builder/sites/{site}/domains/{domain}/primary',[WebsiteBuilderController::class,'setPrimaryDomain'])->middleware('permission:website.domains.manage');
  Route::post('/website-builder/sites/{site}/domains/{domain}/verify',[WebsiteBuilderController::class,'verifyDomain'])->middleware('permission:website.domains.manage');
  Route::get('/website-builder/sites/{site}/preview/{page?}',[WebsiteBuilderController::class,'preview'])->middleware('permission:website.view')->name('website-builder.preview');
