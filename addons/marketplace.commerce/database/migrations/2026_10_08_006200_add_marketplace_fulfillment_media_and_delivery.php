@@ -102,7 +102,7 @@ return new class extends Migration {
             $table->dropColumn(['fulfillment_status','delivery_status','shipping_address','delivery_data','fulfilled_at','accepted_at','completed_at','service_status','revision_count','buyer_requirements','seller_submission']);
         });
         Schema::table('marketplace_products', function (Blueprint $table): void {
-            $table->dropIndex(['marketplace_products_latitude_longitude_index']);
+            $table->dropIndex('marketplace_products_latitude_longitude_index');
             $table->dropColumn(['location_text','latitude','longitude','shipping_mode','fulfillment_policy','seller_terms','buyer_requirements']);
         });
         Schema::dropIfExists('marketplace_product_media');
