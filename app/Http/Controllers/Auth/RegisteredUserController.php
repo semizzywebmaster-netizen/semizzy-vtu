@@ -25,7 +25,7 @@ class RegisteredUserController extends Controller
         $channels = json_decode((string) (SystemSetting::query()->where('key','registration_otp_channels')->value('value') ?? '["email"]'), true) ?: ['email'];
         return Inertia::render('Auth/Register', [
             'referral' => trim((string) $request->query('ref')),
-            'registrationVerification' => ['enabled'=>$verificationEnabled,'channels'=>array_values(array_intersect($channels,['email','sms','whatsapp']))],
+            'registrationVerification' => ['enabled'=>$verificationEnabled,'channels'=>array_values(array_intersect($channels,['email','sms']))],
         ]);
     }
 
@@ -52,7 +52,7 @@ class RegisteredUserController extends Controller
             'email' => 'required|email|max:190|unique:users,email',
             'password' => ['required', 'confirmed', Rules\Password::min(12)->mixedCase()->numbers()->symbols()->uncompromised()],
             'terms' => 'accepted',
-            'verification_channel' => $verificationEnabled ? 'required|in:email,sms,whatsapp' : 'nullable|in:email,sms,whatsapp',
+            'verification_channel' => $verificationEnabled ? 'required|in:email,sms' : 'nullable|in:email,sms',
         ]);
 
         if ($reserved->contains($username) || $protected->contains(fn ($term) => $term !== '' && str_contains($username, $term))) {
