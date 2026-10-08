@@ -10,6 +10,12 @@ return new class extends Migration {
    $table->string('code',80)->unique();
    $table->string('name');
    $table->string('type',40)->index();
+   $table->string('category',60)->nullable()->index();
+   $table->string('ownership',40)->nullable()->index();
+   $table->string('accrediting_body',80)->nullable()->index();
+   $table->unsignedSmallInteger('established_year')->nullable();
+   $table->string('city',100)->nullable();
+   $table->json('classification')->nullable();
    $table->string('state',80)->nullable()->index();
    $table->string('lga',100)->nullable();
    $table->string('country',80)->default('Nigeria');
