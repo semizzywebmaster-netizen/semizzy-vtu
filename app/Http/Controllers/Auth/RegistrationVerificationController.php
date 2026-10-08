@@ -37,10 +37,14 @@ class RegistrationVerificationController extends Controller
 
         $channels = $this->channels();
         $data = $request->validate(['channel'=>'required|in:'.implode(',', $channels)]);
+        $cooldown = (int) (SystemSetting::query()->where('key','registration_otp_resend_seconds')->value('value') ?? 60);
+        $lastSent = $request->session()->get('registration_otp_sent_at');
+        if ($lastSent && now()->diffInSeconds($lastSent) < $cooldown) return back()->withErrors(['verification_channel'=>'Please wait before requesting another code.']);
         $expiry = (int) (SystemSetting::query()->where('key','registration_otp_expiry_minutes')->value('value') ?? 10);
         $attempts = (int) (SystemSetting::query()->where('key','registration_otp_max_attempts')->value('value') ?? 5);
         $otp->sendRegistration($user, $data['channel'], $expiry, $attempts);
         $request->session()->put('registration_channel', $data['channel']);
+        $request->session()->put('registration_otp_sent_at', now());
         return back()->with('success','A new verification code has been sent.');
     }
 
