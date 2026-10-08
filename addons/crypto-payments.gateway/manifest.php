@@ -43,7 +43,9 @@ return [
         '2026_10_08_003001_seed_crypto_payment_providers.php',
         '2026_10_08_003002_create_crypto_payment_transactions.php',
     ],
-    'web_route_files' => [],
+    'web_route_files' => [
+        'addons/crypto-payments.gateway/routes/admin.php',
+    ],
     'api_route_files' => [],
     'routes' => ['/crypto-payments'],
     'api_routes' => ['/api/v1/crypto-payments'],
