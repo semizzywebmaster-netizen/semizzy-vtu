@@ -39,7 +39,7 @@ class PlatformControlController extends Controller
         $data = $request->validate([
             'enabled' => 'required|boolean',
             'channels' => 'required|array|min:1',
-            'channels.*' => 'in:email,sms,whatsapp',
+            'channels.*' => 'in:email,sms',
             'expiry_minutes' => 'required|integer|in:5,10,15,30,60',
             'max_attempts' => 'required|integer|in:3,5,6,8,10',
             'resend_seconds' => 'required|integer|in:30,60,90,120,300',
