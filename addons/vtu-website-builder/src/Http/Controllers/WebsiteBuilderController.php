@@ -33,5 +33,16 @@ class WebsiteBuilderController extends Controller
  public function setPrimaryDomain(Request $r,WebsiteSite $site,WebsiteDomain $domain){$this->own($r,$site);abort_unless((int)$domain->website_site_id===(int)$site->id,404);$this->service->setPrimaryDomain($site,$domain);return back()->with('success','Primary domain updated.');}
  public function verifyDomain(Request $r,WebsiteSite $site,WebsiteDomain $domain){$this->own($r,$site);abort_unless((int)$domain->website_site_id===(int)$site->id,404);$data=$r->validate(['token'=>'required|string|max:100']);$this->service->verifyDomain($domain,$data['token']);return back()->with('success','Domain verified.');}
  public function preview(Request $r,WebsiteSite $site,?string $page=null){$this->own($r,$site);$target=$page?$site->pages()->where('slug',$page)->firstOrFail():$site->pages()->where('is_home',true)->firstOrFail();return inertia('WebsitePublic',['site'=>$site,'page'=>$target,'preview'=>true]);}
+ public function contact(Request $r, WebsiteSite $site)
+ {
+  abort_unless($site->status==='published',404);
+  $data=$r->validate(['name'=>'required|string|max:120','email'=>'required|email|max:190','message'=>'required|string|max:5000']);
+  $settings=$site->settings??[];
+  $inbox=$settings['contact_submissions']??[];
+  $inbox[]=array_merge($data,['id'=>bin2hex(random_bytes(8)),'created_at'=>now()->toIso8601String(),'ip'=>$r->ip()]);
+  $settings['contact_submissions']=array_slice($inbox,-500);
+  $site->update(['settings'=>$settings]);
+  return back()->with('success','Message received. Thank you.');
+ }
  public function publicSite(WebsiteSite $site,?string $page=null){abort_unless($site->status==='published',404);$site->load(['pages'=>fn($q)=>$q->where('status','published')->orderBy('sort_order')]);$target=$this->pageFor($site,$page);return inertia('WebsitePublic',['site'=>$site->only(['id','name','slug','template_key','settings'])+['pages'=>$site->pages->map(fn($p)=>$p->only(['id','title','slug','is_home','sort_order']))->values()->all()],'page'=>$target->only(['id','title','slug','content','seo']),'preview'=>false]);}
 }
