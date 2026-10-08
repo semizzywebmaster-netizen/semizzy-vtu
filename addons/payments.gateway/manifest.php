@@ -50,6 +50,7 @@ return [
         '2026_10_08_002005_configure_opay_adapter.php',
         '2026_10_08_002006_configure_kora_adapter.php',
         '2026_10_08_002007_configure_squad_adapter.php',
+        '2026_10_08_002008_harden_ngn_gateway_capabilities.php',
     ],
     'web_route_files' => [
         'addons/payments.gateway/routes/web.php',
