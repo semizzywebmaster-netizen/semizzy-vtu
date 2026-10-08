@@ -28,7 +28,7 @@ final class MarketplaceController
 
         return Inertia::render('Marketplace/Index', [
             'products' => MarketplaceProduct::query()
-                ->with('category')
+                ->with(['category','media'])
                 ->where('status', 'active')
                 ->latest('published_at')
                 ->latest()
