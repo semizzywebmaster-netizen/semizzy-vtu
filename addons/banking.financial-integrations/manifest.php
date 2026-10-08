@@ -57,7 +57,9 @@ return [
         ['key' => 'automatic_reconciliation', 'type' => 'boolean', 'default' => true],
         ['key' => 'bank_account_name_enquiry', 'type' => 'boolean', 'default' => true],
     ],
-    'migrations' => [],
+    'migrations' => [
+        '2026_10_08_001000_create_banking_providers.php',
+    ],
     'web_route_files' => [],
     'api_route_files' => [],
     'routes' => ['/banking'],
