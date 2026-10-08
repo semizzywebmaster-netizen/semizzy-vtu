@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 export default function ForgotPin({ platform }: { platform?: { platform_name?: string } }) {
   const [otpSent, setOtpSent] = useState(false);
-  const form = useForm({ email: '', otp_code: '', pin: '', pin_confirmation: '' });
+  const form = useForm({ email: '', otp_channel: 'email', otp_code: '', pin: '', pin_confirmation: '' });
 
   const requestOtp = () => {
     form.post('/forgot-pin/otp', { preserveScroll: true, onSuccess: () => setOtpSent(true) });
@@ -19,7 +19,7 @@ export default function ForgotPin({ platform }: { platform?: { platform_name?: s
     <section className="w-full space-y-6 rounded-2xl border bg-white p-6 shadow-sm">
       <div><h1 className="text-2xl font-semibold">Reset your transaction PIN</h1><p className="mt-2 text-sm text-slate-600">We will send a one-time verification code to your registered email. No old PIN is required.</p></div>
       <input type="email" required autoComplete="email" className="w-full rounded-lg border px-3 py-2" placeholder="Email address" value={form.data.email} onChange={e=>form.setData('email',e.target.value)} />
-      <button type="button" onClick={requestOtp} disabled={form.processing} className="w-full rounded-lg bg-slate-900 px-4 py-2 text-white">{otpSent ? 'Resend OTP' : 'Send OTP'}</button>
+      <select className="w-full rounded-lg border px-3 py-2" value={form.data.otp_channel} onChange={e=>form.setData("otp_channel",e.target.value)}><option value="email">Email OTP</option><option value="sms">SMS OTP</option><option value="whatsapp">WhatsApp OTP (verified WhatsApp only)</option></select><button type="button" onClick={requestOtp} disabled={form.processing} className="w-full rounded-lg bg-slate-900 px-4 py-2 text-white">{otpSent ? 'Resend OTP' : 'Send OTP'}</button>
       {otpSent && <form onSubmit={submit} className="space-y-4">
         <input inputMode="numeric" pattern="\d{6}" maxLength={6} autoComplete="one-time-code" className="w-full rounded-lg border px-3 py-2 tracking-widest" placeholder="6-digit OTP" value={form.data.otp_code} onChange={e=>form.setData('otp_code',e.target.value.replace(/\D/g,'').slice(0,6))} />
         <input type="password" required inputMode="numeric" autoComplete="new-password" maxLength={4} className="w-full rounded-lg border px-3 py-2" placeholder="New 4-digit PIN" value={form.data.pin} onChange={e=>form.setData('pin',e.target.value.replace(/\D/g,'').slice(0,4))} />
