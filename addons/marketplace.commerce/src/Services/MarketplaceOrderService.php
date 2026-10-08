@@ -84,6 +84,9 @@ final class MarketplaceOrderService
             if ($product->isPhysical() && (int) $product->stock_quantity < (int) $order->quantity) {
                 throw new RuntimeException('Insufficient product stock.');
             }
+            if ($product->isDigital() && !$product->digitalAssets()->exists()) {
+                throw new RuntimeException('This digital product is not ready for delivery yet.');
+            }
 
             $currency = strtoupper((string) $order->currency);
             if ($currency !== 'NGN') {
