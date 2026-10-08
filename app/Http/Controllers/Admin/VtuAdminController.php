@@ -251,6 +251,12 @@ class VtuAdminController extends Controller
   return response()->json(['data'=>$result,'message'=>'Bulk operation cancelled safely.']);
  }
 
+ public function cancelSelectedBulk(Request $r,VtuBulkService $bulkService): JsonResponse{
+  $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id'],'reason'=>['required','string','max:500']]);
+  $result=$bulkService->cancelAdminSelected(array_map('intval',$data['bulk_ids']),(int)$r->user()->id,$data['reason']);
+  return response()->json(['status'=>'completed',...$result,'message'=>"Selected bulk cancellation completed: {$result['cancelled']} cancelled, {$result['skipped']} skipped."]); 
+ }
+
  public function auditBulk(VtuBulkOperation $bulk, VtuBulkReconciliationService $reconciliation): JsonResponse{
   $result=$reconciliation->audit($bulk);
   return response()->json($result, $result['healthy'] ? 200 : 409);
