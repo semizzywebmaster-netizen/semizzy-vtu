@@ -48,7 +48,15 @@ final class PaymentWebhookService
 
         if ($event->processed_at !== null) return $event;
 
-        DB::transaction(function () use ($event, $provider, $payload, $reference): void {
+        $verified = $this->gateways->adapter($provider)->verifyCollection($provider, $reference);
+        $verifiedStatus = $this->verifiedStatus($provider, $verified);
+        $verifiedAmountMinor = $this->verifiedAmountMinor($provider, $verified);
+        $verifiedCurrency = $this->verifiedCurrency($provider, $verified);
+        if (!in_array($verifiedStatus, ['success','successful','completed','complete','paid','approved'], true)) {
+            throw new RuntimeException('Gateway verification did not confirm a successful payment.');
+        }
+
+        DB::transaction(function () use ($event, $provider, $payload, $reference, $verifiedAmountMinor, $verifiedCurrency): void {
             $event->update(['processing_status' => 'processing', 'payload' => $payload]);
 
             $payment = PaymentIntent::query()->where('reference', $reference)->lockForUpdate()->first();
@@ -65,12 +73,12 @@ final class PaymentWebhookService
                 return;
             }
 
-            $amountMinor = $this->amountMinor($provider, $payload);
+            $amountMinor = $verifiedAmountMinor ?? $this->amountMinor($provider, $payload);
             if ($amountMinor !== null && $amountMinor !== (string) $payment->amount_minor) {
                 throw new RuntimeException('Payment amount does not match the payment intent.');
             }
 
-            $currency = strtoupper($this->currency($provider, $payload));
+            $currency = strtoupper($verifiedCurrency ?: $this->currency($provider, $payload));
             if ($currency !== '' && $currency !== strtoupper((string) $payment->currency)) {
                 throw new RuntimeException('Payment currency does not match the payment intent.');
             }
@@ -101,6 +109,34 @@ final class PaymentWebhookService
         });
 
         return $event->fresh();
+    }
+
+    private function verifiedStatus(PaymentGatewayProvider $provider, array $data): string
+    {
+        return strtolower((string) match ($provider->driver) {
+            'paystack' => data_get($data, 'status', ''),
+            'monnify' => data_get($data, 'paymentStatus', ''),
+            default => data_get($data, 'status', ''),
+        });
+    }
+
+    private function verifiedAmountMinor(PaymentGatewayProvider $provider, array $data): ?string
+    {
+        $amount = match ($provider->driver) {
+            'paystack' => data_get($data, 'amount'),
+            'monnify' => data_get($data, 'amountPaid', data_get($data, 'totalPayable')),
+            default => data_get($data, 'amount'),
+        };
+        if ($amount === null || $amount === '') return null;
+        return $provider->driver === 'monnify' ? number_format((float) $amount * 100, 0, '.', '') : (string) $amount;
+    }
+
+    private function verifiedCurrency(PaymentGatewayProvider $provider, array $data): string
+    {
+        return strtoupper((string) match ($provider->driver) {
+            'monnify' => data_get($data, 'currencyCode', ''),
+            default => data_get($data, 'currency', ''),
+        });
     }
 
     private function majorFromMinor(string $minor): string
