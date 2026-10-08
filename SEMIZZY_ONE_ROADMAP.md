@@ -95,6 +95,18 @@ The admin control layer now covers the marketplace foundation:
 
 Next bulk action should continue the active addon from this state, with the user-facing marketplace/admin UI and provider/execution abstraction built only from actual repository patterns; trading and live market-data ingestion remain gated until real verified providers exist.
 
+## Stocks & Investments Marketplace — bulk action #4 completed
+
+The user/API read layer now includes:
+- Published-security marketplace remains read-only and source/timestamp aware.
+- Authenticated users can retrieve their own reconciled holdings through a dedicated portfolio API.
+- Portfolio responses only expose holdings whose securities are currently published.
+- Authenticated users can retrieve published-security corporate actions through a paginated API.
+- Corporate-action visibility is restricted to announced/confirmed/processed records.
+- No buy/sell order endpoint has been enabled yet; execution remains gated behind a verified real provider and KYC/regulatory controls.
+
+No fake execution, synthetic holdings, or fabricated corporate actions were introduced.
+
 ## Education — previous addon
 
 
