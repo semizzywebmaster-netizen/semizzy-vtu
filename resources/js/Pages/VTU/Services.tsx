@@ -4,7 +4,7 @@ import { Head, Link } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 
 type Product = { id: number; name: string; key: string; metadata?: Record<string, unknown> | null };
-type Service = { id: number; key: string; name: string; description?: string | null; metadata?: Record<string, unknown> | null; category?: { key: string; name: string; description?: string | null } | null; products: Product[] };
+type Service = { id: number; key: string; name: string; description?: string | null; metadata?: Record<string, unknown> | null; category?: { key: string; name: string; description?: string | null } | null; products: Product[]; health?: { mode?: string; status?: string; label?: string; success_rate?: number|null; sample_size?: number; window_hours?: number; providers?: Array<{provider?:string;success_rate?:number;sample_size?:number}> } };
 
 const categoryIcon = (value: string) => iconForService(value);
 
@@ -97,8 +97,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
     if (!airtimeProduct || !bulkRows.length) return;
     setBulkQuoting(true); setBulkResult(null);
     try {
-      const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
-      const items=bulkRows.map(row=>({
+      const token=(document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';      const items=bulkRows.map(row=>({
         product_id: airtimeProduct.id,
         payload: { network: row.network, phone: row.phone, amount: row.amount },
       }));
@@ -197,7 +196,6 @@ export default function Services({ services = [] }: { services: Service[] }) {
     } catch(e) { setBulkDataResult(e instanceof Error ? e.message : 'Bulk data could not be processed.'); }
     finally { setBulkDataBusy(false); }
   };
-
   const categories = useMemo(() => {
     const map = new Map<string, { key: string; name: string; description?: string | null }>();
     services.forEach(service => {
@@ -257,7 +255,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
       </section> : <section className='mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
         {filtered.map(service => <button type='button' key={service.id} onClick={() => setSelectedService(service)} className='group text-left rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:ring-indigo-200 hover:shadow-md'>
           <div className='flex items-start justify-between gap-3'><ServiceIcon name={service.name} icon={(service.metadata as any)?.icon} iconUrl={(service.metadata as any)?.icon_url} size='lg'/><span className='rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-500'>{service.products.length} {service.products.length === 1 ? 'product' : 'products'}</span></div>
-          <p className='mt-5 text-lg font-black'>{service.name}</p><p className='mt-1 min-h-10 text-sm leading-5 text-slate-500'>{service.description || 'Provider-powered digital service.'}</p>
+          <p className='mt-5 text-lg font-black'>{service.name}</p><div className='mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2'><span className='text-[11px] font-bold uppercase tracking-wide text-slate-500'>Success rate</span><span className={'text-xs font-black ' + (service.health?.status === 'down' ? 'text-red-600' : service.health?.status === 'degraded' ? 'text-amber-600' : service.health?.status === 'healthy' ? 'text-emerald-600' : 'text-slate-500')}>{service.health?.label || 'No recent data'}</span></div><p className='mt-1 min-h-10 text-sm leading-5 text-slate-500'>{service.description || 'Provider-powered digital service.'}</p>
           <div className='mt-5 flex items-center justify-between border-t border-slate-100 pt-4'><span className='text-xs font-semibold text-slate-400'>{service.category?.name || 'Digital service'}</span><span className='text-sm font-black text-indigo-700'>View options →</span></div>
         </button>)}
       </section>}
@@ -297,8 +295,7 @@ export default function Services({ services = [] }: { services: Service[] }) {
             <label className='block text-sm font-bold'>Meter type<select value={form.meter_type || 'prepaid'} onChange={e => setForm({...form, meter_type:e.target.value})} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium'><option value='prepaid'>Prepaid</option><option value='postpaid'>Postpaid</option></select></label>
             <label className='block text-sm font-bold'>Amount<input value={form.amount || ''} onChange={e => setForm({...form, amount:e.target.value})} placeholder='5000' inputMode='decimal' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>
           </>}
-          {['cable_tv','broadband'].includes(selectedService.key) && <>
-            <label className='block text-sm font-bold'>Provider<input value={form.provider || ''} onChange={e => setForm({...form, provider:e.target.value})} placeholder='Provider' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>
+          {['cable_tv','broadband'].includes(selectedService.key) && <>            <label className='block text-sm font-bold'>Provider<input value={form.provider || ''} onChange={e => setForm({...form, provider:e.target.value})} placeholder='Provider' className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>
             <label className='block text-sm font-bold'>{selectedService.key === 'cable_tv' ? 'Customer / IUC number' : 'Account ID'}<input value={form.customer_number || form.account_id || ''} onChange={e => setForm({...form, ...(selectedService.key === 'cable_tv' ? {customer_number:e.target.value} : {account_id:e.target.value})})} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>
             <label className='block text-sm font-bold'>{selectedService.key === 'cable_tv' ? 'Package' : 'Plan'}<input value={form.package || ''} onChange={e => setForm({...form, package:e.target.value})} placeholder={selectedProduct.name} className='mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium outline-none' /></label>
           </>}
