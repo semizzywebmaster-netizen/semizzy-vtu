@@ -159,6 +159,9 @@ export default function BulkOperations({
             <a href={`/admin/vtu/bulk/export?status=${encodeURIComponent(status)}&reference=${encodeURIComponent(reference)}`} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">
               Export CSV
             </a>
+              <button type="button" onClick={()=>{if(confirm('Archive this completed bulk operation? Financial records and audit history will be preserved.')) fetch(`/admin/vtu/bulk/${openId}/archive`,{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')||'','Accept':'application/json'}}).then(()=>window.location.reload())}} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">
+                Archive
+              </button>
               <a href={`/admin/vtu/bulk/${openId}/report`} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">
                 Report CSV
               </a>
