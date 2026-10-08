@@ -12,6 +12,8 @@ type Operation = {
   idempotency_key?: string | null;
   created_at?: string | null;
   archived_at?: string | null;
+  scheduled_at?: string | null;
+  edit_until?: string | null;
   metadata?: { pending_items?: number | null } | null;
   user?: { name?: string | null; email?: string | null } | null;
 };
@@ -205,7 +207,7 @@ export default function BulkOperations({
 
         <div className="mt-4 rounded-xl border bg-white p-3">
           <div className="flex flex-wrap items-center gap-2">
-            <a href={`/admin/vtu/bulk/export?status=${encodeURIComponent(status)}&reference=${encodeURIComponent(reference)}`} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">
+            <a href="/admin/vtu/schedule-policy" className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">Schedule policy</a><a href={`/admin/vtu/bulk/export?status=${encodeURIComponent(status)}&reference=${encodeURIComponent(reference)}`} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">
               Export CSV
             </a>
               {operations.data.find((operation) => operation.id === openId)?.archived_at ? (
@@ -288,7 +290,7 @@ export default function BulkOperations({
                           <div className="grid gap-3 sm:grid-cols-3">
                             <div><span className="font-bold">Items:</span> {operation.total_items}</div>
                             <div><span className="font-bold">Processed:</span> {operation.processed_items}</div>
-                            <div><span className="font-bold">Pending:</span> {pending}</div>
+                            <div><span className="font-bold">Pending:</span> {pending}</div><div><span className="font-bold">Executes:</span> {operation.scheduled_at ? new Date(operation.scheduled_at).toLocaleString() : 'Immediate'}</div><div><span className="font-bold">Editing closes:</span> {operation.edit_until ? new Date(operation.edit_until).toLocaleString() : '—'}</div>
                           </div>
                           <div className="mt-3">
                             <span className="font-bold">Idempotency:</span>{' '}
