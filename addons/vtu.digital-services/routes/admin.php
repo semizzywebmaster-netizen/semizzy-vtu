@@ -24,6 +24,7 @@ Route::middleware(['auth', 'role:ADMIN,STAFF,SUPPORT', 'verified', 'ensure.addon
         Route::post('/bulk/reconcile-selected', [VtuAdminController::class, 'reconcileSelectedBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.reconcile-selected');
         Route::post('/bulk/{bulk}/reconcile', [VtuAdminController::class, 'reconcileBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.reconcile');
         Route::get('/bulk/{bulk}/audit', [VtuAdminController::class, 'auditBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.audit');
+        Route::post('/bulk/{bulk}/cancel', [VtuAdminController::class, 'cancelBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.cancel');
         Route::post('/bulk/recover-stale', [VtuAdminController::class, 'recoverStaleBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.recover-stale');
         Route::get('/transactions', [VtuAdminController::class, 'transactions'])->middleware('permission:vtu.transactions.view')->name('admin.vtu.transactions');
         Route::post('/transactions/bulk/requery', [VtuAdminController::class, 'bulkRequery'])->middleware('permission:vtu.requery')->name('admin.vtu.transactions.bulk-requery');
