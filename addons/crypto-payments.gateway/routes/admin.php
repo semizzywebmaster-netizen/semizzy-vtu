@@ -13,3 +13,13 @@ Route::middleware(['auth', 'verified', 'permission:crypto.providers.manage'])
         Route::post('/{provider}/toggle', [CryptoPaymentProviderAdminController::class, 'toggle'])->name('toggle');
         Route::post('/{provider}/test', [CryptoPaymentProviderAdminController::class, 'test'])->name('test');
     });
+
+use Semizzy\Addons\CryptoPayments\Http\Controllers\CryptoFundingSettingsAdminController;
+
+Route::middleware(['auth', 'verified', 'permission:crypto.settings.manage'])
+    ->prefix('admin/crypto-payments/settings')
+    ->name('admin.crypto-payments.settings.')
+    ->group(function (): void {
+        Route::get('/funding-fee', [CryptoFundingSettingsAdminController::class, 'show'])->name('funding-fee.show');
+        Route::patch('/funding-fee', [CryptoFundingSettingsAdminController::class, 'update'])->name('funding-fee.update');
+    });
