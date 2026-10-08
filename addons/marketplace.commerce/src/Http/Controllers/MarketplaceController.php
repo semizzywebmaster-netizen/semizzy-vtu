@@ -82,6 +82,28 @@ final class MarketplaceController
         return response()->json(['success' => true, 'categories' => $categories]);
     }
 
+    public function updateCategoryProfit(Request $request, MarketplaceCategory $category)
+    {
+        $data = $request->validate([
+            'sale_profit_percent' => ['required','numeric','min:0','max:100'],
+            'sale_profit_fixed_minor' => ['nullable','string','max:30'],
+        ]);
+        $percent = (float) $data['sale_profit_percent'];
+        if ($percent < 0 || $percent > 100) {
+            return response()->json(['success' => false, 'message' => 'Profit percentage must be between 0 and 100.'], 422);
+        }
+        $fixed = (string) ($data['sale_profit_fixed_minor'] ?? '0');
+        if (!preg_match('/^\d+$/', $fixed)) {
+            return response()->json(['success' => false, 'message' => 'Fixed profit must be a whole amount in minor currency units.'], 422);
+        }
+        $category->forceFill([
+            'sale_profit_bps' => (int) round($percent * 100),
+            'sale_profit_fixed_minor' => $fixed,
+        ])->save();
+
+        return response()->json(['success' => true, 'category' => $category->fresh(), 'message' => 'Category sales profit settings updated.']);
+    }
+
     public function admin()
     {
         return Inertia::render('Admin/Marketplace/Index', [
