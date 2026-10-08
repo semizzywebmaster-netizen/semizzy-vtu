@@ -15,6 +15,9 @@ Route::prefix('admin/forex-digital-assets')
         Route::post('/providers/{provider}/verify', [AdminForexDigitalAssetsController::class, 'verifyProvider'])
             ->middleware('permission:forex.providers.manage')
             ->name('admin.forex-digital-assets.provider.verify');
+        Route::post('/providers/{provider}/test', [AdminForexDigitalAssetsController::class, 'testProvider'])
+            ->middleware('permission:forex.providers.manage')
+            ->name('admin.forex-digital-assets.provider.test');
         Route::post('/providers/{provider}/disable', [AdminForexDigitalAssetsController::class, 'disableProvider'])
             ->middleware('permission:forex.providers.manage')
             ->name('admin.forex-digital-assets.provider.disable');
