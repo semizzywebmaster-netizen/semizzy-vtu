@@ -9,10 +9,17 @@ use RuntimeException;
 
 final class SmmWalletService
 {
+    public function walletForOrderUser(int $userId,string $currency): WalletAccount
+    {
+        $wallet=WalletAccount::where('user_id',$userId)->where('currency',$currency)->lockForUpdate()->first();
+        if(!$wallet||$wallet->status!=='active') throw new RuntimeException('User wallet is not available.');
+        return $wallet;
+    }
+
     public function reserve(SmmOrder $order): void
     {
         DB::transaction(function () use ($order): void {
-            $wallet=$this->wallet($order); $key="smm:{$order->id}:reserve";
+            $wallet=$this->wallet($order); if($order->wallet_account_id!==null && (int)$order->wallet_account_id!==(int)$wallet->id) throw new RuntimeException('SMM order wallet binding is invalid.'); $key="smm:{$order->id}:reserve";
             if(WalletMovement::where('wallet_account_id',$wallet->id)->where('operation_key',$key)->exists()) return;
             $beforeA=(string)$wallet->available_minor; $beforeH=(string)$wallet->held_minor; $amount=(string)$order->amount_minor;
             if($this->cmp($beforeA,$amount)<0) throw new RuntimeException('Insufficient wallet balance.');
@@ -24,7 +31,7 @@ final class SmmWalletService
     public function settle(SmmOrder $order,bool $success): void
     {
         DB::transaction(function () use ($order,$success): void {
-            $wallet=$this->wallet($order); $key="smm:{$order->id}:settle:".($success?'success':'failure');
+            ".($success?'success':'failure');
             if(WalletMovement::where('wallet_account_id',$wallet->id)->where('operation_key',$key)->exists()) return;
             $opposite="smm:{$order->id}:settle:".($success?'failure':'success');
             if(WalletMovement::where('wallet_account_id',$wallet->id)->where('operation_key',$opposite)->exists()) throw new RuntimeException('Wallet settlement already finalized with the opposite outcome.');
