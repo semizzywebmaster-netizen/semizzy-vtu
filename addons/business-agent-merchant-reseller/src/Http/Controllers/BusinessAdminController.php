@@ -20,6 +20,32 @@ class BusinessAdminController
   return response()->json(['partner'=>$s->approve($partner,$r->user(),$d['approved'],$d['note']??'')]);
  }
 
+ public function bulkStatus(Request $r){
+  $d=$r->validate([
+   'partner_ids'=>['required','array','min:1','max:100'],
+   'partner_ids.*'=>['integer','distinct','exists:business_partners,id'],
+   'status'=>['required','in:active,rejected,suspended'],
+   'note'=>['nullable','string','max:1000'],
+  ]);
+  if(in_array($d['status'],['rejected','suspended'],true) && trim((string)($d['note']??''))==='') abort(422,'A reason is required for rejection or suspension.');
+  $actor=$r->user(); $changed=0; $skipped=0;
+  foreach(BusinessPartner::query()->whereIn('id',array_map('intval',$d['partner_ids']))->with('business')->get() as $partner){
+   $from=(string)$partner->status; $to=(string)$d['status'];
+   $allowed=(($from==='pending'&&in_array($to,['active','rejected'],true))||($from==='active'&&$to==='suspended')||($from==='suspended'&&$to==='active'));
+   if(!$allowed){$skipped++;continue;}
+   try{
+    DB::transaction(function()use($partner,$actor,$from,$to,$d){
+     $partner->updateOrFail(['status'=>$to]);
+     $partner->events()->create(['actor_user_id'=>$actor->id,'action'=>'bulk_status_updated','status'=>$to,'note'=>$d['note']??null,'metadata'=>['from'=>$from,'to'=>$to,'bulk'=>true]]);
+     if($to==='active'&&$partner->business)$partner->business->update(['status'=>'approved']);
+    });
+    $changed++;
+   }catch(\\Throwable $e){report($e);$skipped++;}
+  }
+  $message="Bulk partner {$d['status']} completed: {$changed} changed, {$skipped} skipped.";
+  return response()->json(['status'=>'completed','changed'=>$changed,'skipped'=>$skipped,'message'=>$message]);
+ }
+
  public function update(Request $r,BusinessPartner $partner){
   $d=$r->validate([
    'status'=>'sometimes|in:pending,active,suspended,rejected',
