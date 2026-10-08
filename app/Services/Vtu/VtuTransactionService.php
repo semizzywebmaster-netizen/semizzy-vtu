@@ -1,5 +1,7 @@
 <?php
 namespace App\Services\Vtu;
+
+use Addons\WhatsAppBot\Services\WhatsAppTransactionNotificationService;
 use App\Models\Addon;
 use App\Models\FinancialOperation;
 use App\Models\ServiceProduct;
@@ -12,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
 class VtuTransactionService{
- public function __construct(private PriceEngine $pricing,private VtuProviderGateway $gateway,private VtuWalletService $wallet,private AuditLogger $audit,private CommercialServiceRegistry $commercial){}
+ public function __construct(private PriceEngine $pricing,private VtuProviderGateway $gateway,private VtuWalletService $wallet,private AuditLogger $audit,private CommercialServiceRegistry $commercial, private WhatsAppTransactionNotificationService $whatsappNotifications){}
  public function quote(ServiceProduct $p,string $tier='USER'):array{
   $tier=$this->normalizeTier($tier);
   $quote=$this->pricing->quote($p,$tier);
@@ -79,7 +81,9 @@ class VtuTransactionService{
    $locked->save();
    $this->audit->record('vtu.transaction.cancelled',$locked,['reference'=>$locked->reference,'reason'=>$reason,'status'=>'cancelled']);
    $this->syncBulkState($locked);
-   return $locked->fresh();
+   $result=$locked->fresh();
+   $this->whatsappNotifications->notify($result,'cancelled');
+   return $result;
   });
  }
 
