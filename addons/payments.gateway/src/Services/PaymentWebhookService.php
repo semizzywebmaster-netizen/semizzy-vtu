@@ -2,113 +2,181 @@
 
 namespace Semizzy\Addons\Payments\Services;
 
-use App\Models\ApiProvider;
-use App\Models\WalletAccount;
-use App\Models\WalletMovement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
 use Semizzy\Addons\Payments\Models\PaymentIntent;
 use Semizzy\Addons\Payments\Models\PaymentWebhookEvent;
 
 final class PaymentWebhookService
 {
-    public function handle(ApiProvider $provider, array $payload, array $headers): PaymentWebhookEvent
-    {
-        $endpoint = $provider->endpoints()->where('enabled', true)->whereIn('operation', ['webhook','payment_webhook'])->latest('id')->first();
-        $config = is_array($endpoint?->webhook_config) ? $endpoint->webhook_config : [];
-        $secret = (string) ($config['secret'] ?? '');
-        $signatureHeader = (string) ($config['signature_header'] ?? 'X-Webhook-Signature');
-        $algorithm = strtolower((string) ($config['algorithm'] ?? 'sha256'));
-        $provided = (string) ($headers[$signatureHeader] ?? $headers[strtolower($signatureHeader)] ?? '');
-        $raw = request()->getContent();
+    public function __construct(private PaymentGatewayManager $gateways) {}
 
-        if (($config['require_signature'] ?? true) && ($secret === '' || $provided === '')) {
+    public function handle(PaymentGatewayProvider $provider, array $payload, array $headers): PaymentWebhookEvent
+    {
+        $raw = request()->getContent();
+        $config = is_array($provider->settings) ? $provider->settings : [];
+        $secret = (string) ($provider->credentials['webhook_secret'] ?? $provider->credentials['secret_key'] ?? $provider->credentials['secret'] ?? '');
+        $signature = $this->header($headers, (string) ($config['signature_header'] ?? ($provider->driver === 'paystack' ? 'x-paystack-signature' : 'monnify-signature')));
+
+        if (($config['require_webhook_signature'] ?? true) && ($secret === '' || $signature === '')) {
             throw new RuntimeException('Webhook signature is required but not configured or supplied.');
         }
-        if ($secret !== '' && $provided !== '') {
-            $prefix = (string) ($config['signature_prefix'] ?? '');
-            $candidate = hash_hmac($algorithm, $raw, $secret);
-            $providedValue = str_starts_with($provided, $prefix) ? substr($provided, strlen($prefix)) : $provided;
-            if (! hash_equals($candidate, trim($providedValue))) {
-                throw new RuntimeException('Invalid webhook signature.');
+
+        if ($secret !== '' && $signature !== '') {
+            $candidate = hash_hmac('sha512', $raw, $secret);
+            if (!hash_equals(strtolower(trim($candidate)), strtolower(trim($signature)))) {
+                throw new RuntimeException('Invalid payment gateway webhook signature.');
             }
         }
 
-        $eventId = (string) data_get($payload, $config['event_id_path'] ?? 'id', '');
-        if ($eventId === '') $eventId = hash('sha256', $raw);
-        $reference = (string) data_get($payload, $config['reference_path'] ?? 'reference', data_get($payload, 'data.reference', ''));
-        $eventType = (string) data_get($payload, $config['event_type_path'] ?? 'event', 'payment');
-        $signatureHash = hash('sha256', $provided ?: $raw);
+        $reference = $this->reference($provider, $payload);
+        if ($reference === '') throw new RuntimeException('Payment reference was not found in webhook payload.');
 
+        $eventId = $this->eventId($provider, $payload, $raw, $reference);
+        $eventType = $this->eventType($provider, $payload);
         $event = PaymentWebhookEvent::firstOrCreate(
-            ['provider_key' => (string) $provider->identifier, 'event_id' => $eventId],
-            ['event_type'=>$eventType,'signature_hash'=>$signatureHash,'processing_status'=>'received','payment_reference'=>$reference ?: null,'payload'=>$payload]
+            ['provider_key' => $provider->code, 'event_id' => $eventId],
+            [
+                'event_type' => $eventType,
+                'signature_hash' => hash('sha256', $signature ?: $raw),
+                'processing_status' => 'received',
+                'payment_reference' => $reference,
+                'payload' => $payload,
+            ]
         );
+
         if ($event->processed_at !== null) return $event;
 
-        DB::transaction(function () use ($event, $provider, $payload, $reference, $config): void {
-            $event->update(['processing_status'=>'processing','payment_reference'=>$reference ?: null,'payload'=>$payload]);
-            $payment = PaymentIntent::query()->where('reference',$reference)->lockForUpdate()->first();
+        DB::transaction(function () use ($event, $provider, $payload, $reference): void {
+            $event->update(['processing_status' => 'processing', 'payload' => $payload]);
+
+            $payment = PaymentIntent::query()->where('reference', $reference)->lockForUpdate()->first();
             if (!$payment) throw new RuntimeException('Payment reference was not found.');
+
             if ($payment->status === 'paid') {
-                $event->update(['processing_status'=>'processed','processed_at'=>now(),'processing_error'=>null]);
+                $event->update(['processing_status' => 'processed', 'processed_at' => now(), 'processing_error' => null]);
                 return;
             }
 
-            $status = strtolower((string) data_get($payload, $config['status_path'] ?? 'status', data_get($payload,'data.status','')));
+            $status = $this->status($provider, $payload);
             if (!in_array($status, ['success','successful','completed','complete','paid','approved'], true)) {
-                $event->update(['processing_status'=>'ignored','processed_at'=>now(),'processing_error'=>'Webhook did not report a successful payment.']);
+                $event->update(['processing_status' => 'ignored', 'processed_at' => now(), 'processing_error' => 'Webhook did not report a successful payment.']);
                 return;
             }
 
-            $payloadCurrency = strtoupper((string) data_get($payload, $config['currency_path'] ?? 'currency', data_get($payload, 'data.currency', '')));
-            if ($payloadCurrency !== '' && $payloadCurrency !== strtoupper((string) $payment->currency)) {
-                throw new RuntimeException('Payment currency does not match the payment intent.');
-            }
-
-            $payloadAmount = data_get($payload, $config['amount_path'] ?? 'amount_minor', data_get($payload, 'data.amount_minor'));
-            if ($payloadAmount !== null && (string) $payloadAmount !== (string) $payment->amount_minor) {
+            $amountMinor = $this->amountMinor($provider, $payload);
+            if ($amountMinor !== null && $amountMinor !== (string) $payment->amount_minor) {
                 throw new RuntimeException('Payment amount does not match the payment intent.');
             }
 
-            $wallet = WalletAccount::query()->whereKey($payment->wallet_account_id)->lockForUpdate()->first();
-            if (!$wallet || $wallet->status !== 'active') throw new RuntimeException('Payment wallet is unavailable.');
-            if (strtoupper($wallet->currency) !== strtoupper($payment->currency)) throw new RuntimeException('Payment currency does not match wallet currency.');
-
-            $existing = WalletMovement::query()->where('operation_key','payment:webhook:'.$event->id)->first();
-            if (!$existing) {
-                $before = (string) $wallet->available_minor;
-                $amount = (string) $payment->amount_minor;
-                $after = $this->add($before, $amount);
-                $wallet->forceFill(['available_minor'=>$after])->saveOrFail();
-                WalletMovement::create([
-                    'wallet_account_id'=>$wallet->id,
-                    'operation_key'=>'payment:webhook:'.$event->id,
-                    'reference'=>'PAY-CREDIT-'.$event->id,
-                    'type'=>'payment_funding',
-                    'amount_minor'=>$amount,
-                    'currency'=>$wallet->currency,
-                    'available_before_minor'=>$before,
-                    'available_after_minor'=>$after,
-                    'held_before_minor'=>(string)$wallet->held_minor,
-                    'held_after_minor'=>(string)$wallet->held_minor,
-                    'metadata'=>['payment_intent_id'=>$payment->id,'provider_id'=>$provider->id,'provider_reference'=>$payment->provider_reference,'webhook_event_id'=>$event->id],
-                ]);
+            $currency = strtoupper($this->currency($provider, $payload));
+            if ($currency !== '' && $currency !== strtoupper((string) $payment->currency)) {
+                throw new RuntimeException('Payment currency does not match the payment intent.');
             }
-            $payment->forceFill(['status'=>'paid','paid_at'=>now(),'provider_id'=>$provider->id,'provider_reference'=>$payment->provider_reference ?: (string)data_get($payload,$config['provider_reference_path'] ?? 'provider_reference','')])->saveOrFail();
-            $event->update(['processing_status'=>'processed','processed_at'=>now(),'processing_error'=>null]);
+
+            $payment->forceFill([
+                'status' => 'paid',
+                'paid_at' => now(),
+                'provider_id' => $provider->id,
+                'provider_reference' => $this->providerReference($provider, $payload) ?: $payment->provider_reference,
+            ])->saveOrFail();
+
+            app(\App\Services\Finance\WalletCreditService::class)->credit(
+                $payment->user()->firstOrFail(),
+                bcdiv((string) $payment->amount_minor, '100', 2),
+                'payment:intent:'.$payment->id,
+                'PAY-CREDIT-'.$event->id,
+                'payment_funding',
+                [
+                    'payment_intent_id' => $payment->id,
+                    'provider_id' => $provider->id,
+                    'provider_reference' => $payment->provider_reference,
+                    'webhook_event_id' => $event->id,
+                    'currency' => $payment->currency,
+                ]
+            );
+
+            $event->update(['processing_status' => 'processed', 'processed_at' => now(), 'processing_error' => null]);
         });
 
         return $event->fresh();
     }
 
-    private function add(string $a, string $b): string
+    private function header(array $headers, string $name): string
     {
-        $a=ltrim($a,'0')?:'0'; $b=ltrim($b,'0')?:'0';
-        if (function_exists('bcadd')) return bcadd($a,$b,0);
-        $carry=0; $out='';
-        for($i=0,$j=0;$i<strlen($a)||$j<strlen($b);$i++,$j++){ $sum=($i<strlen($a)?ord($a[strlen($a)-1-$i])-48:0)+($j<strlen($b)?ord($b[strlen($b)-1-$j])-48:0)+$carry; $out=($sum%10).$out; $carry=intdiv($sum,10); }
-        return $carry?($carry.$out):$out;
+        foreach ($headers as $key => $value) {
+            if (strtolower((string) $key) === strtolower($name)) return is_array($value) ? (string) ($value[0] ?? '') : (string) $value;
+        }
+        return '';
+    }
+
+    private function config(PaymentGatewayProvider $provider): array
+    {
+        return is_array($provider->settings) ? $provider->settings : [];
+    }
+
+    private function reference(PaymentGatewayProvider $provider, array $payload): string
+    {
+        return match ($provider->driver) {
+            'paystack' => (string) data_get($payload, 'data.reference', data_get($payload, 'reference', '')),
+            'monnify' => (string) data_get($payload, 'eventData.paymentReference', ''),
+            default => (string) data_get($payload, 'data.reference', data_get($payload, 'reference', '')),
+        };
+    }
+
+    private function eventId(PaymentGatewayProvider $provider, array $payload, string $raw, string $reference): string
+    {
+        return match ($provider->driver) {
+            'paystack' => (string) data_get($payload, 'data.id', hash('sha256', $raw)),
+            'monnify' => (string) data_get($payload, 'eventData.transactionReference', hash('sha256', $raw)),
+            default => hash('sha256', $provider->code.'|'.$reference.'|'.$raw),
+        };
+    }
+
+    private function eventType(PaymentGatewayProvider $provider, array $payload): string
+    {
+        return (string) data_get($payload, 'event', data_get($payload, 'eventType', 'payment'));
+    }
+
+    private function status(PaymentGatewayProvider $provider, array $payload): string
+    {
+        return match ($provider->driver) {
+            'paystack' => strtolower((string) data_get($payload, 'data.status', data_get($payload, 'status', ''))),
+            'monnify' => strtolower((string) data_get($payload, 'eventData.paymentStatus', data_get($payload, 'eventData.paymentStatus', ''))),
+            default => strtolower((string) data_get($payload, 'data.status', data_get($payload, 'status', ''))),
+        };
+    }
+
+    private function amountMinor(PaymentGatewayProvider $provider, array $payload): ?string
+    {
+        $amount = match ($provider->driver) {
+            'paystack' => data_get($payload, 'data.amount'),
+            'monnify' => data_get($payload, 'eventData.amountPaid'),
+            default => data_get($payload, 'data.amount', data_get($payload, 'amount')),
+        };
+        if ($amount === null || $amount === '') return null;
+        if ($provider->driver === 'monnify') {
+            return number_format((float) $amount * 100, 0, '.', '');
+        }
+        return (string) $amount;
+    }
+
+    private function currency(PaymentGatewayProvider $provider, array $payload): string
+    {
+        return strtoupper((string) match ($provider->driver) {
+            'monnify' => data_get($payload, 'eventData.currency', ''),
+            default => data_get($payload, 'data.currency', data_get($payload, 'currency', '')),
+        });
+    }
+
+    private function providerReference(PaymentGatewayProvider $provider, array $payload): string
+    {
+        return (string) match ($provider->driver) {
+            'paystack' => data_get($payload, 'data.id', ''),
+            'monnify' => data_get($payload, 'eventData.transactionReference', ''),
+            default => data_get($payload, 'data.id', ''),
+        };
     }
 }
