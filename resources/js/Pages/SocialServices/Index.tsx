@@ -1,4 +1,3 @@
-import React from 'react';
 import { Head } from '@inertiajs/react';
 
 type Props = { accounts?: any; numbers?: any; orders?: any };
