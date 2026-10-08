@@ -136,7 +136,10 @@ final class OpayPaymentGatewayAdapter implements PaymentGatewayAdapter
         );
 
         $body = $response->json();
-        if (!$response->successful() || !is_array($body)) return false;
-        return (string) ($body['code'] ?? '') !== '02000';
+        // A status lookup for a deliberately unknown reference may return a business-level
+        // "not found" code. For a connection test, successful authenticated HTTP response
+        // is the meaningful signal; never treat an expected unknown-reference response as
+        // a gateway outage.
+        return $response->successful() && is_array($body);
     }
 }
