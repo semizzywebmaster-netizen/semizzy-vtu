@@ -5,6 +5,8 @@ use Semizzy\Addons\Marketplace\Http\Controllers\MarketplaceController;
 Route::middleware(['web','auth','ensure.addon:marketplace.commerce','permission:marketplace.view'])->group(function(){
  Route::get('/marketplace',[MarketplaceController::class,'index'])->name('marketplace.index');
  Route::get('/marketplace/categories',[MarketplaceController::class,'categories'])->name('marketplace.categories');
+ Route::get('/marketplace/categories/{category}/form',[MarketplaceController::class,'categoryForm'])->name('marketplace.categories.form');
+ Route::get('/marketplace/seller/categories',[MarketplaceController::class,'sellerCategories'])->name('marketplace.seller.categories');
 });
 Route::middleware(['web','auth','ensure.addon:marketplace.commerce','permission:marketplace.sell'])->group(function(){
  Route::post('/marketplace/products',[MarketplaceController::class,'productStore'])->name('marketplace.products.store');
