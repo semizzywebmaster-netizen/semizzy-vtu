@@ -18,6 +18,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\PasswordRecoveryController;
 use App\Http\Controllers\Auth\UpdatePasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Auth\RegistrationVerificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\Admin\KycController as AdminKycController;
@@ -81,6 +82,9 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
     Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('/register', [RegisteredUserController::class, 'store'])->name('register.store');
+    Route::get('/register/verify', [RegistrationVerificationController::class, 'show'])->name('registration.verify');
+    Route::post('/register/verify/send', [RegistrationVerificationController::class, 'send'])->middleware('throttle:3,10')->name('registration.verify.send');
+    Route::post('/register/verify', [RegistrationVerificationController::class, 'verify'])->middleware('throttle:10,10')->name('registration.verify.submit');
     Route::get('/forgot-password', [PasswordRecoveryController::class, 'create'])->name('password.request');
     Route::post('/forgot-password/otp', [PasswordRecoveryController::class, 'requestOtp'])->middleware('throttle:3,10')->name('password.recovery.otp');
     Route::post('/forgot-password/reset', [PasswordRecoveryController::class, 'reset'])->middleware('throttle:5,10')->name('password.recovery.reset');
@@ -166,6 +170,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/platform-controls', [PlatformControlController::class, 'index'])->middleware(['role:ADMIN','permission:system.manage'])->name('admin.platform-controls.index');
         Route::patch('/platform-controls/services/{service}', [PlatformControlController::class, 'toggleService'])->whereNumber('service')->middleware(['role:ADMIN','permission:system.manage','throttle:30,1'])->name('admin.platform-controls.service-toggle');
         Route::patch('/platform-controls/addons/{addon}', [PlatformControlController::class, 'toggleAddon'])->whereNumber('addon')->middleware(['role:ADMIN','permission:system.manage','throttle:30,1'])->name('admin.platform-controls.addon-toggle');
+        Route::put('/platform-controls/registration-verification', [PlatformControlController::class, 'updateRegistrationVerification'])->middleware(['role:ADMIN','permission:system.manage','throttle:20,1'])->name('admin.platform-controls.registration-verification');
         Route::put('/platform-controls', [PlatformControlController::class, 'update'])->middleware(['role:ADMIN','permission:system.manage','throttle:20,1'])->name('admin.platform-controls.update');
         Route::get('/settings', [SystemSettingsController::class, 'index'])->middleware('permission:system.manage')->name('admin.settings.index');
         Route::put('/settings', [SystemSettingsController::class, 'update'])->middleware(['permission:system.manage', 'throttle:20,1'])->name('admin.settings.update');
