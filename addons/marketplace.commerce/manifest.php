@@ -18,7 +18,7 @@ return [
   ['key'=>'platform_fee_bps','type'=>'integer','default'=>0],
   ['key'=>'max_order_minor','type'=>'integer','default'=>1000000000],
  ],
- 'migrations'=>['2026_10_07_001100_create_marketplace_tables.php','2026_10_07_001101_harden_marketplace_orders.php','2026_10_07_001102_marketplace_earnings.php','2026_10_08_006000_extend_marketplace_product_types.php','2026_10_08_006100_create_marketplace_category_taxonomy.php','2026_10_08_006101_seed_marketplace_category_children.php'],
+ 'migrations'=>['2026_10_07_001100_create_marketplace_tables.php','2026_10_07_001101_harden_marketplace_orders.php','2026_10_07_001102_marketplace_earnings.php','2026_10_08_006000_extend_marketplace_product_types.php','2026_10_08_006100_create_marketplace_category_taxonomy.php','2026_10_08_006101_seed_marketplace_category_children.php','2026_10_08_006200_add_marketplace_fulfillment_media_and_delivery.php'],
  'web_route_files'=>['addons/marketplace.commerce/routes/web.php','addons/marketplace.commerce/routes/admin.php'],
  'api_route_files'=>['addons/marketplace.commerce/routes/api.php'],
  'routes'=>['/marketplace'],'api_routes'=>['/api/v1/marketplace/orders'],
