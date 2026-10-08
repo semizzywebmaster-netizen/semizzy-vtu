@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SecurityEventController;
 use App\Http\Controllers\Admin\DataSyncController;
+use App\Http\Controllers\Admin\FxProviderController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\PasswordRecoveryController;
@@ -272,5 +273,3 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/addons/{addon}/uninstall', [AddonController::class, 'uninstall'])->middleware('permission:addons.manage')->name('admin.addons.uninstall');
     });
 });
-
-app(\App\Services\Addons\AddonRouteRegistrar::class)->registerWebRoutes();
