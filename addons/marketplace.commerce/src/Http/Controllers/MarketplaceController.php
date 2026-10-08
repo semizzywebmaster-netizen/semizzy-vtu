@@ -416,6 +416,8 @@ final class MarketplaceController
             throw new RuntimeException('Condition notes are required for non-new physical listings.');
         }
 
+        if (!empty($data['video_url'])) $this->validateExternalVideoUrl($data['video_url']);
+
         $data['category_name'] = $category->name;
         $data['listing_type'] = $category->listing_type;
         $data['attributes'] = $attributes;
@@ -465,11 +467,29 @@ final class MarketplaceController
         $product->media()->where('media_type', 'video')->delete();
         if (!$url) return null;
 
+        $this->validateExternalVideoUrl($url);
+        $parts = parse_url($url);
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        $path = strtolower((string) ($parts['path'] ?? ''));
+
+        return \Semizzy\Addons\Marketplace\Models\MarketplaceProductMedia::create([
+            'product_id' => $product->id,
+            'media_type' => 'video',
+            'url' => $url,
+            'disk' => null,
+            'path' => null,
+            'alt_text' => $altText,
+            'sort_order' => ((int) $product->media()->max('sort_order')) + 1,
+            'is_primary' => false,
+        ]);
+    }
+
+    private function validateExternalVideoUrl(string $url): void
+    {
         $parts = parse_url($url);
         if (($parts['scheme'] ?? '') !== 'https') {
             throw new RuntimeException('Video links must use HTTPS.');
         }
-
         $host = strtolower((string) ($parts['host'] ?? ''));
         $path = strtolower((string) ($parts['path'] ?? ''));
         $allowedHosts = [
