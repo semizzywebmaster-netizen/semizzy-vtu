@@ -21,8 +21,7 @@ final class AdminSchoolAdmissionController extends Controller
             'admissionRoutes'=>EducationAdmissionRoute::where('active',true)->orderBy('name')->get(),
             'admissions'=>EducationProgrammeAdmission::with([
                 'programme.institution','programme.academicUnit','programme.department','academicSession',
-                'requirements.sources','requirements.route','cutoffs','screeningRules','sources'])->withCount('requirements')
-            ])->latest()->paginate(25),
+                'requirements.sources','requirements.route','cutoffs','screeningRules','sources'])->withCount('requirements')->latest()->paginate(25),
         ]);
     }
 
