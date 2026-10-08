@@ -30,6 +30,34 @@ class WebsiteBuilderService
         });
     }
 
+    public function updateSite(WebsiteSite $site, array $data): WebsiteSite
+    {
+        $settings = is_array($data['settings'] ?? null) ? $data['settings'] : [];
+        $settings = array_replace_recursive($site->settings ?? [], $settings);
+        foreach (['theme','branding','seo'] as $key) {
+            $settings[$key] = is_array($settings[$key] ?? null) ? $settings[$key] : [];
+        }
+        $wasPublished = $site->status === 'published';
+        $site->update([
+            'name' => trim($data['name'] ?? $site->name),
+            'template_key' => $data['template_key'] ?? $site->template_key,
+            'settings' => $settings,
+            'status' => $wasPublished ? 'draft' : $site->status,
+            'published_at' => $wasPublished ? null : $site->published_at,
+        ]);
+        return $site->fresh(['pages','domains']);
+    }
+
+    public function resolvePublishedByHost(string $host): ?WebsiteSite
+    {
+        $host = strtolower(trim(explode(':', $host)[0]));
+        return WebsiteSite::where('status','published')
+            ->where(function($q) use ($host) {
+                $q->where('active_domain',$host)
+                  ->orWhereHas('domains', fn($d) => $d->where('domain',$host)->where('status','verified'));
+            })->first();
+    }
+
     public function createPage(WebsiteSite $site,array $data): WebsitePage
     {
         $slug=Str::slug($data['slug']??$data['title']);
