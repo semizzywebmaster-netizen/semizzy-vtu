@@ -15,5 +15,5 @@ Route::middleware(['web','auth','ensure.addon:marketplace.commerce','permission:
  Route::delete('/marketplace/products/{product}',[MarketplaceController::class,'productDestroy'])->name('marketplace.products.destroy');
  Route::post('/marketplace/products/{product}/media',[MarketplaceController::class,'storeMedia'])->name('marketplace.products.media.store');
  Route::post('/marketplace/products/{product}/media/{media}/primary',[MarketplaceController::class,'setPrimaryMedia'])->name('marketplace.products.media.primary');
- Route::delete('/marketplace/products/{product}/media/{media}',[MarketplaceController::class,'deleteMedia'])->name('marketplace.products.media.destroy');
+ Route::delete('/marketplace/products/{product}/media/{media}',[MarketplaceController::class,'deleteMedia'])->name('marketplace.products.media.destroy'); Route::post('/marketplace/products/{product}/assets/upload',[MarketplaceController::class,'storeDigitalAssetFile'])->name('marketplace.products.assets.upload');
 });
