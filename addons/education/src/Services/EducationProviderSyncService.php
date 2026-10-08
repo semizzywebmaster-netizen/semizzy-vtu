@@ -1,0 +1,40 @@
+<?php
+namespace Semizzy\Addons\Education\Services;
+use Semizzy\Addons\Education\Models\EducationInstitution;
+use Semizzy\Addons\Education\Models\EducationProduct;
+final class EducationProviderSyncService {
+ public function syncInstitutions(array $items): int {
+  $count=0;
+  foreach ($items as $item) {
+   $code=trim((string)($item['code']??''));
+   $name=trim((string)($item['name']??''));
+   if ($code===''||$name==='') continue;
+   EducationInstitution::updateOrCreate(['code'=>$code],[
+    'name'=>$name,'type'=>$item['type']??'other','state'=>$item['state']??null,
+    'lga'=>$item['lga']??null,'country'=>$item['country']??'Nigeria',
+    'website'=>$item['website']??null,'external_id'=>$item['external_id']??null,
+    'active'=>$item['active']??true,'metadata'=>$item['metadata']??null,
+   ]);
+   $count++;
+  }
+  return $count;
+ }
+ public function syncProducts(array $items): int {
+  $count=0;
+  foreach ($items as $item) {
+   $code=trim((string)($item['code']??''));
+   $name=trim((string)($item['name']??''));
+   if ($code===''||$name==='') continue;
+   EducationProduct::updateOrCreate(['code'=>$code],[
+    'name'=>$name,'category'=>$item['category']??'other','institution_id'=>$item['institution_id']??null,
+    'provider_service_code'=>$item['provider_service_code']??null,'currency'=>$item['currency']??'NGN',
+    'provider_amount_minor'=>$item['provider_amount_minor']??null,'selling_amount_minor'=>$item['selling_amount_minor']??null,
+    'pricing_mode'=>$item['pricing_mode']??'fixed','requires_institution'=>$item['requires_institution']??false,
+    'requires_student_reference'=>$item['requires_student_reference']??false,'requires_session'=>$item['requires_session']??false,
+    'active'=>$item['active']??true,'fields'=>$item['fields']??null,'metadata'=>$item['metadata']??null,
+   ]);
+   $count++;
+  }
+  return $count;
+ }
+}
