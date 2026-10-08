@@ -42,6 +42,9 @@ return [
         '2026_10_06_000300_create_payment_intents.php',
         '2026_10_06_000301_create_payment_webhook_events.php',
         '2026_10_06_000302_seed_payments_service.php',
+        '2026_10_08_002000_create_payment_gateway_providers.php',
+        '2026_10_08_002001_seed_payment_gateway_providers.php',
+        '2026_10_08_002002_correct_payment_gateway_capabilities.php',
     ],
     'web_route_files' => [
         'addons/payments.gateway/routes/web.php',
@@ -56,6 +59,10 @@ return [
         'payment intent lifecycle',
         'wallet funding',
         'provider checkout integration',
+        'separate payment gateway provider engine',
+        'unlimited admin-addable payment gateway providers',
+        'provider capability-based routing and automatic failover',
+        'single and bulk payout support where a provider allows it',
         'webhook verification and idempotency',
         'refund and reconciliation',
     ],
@@ -66,5 +73,7 @@ return [
         'payment.succeeded',
         'payment.failed',
         'payment.refunded',
+        'payment.provider.failed',
+        'payment.provider.health_changed',
     ],
 ];
