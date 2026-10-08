@@ -59,7 +59,8 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
 
     public function healthCheck(PaymentGatewayProvider $provider): bool
     {
-        $this->request($provider)->get(rtrim($provider->base_url ?: 'https://api.paystack.co', '/').'/bank');
+        $response = $this->request($provider)->get(rtrim($provider->base_url ?: 'https://api.paystack.co', '/').'/bank');
+        $this->result($response);
         return true;
     }
 }
