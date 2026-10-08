@@ -65,6 +65,8 @@ class RegistrationVerificationController extends Controller
             'status'=>'active',
             'email_verified_at'=>$user->email_verified_at ?: now(),
             'phone_verified_at'=>$channel !== 'email' ? ($user->phone_verified_at ?: now()) : $user->phone_verified_at,
+            'whatsapp_verified_at'=>$channel === 'whatsapp' ? now() : $user->whatsapp_verified_at,
+            'whatsapp_transaction_enabled'=>$channel === 'whatsapp' ? true : (bool)$user->whatsapp_transaction_enabled,
         ])->saveOrFail();
 
         $deviceCookie = (string) session('pending_registration_device_cookie', $request->cookie('semizzy_device_key',''));
