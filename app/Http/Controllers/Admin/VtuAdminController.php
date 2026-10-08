@@ -131,6 +131,12 @@ class VtuAdminController extends Controller
   $bulkService->recalculate($bulk);
   return back()->with('success',"Bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
  }
+ public function cancelBulk(Request $r,VtuBulkOperation $bulk,VtuBulkService $bulkService): JsonResponse{
+  $data=$r->validate(['reason'=>['required','string','max:500']]);
+  $result=$bulkService->cancelAdmin($bulk,(int)$r->user()->id,$data['reason']);
+  return response()->json(['data'=>$result,'message'=>'Bulk operation cancelled safely.']);
+ }
+
  public function auditBulk(VtuBulkOperation $bulk, VtuBulkReconciliationService $reconciliation): JsonResponse{
   $result=$reconciliation->audit($bulk);
   return response()->json($result, $result['healthy'] ? 200 : 409);
