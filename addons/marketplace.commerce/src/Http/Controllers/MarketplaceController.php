@@ -199,6 +199,67 @@ final class MarketplaceController
         return response()->json(['success'=>true,'asset'=>$asset],201);
     }
 
+    public function storeMedia(Request $request, MarketplaceProduct $product)
+    {
+        if ((int) $product->seller_id !== (int) $request->user()->id && !$request->user()->hasPermission('marketplace.manage')) abort(403);
+
+        $data = $request->validate([
+            'media' => ['required','file','mimes:jpg,jpeg,png,webp,gif','max:10240'],
+            'alt_text' => ['nullable','string','max:255'],
+            'is_primary' => ['nullable','boolean'],
+        ]);
+
+        $file = $data['media'];
+        $path = $file->store('marketplace/products/'.$product->id, 'public');
+        $media = \Semizzy\Addons\Marketplace\Models\MarketplaceProductMedia::create([
+            'product_id' => $product->id,
+            'media_type' => 'image',
+            'url' => Storage::disk('public')->url($path),
+            'disk' => 'public',
+            'path' => $path,
+            'alt_text' => $data['alt_text'] ?? null,
+            'sort_order' => ((int) $product->media()->max('sort_order')) + 1,
+            'is_primary' => (bool) ($data['is_primary'] ?? false),
+        ]);
+
+        if ($media->is_primary) {
+            $product->media()->whereKeyNot($media->id)->update(['is_primary' => false]);
+        }
+
+        if (!$product->media()->where('is_primary', true)->exists()) {
+            $media->forceFill(['is_primary' => true])->save();
+        }
+
+        return response()->json(['success' => true, 'media' => $media], 201);
+    }
+
+    public function setPrimaryMedia(Request $request, MarketplaceProduct $product, int $media)
+    {
+        if ((int) $product->seller_id !== (int) $request->user()->id && !$request->user()->hasPermission('marketplace.manage')) abort(403);
+        $item = $product->media()->whereKey($media)->firstOrFail();
+        $product->media()->update(['is_primary' => false]);
+        $item->forceFill(['is_primary' => true])->save();
+        return response()->json(['success' => true, 'media' => $item]);
+    }
+
+    public function deleteMedia(Request $request, MarketplaceProduct $product, int $media)
+    {
+        if ((int) $product->seller_id !== (int) $request->user()->id && !$request->user()->hasPermission('marketplace.manage')) abort(403);
+        $item = $product->media()->whereKey($media)->firstOrFail();
+        if ($item->disk && $item->path) {
+            Storage::disk($item->disk)->delete($item->path);
+        }
+        $wasPrimary = (bool) $item->is_primary;
+        $item->delete();
+
+        if ($wasPrimary) {
+            $replacement = $product->media()->orderBy('sort_order')->first();
+            if ($replacement) $replacement->forceFill(['is_primary' => true])->save();
+        }
+
+        return response()->json(['success' => true]);
+    }
+
     public function downloadDigitalAsset(Request $request, string $token)
     {
         $delivery = MarketplaceDigitalDelivery::query()->with(['order.product','asset'])->where('delivery_token',$token)->firstOrFail();
