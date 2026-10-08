@@ -29,6 +29,10 @@ Route::prefix('admin/investments')->middleware(['auth','ensure.addon:investments
         ->middleware('permission:investments.market.manage')
         ->name('admin.investments.provider.disable');
 
+    Route::post('/corporate-actions', [AdminInvestmentsController::class, 'storeCorporateAction'])
+        ->middleware('permission:investments.market.manage')
+        ->name('admin.investments.corporate-action.store');
+
     Route::post('/securities/{security}/quotes', [AdminInvestmentsController::class, 'storeQuote'])
         ->middleware('permission:investments.market.manage')
         ->name('admin.investments.quote.store');
