@@ -13,8 +13,35 @@ class AdminForexDigitalAssetsController extends Controller
 {
     public function index()
     {
+        $providers = ForexDigitalAssetProvider::latest()->get()->map(function (ForexDigitalAssetProvider $provider): array {
+            $lastQuoteAt = $provider->quotes()->latest('observed_at')->value('observed_at');
+
+            return [
+                'id' => $provider->id,
+                'name' => $provider->name,
+                'code' => $provider->code,
+                'driver' => $provider->driver,
+                'capabilities' => $provider->capabilities ?? [],
+                'enabled' => $provider->enabled,
+                'verified' => $provider->verified,
+                'paused' => $provider->paused,
+                'maintenance' => $provider->maintenance,
+                'is_market_data_provider' => $provider->is_market_data_provider,
+                'is_execution_provider' => $provider->is_execution_provider,
+                'priority' => $provider->priority,
+                'last_health_check_at' => $provider->last_health_check_at,
+                'last_success_at' => $provider->last_success_at,
+                'last_failure_at' => $provider->last_failure_at,
+                'last_error' => $provider->last_error,
+                'last_quote_at' => $lastQuoteAt,
+                'health_status' => $provider->last_error
+                    ? 'error'
+                    : ($provider->last_success_at ? 'healthy' : 'not_tested'),
+            ];
+        });
+
         return inertia('Admin/ForexDigitalAssets', [
-            'providers' => ForexDigitalAssetProvider::latest()->get(),
+            'providers' => $providers,
             'instruments' => ForexDigitalAssetInstrument::latest()->paginate(25),
         ]);
     }
