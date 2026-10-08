@@ -3,7 +3,7 @@
 namespace Semizzy\Addons\Payments\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\ApiProvider;
+use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
 use Illuminate\Http\Request;
 use Semizzy\Addons\Payments\Services\PaymentWebhookService;
 
