@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\VtuConversionRequest;
 use App\Services\Vtu\VtuConversionService;
+use App\Services\Vtu\VtuServiceRegistry;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -14,6 +15,7 @@ class VtuConversionController extends Controller
         return Inertia::render('VTU/Conversions', [
             'conversionTypes'=>VtuConversionService::TYPES,
             'requests'=>VtuConversionRequest::query()->where('user_id',$request->user()->id)->latest()->paginate(20),
+            'conversionSettings'=>app(VtuServiceRegistry::class)->conversionSettings(),
         ]);
     }
 
@@ -29,8 +31,6 @@ class VtuConversionController extends Controller
             'target_phone'=>['nullable','string','max:30'],
             'target_product'=>['nullable','string','max:160'],
             'data_plan'=>['nullable','string','max:160'],
-            'rate'=>['required','numeric','gt:0'],
-            'fee'=>['nullable','numeric','min:0'],
             'proof'=>['nullable','file','max:5120','mimes:jpg,jpeg,png,pdf'],
         ]);
 
