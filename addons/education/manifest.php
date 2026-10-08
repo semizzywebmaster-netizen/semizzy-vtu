@@ -23,6 +23,8 @@ return [
   '2026_10_08_001000_create_education_institutions.php',
   '2026_10_08_001001_create_education_products.php',
   '2026_10_08_001002_create_education_transactions.php',
+   '2026_10_08_001003_harden_education_products_provider_id.php',
+   '2026_10_08_001004_add_education_institution_classification.php',
  ],
  'web_route_files'=>['addons/education/routes/web.php','addons/education/routes/admin.php'],
  'api_route_files'=>['addons/education/routes/api.php'],
