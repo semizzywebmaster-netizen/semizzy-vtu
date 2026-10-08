@@ -236,7 +236,11 @@ final class MarketplaceController
             'alt_text' => ['nullable','string','max:255'],
         ]);
 
-        $media = $this->syncExternalVideo($product, $data['url'], $data['alt_text'] ?? null);
+        try {
+            $media = $this->syncExternalVideo($product, $data['url'], $data['alt_text'] ?? null);
+        } catch (RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
         return response()->json(['success' => true, 'media' => $media], 201);
     }
 
