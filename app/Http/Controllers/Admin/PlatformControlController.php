@@ -20,7 +20,6 @@ class PlatformControlController extends Controller
 
     public function index(TierLimitService $tiers): Response
     {
-        $registrationKeys = ['registration_verification_enabled','registration_otp_channels','registration_otp_expiry_minutes','registration_otp_max_attempts','registration_otp_resend_seconds'];
         $keys=array_merge(self::FEATURES,['registration_verification_enabled','registration_otp_channels','registration_otp_expiry_minutes','registration_otp_max_attempts','registration_otp_resend_seconds'],collect(range(1,5))->flatMap(fn($t)=>['tier_'.$t.'_daily_limit_minor','tier_'.$t.'_balance_limit_minor'])->all());
         $stored=SystemSetting::query()->whereIn('key',$keys)->pluck('value','key');
         $features=[];
