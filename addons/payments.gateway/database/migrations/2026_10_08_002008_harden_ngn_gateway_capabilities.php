@@ -79,8 +79,8 @@ return new class extends Migration {
             ]),
             'settings' => json_encode([
                 'require_webhook_signature' => true,
-                'signature_header' => 'sha512',
-                'webhook_signature_algorithm' => 'sha3_512_callback',
+                'signature_header' => 'Signature',
+                'webhook_signature_algorithm' => 'hmac_sha512_timestamp_raw_body',
                 'country' => 'NG',
                 'currency' => 'NGN',
                 'default_pay_method' => 'BankCard',
