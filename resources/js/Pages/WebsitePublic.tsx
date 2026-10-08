@@ -1,5 +1,6 @@
 import React from 'react';
 import {Head} from '@inertiajs/react';
+import React from 'react';
 
 type Section={id:string,type:string,data:Record<string,any>};
 type Props={site:{id:number,name:string,slug:string,template_key:string,settings?:Record<string,any>},page:{id:number,title:string,slug:string,content?:{sections?:Section[]},seo?:Record<string,any>},preview?:boolean};
