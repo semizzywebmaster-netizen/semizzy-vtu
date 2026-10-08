@@ -32,7 +32,7 @@ class ForexDigitalAssetProvider extends Model
             $payload = Crypt::decryptString($value);
             $decoded = json_decode($payload, true);
             return is_array($decoded) ? $decoded : [];
-        } catch (\\Throwable) {
+        } catch (\Throwable) {
             return [];
         }
     }
