@@ -13,6 +13,7 @@ class MarketplaceProduct extends Model
     {
         return [
             'metadata' => 'array',
+            'attributes' => 'array',
             'price_minor' => 'string',
             'stock_quantity' => 'string',
             'requires_shipping' => 'boolean',
@@ -20,6 +21,11 @@ class MarketplaceProduct extends Model
             'service_delivery_days' => 'integer',
             'published_at' => 'datetime',
         ];
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceCategory::class, 'category_id');
     }
 
     public function seller(): BelongsTo
