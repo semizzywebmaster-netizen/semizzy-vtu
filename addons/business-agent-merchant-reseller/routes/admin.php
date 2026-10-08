@@ -5,6 +5,7 @@ Route::middleware(['auth','verified','ensure.addon:business.agent-merchant-resel
  Route::get('/admin/business',[BusinessAdminController::class,'page']);
  Route::get('/admin/business/partners',[BusinessAdminController::class,'partners']);
  Route::post('/admin/business/partners/{partner}/approve',[BusinessAdminController::class,'approve'])->middleware('permission:business.approve');
+ Route::post('/admin/business/partners/bulk-status',[BusinessAdminController::class,'bulkStatus'])->middleware('permission:business.approve');
  Route::patch('/admin/business/partners/{partner}',[BusinessAdminController::class,'update'])->middleware('permission:business.manage');
  Route::get('/admin/business/partners/{partner}/pricing',[BusinessAdminController::class,'pricing'])->middleware('permission:business.pricing.manage');
  Route::post('/admin/business/partners/{partner}/pricing',[BusinessAdminController::class,'savePricing'])->middleware('permission:business.pricing.manage');
