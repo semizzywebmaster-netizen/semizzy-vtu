@@ -1,0 +1,7 @@
+<?php
+namespace Semizzy\Addons\EventsEntertainment\Http\Controllers;
+use App\Http\Controllers\Controller;use Illuminate\Http\Request;use Semizzy\Addons\EventsEntertainment\Models\{Event,EventOccurrence};
+final class EventOccurrenceController extends Controller{
+ public function store(Request $request,Event $event){$data=$request->validate(['starts_at'=>'required|date','ends_at'=>'nullable|date|after:starts_at','venue_id'=>'nullable|exists:event_venues,id','capacity'=>'nullable|integer|min:1']);abort_unless($event->organizer->user_id===$request->user()->id,403);abort_unless(in_array($event->status,['draft','rejected'],true),422);EventOccurrence::create($data+['event_id'=>$event->id,'status'=>'scheduled']);return back()->with('success','Event occurrence added.');}
+ public function update(Request $request,EventOccurrence $occurrence){$data=$request->validate(['starts_at'=>'required|date','ends_at'=>'nullable|date|after:starts_at','venue_id'=>'nullable|exists:event_venues,id','capacity'=>'nullable|integer|min:1','status'=>'required|in:scheduled,cancelled,completed']);abort_unless($occurrence->event->organizer->user_id===$request->user()->id,403);abort_unless(in_array($occurrence->event->status,['draft','rejected'],true),422);$occurrence->update($data);return back()->with('success','Event occurrence updated.');}
+}
