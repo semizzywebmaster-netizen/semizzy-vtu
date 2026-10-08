@@ -42,7 +42,7 @@ class VtuServiceRegistry
 
     public function health(Service $service): array
     {
-        if (str_contains((string) $service->key, '_to_')) {
+        if ((string) data_get($service->metadata, 'execution_mode') === 'manual' || (string) data_get($service->metadata, 'execution_mode') === 'manual_conversion' || str_contains((string) $service->key, '_to_')) {
             return ['mode'=>'manual','status'=>'healthy','label'=>'100% success','success_rate'=>100.0,'sample_size'=>0,'window_hours'=>24,'providers'=>[]];
         }
         $rows = VtuTransaction::query()->where('service_id',$service->id)->where('created_at','>=',now()->subHours(24))->whereIn('status',['successful','failed'])->get(['status','api_provider_id']);
