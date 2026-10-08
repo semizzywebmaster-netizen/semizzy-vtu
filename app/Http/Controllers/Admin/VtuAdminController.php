@@ -136,6 +136,24 @@ class VtuAdminController extends Controller
   },$filename,['Content-Type'=>'text/csv; charset=UTF-8','Cache-Control'=>'no-store']);
  }
 
+ public function exportSelectedBulk(Request $r): \Symfony\\Component\\HttpFoundation\\StreamedResponse{
+  $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id']]);
+  $ids=array_map('intval',$data['bulk_ids']);
+  $q=VtuBulkOperation::query()->with(['user','items.transaction','items.product'])->whereIn('id',$ids)->orderBy('id');
+  $filename='vtu-selected-bulk-'.now()->format('Ymd-His').'.csv';
+  return response()->streamDownload(function()use($q){
+   $out=fopen('php://output','w');
+   fputcsv($out,['Bulk Reference','Bulk Status','User','Item ID','Sequence','Item Status','Recipient','Product','Amount Minor','Provider Reference','Transaction Reference','Failure Reason','Created At','Updated At']);
+   $q->chunkById(50,function($bulks)use($out){
+    foreach($bulks as $bulk)foreach($bulk->items as $item){
+     $tx=$item->transaction;
+     fputcsv($out,[$bulk->reference,$bulk->status,$bulk->user?->email??$bulk->user?->name??'', $item->id,$item->sequence,$item->status,$item->recipient??'', $item->product?->name??'', $item->amount_minor??'', $tx?->provider_reference??'', $tx?->reference??'', $item->error_message??$tx?->failure_message??'', $item->created_at?->toIso8601String()??'', $item->updated_at?->toIso8601String()??'']);
+    }
+   });
+   fclose($out);
+  },$filename,['Content-Type'=>'text/csv; charset=UTF-8','Cache-Control'=>'no-store']);
+ }
+
  public function bulkStatement(VtuBulkOperation $bulk){
   $bulk->load(['user','items.transaction','items.product']);
   $currency=(string)($bulk->items->first()?->transaction?->currency ?? config('app.currency','NGN'));
