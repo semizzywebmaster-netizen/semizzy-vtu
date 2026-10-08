@@ -12,7 +12,7 @@ class EducationOfficialInstitutionSyncService
   foreach ((array) config('education.institution_sources.official_sources',[]) as $source) {
    $key=$source['key']??null; if(!$key) continue;
    $results[$key]=match($key){
-    'nuc_universities'=>$this->syncNucUniversities($source),
+    'nuc_universities'=>$this->syncNucUniversities($source),'ncce_accredited_colleges'=>$this->syncNcceColleges($source),
     default=>['status'=>'manual_parser_required','source'=>$source['url']??null,'message'=>'Official source registered; parser is intentionally not guessing its table structure.'],
    };
   }
@@ -36,6 +36,15 @@ class EducationOfficialInstitutionSyncService
   $import=app(EducationInstitutionImportService::class)->import($records,'NUC-NUS');
   return ['status'=>'imported','source'=>$source['url'],'records_found'=>count($records),'import'=>$import];
  }
+ private function syncNcceColleges(array $source): array {
+  $response=Http::timeout(30)->retry(2,500)->get($source['url']);
+  if(!$response->successful()) throw new RuntimeException('NCCE accredited-college catalogue could not be retrieved.');
+  $html=$response->body(); preg_match_all('/<tr[^>]*>\s*<td[^>]*>\s*(\d+)\s*<\/td>\s*<td[^>]*>(.*?)<\/td>\s*<td[^>]*>(.*?)<\/td>\s*<td[^>]*>(.*?)<\/td>\s*<td[^>]*>(.*?)<\/td>\s*<td[^>]*>(.*?)<\/td>/is',$html,$matches,PREG_SET_ORDER);
+  $records=[]; foreach($matches as $m){$name=trim(preg_replace('/\s+/',' ',html_entity_decode(strip_tags($m[2])))); if($name===''||strcasecmp($name,'Name')===0)continue; $ownership=$this->normalizeOwnership($this->extractOwnership(strip_tags($m[4]))); $state=trim(preg_replace('/\s+/',' ',html_entity_decode(strip_tags($m[5])))); $website=trim(strip_tags($m[6])); $records[]=['name'=>$name,'category'=>'college_of_education','ownership'=>$ownership,'state'=>$state,'website'=>$website!==''?$website:null,'accrediting_body'=>'NCCE','metadata'=>['official_source'=>$source['url'],'official_row'=>(int)$m[1]]];}
+  $import=app(EducationInstitutionImportService::class)->import($records,'NCCE-ACCREDITED-COLLEGES'); return ['status'=>'imported','source'=>$source['url'],'records_found'=>count($records),'import'=>$import];
+ }
+ private function extractOwnership(string $value): string { $v=strtolower(trim($value)); if(str_contains($v,'federal'))return 'federal'; if(str_contains($v,'state'))return 'state'; if(str_contains($v,'private'))return 'private'; if(str_contains($v,'community'))return 'community'; if(str_contains($v,'faith'))return 'faith_based'; return $value; }
+
  private function normalizeOwnership(string $value): string {
   return match(strtolower(trim($value))){'federal'=>'federal','state'=>'state','private'=>'private',default=>'other'};
  }
