@@ -206,7 +206,16 @@ class OtpChallengeService
             throw ValidationException::withMessages(['otp_code' => 'The verification code is incorrect.']);
         }
 
-        $challenge->forceFill(['consumed_at' => now()])->saveOrFail();
+        $claimed = OtpChallenge::query()
+            ->whereKey($challenge->id)
+            ->whereNull('consumed_at')
+            ->where('expires_at', '>', now())
+            ->whereColumn('attempts', '<', 'max_attempts')
+            ->update(['consumed_at' => now()]);
+
+        if ($claimed !== 1) {
+            throw ValidationException::withMessages(['otp_code' => 'This verification code has already been used or is no longer valid. Request a new code.']);
+        }
     }
 
     private function normalizePurpose(string $purpose): string
