@@ -54,6 +54,7 @@ class WebsiteBuilderService
         return WebsiteSite::where('status','published')
             ->where(function($q) use ($host) {
                 $q->where('active_domain',$host)
+                  ->orWhere('subdomain',$host)
                   ->orWhereHas('domains', fn($d) => $d->where('domain',$host)->where('status','verified'));
             })->first();
     }
@@ -174,6 +175,24 @@ class WebsiteBuilderService
         $existing=WebsiteDomain::where('domain',$domain)->first();
         if($existing && $existing->website_site_id!==$site->id) throw ValidationException::withMessages(['domain'=>'This domain is already registered.']);
         return $existing??WebsiteDomain::create(['website_site_id'=>$site->id,'domain'=>$domain,'type'=>'custom','status'=>'pending','verification_method'=>'dns_txt','verification_token'=>Str::random(40)]);
+    }
+
+    public function setSubdomain(WebsiteSite $site, string $subdomain): WebsiteSite
+    {
+        $subdomain = strtolower(trim($subdomain));
+        $subdomain = preg_replace('/^https?:\\/\\//', '', $subdomain);
+        $subdomain = rtrim($subdomain, '/');
+        if (!filter_var($subdomain, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
+            throw ValidationException::withMessages(['subdomain' => 'Enter a valid hostname, for example shop.example.com.']);
+        }
+        $existing = WebsiteSite::where('subdomain', $subdomain)
+            ->where('id', '!=', $site->id)
+            ->exists();
+        if ($existing) {
+            throw ValidationException::withMessages(['subdomain' => 'This subdomain is already assigned to another website.']);
+        }
+        $site->update(['subdomain' => $subdomain]);
+        return $site->fresh(['pages', 'domains']);
     }
 
     public function setPrimaryDomain(WebsiteSite $site, WebsiteDomain $domain): WebsiteDomain
