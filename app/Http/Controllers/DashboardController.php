@@ -106,6 +106,7 @@ class DashboardController extends Controller
             $quickLinks = [
                 ['label' => 'Support desk', 'url' => '/support'],
                 ['label' => 'Notifications', 'url' => '/notifications'],
+                ['label' => 'WhatsApp Transactions', 'url' => '/whatsapp-bot'],
                 ['label' => 'My profile', 'url' => '/profile'],
             ];
         } else {
@@ -205,6 +206,17 @@ class DashboardController extends Controller
                     'message' => 'Create your 4-digit PIN before protected actions.',
                     'url' => '/profile/transaction-pin',
                     'label' => 'Set transaction PIN',
+                    'priority' => 'high',
+                ];
+            }
+
+            if (!$user->whatsapp_verified_at) {
+                $requiredActions[] = [
+                    'key' => 'whatsapp-verification',
+                    'title' => 'Verify your WhatsApp number',
+                    'message' => 'Verify your registered WhatsApp number to receive transaction updates and unlock WhatsApp transactions.',
+                    'url' => '/whatsapp-bot',
+                    'label' => 'Verify WhatsApp',
                     'priority' => 'high',
                 ];
             }
