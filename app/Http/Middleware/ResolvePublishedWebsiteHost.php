@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Addons\VtuWebsiteBuilder\Services\WebsiteBuilderService;
+use App\Models\Addon;
 use Closure;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -43,6 +44,10 @@ class ResolvePublishedWebsiteHost
 
     public function handle(Request $request, Closure $next): Response
     {
+        if (!Addon::query()->where('identifier', 'vtu.website-builder')->where('status', 'active')->exists()) {
+            return $next($request);
+        }
+
         if (!$request->isMethod('GET') && !$request->isMethod('HEAD')) {
             return $next($request);
         }
