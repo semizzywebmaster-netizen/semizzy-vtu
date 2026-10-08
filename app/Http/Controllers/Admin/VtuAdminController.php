@@ -39,9 +39,9 @@ class VtuAdminController extends Controller
  }
 
  public function services(){
-  $services=Service::query()
-   ->whereHas('category',fn($q)=>$q->where('key','vtu-digital-services'))
-   ->withCount('products')->orderBy('name')->get(['id','key','name','description','enabled','category_id']);
+  $registry=app(VtuServiceRegistry::class);
+  $services=Service::query()->whereHas('category',fn($q)=>$q->where('key','vtu-digital-services'))->withCount('products')->orderBy('name')->get(['id','key','name','description','enabled','category_id']);
+  $services->each(fn($service)=>$service->setAttribute('health',$registry->health($service)));
   return Inertia::render('Admin/VTU/Services',['services'=>$services]);
  }
 
