@@ -199,6 +199,16 @@ class VtuAdminController extends Controller
   $bulk->forceFill(['archived_at'=>now()])->save();
   return back()->with('success','Bulk operation archived. Financial records and audit history remain intact.');
  }
+ public function archiveSelectedBulk(Request $r): JsonResponse|\Illuminate\\Http\\RedirectResponse{
+  $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id']]);
+  $archived=0;$skipped=0;
+  foreach(VtuBulkOperation::query()->whereIn('id',array_map('intval',$data['bulk_ids']))->get() as $bulk){
+   if(in_array($bulk->status,['successful','failed','partial','cancelled'],true) && !$bulk->archived_at){$bulk->forceFill(['archived_at'=>now()])->save();$archived++;}else{$skipped++;}
+  }
+  $payload=['status'=>'completed','archived'=>$archived,'skipped'=>$skipped];
+  return $r->expectsJson()?response()->json($payload):back()->with('success',"Selected bulk archive completed: {$archived} archived, {$skipped} skipped (only terminal unarchived operations can be archived).");
+ }
+
  public function unarchiveBulk(VtuBulkOperation $bulk): \Illuminate\\Http\\RedirectResponse{
   if(!$bulk->archived_at) return back()->with('success','Bulk operation is not archived.');
   $bulk->forceFill(['archived_at'=>null])->save();
