@@ -23,7 +23,7 @@ type Product = {
   condition?: string | null;
   category?: { id: number; name: string; slug: string; icon?: string | null };
   listing_type?: string | null;
-  media?: Array<{ id: number; url: string; alt_text?: string | null; is_primary?: boolean }>;
+  media?: Array<{ id: number; url: string; alt_text?: string | null; is_primary?: boolean; media_type?: 'image' | 'video'; embed_url?: string | null }>;
 };
 
 const typeLabels: Record<string, string> = {
@@ -169,13 +169,42 @@ export default function Index({
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filtered.map((product) => (
                   <article key={product.id} className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-                    <div className="flex h-32 items-center justify-center overflow-hidden bg-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                      {product.media && product.media.length > 0 ? (
-                        <img src={product.media[0].url} alt={product.media[0].alt_text || product.name} className="h-full w-full object-cover" loading="lazy" />
-                      ) : (
-                        product.product_type ? typeLabels[product.product_type] : 'Marketplace'
-                      )}
-                    </div>
+                    {(() => {
+                      const video = product.media?.find((item) => item.media_type === 'video');
+                      const image = product.media?.find((item) => item.media_type !== 'video' && item.is_primary)
+                        || product.media?.find((item) => item.media_type !== 'video');
+                      if (video?.embed_url) {
+                        return (
+                          <div className="aspect-video overflow-hidden bg-black">
+                            <iframe
+                              src={video.embed_url}
+                              title={video.alt_text || product.name + ' video'}
+                              className="h-full w-full border-0"
+                              loading="lazy"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                              referrerPolicy="strict-origin-when-cross-origin"
+                              allowFullScreen
+                            />
+                          </div>
+                        );
+                      }
+                      if (video) {
+                        return (
+                          <div className="aspect-video overflow-hidden bg-black">
+                            <video src={video.url} controls preload="metadata" className="h-full w-full object-contain" />
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="flex h-32 items-center justify-center overflow-hidden bg-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          {image ? (
+                            <img src={image.url} alt={image.alt_text || product.name} className="h-full w-full object-cover" loading="lazy" />
+                          ) : (
+                            product.product_type ? typeLabels[product.product_type] : 'Marketplace'
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="space-y-3 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="font-semibold leading-5">{product.name}</h3>
