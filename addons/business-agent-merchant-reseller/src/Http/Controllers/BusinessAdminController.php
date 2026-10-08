@@ -202,6 +202,25 @@ class BusinessAdminController
   return response()->json(['settlements'=>$q->paginate(100)]);
  }
 
+ public function bulkSettle(Request $r){
+  $d=$r->validate([
+   'settlement_ids'=>['required','array','min:1','max:100'],
+   'settlement_ids.*'=>['integer','distinct','exists:business_commission_settlements,id'],
+  ]);
+  $actor=$r->user(); $settled=0; $skipped=0; $errors=[];
+  $service=app(\\Addons\\BusinessAgentMerchantReseller\\Services\\BusinessCommissionService::class);
+  foreach(BusinessCommissionSettlement::query()->whereIn('id',array_map('intval',$d['settlement_ids']))->get() as $row){
+   if($row->status!=='pending'){$skipped++;continue;}
+   try{
+    $paid=$service->settle((int)$row->id);
+    $partner=BusinessPartner::find($paid->beneficiary_partner_id);
+    $partner?->events()->create(['actor_user_id'=>$actor->id,'action'=>'commission_bulk_settled','status'=>'settled','metadata'=>['settlement_id'=>$paid->id,'reference'=>$paid->settlement_reference,'amount_minor'=>$paid->amount_minor,'bulk'=>true]]);
+    $settled++;
+   }catch(\\Throwable $e){report($e);$skipped++;$errors[]=['id'=>$row->id,'message'=>$e->getMessage()];}
+  }
+  return response()->json(['status'=>'completed','settled'=>$settled,'skipped'=>$skipped,'errors'=>$errors,'message'=>"Bulk commission settlement completed: {$settled} settled, {$skipped} skipped."]);
+ }
+
  public function settle(Request $r,BusinessCommissionSettlement $settlement){
   if($settlement->status!=='pending') abort(422,'Only pending commission settlements can be settled.');
   $service=app(\Addons\BusinessAgentMerchantReseller\Services\BusinessCommissionService::class);
