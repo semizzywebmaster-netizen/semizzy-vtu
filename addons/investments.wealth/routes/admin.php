@@ -12,6 +12,9 @@ Route::prefix('admin/investments')->middleware(['auth','ensure.addon:investments
     Route::post('/securities', [AdminInvestmentsController::class, 'storeSecurity'])
         ->middleware('permission:investments.market.manage')
         ->name('admin.investments.security.store');
+    Route::post('/securities/{security}/verify', [AdminInvestmentsController::class, 'verifySecurity'])
+        ->middleware('permission:investments.market.manage')
+        ->name('admin.investments.security.verify');
     Route::post('/securities/{security}/publish', [AdminInvestmentsController::class, 'publishSecurity'])
         ->middleware('permission:investments.market.manage')
         ->name('admin.investments.security.publish');
