@@ -7,6 +7,7 @@ use App\Models\OtpChallenge;
 use App\Services\Security\OtpChallengeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -64,13 +65,7 @@ class WhatsAppBotVerificationController extends Controller
             ]);
         }
 
-        if (! hash_equals((string) $challenge->code_hash, (string) $challenge->code_hash)) {
-            throw ValidationException::withMessages([
-                'otp_code' => 'The WhatsApp verification code is invalid.',
-            ]);
-        }
-
-        if (! \Illuminate\Support\Facades\Hash::check((string) $data['otp_code'], (string) $challenge->code_hash)) {
+        if (! Hash::check((string) $data['otp_code'], (string) $challenge->code_hash)) {
             $challenge->increment('attempts');
 
             throw ValidationException::withMessages([
