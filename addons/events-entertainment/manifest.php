@@ -77,7 +77,7 @@ return [
     'migrations' => [
         '2026_10_08_003000_create_events_core_schema.php',
     ],
-    'web_route_files' => ['addons/events-entertainment/routes/web.php'],
+    'web_route_files' => ['addons/events-entertainment/routes/web.php','addons/events-entertainment/routes/admin.php'],
     'api_route_files' => ['addons/events-entertainment/routes/api.php'],
     'routes' => ['/events'],
     'api_routes' => ['/api/v1/events'],
