@@ -67,6 +67,8 @@ The list above reflects the repository state checked while establishing this roa
 
 ## Events & Entertainment — current focus
 
+Bulk action status: foundation + discovery + event draft/venue/ticket management implemented. Public discovery now supports search, category, format and city filtering; published event detail exposes active ticket types. Admin can create event drafts, venues and ticket types. Publication/verification, checkout/payment, QR issuance/check-in, refunds, payouts, organiser verification and advanced recurring schedules remain to be implemented and tested.
+
 Events & Entertainment is now the active addon. The initial architecture is based on researched ticketing/event-platform patterns: physical, virtual and recurring events; event categories; organiser verification; ticket types; order/ticket lifecycle; QR-based check-in; and event discovery. Do not copy any third-party platform implementation; use these capabilities only as product research.
 
 Research references used for the initial model included Tix Africa's live/virtual/recurring event model, ticket types and QR tickets, and Eventbrite's category/format discovery filters. citeturn0search0turn0search3turn0search8turn0search12
