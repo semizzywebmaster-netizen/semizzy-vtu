@@ -11,6 +11,7 @@ type Operation = {
   failed_items: number;
   idempotency_key?: string | null;
   created_at?: string | null;
+  archived_at?: string | null;
   metadata?: { pending_items?: number | null } | null;
   user?: { name?: string | null; email?: string | null } | null;
 };
@@ -59,6 +60,26 @@ export default function BulkOperations({
       onSuccess: () => setSelectedIds([]),
       onFinish: () => setBulkReconciling(false),
     });
+  };
+
+  const unarchive = async (id: number) => {
+    if (!window.confirm('Restore this archived bulk operation to active history?')) return;
+    try {
+      const response = await fetch('/admin/vtu/bulk/' + id + '/unarchive', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || 'Bulk unarchive failed.');
+      window.location.reload();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Bulk unarchive failed.');
+    }
   };
 
   const auditSelected = async () => {
@@ -172,9 +193,15 @@ export default function BulkOperations({
             <a href={`/admin/vtu/bulk/export?status=${encodeURIComponent(status)}&reference=${encodeURIComponent(reference)}`} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">
               Export CSV
             </a>
-              <button type="button" onClick={()=>{if(confirm('Archive this completed bulk operation? Financial records and audit history will be preserved.')) fetch(`/admin/vtu/bulk/${openId}/archive`,{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')||'','Accept':'application/json'}}).then(()=>window.location.reload())}} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">
-                Archive
-              </button>
+              {operations.data.find((operation) => operation.id === openId)?.archived_at ? (
+                <button type="button" onClick={() => unarchive(openId!)} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">
+                  Unarchive
+                </button>
+              ) : (
+                <button type="button" onClick={()=>{if(confirm('Archive this completed bulk operation? Financial records and audit history will be preserved.')) fetch(`/admin/vtu/bulk/${openId}/archive`,{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')||'','Accept':'application/json'}}).then(()=>window.location.reload())}} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">
+                  Archive
+                </button>
+              )}
               <a href={`/admin/vtu/bulk/${openId}/statement`} target="_blank" rel="noreferrer" className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">Statement / Print</a>
               <a href={`/admin/vtu/bulk/${openId}/report`} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">
                 Report CSV
