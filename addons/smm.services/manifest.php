@@ -35,7 +35,7 @@ return [
         ['key'=>'min_order_minor','type'=>'integer','default'=>100],
         ['key'=>'max_order_minor','type'=>'integer','default'=>100000000],
     ],
-    'migrations' => ['2026_10_07_001500_create_smm_services_tables.php'],
+    'migrations' => ['2026_10_07_001500_create_smm_services_tables.php','2026_10_08_001501_harden_smm_order_wallet_binding.php'],
     'web_route_files' => ['addons/smm.services/routes/web.php','addons/smm.services/routes/admin.php'],
     'api_route_files' => ['addons/smm.services/routes/api.php'],
     'routes' => ['/smm','/admin/smm'],
