@@ -3,14 +3,15 @@
 namespace Semizzy\Addons\Payments\Services;
 
 use App\Models\WalletAccount;
-use App\Services\Providers\ProviderManager;
+use Illuminate\Support\Facades\DB;
+use App\Models\User;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Semizzy\Addons\Payments\Models\PaymentIntent;
 
 final class PaymentService
 {
-    public function __construct(private ProviderManager $providers) {}
+    public function __construct(private PaymentGatewayManager $gateways) {}
 
     public function createFundingIntent(int $userId, WalletAccount $wallet, string $amountMinor, string $currency = 'NGN'): PaymentIntent
     {
@@ -31,28 +32,37 @@ final class PaymentService
         ]);
 
         try {
-            $result = $this->providers->execute(
-                'payments.gateway',
-                'transaction_initiation',
-                [
-                    'reference' => $reference,
-                    'amount_minor' => $amountMinor,
-                    'currency' => strtoupper($currency),
-                    'purpose' => 'wallet_funding',
-                ],
-                $reference
-            );
+            $user = User::query()->findOrFail($userId);
+            $result = $this->gateways->execute('collect_payment', function ($provider) use ($user, $wallet, $amountMinor, $currency, $reference) {
+                $adapter = $this->gateways->adapter($provider);
+                return [
+                    'provider' => $provider,
+                    'data' => $adapter->initializeCollection($provider, [
+                        'reference' => $reference,
+                        'amount_minor' => $amountMinor,
+                        'amount' => ((int) $amountMinor) / 100,
+                        'currency' => strtoupper($currency),
+                        'customer_email' => $user->email,
+                        'customer_name' => $user->name ?? null,
+                        'description' => 'SEMIZZY ONE wallet funding',
+                        'redirect_url' => url('/payments'),
+                        'metadata' => ['wallet_account_id' => $wallet->id, 'purpose' => 'wallet_funding'],
+                    ]),
+                ];
+            });
 
-            $data = is_array($result->data) ? $result->data : [];
+            $provider = $result['provider'];
+            $data = is_array($result['data']) ? $result['data'] : [];
             $checkoutUrl = data_get($data, 'checkout_url')
                 ?? data_get($data, 'authorization_url')
-                ?? data_get($data, 'data.checkout_url')
-                ?? data_get($data, 'data.authorization_url');
+                ?? data_get($data, 'checkoutUrl');
+
+            $providerReference = (string) (data_get($data, 'reference') ?? data_get($data, 'transactionReference') ?? $reference);
 
             $intent->forceFill([
-                'provider_id' => $result->providerId,
-                'provider_reference' => $result->providerReference,
-                'status' => strtolower($result->status),
+                'provider_id' => $provider->id,
+                'provider_reference' => $providerReference,
+                'status' => 'pending',
                 'checkout_url' => is_string($checkoutUrl) ? $checkoutUrl : null,
             ])->save();
         } catch (RuntimeException $e) {
