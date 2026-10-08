@@ -126,9 +126,16 @@ class VtuController extends Controller
             'items.*.idempotency_key' => ['nullable', 'string', 'max:120'],
             'idempotency_key' => ['nullable', 'string', 'max:160'],
             'quote_fingerprint' => ['required', 'string', 'size:64', 'regex:/^[a-f0-9]{64}$/'],
+            'schedule' => ['nullable','boolean'], 'scheduled_at' => ['nullable','date'],
         ]);
 
-        return response()->json(['data' => $b->execute($r->user()->id, $d['items'], $r->user()->role, $d['idempotency_key'] ?? null, $d['quote_fingerprint'])], 201);
+        if (($d['schedule'] ?? false) === true) { if (empty($d['scheduled_at'])) return response()->json(['message'=>'scheduled_at is required when Schedule transaction is selected.'],422); return response()->json(['data'=>$b->schedule($r->user()->id,$d['items'],$r->user()->role,\Illuminate\Support\Carbon::parse($d['scheduled_at']),$d['idempotency_key']??null,$d['quote_fingerprint'])],201); } return response()->json(['data' => $b->execute($r->user()->id, $d['items'], $r->user()->role, $d['idempotency_key'] ?? null, $d['quote_fingerprint'])], 201);
+    }
+
+    public function bulkReschedule(Request $r, VtuBulkOperation $bulk, VtuBulkService $service)
+    {
+        $d=$r->validate(['scheduled_at'=>['required','date']]);
+        return response()->json(['data'=>$service->reschedule($r->user()->id,$bulk,\Illuminate\Support\Carbon::parse($d['scheduled_at']))]);
     }
 
     public function bulkItemRequery(Request $r, VtuBulkOperation $bulk, int $item, VtuBulkService $service)
