@@ -13,6 +13,7 @@ Route::middleware(['web','auth','ensure.addon:marketplace.commerce','permission:
  Route::post('/marketplace/products',[MarketplaceController::class,'productStore'])->name('marketplace.products.store');
  Route::patch('/marketplace/products/{product}',[MarketplaceController::class,'productUpdate'])->name('marketplace.products.update');
  Route::delete('/marketplace/products/{product}',[MarketplaceController::class,'productDestroy'])->name('marketplace.products.destroy');
+ Route::post('/marketplace/products/{product}/video',[MarketplaceController::class,'storeVideo'])->name('marketplace.products.video.store');
  Route::post('/marketplace/products/{product}/media',[MarketplaceController::class,'storeMedia'])->name('marketplace.products.media.store');
  Route::post('/marketplace/products/{product}/media/{media}/primary',[MarketplaceController::class,'setPrimaryMedia'])->name('marketplace.products.media.primary');
  Route::delete('/marketplace/products/{product}/media/{media}',[MarketplaceController::class,'deleteMedia'])->name('marketplace.products.media.destroy'); Route::post('/marketplace/products/{product}/assets/upload',[MarketplaceController::class,'storeDigitalAssetFile'])->name('marketplace.products.assets.upload');
