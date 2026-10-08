@@ -2,6 +2,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 return new class extends Migration {
  public function up(): void {
   Schema::create('education_academic_units',function(Blueprint $t){$t->id();$t->foreignId('institution_id')->constrained('education_institutions')->cascadeOnDelete();$t->foreignId('parent_unit_id')->nullable()->constrained('education_academic_units')->nullOnDelete();$t->string('unit_type',40)->index();$t->string('name');$t->string('short_name')->nullable();$t->string('code')->nullable();$t->string('slug')->index();$t->text('description')->nullable();$t->unsignedInteger('display_order')->default(0);$t->boolean('active')->default(true)->index();$t->json('metadata')->nullable();$t->string('source_url')->nullable();$t->string('source_title')->nullable();$t->date('source_published_at')->nullable();$t->timestamp('verified_at')->nullable();$t->timestamps();$t->softDeletes();$t->unique(['institution_id','parent_unit_id','name']);});
