@@ -73,7 +73,7 @@ class VtuBulkIdempotencyTest extends TestCase
             ]);
         });
 
-        $this->expectException(\\Illuminate\\Validation\\ValidationException::class);
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
         $this->expectExceptionMessage('expired or changed');
 
         app(VtuBulkService::class)->execute($user->id, [[
@@ -116,7 +116,7 @@ class VtuBulkIdempotencyTest extends TestCase
             'enabled' => true,
         ]);
 
-        $this->expectException(\\Illuminate\\Validation\\ValidationException::class);
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
         $this->expectExceptionMessage('Duplicate recipient numbers are not allowed');
 
         app(VtuBulkService::class)->execute($user->id, [
