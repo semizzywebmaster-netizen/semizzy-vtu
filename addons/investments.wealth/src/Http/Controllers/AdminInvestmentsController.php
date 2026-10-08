@@ -23,7 +23,7 @@ class AdminInvestmentsController extends Controller
             'securities' => InvestmentSecurity::with(['quotes' => fn ($q) => $q->latest('observed_at')->limit(1)])->latest()->paginate(25, ['*'], 'securities_page'),
             'providers' => InvestmentProvider::latest()->get(),
             'orders' => InvestmentOrder::with(['security','provider'])->latest()->paginate(25, ['*'], 'orders_page'),
-            'corporateActions' => InvestmentCorporateAction::with('security')->latest()->paginate(25, ['*'], 'corporate_actions_page'),
+            'corporateActions' => InvestmentCorporateAction::with(['security','provider'])->latest()->paginate(25, ['*'], 'corporate_actions_page'),
         ]);
     }
 
@@ -31,7 +31,6 @@ class AdminInvestmentsController extends Controller
     {
         $product->active = ! $product->active;
         $product->saveOrFail();
-
         return back();
     }
 
@@ -61,14 +60,12 @@ class AdminInvestmentsController extends Controller
     public function publishSecurity(InvestmentSecurity $security)
     {
         $security->update(['status' => 'published', 'published_at' => now()]);
-
         return back()->with('success', 'Security published.');
     }
 
     public function unpublishSecurity(InvestmentSecurity $security)
     {
         $security->update(['status' => 'draft', 'published_at' => null]);
-
         return back()->with('success', 'Security unpublished.');
     }
 
@@ -87,11 +84,7 @@ class AdminInvestmentsController extends Controller
 
         InvestmentProvider::updateOrCreate(
             ['key' => $data['key']],
-            [
-                ...$data,
-                'status' => 'disabled',
-                'verified' => false,
-            ]
+            [...$data, 'status' => 'disabled', 'verified' => false]
         );
 
         return back()->with('success', 'Provider saved disabled and unverified.');
@@ -99,18 +92,13 @@ class AdminInvestmentsController extends Controller
 
     public function verifyProvider(InvestmentProvider $provider)
     {
-        $provider->update([
-            'verified' => true,
-            'status' => 'enabled',
-        ]);
-
+        $provider->update(['verified' => true, 'status' => 'enabled']);
         return back()->with('success', 'Provider verified and enabled.');
     }
 
     public function disableProvider(InvestmentProvider $provider)
     {
         $provider->update(['status' => 'disabled']);
-
         return back()->with('success', 'Provider disabled.');
     }
 
@@ -118,6 +106,7 @@ class AdminInvestmentsController extends Controller
     {
         $data = $request->validate([
             'security_id' => ['required', 'integer', 'exists:investment_securities,id'],
+            'provider_id' => ['required', 'integer', 'exists:investment_providers,id'],
             'action_type' => ['required', Rule::in(['dividend','bonus','split','rights','merger','other'])],
             'reference' => ['required', 'string', 'max:255'],
             'record_date' => ['nullable', 'date'],
@@ -130,21 +119,26 @@ class AdminInvestmentsController extends Controller
             'metadata' => ['nullable', 'array'],
         ]);
 
+        $provider = InvestmentProvider::whereKey($data['provider_id'])
+            ->where('status', 'enabled')
+            ->where('verified', true)
+            ->firstOrFail();
+
         InvestmentCorporateAction::updateOrCreate(
             ['reference' => $data['reference']],
             $data
         );
 
-        return back()->with('success', 'Corporate action saved with its source/reference data.');
+        return back()->with('success', 'Corporate action saved with verified provider provenance.');
     }
 
     public function storeQuote(Request $request, InvestmentSecurity $security)
     {
         $data = $request->validate([
-            'source' => ['required', 'string', 'max:120'],
+            'provider_id' => ['required', 'integer', 'exists:investment_providers,id'],
+            'last_price' => ['nullable', 'numeric', 'min:0'],
             'bid' => ['nullable', 'numeric', 'min:0'],
             'ask' => ['nullable', 'numeric', 'min:0'],
-            'last_price' => ['nullable', 'numeric', 'min:0'],
             'open_price' => ['nullable', 'numeric', 'min:0'],
             'high_price' => ['nullable', 'numeric', 'min:0'],
             'low_price' => ['nullable', 'numeric', 'min:0'],
@@ -155,11 +149,18 @@ class AdminInvestmentsController extends Controller
             'raw_metadata' => ['nullable', 'array'],
         ]);
 
+        $provider = InvestmentProvider::whereKey($data['provider_id'])
+            ->where('status', 'enabled')
+            ->where('verified', true)
+            ->where('is_data_provider', true)
+            ->firstOrFail();
+
         InvestmentMarketQuote::create([
             ...$data,
             'security_id' => $security->id,
+            'source' => $provider->name,
         ]);
 
-        return back()->with('success', 'Quote snapshot recorded with its source and timestamp.');
+        return back()->with('success', 'Quote snapshot recorded from a verified market-data provider.');
     }
 }
