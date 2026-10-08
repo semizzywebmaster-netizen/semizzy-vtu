@@ -195,6 +195,7 @@ final class MarketplaceController
         ]);
         if (empty($data['path']) && empty($data['external_url'])) return response()->json(['success'=>false,'message'=>'A storage path or external URL is required.'],422);
         if (!empty($data['path']) && empty($data['disk'])) return response()->json(['success'=>false,'message'=>'A storage disk is required for stored assets.'],422);
+        if (!empty($data['path']) && !str_starts_with($data['path'], 'marketplace/digital-assets/'.$product->id.'/')) return response()->json(['success'=>false,'message'=>'Digital assets must use the protected marketplace asset directory.'],422);
         $asset = MarketplaceDigitalAsset::create(array_merge($data, ['product_id'=>$product->id,'active'=>true]));
         return response()->json(['success'=>true,'asset'=>$asset],201);
     }
@@ -258,6 +259,34 @@ final class MarketplaceController
         }
 
         return response()->json(['success' => true]);
+    }
+
+    public function storeDigitalAssetFile(Request $request, MarketplaceProduct $product)
+    {
+        if ((int) $product->seller_id !== (int) $request->user()->id && !$request->user()->hasPermission('marketplace.manage')) abort(403);
+        if (!$product->isDigital()) abort(422, 'Only digital products can have digital assets.');
+
+        $data = $request->validate([
+            'asset' => ['required','file','max:51200'],
+            'asset_type' => ['required', Rule::in(['download','license_key','course','media'])],
+            'version' => ['nullable','string','max:80'],
+            'checksum' => ['nullable','string','max:255'],
+        ]);
+
+        $path = $data['asset']->store('marketplace/digital-assets/'.$product->id, 'local');
+        $asset = MarketplaceDigitalAsset::create([
+            'product_id' => $product->id,
+            'asset_type' => $data['asset_type'],
+            'disk' => 'local',
+            'path' => $path,
+            'external_url' => null,
+            'version' => $data['version'] ?? null,
+            'checksum' => $data['checksum'] ?? null,
+            'sort_order' => ((int) $product->digitalAssets()->max('sort_order')) + 1,
+            'active' => true,
+        ]);
+
+        return response()->json(['success' => true, 'asset' => $asset], 201);
     }
 
     public function downloadDigitalAsset(Request $request, string $token)
