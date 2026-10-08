@@ -4,17 +4,17 @@
 
 ## Current project
 - Repository: `semizzywebmaster-netizen/semizzy-vtu`
-- Current work branch: `feat/events-addon`
-- **Current active addon: #2 Events & Entertainment**
+- Current work branch: `feat/stocks-investments-addon`
+- **Current active addon: #3 Stocks & Investments Marketplace**
 - Do not rebuild, rename, or treat existing addons as missing.
 
 ## Remaining addon sequence
 
 There are **8 remaining roadmap positions: 1 in progress + 7 not yet built**.
 
-1. **Education** — IN PROGRESS
-2. **Events & Entertainment** — NOT BUILT
-3. **Stocks & Investments Marketplace** — NOT BUILT
+1. **Education** — completed enough to move forward
+2. **Events & Entertainment** — foundation implemented; API-provider confirmation intentionally held until a real provider is configured
+3. **Stocks & Investments Marketplace** — IN PROGRESS
 4. **Forex / Digital Assets** — NOT BUILT
 5. **Digital Products / Services Marketplace** — NOT BUILT
 6. **Ads & Monetization** — NOT BUILT
@@ -65,13 +65,21 @@ The repository already contains the following addon directories and they must no
 
 The list above reflects the repository state checked while establishing this roadmap. Verify the actual branch/tree before making claims about implementation status.
 
-## Events & Entertainment — current focus
+## Events & Entertainment — previous addon
 
 Bulk action status: foundation + discovery + event draft/venue/ticket management implemented. Public discovery now supports search, category, format and city filtering; published event detail exposes active ticket types. Admin can create event drafts, venues and ticket types. Publication/verification, checkout/payment, QR issuance/check-in, refunds, payouts, organiser verification and advanced recurring schedules remain to be implemented and tested.
 
-Events & Entertainment is now the active addon. The initial architecture is based on researched ticketing/event-platform patterns: physical, virtual and recurring events; event categories; organiser verification; ticket types; order/ticket lifecycle; QR-based check-in; and event discovery. Do not copy any third-party platform implementation; use these capabilities only as product research.
+Events & Entertainment is no longer the active addon. Its API-provider confirmation path remains intentionally held until a real provider is configured; no simulated API payment confirmation is permitted. The initial architecture is based on researched ticketing/event-platform patterns: physical, virtual and recurring events; event categories; organiser verification; ticket types; order/ticket lifecycle; QR-based check-in; and event discovery. Do not copy any third-party platform implementation; use these capabilities only as product research.
 
 Research references used for the initial model included Tix Africa's live/virtual/recurring event model, ticket types and QR tickets, and Eventbrite's category/format discovery filters. citeturn0search0turn0search3turn0search8turn0search12
+
+## Stocks & Investments Marketplace — current focus
+
+The existing `investments.wealth` addon is the canonical base for this roadmap position; do not create a duplicate investments addon directory. It is being extended into the Stocks & Investments Marketplace.
+
+Bulk action #1 established the researched regulatory/product boundary and added the initial securities, market-quotes, investment-provider, order, execution, holdings and corporate-actions schema. Trading is disabled by default until a verified execution provider and required KYC/regulatory controls are configured. Market data is disabled by default until a verified licensed data source is configured. No fake prices, fake trades or guaranteed returns.
+
+Research basis: SEC Nigeria's current registered-operator/public-warning material and digital-intermediary rules, NGX Trading License Holder requirements and market-data licensing information, and CSCS investor account/portfolio services. citeturn0search0turn0search2turn0search4turn0search1turn0search10
 
 ## Education — previous addon
 
