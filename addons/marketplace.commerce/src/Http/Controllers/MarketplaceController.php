@@ -109,6 +109,7 @@ final class MarketplaceController
         return Inertia::render('Admin/Marketplace/Index', [
             'products' => MarketplaceProduct::query()->with(['seller','category'])->latest()->paginate(30),
             'orders' => MarketplaceOrder::query()->with(['buyer', 'seller', 'product'])->latest()->paginate(30),
+            'earnings' => MarketplaceEarning::query()->with(['seller', 'category', 'order'])->latest()->paginate(30),
             'categories' => MarketplaceCategory::query()->with('parent')->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
