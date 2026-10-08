@@ -276,6 +276,9 @@ final class MarketplaceController
         $schema = $this->categorySchema($category);
         $attributes = is_array($data['attributes'] ?? null) ? $data['attributes'] : [];
         $this->validateCategoryAttributes($attributes, $schema);
+        if ($data['product_type'] === 'physical' && in_array($data['condition'] ?? 'new', ['used','refurbished','open_box','like_new','pre_owned','for_parts'], true) && empty($data['attributes']['condition_notes'])) {
+            throw new RuntimeException('Condition notes are required for non-new physical listings.');
+        }
 
         $data['category_name'] = $category->name;
         $data['listing_type'] = $category->listing_type;
