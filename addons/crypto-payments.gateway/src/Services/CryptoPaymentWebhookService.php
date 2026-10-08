@@ -32,7 +32,7 @@ class CryptoPaymentWebhookService
 
         $this->verifySignature($provider, $payload, $raw, $signature);
 
-        return DB::transaction(function () use ($provider, $eventKey, $signature, $payload) {
+        $event = DB::transaction(function () use ($provider, $eventKey, $signature, $payload) {
             $event = CryptoPaymentWebhookEvent::create([
                 'crypto_payment_provider_id' => $provider->id,
                 'event_key' => $eventKey,
@@ -65,6 +65,28 @@ class CryptoPaymentWebhookService
             $event->forceFill(['processed_at' => now()])->save();
             return $event;
         });
+
+        if ($event->provider_payment_id) {
+            $tx = CryptoPaymentTransaction::query()
+                ->where('crypto_payment_provider_id', $provider->id)
+                ->where('provider_payment_id', $event->provider_payment_id)
+                ->first();
+
+            if ($tx) {
+                $settlement = app(CryptoPaymentSettlementService::class);
+                $settlement->evaluate($tx);
+                $tx = $tx->fresh();
+
+                if ($settlement->canSettle($tx)) {
+                    $settlement->markSettled(
+                        $tx,
+                        'CRYPTO-SETTLE-'.$tx->uuid
+                    );
+                }
+            }
+        }
+
+        return $event;
     }
 
     private function verifySignature(CryptoPaymentProvider $provider, array $payload, string $raw, ?string $signature): void
