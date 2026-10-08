@@ -51,6 +51,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
+            'whatsapp_verified_at' => 'datetime',
+            'whatsapp_transaction_enabled' => 'boolean',
             'merchant_verified_at' => 'datetime',
             'security_lock_until' => 'datetime',
             'onboarding_completed_at' => 'datetime',
