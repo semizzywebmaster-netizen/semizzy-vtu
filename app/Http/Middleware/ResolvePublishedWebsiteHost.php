@@ -49,6 +49,7 @@ class ResolvePublishedWebsiteHost
 
         $path = trim($request->path(), '/');
         $firstSegment = strtolower((string) strtok($path, '/'));
+        $host = strtolower(rtrim($request->getHost(), '.'));
 
         if ($firstSegment !== '' && in_array($firstSegment, self::RESERVED_PREFIXES, true)) {
             return $next($request);
@@ -58,7 +59,7 @@ class ResolvePublishedWebsiteHost
             return $next($request);
         }
 
-        $site = $this->service->resolvePublishedByHost($request->getHost());
+        $site = $this->service->resolvePublishedByHost($host);
         if (!$site) {
             return $next($request);
         }
@@ -67,9 +68,14 @@ class ResolvePublishedWebsiteHost
             ->where('status', 'published')
             ->orderBy('sort_order')]);
 
-        $target = $path === ''
+        $slug = $path === '' ? null : trim($path, '/');
+        if ($slug !== null && !preg_match('/^[A-Za-z0-9-]+$/', $slug)) {
+            return $next($request);
+        }
+
+        $target = $slug === null
             ? $site->pages->firstWhere('is_home', true)
-            : $site->pages->firstWhere('slug', $path);
+            : $site->pages->firstWhere('slug', $slug);
 
         if (!$target) {
             return $next($request);
