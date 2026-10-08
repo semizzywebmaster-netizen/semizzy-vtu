@@ -2,6 +2,8 @@
 
 namespace Semizzy\Addons\ForexDigitalAssets\Services;
 
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use InvalidArgumentException;
 
 class ForexQuoteNormalizer
@@ -13,14 +15,14 @@ class ForexQuoteNormalizer
         $mid = $this->number($payload['mid'] ?? null, 'mid');
 
         if ($mid === null && $bid !== null && $ask !== null) {
-            $mid = bcdiv(bcadd($bid, $ask, 12), '2', 12);
+            $mid = BigDecimal::of($bid)->plus($ask)->dividedBy(2, 12, RoundingMode::HALF_UP)->toScale(12)->__toString();
         }
 
         if ($mid === null) {
             throw new InvalidArgumentException('A real provider quote must contain mid, or both bid and ask.');
         }
 
-        if ($bid !== null && $ask !== null && bccomp($bid, $ask, 12) > 0) {
+        if ($bid !== null && $ask !== null && BigDecimal::of($bid)->isGreaterThan($ask)) {
             throw new InvalidArgumentException('Bid cannot exceed ask.');
         }
 
