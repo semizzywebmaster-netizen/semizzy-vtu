@@ -127,6 +127,63 @@ return [
                 'published_general_rules_do_not_replace_programme_table',
             ],
         ],
+        'university_of_nigeria_nsukka' => [
+            'name' => 'University of Nigeria, Nsukka',
+            'category' => 'university',
+            'ownership' => 'federal',
+            'country' => 'Nigeria',
+            'official_sources' => [
+                '2026_screening_notice' => 'https://www.unn.edu.ng/2026-2027-screening-exercise-for-admission/',
+                'undergraduate_admission' => 'https://www.unn.edu.ng/academics/admission-2/',
+                'direct_entry' => 'https://www.unn.edu.ng/academics/admission-2/under-graduate/admission-by-direct-entry/',
+                'admissions_unit' => 'https://registry.unn.edu.ng/admissions/',
+            ],
+            'observed_admission_dimensions' => [
+                'utme',
+                'direct_entry',
+                'inter_university_transfer',
+                'programme',
+                'department',
+                'o_level_subjects',
+                'o_level_sittings',
+                'utme_score',
+                'post_utme',
+                'age',
+                'o_level_upload',
+                'document_uploads',
+                'nce_diploma_a_level_qualification',
+            ],
+            'verified_examples' => [
+                '2026_2027_utme_screening' => [
+                    'first_choice_required',
+                    'minimum_utme_score_160',
+                    'minimum_age_16_by_30_september_2026',
+                    'o_level_results_uploaded_to_jamb_and_unn',
+                    'waiting_results_not_eligible_for_screening',
+                ],
+                'general_undergraduate' => [
+                    'five_o_level_credits',
+                    'maximum_two_sittings',
+                    'english_language_required',
+                    'science_subject_required',
+                ],
+                'direct_entry' => [
+                    'advanced_level_routes',
+                    'recognised_diploma_routes',
+                    'degree_and_other_recognised_post_secondary_qualifications',
+                    'course_specific_requirements_apply',
+                ],
+                'departmental_example' => [
+                    'management_sciences_can_specify_economics_and_other_subjects',
+                ],
+            ],
+            'do_not_generalize' => [
+                '160_is_screening_eligibility_not_a_universal_programme_cutoff',
+                'departmental_requirements_still_apply',
+                'direct_entry_requirements_vary_by_course',
+                'post_utme_process_is_session_specific',
+            ],
+        ],
     ],
 
     /*
