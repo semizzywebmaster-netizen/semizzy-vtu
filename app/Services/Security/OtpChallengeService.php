@@ -4,6 +4,7 @@ namespace App\Services\Security;
 
 use App\Models\OtpChallenge;
 use App\Models\User;
+use App\Services\System\SystemSettingsService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
@@ -20,6 +21,9 @@ class OtpChallengeService
     {
         $purpose = $this->normalizePurpose($purpose);
         $channel = strtolower(trim((string) ($channel ?? 'email')));
+        $settings = app(SystemSettingsService::class)->all();
+        $expiryMinutes = max(1, min(60, (int) ($settings['otp_expiry_minutes'] ?? 10)));
+        $maxAttempts = max(1, min(10, (int) ($settings['otp_max_attempts'] ?? 5)));
 
         if (! in_array($channel, ['email', 'sms', 'whatsapp'], true)) {
             throw ValidationException::withMessages(['otp_channel' => 'Unsupported OTP channel.']);
@@ -53,14 +57,14 @@ class OtpChallengeService
             'purpose' => $purpose,
             'destination' => $destination,
             'code_hash' => Hash::make($code),
-            'expires_at' => now()->addMinutes(10),
+            'expires_at' => now()->addMinutes($expiryMinutes),
             'consumed_at' => null,
             'attempts' => 0,
-            'max_attempts' => 5,
+            'max_attempts' => $maxAttempts,
             'ip_address' => request()->ip(),
         ]);
 
-        $body = "Your SEMIZZY ONE {$label} verification code is {$code}. It expires in 10 minutes.";
+        $body = "Your SEMIZZY ONE {$label} verification code is {$code}. It expires in {$expiryMinutes} minutes.";
 
         if ($channel === 'email') {
             Mail::raw($body, fn ($message) => $message
@@ -83,7 +87,11 @@ class OtpChallengeService
             'body' => $body,
             'status' => 'queued',
             'idempotency_key' => 'otp:' . $purpose . ':' . $user->id . ':' . bin2hex(random_bytes(8)),
-            'metadata' => ['purpose' => $purpose, 'channel' => $channel],
+            'metadata' => [
+                'purpose' => $purpose,
+                'channel' => $channel,
+                'expires_at' => now()->addMinutes($expiryMinutes)->toIso8601String(),
+            ],
         ]);
 
         app(\Addons\CommunicationWhatsapp\Services\CommunicationProviderGateway::class)->send($message);
@@ -164,7 +172,10 @@ class OtpChallengeService
             'body' => $body,
             'status' => 'queued',
             'idempotency_key' => 'registration-otp-' . $user->id . '-' . bin2hex(random_bytes(8)),
-            'metadata' => ['purpose' => 'registration'],
+            'metadata' => [
+                'purpose' => 'registration',
+                'expires_at' => now()->addMinutes($expiryMinutes)->toIso8601String(),
+            ],
         ]);
 
         app(\Addons\CommunicationWhatsapp\Services\CommunicationProviderGateway::class)->send($message);
