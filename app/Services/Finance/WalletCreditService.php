@@ -1,11 +1,11 @@
 <?php
 
-namespace App\\Services\\Finance;
+namespace App\Services\Finance;
 
-use App\\Models\\User;
-use App\\Models\\WalletAccount;
-use App\\Models\\WalletMovement;
-use Illuminate\\Support\\Facades\\DB;
+use App\Models\User;
+use App\Models\WalletAccount;
+use App\Models\WalletMovement;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class WalletCreditService
@@ -72,7 +72,7 @@ class WalletCreditService
     private function toMinor(string $major): string
     {
         $major = trim($major);
-        if (!preg_match('/^\\d+(?:\\.\\d{1,2})?$/', $major)) {
+        if (!preg_match('/^\d+(?:\.\d{1,2})?$/', $major)) {
             throw new RuntimeException('Wallet credit amount must be a valid NGN amount.');
         }
 
