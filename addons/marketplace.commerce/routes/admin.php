@@ -7,4 +7,5 @@ Route::middleware(['web','auth','ensure.addon:marketplace.commerce','permission:
  Route::patch('/admin/marketplace/products/{product}',[MarketplaceController::class,'productUpdate'])->name('admin.marketplace.products.update');
  Route::delete('/admin/marketplace/products/{product}',[MarketplaceController::class,'productDestroy'])->name('admin.marketplace.products.destroy');
  Route::post('/admin/marketplace/orders/{order}/refund',[MarketplaceController::class,'refund'])->name('admin.marketplace.orders.refund');
+ Route::patch('/admin/marketplace/categories/{category}/profit',[MarketplaceController::class,'updateCategoryProfit'])->name('admin.marketplace.categories.profit');
 });
