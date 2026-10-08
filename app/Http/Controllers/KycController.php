@@ -59,7 +59,7 @@ class KycController extends Controller
             );
 
             return back()->with('success', strtoupper($data['identity_type']).' verification lookup completed.')->with('kycLookup', $result);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             return back()->withErrors(['identity_number' => $e->getMessage()])->withInput();
         }
     }
