@@ -107,6 +107,17 @@ The user/API read layer now includes:
 
 No fake execution, synthetic holdings, or fabricated corporate actions were introduced.
 
+
+## Stocks & Investments Marketplace — bulk action #5 completed
+
+The marketplace UI blocker was fixed and the admin control surface was expanded:
+- Added the missing user-facing `Investments/Market` page required by the existing web route.
+- The marketplace page only displays published securities and clearly shows when an approved quote is unavailable; it does not invent prices.
+- Added an admin marketplace screen for investment-product activation, security draft creation/publication, provider registration/verification/disablement, quote snapshot recording, and investment-account visibility.
+- Provider controls remain explicitly disabled/unverified until an administrator verifies a real provider.
+- Quote recording retains source, observed time and expiry; no synthetic live-feed behaviour was introduced.
+- Buy/sell execution remains intentionally unavailable until a real verified execution provider and required KYC/regulatory controls are configured.
+
 ## Education — previous addon
 
 
