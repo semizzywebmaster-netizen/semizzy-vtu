@@ -23,6 +23,8 @@ return [
   ['key'=>'enabled','type'=>'boolean','default'=>true],
   ['key'=>'default_currency','type'=>'string','default'=>'NGN'],
   ['key'=>'fee_minor','type'=>'integer','default'=>0],
+  ['key'=>'min_transfer_minor','type'=>'integer','default'=>100],
+  ['key'=>'max_transfer_minor','type'=>'integer','default'=>1000000000],
   ['key'=>'high_amount_transfer_threshold_minor','type'=>'integer','default'=>100000000],
   ['key'=>'high_amount_transfer_require_otp','type'=>'boolean','default'=>true],
   ['key'=>'high_amount_transfer_require_pin','type'=>'boolean','default'=>true],
