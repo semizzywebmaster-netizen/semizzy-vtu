@@ -125,6 +125,8 @@ final class PaymentWebhookService
             'paystack' => data_get($data, 'status', ''),
             'monnify' => data_get($data, 'paymentStatus', ''),
             'opay' => data_get($data, 'status', ''),
+            'kora' => data_get($data, 'status', ''),
+            'squad' => data_get($data, 'transaction_status', data_get($data, 'status', '')),
             default => data_get($data, 'status', ''),
         });
     }
@@ -136,7 +138,7 @@ final class PaymentWebhookService
             'monnify' => data_get($data, 'amountPaid', data_get($data, 'totalPayable')),
             'opay' => data_get($data, 'amount.total'),
             'kora' => data_get($data, 'amount'),
-            'squad' => data_get($data, 'amount', data_get($data, 'merchant_amount')),
+            'squad' => data_get($data, 'transaction_amount', data_get($data, 'amount', data_get($data, 'merchant_amount'))),
             default => data_get($data, 'amount'),
         };
         if ($amount === null || $amount === '') return null;
@@ -149,7 +151,7 @@ final class PaymentWebhookService
             'monnify' => data_get($data, 'currencyCode', ''),
             'opay' => data_get($data, 'amount.currency', ''),
             'kora' => data_get($data, 'currency', ''),
-            'squad' => data_get($data, 'currency', ''),
+            'squad' => data_get($data, 'transaction_currency_id', data_get($data, 'currency', '')),
             default => data_get($data, 'currency', ''),
         });
     }
