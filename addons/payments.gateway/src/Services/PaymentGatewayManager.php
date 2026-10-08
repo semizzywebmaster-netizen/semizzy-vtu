@@ -4,6 +4,7 @@ namespace Semizzy\Addons\Payments\Services;
 
 use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -52,6 +53,10 @@ class PaymentGatewayManager
 
                 return $result;
             } catch (\Throwable $e) {
+                if (!$this->isRetryable($e)) {
+                    throw $e;
+                }
+
                 $last = $e;
                 $provider->increment('failure_count');
                 $provider->forceFill([
@@ -69,5 +74,10 @@ class PaymentGatewayManager
         }
 
         throw $last ?: new RuntimeException('Payment gateway execution failed.');
+    }
+
+    private function isRetryable(\Throwable $e): bool
+    {
+        return $e instanceof ConnectionException;
     }
 }
