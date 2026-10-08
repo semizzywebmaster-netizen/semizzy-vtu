@@ -100,7 +100,7 @@ class AdminForexDigitalAssetsController extends Controller
             ]);
 
             return back()->with('success', "Provider test succeeded; {$count} quote(s) refreshed.");
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             $provider->update([
                 'last_health_check_at' => now(),
                 'last_failure_at' => now(),
