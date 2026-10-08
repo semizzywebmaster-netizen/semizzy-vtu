@@ -249,7 +249,7 @@ class VtuAdminController extends Controller
   foreach($items as $item){
    if(!$item->transaction||!$item->transaction->provider_reference||$item->transaction->isTerminal()){$skipped++;continue;}
    $checked++;
-   try{$before=$item->transaction->status;$after=$service->requery($item->transaction);if($after->status!==$before)$changed++;$bulkService->recalculate($bulk);}catch(\\Throwable $e){$skipped++;report($e);}
+   try{$before=$item->transaction->status;$after=$service->requery($item->transaction);if($after->status!==$before)$changed++;$bulkService->recalculate($bulk);}catch(\Throwable $e){$skipped++;report($e);}
   }
   $message="Bulk item requery checked {$checked}; {$changed} state change(s), {$skipped} skipped/failed.";
   return $r->expectsJson()?response()->json(['status'=>'completed','checked'=>$checked,'changed'=>$changed,'skipped'=>$skipped,'message'=>$message]):back()->with('success',$message);
@@ -281,7 +281,7 @@ class VtuAdminController extends Controller
    $count=$bulkService->recoverStaleOperations((int)($data['limit']??50),(int)($data['stale_minutes']??10));
    $message="Bulk recovery checked and reconciled {$count} item(s).";
    return $r->expectsJson()?response()->json(['status'=>'completed','recovered'=>$count,'message'=>$message]):back()->with('success',$message);
-  }catch(\\Throwable $e){
+  }catch(\Throwable $e){
    report($e);
    $message='Bulk recovery failed safely. No destructive recovery was applied.';
    return $r->expectsJson()?response()->json(['message'=>$message],500):back()->with('error',$message);
