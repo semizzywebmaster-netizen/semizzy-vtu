@@ -27,6 +27,8 @@ final class PaymentWebhookService
             $this->validateOpayCallback($payload, $secret);
         } elseif ($provider->driver === 'monnify') {
             $this->validateMonnifyCallback($raw, $signature, $secret);
+        } elseif ($provider->driver === 'kora') {
+            $this->validateKoraCallback($payload, $signature, $secret);
         } elseif ($secret !== '' && $signature !== '') {
             $candidate = hash_hmac('sha512', $raw, $secret);
             if (!hash_equals(strtolower(trim($candidate)), strtolower(trim($signature)))) {
@@ -131,6 +133,7 @@ final class PaymentWebhookService
             'paystack' => data_get($data, 'amount'),
             'monnify' => data_get($data, 'amountPaid', data_get($data, 'totalPayable')),
             'opay' => data_get($data, 'amount.total'),
+            'kora' => data_get($data, 'amount'),
             default => data_get($data, 'amount'),
         };
         if ($amount === null || $amount === '') return null;
@@ -142,6 +145,7 @@ final class PaymentWebhookService
         return strtoupper((string) match ($provider->driver) {
             'monnify' => data_get($data, 'currencyCode', ''),
             'opay' => data_get($data, 'amount.currency', ''),
+            'kora' => data_get($data, 'currency', ''),
             default => data_get($data, 'currency', ''),
         });
     }
@@ -199,6 +203,7 @@ final class PaymentWebhookService
             'paystack' => (string) data_get($payload, 'data.reference', data_get($payload, 'reference', '')),
             'monnify' => (string) data_get($payload, 'eventData.paymentReference', ''),
             'opay' => (string) data_get($payload, 'payload.reference', data_get($payload, 'data.reference', '')),
+            'kora' => (string) data_get($payload, 'data.reference', ''),
             default => (string) data_get($payload, 'data.reference', data_get($payload, 'reference', '')),
         };
     }
@@ -209,6 +214,7 @@ final class PaymentWebhookService
             'paystack' => (string) data_get($payload, 'data.id', hash('sha256', $raw)),
             'monnify' => (string) data_get($payload, 'eventData.transactionReference', hash('sha256', $raw)),
             'opay' => (string) data_get($payload, 'payload.transactionId', data_get($payload, 'payload.reference', hash('sha256', $raw))),
+            'kora' => (string) data_get($payload, 'data.reference', hash('sha256', $raw)),
             default => hash('sha256', $provider->code.'|'.$reference.'|'.$raw),
         };
     }
