@@ -56,6 +56,8 @@ return [
         ['key' => 'automatic_provider_failover', 'type' => 'boolean', 'default' => true],
         ['key' => 'automatic_reconciliation', 'type' => 'boolean', 'default' => true],
         ['key' => 'bank_account_name_enquiry', 'type' => 'boolean', 'default' => true],
+        ['key' => 'withdrawal_account_max', 'type' => 'integer', 'default' => 2],
+        ['key' => 'withdrawal_account_kyc_name_match_required', 'type' => 'boolean', 'default' => true],
     ],
     'migrations' => [
         '2026_10_08_001000_create_banking_providers.php',
@@ -64,6 +66,9 @@ return [
         '2026_10_08_001003_create_banking_transfers.php',
         '2026_10_08_001004_create_banking_scheduled_transfers.php',
         '2026_10_08_001005_create_banking_transfer_batches.php',
+        '2026_10_08_001006_extend_banking_bank_directories.php',
+        '2026_10_08_001007_create_banking_withdrawal_accounts.php',
+        '2026_10_08_001008_seed_nigeria_financial_institutions.php',
     ],
     'web_route_files' => [],
     'api_route_files' => [],
