@@ -185,6 +185,16 @@ class WebsiteBuilderService
         if (!filter_var($subdomain, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
             throw ValidationException::withMessages(['subdomain' => 'Enter a valid hostname, for example shop.example.com.']);
         }
+
+        $applicationHost = strtolower((string) (parse_url((string) config('app.url'), PHP_URL_HOST) ?? ''));
+        if ($applicationHost !== '' && ($subdomain === $applicationHost || str_ends_with($subdomain, '.' . $applicationHost))) {
+            $label = strtolower((string) strtok($subdomain, '.'));
+            $reserved = ['admin','api','login','register','logout','dashboard','profile','kyc','transactions','wallet','support','help','website-builder','www'];
+            if ($subdomain === $applicationHost || in_array($label, $reserved, true)) {
+                throw ValidationException::withMessages(['subdomain' => 'This hostname is reserved for the main platform.']);
+            }
+        }
+
         if (WebsiteSite::where('subdomain', $subdomain)->where('id', '!=', $site->id)->exists()
             || WebsiteSite::where('active_domain', $subdomain)->where('id', '!=', $site->id)->exists()
             || WebsiteDomain::where('domain', $subdomain)->where('website_site_id', '!=', $site->id)->exists()) {
