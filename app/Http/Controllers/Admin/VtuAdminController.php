@@ -242,6 +242,16 @@ class VtuAdminController extends Controller
   }
  }
 
+ public function auditSelectedBulk(Request $r, VtuBulkReconciliationService $reconciliation): JsonResponse|\Illuminate\Http\RedirectResponse{
+  $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id']]);
+  $results=[];$healthy=0;$issues=0;
+  foreach(VtuBulkOperation::query()->whereIn('id',$data['bulk_ids'])->get() as $bulk){
+   try{$result=$reconciliation->audit($bulk);$results[]=['id'=>$bulk->id,'reference'=>$bulk->reference,'healthy'=>(bool)($result['healthy']??false),'issue_count'=>(int)($result['issue_count']??0),'issues'=>array_slice((array)($result['issues']??[]),0,10)];if($result['healthy']??false)$healthy++;else$issues++;}catch(\Throwable $e){report($e);$results[]=['id'=>$bulk->id,'reference'=>$bulk->reference,'healthy'=>false,'issue_count'=>1,'issues'=>[['code'=>'AUDIT_FAILED','message'=>'Integrity audit could not be completed safely.']]];$issues++;}
+  }
+  $payload=['status'=>'completed','checked'=>count($results),'healthy'=>$healthy,'with_issues'=>$issues,'results'=>$results];
+  return $r->expectsJson()?response()->json($payload):back()->with('success',"Selected bulk integrity audit checked {$payload['checked']} operation(s): {$healthy} healthy, {$issues} requiring attention.");
+ }
+
  public function reconcileSelectedBulk(Request $r,VtuTransactionService $service,VtuBulkService $bulkService): JsonResponse|\Illuminate\Http\RedirectResponse{
   $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id']]);
   $attempted=0;$reconciled=0;
