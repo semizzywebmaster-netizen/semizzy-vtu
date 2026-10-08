@@ -26,6 +26,7 @@ return new class extends Migration {
             'services' => ['Repair & Maintenance','Cleaning','Beauty Services','Photography & Video','Events & Catering','Logistics & Delivery','Tutoring & Training','IT & Digital Services','Professional Services','Home Services'],
             'digital-products' => ['E-books & Documents','Templates & Design Assets','Software & Licences','Audio','Video','Digital Courses','Graphics & Media'],
             'business-industry' => ['Business for Sale','Office & Commercial Supplies','Retail Equipment','Wholesale & Distribution','Franchise & Business Opportunities'],
+            'real-estate' => ['Houses for Sale','Houses for Rent','Apartments for Sale','Apartments for Rent','Land & Plots for Sale','Land & Plots for Rent','Shops for Rent','Shops for Sale','Offices for Rent','Offices for Sale','Warehouses for Rent','Warehouses for Sale','Shortlet Apartments','Event Centres','Hotels & Guest Houses','Farms & Agricultural Land','Estates & Developments'],
         ];
 
         foreach ($groups as $parentSlug => $children) {
