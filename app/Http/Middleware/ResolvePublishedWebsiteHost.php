@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Addons\VtuWebsiteBuilder\Services\WebsiteBuilderService;
+use Closure;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
+
+class ResolvePublishedWebsiteHost
+{
+    public function __construct(private WebsiteBuilderService $service)
+    {
+    }
+
+    public function handle(Request $request, Closure $next): Response
+    {
+        if (!$request->isMethod('GET') && !$request->isMethod('HEAD')) {
+            return $next($request);
+        }
+
+        $path = trim($request->path(), '/');
+        if ($path !== '' && str_contains($path, '.')) {
+            return $next($request);
+        }
+
+        $site = $this->service->resolvePublishedByHost($request->getHost());
+        if (!$site) {
+            return $next($request);
+        }
+
+        $site->load(['pages' => fn ($query) => $query
+            ->where('status', 'published')
+            ->orderBy('sort_order')]);
+
+        $target = $path === ''
+            ? $site->pages->firstWhere('is_home', true)
+            : $site->pages->firstWhere('slug', $path);
+
+        if (!$target) {
+            return $next($request);
+        }
+
+        return Inertia::render('WebsitePublic', [
+            'site' => $site->only(['id', 'name', 'slug', 'template_key', 'settings']) + [
+                'pages' => $site->pages->map(fn ($page) => $page->only([
+                    'id', 'title', 'slug', 'is_home', 'sort_order'
+                ]))->values()->all(),
+            ],
+            'page' => $target->only(['id', 'title', 'slug', 'content', 'seo']),
+            'preview' => false,
+        ]);
+    }
+}
