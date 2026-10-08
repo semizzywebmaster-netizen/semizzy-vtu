@@ -157,8 +157,10 @@ class WebsiteBuilderService
         return DB::transaction(function() use($site){
             $site->load(['pages'=>fn($q)=>$q->orderBy('sort_order')]);
             foreach($site->pages as $page) $page->update(['status'=>'published']);
+            $primary=$site->domains()->where('status','verified')->where('primary',true)->first() ?? $site->domains()->where('status','verified')->first();
             $site->update([
                 'status'=>'published','published_at'=>now(),
+                'active_domain'=>$primary?->domain,
                 'published_revision_id'=>optional($site->revisions()->latest('id')->first())->id
             ]);
             return $site->fresh('pages','domains');
