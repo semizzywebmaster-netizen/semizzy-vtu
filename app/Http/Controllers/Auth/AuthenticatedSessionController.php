@@ -31,6 +31,7 @@ class AuthenticatedSessionController extends Controller
             'login' => 'nullable|string|max:190',
             'email' => 'nullable|email|max:190',
             'password' => 'required|string',
+            'pin' => 'required|digits:4',
             'remember' => 'nullable|boolean',
             'otp_code' => 'nullable|digits:6',
         ]);
@@ -79,15 +80,21 @@ class AuthenticatedSessionController extends Controller
             throw ValidationException::withMessages([$this->loginErrorKey($request) => 'Too many login attempts. Please try again later.']);
         }
 
-        if (! $user || ! Auth::validate(['email' => $user->email, 'password' => (string) $credentials['password'], 'status' => 'active'])) {
+        if (! $user || ! Auth::validate(['email' => $user->email, 'password' => (string) $credentials['password'], 'status' => 'active']) || ! filled($user->transaction_pin_hash) || ! Hash::check((string) $credentials['pin'], (string) $user->transaction_pin_hash)) {
             RateLimiter::hit($key, 60);
             $this->securityEvents->record('auth.login.failed', 'warning', ['admin' => $admin], $request);
             throw ValidationException::withMessages([$this->loginErrorKey($request) => 'The provided credentials are invalid.']);
         }
 
-        if (! $admin && $user->phone === preg_replace('/[^0-9+]/', '', $login) && ! $user->phone_verified_at) {
-            RateLimiter::hit($key, 60);
-            throw ValidationException::withMessages([$this->loginErrorKey($request) => 'This phone number is not verified. Please use your email or username, or verify your phone first.']);
+        if (! $admin && $user->phone === preg_replace('/[^0-9+]/', '', $login)) {
+            if (! $user->phone_verified_at) {
+                RateLimiter::hit($key, 60);
+                throw ValidationException::withMessages([$this->loginErrorKey($request) => 'This phone number is not verified. Please use your email or username, or verify your phone first.']);
+            }
+            if (! $user->whatsapp_verified_at || ! $user->whatsapp_transaction_enabled) {
+                RateLimiter::hit($key, 60);
+                throw ValidationException::withMessages([$this->loginErrorKey($request) => 'This WhatsApp number is not connected and verified. Verify your WhatsApp number before using it to sign in.']);
+            }
         }
 
         $rawDeviceKey = (string) $request->cookie('semizzy_device_key', '');
