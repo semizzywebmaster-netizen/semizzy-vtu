@@ -16,7 +16,9 @@ final class PaymentWebhookService
     {
         $raw = request()->getContent();
         $config = is_array($provider->settings) ? $provider->settings : [];
-        $secret = (string) ($provider->credentials['webhook_secret'] ?? $provider->credentials['secret_key'] ?? $provider->credentials['secret'] ?? '');
+        $secret = $provider->driver === 'flutterwave'
+            ? (string) ($provider->credentials['webhook_secret'] ?? '')
+            : (string) ($provider->credentials['webhook_secret'] ?? $provider->credentials['secret_key'] ?? $provider->credentials['secret'] ?? '');
         $signature = $this->header($headers, (string) ($config['signature_header'] ?? ($provider->driver === 'paystack' ? 'x-paystack-signature' : 'monnify-signature')));
 
         if (($config['require_webhook_signature'] ?? true) && ($secret === '' || $signature === '')) {
