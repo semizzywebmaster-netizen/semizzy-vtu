@@ -33,6 +33,15 @@ return [
             'section' => 'addons',
             'order' => 30,
         ],
+        [
+            'id' => 'manual-deposits',
+            'label' => 'Manual NGN Deposits',
+            'url' => '/admin/payments/manual-deposits',
+            'icon' => 'banknote',
+            'permission' => 'payments.manual_deposits.manage',
+            'section' => 'addons',
+            'order' => 31,
+        ],
     ],
     'settings' => [
         ['key' => 'default_currency', 'type' => 'string', 'default' => 'NGN'],
@@ -76,6 +85,7 @@ return [
         'single and bulk payout support where a provider allows it',
         'webhook verification and idempotency',
         'refund and reconciliation',
+        'manual NGN bank deposits with proof upload and admin approval',
     ],
     'provider_integrations' => ['dedicated PaymentGatewayManager with unlimited admin-addable NGN gateway providers'],
     'scheduled_tasks' => ['payment expiry/reconciliation maintenance'],
