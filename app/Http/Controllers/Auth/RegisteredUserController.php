@@ -39,6 +39,8 @@ class RegisteredUserController extends Controller
         $selectedChannel = strtolower(trim((string) $request->input('verification_channel','email')));
         if ($verificationEnabled && ! in_array($selectedChannel, $allowedChannels, true)) return back()->withErrors(['verification_channel'=>'Please choose an enabled verification channel.'])->withInput();
         $phone = preg_replace('/[^0-9+]/', '', (string) $request->input('phone'));
+        if (str_starts_with($phone, '0')) $phone = '+234'.substr($phone, 1);
+        elseif (str_starts_with($phone, '234')) $phone = '+'.$phone;
         $username = strtolower(trim((string) $request->input('username')));
         $reserved = collect(config('semizzy.username_policy.reserved', []))->map(fn ($value) => strtolower((string) $value));
         $protected = collect(config('semizzy.username_policy.protected_terms', []))->map(fn ($value) => strtolower((string) $value));
@@ -63,7 +65,7 @@ class RegisteredUserController extends Controller
         ]);
 
         $request->validate([
-            'phone' => 'required|string|max:30|unique:users,phone',
+            'phone' => ['required','string','regex:/^\\+234[789][0-9]{9}$/','unique:users,phone'],
         ]);
 
         $referrer = null;
