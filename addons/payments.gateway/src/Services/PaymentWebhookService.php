@@ -25,6 +25,8 @@ final class PaymentWebhookService
 
         if ($provider->driver === 'opay') {
             $this->validateOpayCallback($payload, $secret);
+        } elseif ($provider->driver === 'monnify') {
+            $this->validateMonnifyCallback($raw, $signature, $secret);
         } elseif ($secret !== '' && $signature !== '') {
             $candidate = hash_hmac('sha512', $raw, $secret);
             if (!hash_equals(strtolower(trim($candidate)), strtolower(trim($signature)))) {
