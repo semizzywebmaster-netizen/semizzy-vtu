@@ -12,12 +12,21 @@ use App\Models\VtuTransaction;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
+use Semizzy\Addons\Payments\Services\PaymentGatewayAdapterRegistry;
+use Semizzy\Addons\Payments\Adapters\MonnifyPaymentGatewayAdapter;
+use Semizzy\Addons\Payments\Adapters\PaystackPaymentGatewayAdapter;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
         $this->app->singleton(CommercialServiceRegistry::class, fn () => new CommercialServiceRegistry());
+        $this->app->singleton(PaymentGatewayAdapterRegistry::class, function () {
+            $registry = new PaymentGatewayAdapterRegistry();
+            $registry->register('paystack', fn () => new PaystackPaymentGatewayAdapter());
+            $registry->register('monnify', fn () => new MonnifyPaymentGatewayAdapter());
+            return $registry;
+        });
     }
 
     public function boot(): void
