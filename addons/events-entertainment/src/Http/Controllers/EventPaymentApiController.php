@@ -1,0 +1,4 @@
+<?php
+namespace Semizzy\Addons\EventsEntertainment\Http\Controllers;
+use App\Http\Controllers\Controller;use Illuminate\Http\Request;use Semizzy\Addons\EventsEntertainment\Models\EventOrder;use Semizzy\Addons\EventsEntertainment\Services\{EventPaymentService,EventTicketService};
+final class EventPaymentApiController extends Controller{public function confirm(Request $request,EventOrder $order,EventPaymentService $payments,EventTicketService $tickets){$d=$request->validate(['provider'=>'required|string|max:80','transaction_id'=>'required|string|max:190']);$payments->confirmApi($order,$d['provider'],$d['transaction_id']);$tickets->issuePaidOrder($order->fresh());return response()->json(['ok'=>true,'order'=>$order->fresh()->load('items.tickets')]);}}
