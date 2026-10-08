@@ -46,5 +46,5 @@ export default function WebsitePublic({site,page,preview=false}:Props){
    <div style={{maxWidth:1100,margin:'auto',padding:'15px 24px',display:'flex',gap:20,alignItems:'center'}}><strong style={{display:'flex',alignItems:'center',gap:10}}>{branding.logo_url&&<img src={safeUrl(branding.logo_url)} alt="" style={{width:34,height:34,objectFit:'contain',borderRadius:8}}/>}{site.name}</strong><nav style={{marginLeft:'auto',display:'flex',gap:16,flexWrap:'wrap'}}>{preview?null:nav.map((p:any)=><a key={p.id} href={'/sites/'+site.slug+(p.is_home?'':'/'+p.slug)} style={{color:t.fg}}>{p.title}</a>)}</nav></div>
   </header>
   <main>{sections.length?sections.map(s=><SectionView key={s.id} s={s} t={t}/>):<section style={{padding:'100px 24px',textAlign:'center'}}><h1>{site.name}</h1><Text muted>Add sections in Website Builder to publish your content.</Text></section>}</main>
- </div></div>;
+ </div>;
 }
