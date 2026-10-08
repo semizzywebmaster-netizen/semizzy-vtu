@@ -68,7 +68,7 @@ class MonnifyPaymentGatewayAdapter implements PaymentGatewayAdapter
                 'paymentReference' => $payload['reference'],
                 'paymentDescription' => $payload['description'] ?? 'SEMIZZY ONE payment',
                 'currencyCode' => $payload['currency'] ?? 'NGN',
-                'contractCode' => $provider->credentials['contract_code'] ?? null,
+                'contractCode' => $provider->credentials['contract_code'] ?? throw new RuntimeException('Monnify contract code is required.'),
                 'redirectUrl' => $payload['redirect_url'] ?? null,
                 'paymentMethods' => $payload['payment_methods'] ?? ['CARD', 'ACCOUNT_TRANSFER', 'USSD', 'PHONE_NUMBER'],
                 'metadata' => $payload['metadata'] ?? [],
