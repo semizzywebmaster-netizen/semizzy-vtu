@@ -54,7 +54,7 @@ class OtpChallengeService
     public function sendRegistration(User $user, string $channel, int $expiryMinutes = 10, int $maxAttempts = 5): void
     {
         $channel = strtolower(trim($channel));
-        if (! in_array($channel, ['email','sms','whatsapp'], true)) throw new \InvalidArgumentException('Unsupported OTP channel.');
+        if (! in_array($channel, ['email','sms'], true)) throw new \InvalidArgumentException('Unsupported OTP channel.');
         if ($channel === 'email') {
             if (! filled($user->email) || ! filter_var($user->email, FILTER_VALIDATE_EMAIL)) throw ValidationException::withMessages(['email'=>'A valid email address is required.']);
             $destination = (string) $user->email;
@@ -73,6 +73,7 @@ class OtpChallengeService
             Mail::raw($body, fn($message) => $message->to($destination)->subject('Registration verification code'));
             return;
         }
+        if ($channel === 'sms') { /* SMS providers use the same communication gateway contract. */ }
         $conversation = \App\Models\Communication\Conversation::firstOrCreate(['channel'=>$channel,'external_contact'=>$destination],['user_id'=>$user->id,'status'=>'open']);
         $message = \App\Models\Communication\Message::create(['conversation_id'=>$conversation->id,'user_id'=>$user->id,'channel'=>$channel,'direction'=>'outbound','recipient'=>$destination,'body'=>$body,'status'=>'queued','idempotency_key'=>'registration-otp-'.$user->id.'-'.bin2hex(random_bytes(8)),'metadata'=>['purpose'=>'registration']]);
         app(\Addons\CommunicationWhatsapp\Services\CommunicationProviderGateway::class)->send($message);
