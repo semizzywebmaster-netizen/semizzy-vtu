@@ -1,10 +1,10 @@
 <?php
-namespace App\\Services\\DataSync;
-use App\\Models\\User;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Http;
-use Illuminate\\Support\\Str;
-use Semizzy\\Addons\\Education\\Services\\EducationOfficialInstitutionSyncService;
+namespace App\Services\DataSync;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Semizzy\Addons\Education\Services\EducationOfficialInstitutionSyncService;
 class DataSyncService {
  public function datasets(): array { return [
   ['dataset_key'=>'education.institutions','addon'=>'education','label'=>'Education institutions','adapter'=>'education.institutions','source_url'=>'NUC / NBTE / NCCE official catalogues','requires_review'=>true],
@@ -12,14 +12,16 @@ class DataSyncService {
  ]; }
  public function syncAll(?User $user=null): array { $out=[]; foreach($this->datasets() as $dataset){$out[$dataset['dataset_key']]=$this->sync($dataset['dataset_key'],$user);} return $out; }
  public function sync(string $key, ?User $user=null): array {
+  $this->ensureDatasetSource($key);
   $dataset=collect($this->datasets())->firstWhere('dataset_key',$key); if(!$dataset) throw new InvalidArgumentException('Unknown synchronization dataset.');
   $started=now(); $runId=DB::table('data_sync_runs')->insertGetId(['dataset_key'=>$key,'status'=>'running','started_at'=>$started,'initiated_by'=>$user?->id,'created_at'=>$started,'updated_at'=>$started]);
   try { $result=match($dataset['adapter']){'education.institutions'=>$this->educationInstitutions(),'payments.banks.paystack'=>$this->paystackBanks()};
    DB::table('data_sync_runs')->where('id',$runId)->update(array_merge($result,['status'=>'completed','finished_at'=>now(),'updated_at'=>now()]));
    DB::table('data_sync_sources')->where('dataset_key',$key)->update(['last_synced_at'=>now(),'updated_at'=>now()]);
    return array_merge(['dataset_key'=>$key,'status'=>'completed','run_id'=>$runId],$result);
-  } catch(Throwable $e){DB::table('data_sync_runs')->where('id',$runId)->update(['status'=>'failed','message'=>Str::limit($e->getMessage(),1000),'finished_at'=>now(),'updated_at'=>now()]); throw $e;}
+  } catch(\\Throwable $e){DB::table('data_sync_runs')->where('id',$runId)->update(['status'=>'failed','message'=>Str::limit($e->getMessage(),1000),'finished_at'=>now(),'updated_at'=>now()]); throw $e;}
  }
+ private function ensureDatasetSource(string $key): void { $dataset=collect($this->datasets())->firstWhere('dataset_key',$key); if(!$dataset)return; DB::table('data_sync_sources')->updateOrInsert(['dataset_key'=>$key],['addon'=>$dataset['addon'],'label'=>$dataset['label'],'adapter'=>$dataset['adapter'],'source_url'=>$dataset['source_url']??null,'requires_review'=>$dataset['requires_review']??true,'enabled'=>true,'updated_at'=>now(),'created_at'=>now()]); }
  private function educationInstitutions(): array {
   $r=app(EducationOfficialInstitutionSyncService::class)->syncAll(); $total=['added'=>0,'updated'=>0,'unchanged'=>0,'review_required'=>0,'failed'=>0];
   foreach($r as $item){$i=(array)($item['import']??[]); $total['added']+=(int)($i['created']??0); $total['updated']+=(int)($i['updated']??0); $total['unchanged']+=(int)($i['skipped']??0);}
