@@ -23,6 +23,7 @@ type Product = {
   condition?: string | null;
   category?: { id: number; name: string; slug: string; icon?: string | null };
   listing_type?: string | null;
+  media?: Array<{ id: number; url: string; alt_text?: string | null; is_primary?: boolean }>;
 };
 
 const typeLabels: Record<string, string> = {
@@ -168,8 +169,12 @@ export default function Index({
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filtered.map((product) => (
                   <article key={product.id} className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-                    <div className="flex h-32 items-center justify-center bg-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                      {product.product_type ? typeLabels[product.product_type] : 'Marketplace'}
+                    <div className="flex h-32 items-center justify-center overflow-hidden bg-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      {product.media && product.media.length > 0 ? (
+                        <img src={product.media[0].url} alt={product.media[0].alt_text || product.name} className="h-full w-full object-cover" loading="lazy" />
+                      ) : (
+                        product.product_type ? typeLabels[product.product_type] : 'Marketplace'
+                      )}
                     </div>
                     <div className="space-y-3 p-4">
                       <div className="flex items-start justify-between gap-3">
