@@ -13,13 +13,13 @@ class DataSyncService {
  public function syncAll(?User $user=null): array { $out=[]; foreach($this->datasets() as $dataset){ try{$out[$dataset['dataset_key']]=$this->sync($dataset['dataset_key'],$user);}catch(\Throwable $e){$out[$dataset['dataset_key']]=['dataset_key'=>$dataset['dataset_key'],'status'=>'failed','message'=>$e->getMessage()];} } return $out; }
  public function sync(string $key, ?User $user=null): array {
   $this->ensureDatasetSource($key);
-  $dataset=collect($this->datasets())->firstWhere('dataset_key',$key); if(!$dataset) throw new InvalidArgumentException('Unknown synchronization dataset.');
+  $dataset=collect($this->datasets())->firstWhere('dataset_key',$key); if(!$dataset) throw new \InvalidArgumentException('Unknown synchronization dataset.');
   $started=now(); $runId=DB::table('data_sync_runs')->insertGetId(['dataset_key'=>$key,'status'=>'running','started_at'=>$started,'initiated_by'=>$user?->id,'created_at'=>$started,'updated_at'=>$started]);
   try { $result=match($dataset['adapter']){'education.institutions'=>$this->educationInstitutions(),'payments.banks.paystack'=>$this->paystackBanks()};
    DB::table('data_sync_runs')->where('id',$runId)->update(array_merge($result,['status'=>'completed','finished_at'=>now(),'updated_at'=>now()]));
    DB::table('data_sync_sources')->where('dataset_key',$key)->update(['last_synced_at'=>now(),'updated_at'=>now()]);
    return array_merge(['dataset_key'=>$key,'status'=>'completed','run_id'=>$runId],$result);
-  } catch(\\Throwable $e){DB::table('data_sync_runs')->where('id',$runId)->update(['status'=>'failed','message'=>Str::limit($e->getMessage(),1000),'finished_at'=>now(),'updated_at'=>now()]); throw $e;}
+  } catch(\Throwable $e){DB::table('data_sync_runs')->where('id',$runId)->update(['status'=>'failed','message'=>Str::limit($e->getMessage(),1000),'finished_at'=>now(),'updated_at'=>now()]); throw $e;}
  }
  private function ensureDatasetSource(string $key): void { $dataset=collect($this->datasets())->firstWhere('dataset_key',$key); if(!$dataset)return; DB::table('data_sync_sources')->updateOrInsert(['dataset_key'=>$key],['addon'=>$dataset['addon'],'label'=>$dataset['label'],'adapter'=>$dataset['adapter'],'source_url'=>$dataset['source_url']??null,'requires_review'=>$dataset['requires_review']??true,'enabled'=>true,'updated_at'=>now(),'created_at'=>now()]); }
  private function educationInstitutions(): array {
@@ -28,7 +28,7 @@ class DataSyncService {
   $total['summary']=$r; return $total;
  }
  private function paystackBanks(): array {
-  $secret=(string)config('services.paystack.secret',env('PAYSTACK_SECRET_KEY','')); if($secret==='') throw new RuntimeException('Paystack secret key is not configured.');
+  $secret=(string)config('services.paystack.secret',env('PAYSTACK_SECRET_KEY','')); if($secret==='') throw new \RuntimeException('Paystack secret key is not configured.');
   $response=Http::withToken($secret)->acceptJson()->timeout(20)->retry(3,500)->get('https://api.paystack.co/bank',['currency'=>'NGN','perPage'=>100]);
   if(!$response->successful() || !$response->json('status')) throw new RuntimeException('Paystack bank catalogue request failed.');
   $added=$updated=$unchanged=0; foreach((array)$response->json('data',[]) as $bank){
