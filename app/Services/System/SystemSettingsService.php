@@ -24,6 +24,8 @@ class SystemSettingsService
             'registration_otp_expiry_minutes' => 10,
             'registration_otp_max_attempts' => 5,
             'registration_otp_resend_seconds' => 60,
+            'otp_expiry_minutes' => 10,
+            'otp_max_attempts' => 5,
             'kyc_bvn_lookup_charge_minor' => 0,
             'kyc_nin_lookup_charge_minor' => 0,
             'kyc_bvn_lookup_charge' => '0.00',
@@ -55,8 +57,20 @@ class SystemSettingsService
         try {
             if (Schema::hasTable('system_settings')) {
                 $stored = SystemSetting::query()->whereIn('key', array_keys($settings))->pluck('value', 'key');
-                foreach (['platform_name','support_email','support_notice','default_timezone','theme_key','theme_primary','skin_default'] as $key) {
-                    if (isset($stored[$key]) && is_string($stored[$key]) && $stored[$key] !== '') $settings[$key] = $stored[$key];
+
+                foreach ([
+                    'platform_name','support_email','support_notice','default_timezone',
+                    'theme_key','theme_primary','skin_default'
+                ] as $key) {
+                    if (isset($stored[$key]) && is_string($stored[$key]) && $stored[$key] !== '') {
+                        $settings[$key] = $stored[$key];
+                    }
+                }
+
+                foreach (['registration_otp_expiry_minutes','registration_otp_max_attempts','registration_otp_resend_seconds','otp_expiry_minutes','otp_max_attempts'] as $key) {
+                    if (isset($stored[$key]) && is_numeric($stored[$key])) {
+                        $settings[$key] = (int) $stored[$key];
+                    }
                 }
 
                 foreach (['registration_otp_channels','theme_custom_light','theme_custom_dark','business','social','assets','footer_menu','smtp'] as $key) {
@@ -68,8 +82,8 @@ class SystemSettingsService
                         $settings[$key] = array_values(array_intersect((array) $decoded, ['email','sms'])) ?: ['email'];
                         continue;
                     }
+
                     if ($key === 'smtp') {
-                        // Backward compatibility with the original single-SMTP object.
                         if (isset($decoded['host']) && !isset($decoded['profiles'])) {
                             $legacy = $decoded;
                             unset($legacy['password']);
@@ -104,11 +118,18 @@ class SystemSettingsService
             }
         } catch (Throwable) {}
 
+        $settings['otp_expiry_minutes'] = max(1, min(60, (int) $settings['otp_expiry_minutes']));
+        $settings['otp_max_attempts'] = max(1, min(10, (int) $settings['otp_max_attempts']));
+        $settings['registration_otp_expiry_minutes'] = max(1, min(60, (int) $settings['registration_otp_expiry_minutes']));
+        $settings['registration_otp_max_attempts'] = max(1, min(10, (int) $settings['registration_otp_max_attempts']));
+        $settings['registration_otp_resend_seconds'] = max(15, min(3600, (int) $settings['registration_otp_resend_seconds']));
+
         if (!in_array($settings['default_timezone'], timezone_identifiers_list(), true)) $settings['default_timezone'] = 'UTC';
         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $settings['theme_primary'])) $settings['theme_primary'] = '#2563EB';
 
         $allowedThemes = ['opay-inspired','palmpay-inspired','modern-corporate','clean-saas','luxury-executive','sky-enterprise','forest-growth','crimson-modern','sunset-commerce','slate-professional','custom'];
         if (!in_array($settings['theme_key'], $allowedThemes, true)) $settings['theme_key'] = 'modern-corporate';
+
         if (!is_array($settings['footer_menu']) || count($settings['footer_menu']) !== 5) $settings['footer_menu'] = [
             ['key'=>'home','label'=>'Home','href'=>'/dashboard','icon'=>'⌂'],
             ['key'=>'services','label'=>'Services','href'=>'/vtu','icon'=>'✦'],
@@ -116,6 +137,7 @@ class SystemSettingsService
             ['key'=>'notifications','label'=>'Alerts','href'=>'/notifications','icon'=>'♧'],
             ['key'=>'profile','label'=>'Profile','href'=>'/profile','icon'=>'◎'],
         ];
+
         if (!in_array($settings['skin_default'], ['light','dark'], true)) $settings['skin_default'] = 'light';
         if (!in_array($settings['smtp']['strategy'] ?? 'failover', ['failover','roundrobin'], true)) $settings['smtp']['strategy'] = 'failover';
         if (!is_array($settings['smtp']['health'] ?? null)) $settings['smtp']['health'] = [];
