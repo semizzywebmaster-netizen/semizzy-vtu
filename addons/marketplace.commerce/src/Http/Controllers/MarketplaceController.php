@@ -176,9 +176,11 @@ final class MarketplaceController
         } catch (RuntimeException $e) {
             return response()->json(['success'=>false,'message'=>$e->getMessage()],422);
         }
+        $videoUrl = $data['video_url'] ?? null;
         $product = MarketplaceProduct::create($this->normaliseProductData($data, (int) $request->user()->id));
+        $this->syncExternalVideo($product, $videoUrl);
 
-        return response()->json(['success'=>true,'product'=>$product->fresh('category')],201);
+        return response()->json(['success'=>true,'product'=>$product->fresh(['category','media'])],201);
     }
 
     public function productUpdate(Request $request, MarketplaceProduct $product)
@@ -190,9 +192,12 @@ final class MarketplaceController
         } catch (RuntimeException $e) {
             return response()->json(['success'=>false,'message'=>$e->getMessage()],422);
         }
+        $videoUrl = array_key_exists('video_url', $data) ? $data['video_url'] : null;
+        $hasVideoInput = array_key_exists('video_url', $data);
         $product->forceFill($this->normaliseProductData($data, (int) $product->seller_id, $product))->save();
+        if ($hasVideoInput) $this->syncExternalVideo($product, $videoUrl);
 
-        return response()->json(['success'=>true,'product'=>$product->fresh('category')]);
+        return response()->json(['success'=>true,'product'=>$product->fresh(['category','media'])]);
     }
 
     public function productDestroy(Request $request, MarketplaceProduct $product)
@@ -220,6 +225,19 @@ final class MarketplaceController
         if (!empty($data['path']) && !str_starts_with($data['path'], 'marketplace/digital-assets/'.$product->id.'/')) return response()->json(['success'=>false,'message'=>'Digital assets must use the protected marketplace asset directory.'],422);
         $asset = MarketplaceDigitalAsset::create(array_merge($data, ['product_id'=>$product->id,'active'=>true]));
         return response()->json(['success'=>true,'asset'=>$asset],201);
+    }
+
+    public function storeVideo(Request $request, MarketplaceProduct $product)
+    {
+        if ((int) $product->seller_id !== (int) $request->user()->id && !$request->user()->hasPermission('marketplace.manage')) abort(403);
+
+        $data = $request->validate([
+            'url' => ['required','url','max:2048'],
+            'alt_text' => ['nullable','string','max:255'],
+        ]);
+
+        $media = $this->syncExternalVideo($product, $data['url'], $data['alt_text'] ?? null);
+        return response()->json(['success' => true, 'media' => $media], 201);
     }
 
     public function storeMedia(Request $request, MarketplaceProduct $product)
@@ -378,6 +396,7 @@ final class MarketplaceController
             'download_limit'=>['nullable','integer','min:1','max:1000000'],
             'service_delivery_days'=>['nullable','integer','min:1','max:3650'],
             'service_model'=>['nullable',Rule::in(['fixed','hourly','custom','milestone'])],
+            'video_url'=>['nullable','url','max:2048'],
             'price_minor'=>['required','regex:/^[1-9]\d*$/','max:30'],
             'stock_quantity'=>['required','regex:/^\d+$/','max:30'],
             'currency'=>['required','string','size:3'],
@@ -429,7 +448,7 @@ final class MarketplaceController
         $data['category'] = $data['category_name'];
         $data['category_id'] = $category->id;
         $data['seller_id'] = $sellerId;
-        unset($data['category_name']);
+        unset($data['category_name'], $data['video_url']);
 
         if (!$existing) {
             $data['slug'] = Str::slug($data['name']).'-'.strtolower(Str::random(8));
@@ -439,6 +458,40 @@ final class MarketplaceController
         }
 
         return $data;
+    }
+
+    private function syncExternalVideo(MarketplaceProduct $product, ?string $url, ?string $altText = null): ?\Semizzy\Addons\Marketplace\Models\MarketplaceProductMedia
+    {
+        $product->media()->where('media_type', 'video')->delete();
+        if (!$url) return null;
+
+        $parts = parse_url($url);
+        if (($parts['scheme'] ?? '') !== 'https') {
+            throw new RuntimeException('Video links must use HTTPS.');
+        }
+
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        $path = strtolower((string) ($parts['path'] ?? ''));
+        $allowedHosts = [
+            'youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be',
+            'youtube-nocookie.com', 'www.youtube-nocookie.com',
+            'vimeo.com', 'www.vimeo.com', 'player.vimeo.com',
+        ];
+        $isDirectVideo = (bool) preg_match('/\\.(mp4|webm|ogg)(?:$|\\?)/i', $path);
+        if (!in_array($host, $allowedHosts, true) && !$isDirectVideo) {
+            throw new RuntimeException('Use a YouTube, Vimeo, or direct HTTPS video URL.');
+        }
+
+        return \Semizzy\Addons\Marketplace\Models\MarketplaceProductMedia::create([
+            'product_id' => $product->id,
+            'media_type' => 'video',
+            'url' => $url,
+            'disk' => null,
+            'path' => null,
+            'alt_text' => $altText,
+            'sort_order' => ((int) $product->media()->max('sort_order')) + 1,
+            'is_primary' => false,
+        ]);
     }
 
     private function categorySchema(MarketplaceCategory $category): array
