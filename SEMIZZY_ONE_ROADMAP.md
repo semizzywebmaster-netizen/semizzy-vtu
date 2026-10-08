@@ -128,6 +128,20 @@ Admin operational coverage was extended:
 - Order monitoring is intentionally read/monitoring only. No buy/sell execution or wallet debit was enabled while no verified real execution provider is configured.
 - The existing Core ProviderManager remains the future execution integration boundary; investment-specific execution must not bypass Core provider safety, idempotency and ambiguous-state handling.
 
+
+## Stocks & Investments Marketplace — bulk action #7 completed
+
+Market-data and corporate-action provenance is now enforced:
+- Quote snapshots now require a specific verified/enabled investment provider marked as a market-data provider.
+- Corporate actions now retain a specific verified/enabled provider reference.
+- Public marketplace quote responses only expose quotes whose provider is verified/enabled and whose quote has not expired.
+- Public corporate-action responses only expose records with verified/enabled provider provenance.
+- Quote model now exposes its provider relation and freshness check.
+- Admin quote/corporate-action forms now select eligible verified providers instead of accepting an arbitrary source name.
+- No fabricated prices, stale quotes, or unverified source-labelled data are exposed as approved market data.
+- The new provenance migration is registered in the addon manifest.
+- Trading/execution remains disabled; this action only hardens data provenance and freshness.
+
 ## Education — previous addon
 
 
