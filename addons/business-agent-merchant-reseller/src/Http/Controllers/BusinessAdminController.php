@@ -64,14 +64,10 @@ class BusinessAdminController
    $parent=BusinessPartner::findOrFail((int)$d['parent_partner_id']);
    if($parent->status!=='active') abort(422,'Parent partner must be active.');
   }
-  $fields=array_filter([
-   'commission_rate_bps'=>$d['commission_rate_bps']??null,
-   'daily_limit_minor'=>array_key_exists('daily_limit_minor',$d)?$d['daily_limit_minor']:null,
-   'monthly_limit_minor'=>array_key_exists('monthly_limit_minor',$d)?$d['monthly_limit_minor']:null,
-   'parent_partner_id'=>array_key_exists('parent_partner_id',$d)?$d['parent_partner_id']:null,
-   'settlement_mode'=>$d['settlement_mode']??null,
-   'minimum_balance_minor'=>array_key_exists('minimum_balance_minor',$d)?$d['minimum_balance_minor']:null,
-  ],fn($v)=>$v!==null);
+  $fields=[];
+  foreach(['commission_rate_bps','daily_limit_minor','monthly_limit_minor','parent_partner_id','settlement_mode','minimum_balance_minor'] as $key){
+   if(array_key_exists($key,$d)) $fields[$key]=$d[$key];
+  }
   if(!$fields) abort(422,'Provide at least one commercial setting to update.');
   $actor=$r->user(); $changed=0; $skipped=0;
   foreach(BusinessPartner::query()->whereIn('id',$ids)->get() as $partner){
