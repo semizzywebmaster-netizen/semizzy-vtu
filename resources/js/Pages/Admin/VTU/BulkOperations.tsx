@@ -156,6 +156,9 @@ export default function BulkOperations({
 
         <div className="mt-4 rounded-xl border bg-white p-3">
           <div className="flex flex-wrap items-center gap-2">
+            <a href={`/admin/vtu/bulk/export?status=${encodeURIComponent(status)}&reference=${encodeURIComponent(reference)}`} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">
+              Export CSV
+            </a>
             <button type="button" onClick={toggleAll} disabled={!selectableIds.length} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{allSelected ? 'Clear selection' : 'Select pending'}</button>
             <button type="button" onClick={reconcileSelected} disabled={!selectedIds.length || bulkReconciling} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">{bulkReconciling ? 'Reconciling selected…' : `Reconcile selected (${selectedIds.length})`}</button>
             <button type="button" onClick={recoverStale} disabled={recovering} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{recovering ? 'Recovering stale…' : 'Recover stale operations'}</button>
