@@ -1,0 +1,4 @@
+<?php
+namespace Semizzy\Addons\EventsEntertainment\Http\Controllers;
+use App\Http\Controllers\Controller;use Illuminate\Http\Request;use Semizzy\Addons\EventsEntertainment\Models\EventOrder;use Semizzy\Addons\EventsEntertainment\Services\{EventPaymentService,EventTicketService};
+final class AdminEventPaymentController extends Controller{public function confirm(Request $request,EventOrder $order,EventPaymentService $payments,EventTicketService $tickets){$d=$request->validate(['reference'=>'required|string|max:190','note'=>'required|string|max:2000']);$payments->confirmManual($order,(int)$request->user()->id,$d['reference'],$d['note']);$tickets->issuePaidOrder($order->fresh());return back()->with('success','Manual payment recorded and tickets issued.');}}
