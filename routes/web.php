@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SecurityEventController;
+use App\Http\Controllers\Admin\DataSyncController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\PasswordRecoveryController;
@@ -114,6 +115,10 @@ Route::get('/'.$adminLoginPath, [AuthenticatedSessionController::class, 'createA
 Route::post('/'.$adminLoginPath, [AuthenticatedSessionController::class, 'storeAdmin'])->middleware('guest')->name('admin.login.store');
 
 Route::middleware(['auth'])->group(function (): void {
+
+    Route::get('/admin/data-sync', [DataSyncController::class, 'index'])->middleware('role:ADMIN')->name('admin.data-sync');
+    Route::post('/admin/data-sync', [DataSyncController::class, 'sync'])->middleware('role:ADMIN')->name('admin.data-sync.sync');
+    Route::post('/admin/data-sync/all', [DataSyncController::class, 'syncAll'])->middleware('role:ADMIN')->name('admin.data-sync.all');
 
     Route::get('/admin/communications', [CommunicationController::class, 'index'])->middleware('permission:communications.manage')->name('admin.communications');
     Route::post('/admin/communications', [CommunicationController::class, 'store'])->middleware('permission:communications.manage')->name('admin.communications.store');
