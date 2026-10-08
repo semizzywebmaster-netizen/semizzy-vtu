@@ -378,6 +378,70 @@ class VtuBulkService
         $locked->save();
     }
 
+    public function cancel(int $userId, VtuBulkOperation $bulk, string $reason = 'Cancelled by user'): VtuBulkOperation
+    {
+        return DB::transaction(function () use ($userId, $bulk, $reason): VtuBulkOperation {
+            $locked = VtuBulkOperation::query()->lockForUpdate()->findOrFail($bulk->id);
+            if ((int) $locked->user_id !== $userId) {
+                throw new \RuntimeException('You cannot cancel this bulk operation.');
+            }
+            if (in_array($locked->status, ['successful','failed','partial','cancelled'], true)) {
+                return $locked->load('items');
+            }
+
+            $items = $locked->items()->lockForUpdate()->get();
+            foreach ($items as $item) {
+                if (in_array($item->status, ['pending','processing'], true)) {
+                    $item->update([
+                        'status' => 'cancelled',
+                        'error_message' => $reason,
+                    ]);
+                }
+            }
+
+            $metadata = array_merge((array) $locked->metadata, [
+                'cancelled_at' => now()->toIso8601String(),
+                'cancelled_by' => $userId,
+                'cancellation_reason' => $reason,
+            ]);
+            $locked->metadata = $metadata;
+            $locked->status = 'cancelled';
+            $locked->save();
+
+            return $locked->fresh('items');
+        });
+    }
+
+    public function cancelAdmin(VtuBulkOperation $bulk, int $operatorId, string $reason): VtuBulkOperation
+    {
+        return DB::transaction(function () use ($bulk, $operatorId, $reason): VtuBulkOperation {
+            $locked = VtuBulkOperation::query()->lockForUpdate()->findOrFail($bulk->id);
+            if (in_array($locked->status, ['successful','failed','partial','cancelled'], true)) {
+                return $locked->load('items');
+            }
+
+            $items = $locked->items()->lockForUpdate()->get();
+            foreach ($items as $item) {
+                if (in_array($item->status, ['pending','processing'], true)) {
+                    $item->update([
+                        'status' => 'cancelled',
+                        'error_message' => $reason,
+                    ]);
+                }
+            }
+
+            $locked->metadata = array_merge((array) $locked->metadata, [
+                'cancelled_at' => now()->toIso8601String(),
+                'cancelled_by_admin' => $operatorId,
+                'cancellation_reason' => $reason,
+            ]);
+            $locked->status = 'cancelled';
+            $locked->save();
+
+            return $locked->fresh('items');
+        });
+    }
+
     public function recoverStaleOperations(int $limit = 50, int $staleMinutes = 10): int
     {
         $recovered = 0;
