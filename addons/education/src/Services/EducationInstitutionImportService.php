@@ -1,10 +1,8 @@
 <?php
-namespace App\\Addons\\Education\\Services;
+namespace App\Addons\Education\Services;
 
-use App\\Addons\\Education\\Models\\EducationInstitution;
-use Illuminate\\Support\\Str;
-use InvalidArgumentException;
-
+use App\Addons\Education\Models\EducationInstitution;
+use Illuminate\Support\Str;
 class EducationInstitutionImportService
 {
  public const CATEGORIES = [
