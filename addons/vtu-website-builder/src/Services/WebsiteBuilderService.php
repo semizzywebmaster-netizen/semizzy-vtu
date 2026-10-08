@@ -89,6 +89,52 @@ class WebsiteBuilderService
         });
     }
 
+    public function listRevisions(WebsiteSite $site, WebsitePage $page, int $limit=30): array
+    {
+        if ((int) $page->website_site_id !== (int) $site->id) {
+            throw ValidationException::withMessages(['page' => 'Page does not belong to this website.']);
+        }
+
+        return $site->revisions()
+            ->where('website_page_id', $page->id)
+            ->latest('version')
+            ->limit(max(1, min($limit, 100)))
+            ->get(['id','version','status','created_by','created_at'])
+            ->map(fn($revision) => [
+                'id' => $revision->id,
+                'version' => $revision->version,
+                'status' => $revision->status,
+                'created_by' => $revision->created_by,
+                'created_at' => optional($revision->created_at)->toIso8601String(),
+            ])->values()->all();
+    }
+
+    public function restoreRevision(WebsiteSite $site, WebsitePage $page, WebsiteRevision $revision, ?int $userId=null): WebsitePage
+    {
+        if ((int) $page->website_site_id !== (int) $site->id || (int) $revision->website_site_id !== (int) $site->id || (int) $revision->website_page_id !== (int) $page->id) {
+            throw ValidationException::withMessages(['revision' => 'Revision does not belong to this page.']);
+        }
+
+        $content = $this->normalizeContent($revision->content ?? []);
+        $version = ((int) $site->revisions()->where('website_page_id', $page->id)->max('version')) + 1;
+
+        return DB::transaction(function () use ($site, $page, $revision, $content, $userId, $version) {
+            $page->update(['content' => $content, 'status' => 'draft']);
+            WebsiteRevision::create([
+                'website_site_id' => $site->id,
+                'website_page_id' => $page->id,
+                'created_by' => $userId,
+                'version' => $version,
+                'status' => 'draft',
+                'content' => $content,
+            ]);
+            if ($site->status === 'published') {
+                $site->update(['status' => 'draft', 'published_at' => null]);
+            }
+            return $page->fresh();
+        });
+    }
+
     public function addSection(WebsitePage $page,string $type,array $data=[]): WebsitePage
     {
         if(!in_array($type,self::SECTION_TYPES,true)) throw ValidationException::withMessages(['type'=>'Unsupported website section.']);
