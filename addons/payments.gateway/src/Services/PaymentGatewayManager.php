@@ -20,7 +20,7 @@ class PaymentGatewayManager
                     ->orWhere('cooldown_until', '<=', now());
             })
             ->get()
-            ->filter(fn (PaymentGatewayProvider $provider) => $provider->supports($capability))
+            ->filter(fn (PaymentGatewayProvider $provider) => $provider->supports($capability) && app(PaymentGatewayAdapterRegistry::class)->has($provider->driver))
             ->sortBy(fn (PaymentGatewayProvider $provider) => [$provider->priority, -$provider->weight])
             ->values()
             ->all();
