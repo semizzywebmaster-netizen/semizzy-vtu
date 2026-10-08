@@ -51,7 +51,15 @@ export default function WebsiteBuilder({sites=[]}:{sites:Site[]}) {
       <button className="border rounded px-2 py-1 text-xs" disabled={i===pages.length-1} onClick={()=>{const x=[...pages];[x[i+1],x[i]]=[x[i],x[i+1]];reorder(site,x)}}>↓</button>
       {!p.is_home&&<button className="border rounded px-2 py-1 text-xs text-red-600" onClick={()=>{if(confirm('Delete this page?'))router.delete('/website-builder/sites/'+site.id+'/pages/'+p.id)}}>Delete</button>}
     </div>)}</div>
-    {site.domains?.length?<div className="text-xs opacity-70">{site.domains.map(d=><div key={d.id}>{d.domain} — {d.status}</div>)}</div>:null}
+    {site.domains?.length?<div className="rounded-lg border p-3 space-y-2">
+      <div className="font-semibold text-sm">Domains</div>
+      {site.domains.map(d=><div key={d.id} className="flex flex-wrap items-center gap-2 text-xs">
+       <span className="flex-1"><b>{d.domain}</b> — {d.status}{d.primary?' · PRIMARY':''}</span>
+       {d.status==='pending'&&<button className="border rounded px-2 py-1" onClick={()=>{const token=window.prompt('DNS TXT verification token for '+d.domain);if(token)router.post('/website-builder/sites/'+site.id+'/domains/'+d.id+'/verify',{token})}}>Verify</button>}
+       {d.status==='verified'&&!d.primary&&<button className="border rounded px-2 py-1" onClick={()=>router.post('/website-builder/sites/'+site.id+'/domains/'+d.id+'/primary')}>Set primary</button>}
+      </div>)}
+      <p className="text-[11px] opacity-60">Add the verification token as a DNS TXT record, then enter the token above to verify ownership.</p>
+    </div>:null}
    </div>})}
   </div>
  </div>;
