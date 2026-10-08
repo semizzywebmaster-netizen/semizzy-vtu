@@ -17,6 +17,7 @@ use Semizzy\Addons\Payments\Adapters\MonnifyPaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Adapters\PaystackPaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Adapters\FlutterwavePaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Adapters\OpayPaymentGatewayAdapter;
+use Semizzy\Addons\Payments\Adapters\KoraPaymentGatewayAdapter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
             $registry->register('monnify', fn () => new MonnifyPaymentGatewayAdapter());
             $registry->register('flutterwave', fn () => new FlutterwavePaymentGatewayAdapter());
             $registry->register('opay', fn () => new OpayPaymentGatewayAdapter());
+            $registry->register('kora', fn () => new KoraPaymentGatewayAdapter());
             return $registry;
         });
     }
