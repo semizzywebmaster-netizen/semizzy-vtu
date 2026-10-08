@@ -117,7 +117,7 @@ class RegisteredUserController extends Controller
             return redirect()->route('registration.verify')->withCookie(cookie('semizzy_device_key', $deviceCookie, 525600, null, null, true, true, false, 'lax'))->with('success','Account created. Enter the verification code sent to your selected channel.');
         }
 
-        try { $user->sendEmailVerificationNotification(); } catch (\Throwable $e) { report($e); }
+        $user->update(['email_verified_at'=>$user->email_verified_at ?: now()]);
         Auth::login($user);
         $request->session()->regenerate();
         $user->devices()->create(['device_key'=>$deviceKey,'name'=>substr((string)$request->userAgent(),0,190),'ip_address'=>$request->ip(),'user_agent'=>substr((string)$request->userAgent(),0,500),'last_seen_at'=>now(),'authenticated_at'=>now(),'auth_method'=>'registration']);
