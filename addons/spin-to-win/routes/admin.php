@@ -1,6 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\SpinToWinController;
+use Semizzy\Addons\SpinToWin\Http\Controllers\Admin\SpinToWinController;
 Route::prefix('admin/spin-to-win')->middleware(['auth','verified','role:ADMIN,STAFF,SUPPORT'])->group(function():void{
  Route::get('/',[SpinToWinController::class,'index'])->middleware('permission:spin.manage')->name('admin.spin.index');
  Route::post('/campaigns',[SpinToWinController::class,'storeCampaign'])->middleware('permission:spin.manage');
