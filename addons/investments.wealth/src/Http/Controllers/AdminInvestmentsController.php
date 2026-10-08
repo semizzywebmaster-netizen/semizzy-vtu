@@ -7,6 +7,8 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Semizzy\Addons\Investments\Models\InvestmentAccount;
 use Semizzy\Addons\Investments\Models\InvestmentMarketQuote;
+use Semizzy\Addons\Investments\Models\InvestmentCorporateAction;
+use Semizzy\Addons\Investments\Models\InvestmentOrder;
 use Semizzy\Addons\Investments\Models\InvestmentProduct;
 use Semizzy\Addons\Investments\Models\InvestmentProvider;
 use Semizzy\Addons\Investments\Models\InvestmentSecurity;
@@ -20,6 +22,8 @@ class AdminInvestmentsController extends Controller
             'investments' => InvestmentAccount::with('product')->latest()->paginate(25),
             'securities' => InvestmentSecurity::with(['quotes' => fn ($q) => $q->latest('observed_at')->limit(1)])->latest()->paginate(25, ['*'], 'securities_page'),
             'providers' => InvestmentProvider::latest()->get(),
+            'orders' => InvestmentOrder::with(['security','provider'])->latest()->paginate(25, ['*'], 'orders_page'),
+            'corporateActions' => InvestmentCorporateAction::with('security')->latest()->paginate(25, ['*'], 'corporate_actions_page'),
         ]);
     }
 
@@ -108,6 +112,30 @@ class AdminInvestmentsController extends Controller
         $provider->update(['status' => 'disabled']);
 
         return back()->with('success', 'Provider disabled.');
+    }
+
+    public function storeCorporateAction(Request $request)
+    {
+        $data = $request->validate([
+            'security_id' => ['required', 'integer', 'exists:investment_securities,id'],
+            'action_type' => ['required', Rule::in(['dividend','bonus','split','rights','merger','other'])],
+            'reference' => ['required', 'string', 'max:255'],
+            'record_date' => ['nullable', 'date'],
+            'ex_date' => ['nullable', 'date'],
+            'payment_date' => ['nullable', 'date'],
+            'value' => ['nullable', 'numeric', 'min:0'],
+            'currency' => ['nullable', 'string', 'size:3'],
+            'description' => ['nullable', 'string'],
+            'status' => ['required', Rule::in(['announced','confirmed','processed'])],
+            'metadata' => ['nullable', 'array'],
+        ]);
+
+        InvestmentCorporateAction::updateOrCreate(
+            ['reference' => $data['reference']],
+            $data
+        );
+
+        return back()->with('success', 'Corporate action saved with its source/reference data.');
     }
 
     public function storeQuote(Request $request, InvestmentSecurity $security)
