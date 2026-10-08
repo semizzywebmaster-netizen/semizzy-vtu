@@ -25,6 +25,7 @@ Route::middleware(['auth', 'role:ADMIN,STAFF,SUPPORT', 'verified', 'ensure.addon
         Route::post('/bulk/{bulk}/unarchive', [VtuAdminController::class, 'unarchiveBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.unarchive');
         Route::get('/bulk/export', [VtuAdminController::class, 'exportBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.export');
         Route::post('/bulk/audit-selected', [VtuAdminController::class, 'auditSelectedBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.audit-selected');
+        Route::post('/bulk/audit-selected', [VtuAdminController::class, 'auditSelectedBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.audit-selected');
         Route::post('/bulk/reconcile-selected', [VtuAdminController::class, 'reconcileSelectedBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.reconcile-selected');
         Route::post('/bulk/{bulk}/reconcile', [VtuAdminController::class, 'reconcileBulk'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.reconcile');
         Route::get('/bulk/{bulk}/statement', [VtuAdminController::class, 'bulkStatement'])->middleware('permission:vtu.bulk.manage')->name('admin.vtu.bulk.statement');
