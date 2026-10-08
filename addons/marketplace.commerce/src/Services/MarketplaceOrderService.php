@@ -101,6 +101,14 @@ final class MarketplaceOrderService
             }
 
             $amount = (string) $order->total_minor;
+            $category = $product->category()->first();
+            $profitBps = $category ? (int) $category->sale_profit_bps : 0;
+            $profitFixed = $category ? (string) ($category->sale_profit_fixed_minor ?? '0') : '0';
+            $usedFallbackFee = $profitBps <= 0 && self::compare($profitFixed, '0') <= 0;
+            if ($usedFallbackFee) {
+                $profitBps = (int) config('addons.marketplace.commerce.settings.platform_fee_bps', 0);
+                $profitFixed = '0';
+            }
             $fee = self::calculateCategoryFee($product, $amount);
             $sellerNet = self::subtract($amount, $fee);
             if (self::compare($buyerWallet->available_minor, $amount) < 0) {
@@ -155,7 +163,39 @@ final class MarketplaceOrderService
                 'metadata' => ['order_id' => $order->id, 'side' => 'seller'],
             ]);
 
-            MarketplaceEarning::create(['order_id'=>$order->id,'seller_id'=>$order->seller_id,'gross_minor'=>$amount,'fee_minor'=>$fee,'net_minor'=>$sellerNet,'currency'=>$currency,'status'=>'credited']);
+            MarketplaceEarning::create([
+                'order_id' => $order->id,
+                'seller_id' => $order->seller_id,
+                'category_id' => $category?->id,
+                'gross_minor' => $amount,
+                'fee_minor' => $fee,
+                'net_minor' => $sellerNet,
+                'gross_amount_minor' => $amount,
+                'category_profit_bps' => $profitBps,
+                'category_profit_fixed_minor' => $profitFixed,
+                'platform_profit_minor' => $fee,
+                'seller_net_minor' => $sellerNet,
+                'calculation_snapshot' => [
+                    'version' => 1,
+                    'calculated_at' => now()->toIso8601String(),
+                    'category_id' => $category?->id,
+                    'category_name' => $category?->name,
+                    'category_slug' => $category?->slug,
+                    'configured_percentage_bps' => $profitBps,
+                    'configured_fixed_minor' => $profitFixed,
+                    'fallback_platform_fee_used' => $usedFallbackFee,
+                    'gross_amount_minor' => $amount,
+                    'percentage_profit_minor' => self::calculatePercentageFee($amount, $profitBps),
+                    'fixed_profit_minor' => $profitFixed,
+                    'platform_profit_minor' => $fee,
+                    'seller_net_minor' => $sellerNet,
+                    'currency' => $currency,
+                    'quantity' => (string) $order->quantity,
+                    'unit_price_minor' => (string) $order->unit_price_minor,
+                ],
+                'currency' => $currency,
+                'status' => 'credited',
+            ]);
             $order->forceFill(array_merge(['status' => 'paid', 'paid_at' => now()], $fulfillment))->save();
 
             if ($product->isDigital()) {
@@ -235,6 +275,13 @@ final class MarketplaceOrderService
             throw new RuntimeException('Category sales profit cannot exceed the sale amount.');
         }
         return $total;
+    }
+
+    private static function calculatePercentageFee(string $amount, int $bps): string
+    {
+        if ($bps <= 0) return '0';
+        if (function_exists('bcmul')) return bcdiv(bcmul($amount, (string) $bps, 0), '10000', 0);
+        return (string) intdiv((int) $amount * $bps, 10000);
     }
 
     private static function calculateFee(string $amount): string
