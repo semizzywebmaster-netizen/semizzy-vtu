@@ -80,6 +80,8 @@ export default function WebsitePublic({ site, page, preview = false }: Props) {
   const description = seo.description || '';
   const nav = pages.slice().sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0));
 
+  const cssVars = { '--fg': theme.fg, '--muted': theme.muted, '--card': theme.card } as React.CSSProperties;
+
   return (
     <>
       <Head title={title}>
@@ -94,9 +96,7 @@ export default function WebsitePublic({ site, page, preview = false }: Props) {
           background: theme.bg,
           color: theme.fg,
           fontFamily: 'Inter, system-ui, sans-serif',
-          ['--fg' as any]: theme.fg,
-          ['--muted' as any]: theme.muted,
-          ['--card' as any]: theme.card,
+          ...cssVars,
         }}
       >
         {preview && <div style={{ position: 'sticky', top: 0, zIndex: 20, padding: '9px 14px', background: theme.accent, color: '#fff', textAlign: 'center', fontSize: 13 }}>Preview — this website is not public until published.</div>}
