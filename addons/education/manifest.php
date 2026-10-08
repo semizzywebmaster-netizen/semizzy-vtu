@@ -26,6 +26,8 @@ return [
    '2026_10_08_001003_harden_education_products_provider_id.php',
    '2026_10_08_001004_add_education_institution_classification.php',
    '2026_10_08_001005_add_education_accrediting_bodies.php',
+  '2026_10_08_001006_create_exam_bodies_and_past_questions.php',
+  '2026_10_08_001007_add_exam_body_to_education_products.php',
  ],
  'web_route_files'=>['addons/education/routes/web.php','addons/education/routes/admin.php'],
  'api_route_files'=>['addons/education/routes/api.php'],
