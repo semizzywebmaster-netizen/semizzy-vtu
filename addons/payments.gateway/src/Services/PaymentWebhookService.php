@@ -137,7 +137,7 @@ final class PaymentWebhookService
             default => data_get($data, 'amount'),
         };
         if ($amount === null || $amount === '') return null;
-        return $provider->driver === 'monnify' ? number_format((float) $amount * 100, 0, '.', '') : (string) $amount;
+        return in_array($provider->driver, ['monnify', 'kora'], true) ? number_format((float) $amount * 100, 0, '.', '') : (string) $amount;
     }
 
     private function verifiedCurrency(PaymentGatewayProvider $provider, array $data): string
