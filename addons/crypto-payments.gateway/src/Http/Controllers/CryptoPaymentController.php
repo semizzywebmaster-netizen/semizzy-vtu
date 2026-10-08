@@ -90,7 +90,7 @@ class CryptoPaymentController
         ]);
 
         $create = function (CryptoPaymentProvider $provider) use (
-            $transaction, $registry, $data, $fiatCurrency, $asset, $network, $fxSnapshot, $usdAmount
+            $transaction, $registry, $data, $fiatCurrency, $asset, $network, $fxSnapshot, $usdAmount, $customerFundingAmount, $walletAmount, $fundingFee, $funding
         ) {
             if (!$provider->supports('crypto_payment', $asset, $network)) {
                 throw new RuntimeException('Provider does not support the requested crypto asset/network.');
