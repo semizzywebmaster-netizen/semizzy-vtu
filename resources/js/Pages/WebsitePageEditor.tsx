@@ -20,8 +20,8 @@ const defaults=(type:string)=>({
 export default function WebsitePageEditor({site,page,sectionTypes=[]}:Props){
  const [title,setTitle]=useState(page.title);
  const [sections,setSections]=useState<Section[]>(page.content?.sections??[]);
- const [open,setOpen]=useState<string|null>(null);
- const save=()=>router.patch('/website-builder/sites/'+site.id+'/pages/'+page.id,{title,content:{sections},seo:page.seo??{}});
+ const [open,setOpen]=useState<string|null>(null); const [seo,setSeo]=useState({...page.seo});
+ const save=()=>router.patch('/website-builder/sites/'+site.id+'/pages/'+page.id,{title,content:{sections},seo});
  const add=(type:string)=>{const s={id:crypto.randomUUID(),type,data:defaults(type)};setSections(x=>[...x,s]);setOpen(s.id);};
  const update=(id:string,key:string,value:any)=>setSections(x=>x.map(s=>s.id===id?{...s,data:{...s.data,[key]:value}}:s));
  const move=(i:number,d:number)=>setSections(x=>{const a=[...x],j=i+d;if(j<0||j>=a.length)return a;[a[i],a[j]]=[a[j],a[i]];return a});
@@ -29,6 +29,11 @@ export default function WebsitePageEditor({site,page,sectionTypes=[]}:Props){
  return <div className="p-6 max-w-6xl mx-auto space-y-5">
   <div className="flex flex-wrap justify-between gap-3"><div><h1 className="text-2xl font-bold">{site.name}</h1><p className="text-sm opacity-70">Page: {page.title} · /{page.slug}</p></div><button className="border rounded-lg px-3 py-2" onClick={()=>router.get('/website-builder')}>Back</button></div>
   <input className="border rounded-lg px-3 py-2 w-full" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Page title"/>
+  <div className="rounded-xl border p-4 space-y-3"><h2 className="font-semibold">Page SEO</h2>
+   <input className="border rounded-lg px-3 py-2 w-full" placeholder="SEO title" value={seo.title||''} onChange={e=>setSeo({...seo,title:e.target.value})}/>
+   <textarea className="border rounded-lg px-3 py-2 w-full" placeholder="Meta description" value={seo.description||''} onChange={e=>setSeo({...seo,description:e.target.value})}/>
+   <div className="grid md:grid-cols-2 gap-3"><input className="border rounded-lg px-3 py-2" placeholder="Keywords" value={seo.keywords||''} onChange={e=>setSeo({...seo,keywords:e.target.value})}/><input className="border rounded-lg px-3 py-2" placeholder="OG image URL" value={seo.og_image||''} onChange={e=>setSeo({...seo,og_image:e.target.value})}/></div>
+  </div>
   <div className="rounded-xl border p-4 space-y-3"><h2 className="font-semibold">Add section</h2><div className="flex flex-wrap gap-2">{sectionTypes.map(t=><button key={t} className="border rounded-lg px-3 py-2 text-sm" onClick={()=>add(t)}>+ {t}</button>)}</div></div>
   <div className="space-y-3">{sections.map((s,i)=><div key={s.id} className="rounded-xl border p-4">
    <div className="flex flex-wrap items-center gap-2"><button className="font-semibold flex-1 text-left" onClick={()=>setOpen(open===s.id?null:s.id)}>{s.type}</button><button className="border rounded px-2 py-1 text-xs" disabled={i===0} onClick={()=>move(i,-1)}>↑</button><button className="border rounded px-2 py-1 text-xs" disabled={i===sections.length-1} onClick={()=>move(i,1)}>↓</button><button className="border rounded px-2 py-1 text-xs text-red-600" onClick={()=>remove(s.id)}>Remove</button></div>
