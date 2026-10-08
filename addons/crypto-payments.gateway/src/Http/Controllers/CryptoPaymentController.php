@@ -10,6 +10,7 @@ use Semizzy\Addons\CryptoPayments\Models\CryptoPaymentProvider;
 use Semizzy\Addons\CryptoPayments\Models\CryptoPaymentTransaction;
 use Semizzy\Addons\CryptoPayments\Services\CryptoPaymentGatewayAdapterRegistry;
 use Semizzy\Addons\CryptoPayments\Services\CryptoPaymentGatewayManager;
+use Semizzy\Addons\CryptoPayments\Services\CryptoFundingSettingsService;
 use RuntimeException;
 
 class CryptoPaymentController
@@ -18,7 +19,8 @@ class CryptoPaymentController
         Request $request,
         CryptoPaymentGatewayAdapterRegistry $registry,
         CryptoPaymentGatewayManager $manager,
-        FxRateService $fx
+        FxRateService $fx,
+        CryptoFundingSettingsService $fundingSettings
     ): JsonResponse {
         $data = $request->validate([
             'provider_code' => ['nullable', 'string', 'max:100'],
@@ -43,7 +45,11 @@ class CryptoPaymentController
             ? ['rate' => 1.0, 'provider_id' => null, 'provider_code' => 'identity', 'fetched_at' => now()->toISOString()]
             : $fx->rate($fiatCurrency, 'USD');
 
-        $usdAmount = (float) $data['fiat_amount'] * (float) $fxSnapshot['rate'];
+        $funding = $fundingSettings->calculate((float) $data['fiat_amount']);
+        $walletAmount = $funding['wallet_amount'];
+        $fundingFee = $funding['fee_amount'];
+        $customerFundingAmount = $funding['customer_crypto_funding_amount'];
+        $usdAmount = $customerFundingAmount * (float) $fxSnapshot['rate'];
         $reference = 'CRP-' . strtoupper(Str::random(20));
 
         // Create one transaction before provider selection so failover never
@@ -55,7 +61,7 @@ class CryptoPaymentController
             'crypto_payment_provider_id' => null,
             'asset' => $asset,
             'network' => $network,
-            'fiat_amount' => $data['fiat_amount'],
+            'fiat_amount' => $customerFundingAmount,
             'fiat_currency' => $fiatCurrency,
             'crypto_amount' => $data['crypto_amount'] ?? 0,
             'exchange_rate' => $fxSnapshot['rate'],
@@ -63,6 +69,12 @@ class CryptoPaymentController
             'expires_at' => now()->addMinutes((int) config('crypto-payments.payment_expiry_minutes', 30)),
             'metadata' => array_merge($data['metadata'] ?? [], [
                 'platform_currency' => 'NGN',
+                'funding' => [
+                    'wallet_amount' => $walletAmount,
+                    'fee_percent' => $funding['fee_percent'],
+                    'fee_amount' => $fundingFee,
+                    'customer_funding_amount' => $customerFundingAmount,
+                ],
                 'settlement_currency' => 'USD',
                 'fx' => [
                     'from' => $fiatCurrency, 'to' => 'USD',
@@ -90,7 +102,10 @@ class CryptoPaymentController
                 $result = $registry->make($provider)->createPayment(array_merge($transaction->toArray(), [
                     'fiat_currency' => 'USD',
                     'fiat_amount' => $usdAmount,
-                    'platform_fiat_amount' => $data['fiat_amount'],
+                    'platform_fiat_amount' => $customerFundingAmount,
+                    'wallet_credit_amount' => $walletAmount,
+                    'funding_fee_amount' => $fundingFee,
+                    'funding_fee_percent' => $funding['fee_percent'],
                     'platform_fiat_currency' => $fiatCurrency,
                     'fx_rate' => $fxSnapshot['rate'],
                 ]));
