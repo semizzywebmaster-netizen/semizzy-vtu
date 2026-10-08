@@ -4,6 +4,7 @@ namespace Semizzy\Addons\Payments\Services;
 
 use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
+use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -24,6 +25,11 @@ class PaymentGatewayManager
             ->sortBy(fn (PaymentGatewayProvider $provider) => [$provider->priority, -$provider->weight])
             ->values()
             ->all();
+    }
+
+    public function adapter(PaymentGatewayProvider $provider): PaymentGatewayAdapter
+    {
+        return app(PaymentGatewayAdapterRegistry::class)->make($provider->driver);
     }
 
     public function execute(string $capability, callable $operation): array
