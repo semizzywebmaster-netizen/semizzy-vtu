@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\VtuConversionRequest;
 use App\Services\Vtu\VtuConversionService;
+use App\Services\Vtu\VtuServiceRegistry;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -14,7 +15,15 @@ class VtuConversionAdminController extends \Illuminate\Routing\Controller
         return Inertia::render('Admin/VTU/Conversions', [
             'requests'=>VtuConversionRequest::query()->with(['user','operator'])->latest()->paginate(30),
             'conversionTypes'=>VtuConversionService::TYPES,
+            'conversionSettings'=>app(VtuServiceRegistry::class)->conversionSettings(),
         ]);
+    }
+
+    public function saveSettings(Request $request, VtuServiceRegistry $registry)
+    {
+        $data=$request->validate(['settings'=>'required|array','settings.airtime_to_cash.rate_percent'=>'required|numeric|gt:0|lte:100','settings.airtime_to_data.rate_percent'=>'required|numeric|gt:0|lte:100','settings.data_to_cash.rate_percent'=>'required|numeric|gt:0|lte:100','settings.data_to_airtime.rate_percent'=>'required|numeric|gt:0|lte:100','settings.airtime_to_cash.fee'=>'nullable|numeric|min:0','settings.airtime_to_data.fee'=>'nullable|numeric|min:0','settings.data_to_cash.fee'=>'nullable|numeric|min:0','settings.data_to_airtime.fee'=>'nullable|numeric|min:0']);
+        $registry->saveConversionSettings($data['settings']);
+        return response()->json(['status'=>'completed','settings'=>$registry->conversionSettings()]);
     }
 
     public function verify(Request $request, VtuConversionRequest $conversion, VtuConversionService $service)
