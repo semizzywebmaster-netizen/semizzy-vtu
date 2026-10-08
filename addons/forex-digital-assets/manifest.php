@@ -71,6 +71,7 @@ return [
     'web_route_files' => [
         'addons/forex-digital-assets/routes/web.php',
         'addons/forex-digital-assets/routes/admin.php',
+        'addons/forex-digital-assets/routes/quote-admin.php',
     ],
     'api_route_files' => [
         'addons/forex-digital-assets/routes/api.php',
