@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Semizzy\Addons\ForexDigitalAssets\Models\ForexDigitalAssetInstrument;
 use Semizzy\Addons\ForexDigitalAssets\Models\ForexDigitalAssetProvider;
+use Semizzy\Addons\ForexDigitalAssets\Services\MarketDataDriverResolver;
 
 class AdminForexDigitalAssetsController extends Controller
 {
@@ -53,6 +54,34 @@ class AdminForexDigitalAssetsController extends Controller
         return back()->with('success', $provider->is_market_data_provider
             ? 'Market-data provider verified and enabled.'
             : 'Execution provider verified; it remains disabled until execution is explicitly enabled.');
+    }
+
+    public function testProvider(ForexDigitalAssetProvider $provider, MarketDataDriverResolver $drivers)
+    {
+        if (! $provider->verified || ! $provider->is_market_data_provider) {
+            return back()->withErrors(['provider' => 'Provider must be verified and marked as a market-data provider before testing.']);
+        }
+
+        try {
+            $driver = $drivers->resolve($provider);
+            $count = (int) $driver->refreshQuotes($provider);
+
+            $provider->update([
+                'last_health_check_at' => now(),
+                'last_success_at' => now(),
+                'last_error' => null,
+            ]);
+
+            return back()->with('success', "Provider test succeeded; {$count} quote(s) refreshed.");
+        } catch (\\Throwable $e) {
+            $provider->update([
+                'last_health_check_at' => now(),
+                'last_failure_at' => now(),
+                'last_error' => mb_substr($e->getMessage(), 0, 2000),
+            ]);
+
+            return back()->withErrors(['provider' => 'Provider test failed: '.mb_substr($e->getMessage(), 0, 500)]);
+        }
     }
 
     public function disableProvider(ForexDigitalAssetProvider $provider)
