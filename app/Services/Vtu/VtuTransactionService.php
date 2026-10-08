@@ -45,6 +45,38 @@ class VtuTransactionService{
 
   $r=$this->gateway->initiate($tx,$tx->request_payload??[]);
   return DB::transaction(function()use($tx,$r){$tx=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);if($tx->isTerminal())return $tx;$providerId=$r->providerId??$tx->api_provider_id;if($providerId!==null)$tx->api_provider_id=$providerId;$n=(int)$tx->attempts()->max('attempt_number')+1;$tx->attempts()->create(['api_provider_id'=>$providerId,'attempt_number'=>$n,'operation'=>'transaction_initiation','status'=>$r->status,'provider_reference'=>$r->providerReference,'request_payload'=>$tx->request_payload,'response_payload'=>is_array($r->data)?$r->data:null,'error_message'=>$r->message,'started_at'=>now(),'finished_at'=>now()]);$tx->provider_reference=$r->providerReference;$tx->provider_status=$r->status;$tx->response_payload=is_array($r->data)?$r->data:null;if($r->accepted){$tx->status='successful';$tx->completed_at=now();$this->finishFinancial($tx,true);}elseif($r->status==='PENDING'){$tx->status='pending';}elseif($r->status==='UNKNOWN'||$r->duplicateRisk){$tx->status='pending';$tx->failure_code='UNKNOWN_PROVIDER_STATE';$tx->failure_message='Provider state is uncertain; requery is required before retry or reversal.';}else{$tx->status='failed';$tx->failure_message=$r->message?:'Provider rejected the transaction.';$this->finishFinancial($tx,false);$tx->completed_at=now();}$tx->save();$this->syncBulkState($tx);return $tx->fresh();});}
+ public function cancelPending(VtuTransaction $tx,string $reason='Cancelled by administrator'):VtuTransaction
+ {
+  return DB::transaction(function()use($tx,$reason){
+   $locked=VtuTransaction::query()->lockForUpdate()->findOrFail($tx->id);
+   if($locked->isTerminal())return $locked;
+   $metadata=(array)$locked->metadata;
+   if(($metadata['provider_initiation_claimed']??false)===true || $locked->provider_reference){
+    throw new RuntimeException('This transaction has already entered provider processing and cannot be safely cancelled. Requery is required.');
+   }
+   $this->wallet->cancelReservation($locked);
+   $locked->status='cancelled';
+   $locked->failure_code='CANCELLED';
+   $locked->failure_message=$reason;
+   $locked->completed_at=now();
+   $metadata['cancelled_at']=now()->toIso8601String();
+   $metadata['cancellation_reason']=$reason;
+   $metadata['financial_settlement_applied']=true;
+   $metadata['financial_settlement_applied_at']=now()->toIso8601String();
+   $locked->metadata=$metadata;
+   $op=$locked->financialOperation()->lockForUpdate()->first();
+   if($op && !in_array($op->status,['completed','reversed'],true)){
+    $op->status='failed';
+    $op->metadata=array_merge((array)$op->metadata,['cancelled'=>true,'cancellation_reason'=>$reason]);
+    $op->save();
+   }
+   $locked->save();
+   $this->audit->record('vtu.transaction.cancelled',$locked,['reference'=>$locked->reference,'reason'=>$reason,'status'=>'cancelled']);
+   $this->syncBulkState($locked);
+   return $locked->fresh();
+  });
+ }
+
  public function requery(VtuTransaction $tx):VtuTransaction{
   if($tx->isTerminal())return $tx;
   if(!$tx->provider_reference)throw new RuntimeException('Cannot requery without a provider reference.');
