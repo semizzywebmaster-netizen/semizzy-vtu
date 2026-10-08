@@ -31,6 +31,7 @@ class VtuController extends Controller
                 'name' => $s->category->name,
                 'description' => $s->category->description,
             ] : null,
+            'health' => $r->health($s),
             'products' => $s->products->map(fn ($p) => [
                 'id' => $p->id,
                 'key' => $p->key,
@@ -97,8 +98,7 @@ class VtuController extends Controller
             'product_id' => ['required', 'integer', 'exists:service_products,id'],
             'idempotency_key' => ['nullable', 'string', 'max:120'],
             'payload' => ['required', 'array'],
-        ]);
-        $p = ServiceProduct::with('service')->findOrFail($d['product_id']);
+        ]);        $p = ServiceProduct::with('service')->findOrFail($d['product_id']);
         abort_unless($p->enabled && $p->service->enabled, 422, 'Service is unavailable.');
         $v->validate($p->service, $d['payload']);
         $tx = $s->process($s->create($r->user()->id, $p, $d['payload'], $r->user()->role, $d['idempotency_key'] ?? null));
@@ -197,8 +197,7 @@ class VtuController extends Controller
                 ?? $body['transactionReference']
                 ?? $body['reference']
                 ?? $body['data']['provider_reference']
-                ?? $body['data']['providerReference']
-                ?? $body['data']['transaction_reference']
+                ?? $body['data']['providerReference']                ?? $body['data']['transaction_reference']
                 ?? $body['data']['transactionReference']
                 ?? $body['data']['reference']
                 ?? null;
