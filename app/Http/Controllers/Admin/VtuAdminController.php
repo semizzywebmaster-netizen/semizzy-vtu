@@ -156,6 +156,12 @@ class VtuAdminController extends Controller
   },$filename,['Content-Type'=>'text/csv; charset=UTF-8','Cache-Control'=>'no-store']);
  }
 
+ public function archiveBulk(VtuBulkOperation $bulk): \Illuminate\\Http\\RedirectResponse{
+  if(!in_array($bulk->status,['successful','failed','partial','cancelled'],true)) return back()->with('error','Only terminal bulk operations can be archived.');
+  if($bulk->archived_at) return back()->with('success','Bulk operation is already archived.');
+  $bulk->forceFill(['archived_at'=>now()])->save();
+  return back()->with('success','Bulk operation archived. Financial records and audit history remain intact.');
+ }
  public function bulkOperations(Request $r){
   $q=VtuBulkOperation::with(['user','service'])->latest();
   if($r->filled('status')){$allowed=['processing','pending','partial','successful','failed'];$status=(string)$r->input('status');if(in_array($status,$allowed,true))$q->where('status',$status);else$q->whereRaw('1=0');}
