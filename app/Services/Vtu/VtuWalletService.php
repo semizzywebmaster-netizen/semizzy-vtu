@@ -56,6 +56,27 @@ class VtuWalletService
         });
     }
 
+    public function cancelReservation(VtuTransaction $tx): void
+    {
+        DB::transaction(function () use ($tx): void {
+            $wallet = $this->wallet($tx);
+            $key = "vtu:{$tx->id}:cancel";
+            if (WalletMovement::query()->where('wallet_account_id', $wallet->id)->where('operation_key', $key)->exists()) {
+                return;
+            }
+            $beforeAvailable = (string) $wallet->available_minor;
+            $beforeHeld = (string) $wallet->held_minor;
+            $amount = (string) $tx->total_minor;
+            if ($this->compareIntegerStrings($beforeHeld, $amount) < 0) {
+                throw new RuntimeException('Wallet hold is inconsistent; cancellation is blocked.');
+            }
+            $wallet->held_minor = $this->sub($beforeHeld, $amount);
+            $wallet->available_minor = $this->add($beforeAvailable, $amount);
+            $wallet->save();
+            $this->movement($wallet, $key, $tx, 'cancel_release', $amount, $beforeAvailable, (string) $wallet->available_minor, $beforeHeld, (string) $wallet->held_minor);
+        });
+    }
+
     public function settle(VtuTransaction $tx, bool $success): void
     {
         DB::transaction(function () use ($tx,$success): void {
