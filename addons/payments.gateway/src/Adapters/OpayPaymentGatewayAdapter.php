@@ -119,7 +119,15 @@ final class OpayPaymentGatewayAdapter implements PaymentGatewayAdapter
 
     public function healthCheck(PaymentGatewayProvider $provider): bool
     {
-        $this->verifyCollection($provider, 'SEMIZZY_HEALTHCHECK_'.bin2hex(random_bytes(6)));
-        return true;
+        $reference = 'SEMIZZY_HEALTHCHECK_'.bin2hex(random_bytes(6));
+        $data = ['country' => 'NG', 'reference' => $reference];
+        $response = $this->request($provider, $data)->post(
+            rtrim($provider->base_url ?: 'https://liveapi.opaycheckout.com', '/').'/api/v1/international/cashier/status',
+            $data
+        );
+
+        $body = $response->json();
+        if (!$response->successful() || !is_array($body)) return false;
+        return (string) ($body['code'] ?? '') !== '02000';
     }
 }
