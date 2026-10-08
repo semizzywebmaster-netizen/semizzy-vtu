@@ -13,7 +13,7 @@ return [
   [
    'key'=>'nbte_approved_institutions',
    'name'=>'National Board for Technical Education — Approved Institutions',
-   'url'=>'https://nbte.gov.ng/nbte/approved%20institutions',
+   'url'=>'https://www.nbte.gov.ng/nbte/approved%20institutions',
    'category'=>'technical',
    'accrediting_body'=>'NBTE',
    'import_mode'=>'category_linked_official_lists',
