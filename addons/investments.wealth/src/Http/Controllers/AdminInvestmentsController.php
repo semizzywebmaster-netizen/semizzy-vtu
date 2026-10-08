@@ -48,12 +48,16 @@ class AdminInvestmentsController extends Controller
             'currency' => ['required', 'string', 'size:3'],
             'country' => ['nullable', 'string', 'size:2'],
             'description' => ['nullable', 'string'],
+            'source_name' => ['required', 'string', 'max:255'],
+            'source_reference' => ['required', 'string', 'max:255'],
+            'source_url' => ['nullable', 'url', 'max:2048'],
+            'source_checked_at' => ['required', 'date'],
             'metadata' => ['nullable', 'array'],
         ]);
 
         InvestmentSecurity::updateOrCreate(
             ['symbol' => $data['symbol'], 'market' => $data['market'] ?? null],
-            [...$data, 'status' => 'draft']
+            [...$data, 'status' => 'draft', 'verified' => false]
         );
 
         return back()->with('success', 'Security saved as draft.');
@@ -61,6 +65,10 @@ class AdminInvestmentsController extends Controller
 
     public function publishSecurity(InvestmentSecurity $security)
     {
+        if (! $security->verified || ! $security->source_name || ! $security->source_reference || ! $security->source_checked_at) {
+            return back()->withErrors(['security' => 'Security must have verified provenance before publication.']);
+        }
+
         $security->update(['status' => 'published', 'published_at' => now()]);
         return back()->with('success', 'Security published.');
     }
