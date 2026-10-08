@@ -3,11 +3,19 @@ namespace Addons\BankingFinancialIntegrations\Services;
 
 use Addons\BankingFinancialIntegrations\Models\BankDirectory;
 use Addons\BankingFinancialIntegrations\Models\BankingTransfer;
+use Addons\BankingFinancialIntegrations\Services\TransferRulesService;
 use Illuminate\Support\Str;
 use RuntimeException;
 
 class BankTransferService
 {
+ private TransferRulesService $rules;
+
+ public function __construct(?TransferRulesService $rules = null)
+ {
+  $this->rules = $rules ?: new TransferRulesService();
+ }
+
  public function create(int $userId, int $bankId, string $accountNumber, float $amount, string $currency='NGN', ?string $idempotencyKey=null): BankingTransfer
  {
   if ($amount <= 0) throw new RuntimeException('Transfer amount must be greater than zero.');
@@ -19,15 +27,7 @@ class BankTransferService
   if ($existing) return $existing;
   $accountNumber = preg_replace('/\D+/', '', $accountNumber) ?? '';
   if (strlen($accountNumber) < 6 || strlen($accountNumber) > 20) throw new RuntimeException('Invalid bank account number.');
-  $min = (float) (($limits['bank_transfer_min_amount_minor'] ?? 0) / 100);
-  $max = (float) (($limits['bank_transfer_max_amount_minor'] ?? PHP_INT_MAX) / 100);
-  if ($amount < $min) throw new RuntimeException('Transfer amount is below the configured minimum.');
-  if ($amount > $max) throw new RuntimeException('Transfer amount exceeds the configured maximum.');
-  $components = $limits['bank_transfer_fee_components'] ?? [];
-  $transferFee = (float) (($components['transfer_fee_minor'] ?? $limits['bank_transfer_fee_minor'] ?? 0) / 100);
-  $vatFee = (float) (($components['vat_minor'] ?? 0) / 100);
-  $otherFee = (float) (($components['other_ng_fee_minor'] ?? 0) / 100);
-  $totalFee = $transferFee + $vatFee + $otherFee;
+  $fees = $this->rules->bank($amount, $limits);
   return BankingTransfer::create([
    'user_id'=>$userId,
    'bank_directory_id'=>$bank->id,
@@ -37,12 +37,12 @@ class BankTransferService
    'amount'=>$amount,
    'currency'=>strtoupper($currency),
    'status'=>'pending',
-   'fee'=>$totalFee,
-   'transfer_fee'=>$transferFee,
-   'vat_fee'=>$vatFee,
-   'other_ng_fee'=>$otherFee,
-   'total_fee'=>$totalFee,
-   'total_debit'=>$amount + $totalFee,
+   'fee'=>$fees['fee'],
+   'transfer_fee'=>$fees['transfer_fee'],
+   'vat_fee'=>$fees['vat_fee'],
+   'other_ng_fee'=>$fees['other_ng_fee'],
+   'total_fee'=>$fees['total_fee'],
+   'total_debit'=>$fees['total_debit'],
   ]);
  }
 
