@@ -224,7 +224,7 @@ final class MarketplaceController
         ]);
 
         if ($media->is_primary) {
-            $product->media()->whereKeyNot($media->id)->update(['is_primary' => false]);
+            $product->media()->where('id', '!=', $media->id)->update(['is_primary' => false]);
         }
 
         if (!$product->media()->where('is_primary', true)->exists()) {
