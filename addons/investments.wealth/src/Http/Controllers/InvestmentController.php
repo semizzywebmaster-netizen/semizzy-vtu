@@ -71,7 +71,8 @@ class InvestmentController extends Controller
             'data' => InvestmentCorporateAction::whereHas('security', fn ($q) => $q->where('status', 'published'))
                 ->whereHas('provider', fn ($q) => $q
                     ->where('status', 'enabled')
-                    ->where('verified', true))
+                    ->where('verified', true)
+                    ->where('is_data_provider', true))
                 ->with(['security', 'provider'])
                 ->whereIn('status', ['announced', 'confirmed', 'processed'])
                 ->orderByRaw('COALESCE(payment_date, ex_date, record_date) ASC')
