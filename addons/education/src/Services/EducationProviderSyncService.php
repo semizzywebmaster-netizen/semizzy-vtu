@@ -3,8 +3,8 @@ namespace Semizzy\Addons\Education\Services;
 use Semizzy\Addons\Education\Models\EducationProduct;
 final class EducationProviderSyncService {
  public function syncInstitutions(array $items): int {
-  return app(EducationInstitutionImportService::class)->import($items,'provider_sync')['created']
-   + app(EducationInstitutionImportService::class)->import([], 'provider_sync')['updated'];
+  $result = app(EducationInstitutionImportService::class)->import($items,'provider_sync');
+  return $result['created'] + $result['updated'];
  }
  public function syncProducts(array $items): int {
   $count=0;
