@@ -85,7 +85,7 @@ final class AdminSchoolAdmissionController extends Controller
         ]);
         $admission=EducationProgrammeAdmission::findOrFail($d['programme_admission_id']);
         if($d['admission_route_id'] ?? null) abort_unless(EducationAdmissionRoute::whereKey($d['admission_route_id'])->where('active',true)->exists(),422,'Selected admission route is inactive.');
-        abort_if($d['maximum_age'] ?? null !== null && ($d['minimum_age'] ?? 0)>$d['maximum_age'],422,'Maximum age cannot be below minimum age.');
+        abort_if(isset($d['maximum_age'],$d['minimum_age']) && $d['minimum_age']>$d['maximum_age'],422,'Maximum age cannot be below minimum age.');
         $req=null;
         DB::transaction(function() use ($d,$admission,&$req) {
             $payload=$d; foreach(['olevel','olevel_subjects','utme_subjects','direct_entry_qualifications','result_bodies'] as $key) unset($payload[$key]);
