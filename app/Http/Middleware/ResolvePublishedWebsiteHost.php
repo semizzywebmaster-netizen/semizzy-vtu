@@ -55,6 +55,10 @@ class ResolvePublishedWebsiteHost
         $path = trim($request->path(), '/');
         $firstSegment = strtolower((string) strtok($path, '/'));
         $host = strtolower(rtrim($request->getHost(), '.'));
+        $applicationHost = strtolower((string) (parse_url((string) config('app.url'), PHP_URL_HOST) ?? ''));
+        if ($host === '' || ($applicationHost !== '' && $host === $applicationHost)) {
+            return $next($request);
+        }
 
         if ($firstSegment !== '' && in_array($firstSegment, self::RESERVED_PREFIXES, true)) {
             return $next($request);
