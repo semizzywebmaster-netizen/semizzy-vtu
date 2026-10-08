@@ -8,5 +8,8 @@ Route::middleware(['web','auth','role:ADMIN,STAFF','ensure.addon:education'])->p
  Route::post('/programmes',[AdminSchoolAdmissionController::class,'programme'])->middleware('permission:education.school_admission.manage')->name('admin.education.school-admission.programmes.store');
  Route::post('/sessions',[AdminSchoolAdmissionController::class,'session'])->middleware('permission:education.school_admission.manage')->name('admin.education.school-admission.sessions.store');
  Route::post('/programme-admissions',[AdminSchoolAdmissionController::class,'admission'])->middleware('permission:education.school_admission.research')->name('admin.education.school-admission.admissions.store');
+ Route::post('/requirements',[AdminSchoolAdmissionController::class,'requirement'])->middleware('permission:education.school_admission.research')->name('admin.education.school-admission.requirements.store');
+ Route::post('/cutoffs',[AdminSchoolAdmissionController::class,'cutoff'])->middleware('permission:education.school_admission.research')->name('admin.education.school-admission.cutoffs.store');
+ Route::post('/screening',[AdminSchoolAdmissionController::class,'screening'])->middleware('permission:education.school_admission.research')->name('admin.education.school-admission.screening.store');
  Route::post('/sync-routes',[AdminSchoolAdmissionController::class,'seedRoutes'])->middleware('permission:education.school_admission.manage')->name('admin.education.school-admission.routes.sync');
 });
