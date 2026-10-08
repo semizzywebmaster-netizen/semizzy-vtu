@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 class CryptoFundingSettingsService
 {
     public const FEE_PERCENT_KEY = 'funding_fee_percent';
+    public const FEE_AMOUNT_SCALE = 2;
 
     public function fundingFeePercent(): float
     {
@@ -32,7 +33,7 @@ class CryptoFundingSettingsService
     public function calculate(float $walletAmount): array
     {
         $percent = $this->fundingFeePercent();
-        $fee = round($walletAmount * ($percent / 100), 2);
+        $fee = round($walletAmount * ($percent / 100), self::FEE_AMOUNT_SCALE);
 
         return [
             'wallet_amount' => round($walletAmount, 2),
