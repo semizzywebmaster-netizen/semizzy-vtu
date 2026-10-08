@@ -118,6 +118,16 @@ The marketplace UI blocker was fixed and the admin control surface was expanded:
 - Quote recording retains source, observed time and expiry; no synthetic live-feed behaviour was introduced.
 - Buy/sell execution remains intentionally unavailable until a real verified execution provider and required KYC/regulatory controls are configured.
 
+
+## Stocks & Investments Marketplace — bulk action #6 completed
+
+Admin operational coverage was extended:
+- Added manual/admin corporate-action recording with security, action type, provider/reference identifier, dates, value, currency, status and notes.
+- Added admin order monitoring with security, side, quantity, status and provider visibility.
+- Corporate actions remain source/reference driven; no corporate action is fabricated automatically.
+- Order monitoring is intentionally read/monitoring only. No buy/sell execution or wallet debit was enabled while no verified real execution provider is configured.
+- The existing Core ProviderManager remains the future execution integration boundary; investment-specific execution must not bypass Core provider safety, idempotency and ambiguous-state handling.
+
 ## Education — previous addon
 
 
