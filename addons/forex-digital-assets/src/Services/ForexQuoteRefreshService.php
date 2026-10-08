@@ -32,7 +32,7 @@ class ForexQuoteRefreshService
                 }
 
                 $adapter = app($driver);
-                if (! method_exists($adapter, 'refreshQuotes')) {
+                if (! $adapter instanceof \Semizzy\Addons\ForexDigitalAssets\Contracts\MarketDataProviderDriver) {
                     $provider->update([
                         'last_failure_at' => now(),
                         'last_error' => 'Configured provider driver does not expose refreshQuotes().',
