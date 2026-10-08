@@ -4,7 +4,6 @@ namespace Semizzy\Addons\Payments\Services;
 
 use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
-use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
