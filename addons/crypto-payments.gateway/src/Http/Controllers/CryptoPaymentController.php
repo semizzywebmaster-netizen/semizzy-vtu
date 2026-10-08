@@ -46,42 +46,45 @@ class CryptoPaymentController
         $usdAmount = (float) $data['fiat_amount'] * (float) $fxSnapshot['rate'];
         $reference = 'CRP-' . strtoupper(Str::random(20));
 
+        // Create one transaction before provider selection so failover never
+        // collides with the unique idempotency key.
+        $transaction = CryptoPaymentTransaction::create([
+            'user_id' => $request->user()->id,
+            'reference' => $reference,
+            'idempotency_key' => $data['idempotency_key'],
+            'crypto_payment_provider_id' => null,
+            'asset' => $asset,
+            'network' => $network,
+            'fiat_amount' => $data['fiat_amount'],
+            'fiat_currency' => $fiatCurrency,
+            'crypto_amount' => $data['crypto_amount'] ?? 0,
+            'exchange_rate' => $fxSnapshot['rate'],
+            'required_confirmations' => (int) config('crypto-payments.minimum_confirmations_default', 1),
+            'expires_at' => now()->addMinutes((int) config('crypto-payments.payment_expiry_minutes', 30)),
+            'metadata' => array_merge($data['metadata'] ?? [], [
+                'platform_currency' => 'NGN',
+                'settlement_currency' => 'USD',
+                'fx' => [
+                    'from' => $fiatCurrency, 'to' => 'USD',
+                    'rate' => $fxSnapshot['rate'],
+                    'provider_id' => $fxSnapshot['provider_id'],
+                    'provider_code' => $fxSnapshot['provider_code'],
+                    'fetched_at' => $fxSnapshot['fetched_at'],
+                    'usd_amount' => $usdAmount,
+                ],
+                'expected_asset' => $asset,
+                'expected_network' => $network,
+            ]),
+        ]);
+
         $create = function (CryptoPaymentProvider $provider) use (
-            $request, $registry, $data, $fiatCurrency, $asset, $network,
-            $fxSnapshot, $usdAmount, $reference
+            $transaction, $registry, $data, $fiatCurrency, $asset, $network, $fxSnapshot, $usdAmount
         ) {
             if (!$provider->supports('crypto_payment', $asset, $network)) {
                 throw new RuntimeException('Provider does not support the requested crypto asset/network.');
             }
 
-            $transaction = CryptoPaymentTransaction::create([
-                'user_id' => $request->user()->id,
-                'reference' => $reference,
-                'idempotency_key' => $data['idempotency_key'],
-                'crypto_payment_provider_id' => $provider->id,
-                'asset' => $asset,
-                'network' => $network,
-                'fiat_amount' => $data['fiat_amount'],
-                'fiat_currency' => $fiatCurrency,
-                'crypto_amount' => $data['crypto_amount'] ?? 0,
-                'exchange_rate' => $fxSnapshot['rate'],
-                'required_confirmations' => (int) config('crypto-payments.minimum_confirmations_default', 1),
-                'expires_at' => now()->addMinutes((int) config('crypto-payments.payment_expiry_minutes', 30)),
-                'metadata' => array_merge($data['metadata'] ?? [], [
-                    'platform_currency' => 'NGN',
-                    'settlement_currency' => 'USD',
-                    'fx' => [
-                        'from' => $fiatCurrency, 'to' => 'USD',
-                        'rate' => $fxSnapshot['rate'],
-                        'provider_id' => $fxSnapshot['provider_id'],
-                        'provider_code' => $fxSnapshot['provider_code'],
-                        'fetched_at' => $fxSnapshot['fetched_at'],
-                        'usd_amount' => $usdAmount,
-                    ],
-                    'expected_asset' => $asset,
-                    'expected_network' => $network,
-                ]),
-            ]);
+            $transaction->forceFill(['crypto_payment_provider_id' => $provider->id])->save();
 
             try {
                 $result = $registry->make($provider)->createPayment(array_merge($transaction->toArray(), [
@@ -103,18 +106,30 @@ class CryptoPaymentController
                 return $transaction->fresh();
             } catch (\Throwable $e) {
                 $transaction->forceFill([
-                    'status' => 'failed',
-                    'provider_payload' => ['error' => $e->getMessage()],
+                    'provider_payment_id' => null,
+                    'wallet_address' => null,
+                    'status' => 'pending',
+                    'provider_payload' => [
+                        'last_provider_error' => $e->getMessage(),
+                    ],
                 ])->save();
                 throw $e;
             }
         };
 
-        $transaction = $data['provider_code']
-            ? $create(CryptoPaymentProvider::where('code', $data['provider_code'])->firstOrFail())
-            : $manager->execute('crypto_payment', $create, $asset, $network);
+        try {
+            $result = $data['provider_code']
+                ? $create(CryptoPaymentProvider::where('code', $data['provider_code'])->firstOrFail())
+                : $manager->execute('crypto_payment', $create, $asset, $network);
+        } catch (\Throwable $e) {
+            $transaction->forceFill([
+                'status' => 'failed',
+                'provider_payload' => ['error' => $e->getMessage()],
+            ])->save();
+            throw $e;
+        }
 
-        return response()->json(['data' => $transaction], 201);
+        return response()->json(['data' => $result], 201);
     }
 
     public function status(Request $request, string $reference): JsonResponse
