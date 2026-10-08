@@ -118,7 +118,7 @@ final class PaymentWebhookService
         return strtolower((string) match ($provider->driver) {
             'paystack' => data_get($data, 'status', ''),
             'monnify' => data_get($data, 'paymentStatus', ''),
-            'opay' => data_get($data, 'payload.status', data_get($data, 'status', '')),
+            'opay' => data_get($data, 'status', ''),
             default => data_get($data, 'status', ''),
         });
     }
@@ -128,7 +128,7 @@ final class PaymentWebhookService
         $amount = match ($provider->driver) {
             'paystack' => data_get($data, 'amount'),
             'monnify' => data_get($data, 'amountPaid', data_get($data, 'totalPayable')),
-            'opay' => data_get($data, 'payload.amount'),
+            'opay' => data_get($data, 'amount.total'),
             default => data_get($data, 'amount'),
         };
         if ($amount === null || $amount === '') return null;
@@ -139,7 +139,7 @@ final class PaymentWebhookService
     {
         return strtoupper((string) match ($provider->driver) {
             'monnify' => data_get($data, 'currencyCode', ''),
-            'opay' => data_get($data, 'payload.currency', ''),
+            'opay' => data_get($data, 'amount.currency', ''),
             default => data_get($data, 'currency', ''),
         });
     }
