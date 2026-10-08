@@ -20,35 +20,43 @@ class OtpChallengeService
     {
         $purpose = $this->normalizePurpose($purpose);
 
-        if (! filled($user->email) || ! filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
-            throw ValidationException::withMessages(['email' => 'A valid email address is required.']);
+        $channel = strtolower(trim($channel));
+        if (! in_array($channel, ['email', 'sms', 'whatsapp'], true)) {
+            throw ValidationException::withMessages(['otp_channel' => 'Unsupported OTP channel.']);
         }
 
-        OtpChallenge::query()
-            ->where('user_id', $user->id)
-            ->where('purpose', $purpose)
-            ->whereNull('consumed_at')
-            ->update(['consumed_at' => now()]);
+        $destination = $channel === 'email' ? (string) $user->email : (string) $user->phone;
+        if ($channel === 'email' && (! filled($destination) || ! filter_var($destination, FILTER_VALIDATE_EMAIL))) {
+            throw ValidationException::withMessages(['email' => 'A valid email address is required.']);
+        }
+        if ($channel !== 'email' && ! filled($destination)) {
+            throw ValidationException::withMessages(['phone' => 'A verified phone number is required for this OTP channel.']);
+        }
+        if ($channel === 'whatsapp' && (! $user->whatsapp_verified_at || ! $user->whatsapp_transaction_enabled)) {
+            throw ValidationException::withMessages(['otp_channel' => 'WhatsApp OTP is available only after your WhatsApp number has been verified.']);
+        }
 
+        OtpChallenge::query()->where('user_id', $user->id)->where('purpose', $purpose)->whereNull('consumed_at')->update(['consumed_at' => now()]);
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
         OtpChallenge::create([
-            'user_id' => $user->id,
-            'channel' => 'email',
-            'purpose' => $purpose,
-            'destination' => (string) $user->email,
-            'code_hash' => Hash::make($code),
-            'expires_at' => now()->addMinutes(10),
-            'consumed_at' => null,
-            'attempts' => 0,
-            'max_attempts' => 5,
-            'ip_address' => request()->ip(),
+            'user_id' => $user->id, 'channel' => $channel, 'purpose' => $purpose, 'destination' => $destination,
+            'code_hash' => Hash::make($code), 'expires_at' => now()->addMinutes(10), 'consumed_at' => null,
+            'attempts' => 0, 'max_attempts' => 5, 'ip_address' => request()->ip(),
         ]);
 
-        Mail::raw(
-            "Your SEMIZZY ONE {$label} verification code is {$code}. It expires in 10 minutes. If you did not request this, secure your account immediately.",
-            fn ($message) => $message->to($user->email)->subject("SEMIZZY ONE {$label} verification")
-        );
+        $body = "Your SEMIZZY ONE {$label} verification code is {$code}. It expires in 10 minutes.";
+        if ($channel === 'email') {
+            Mail::raw($body, fn ($message) => $message->to($destination)->subject("SEMIZZY ONE {$label} verification"));
+            return;
+        }
+        $conversation = \App\Models\Communication\Conversation::firstOrCreate(['channel' => $channel, 'external_contact' => $destination], ['user_id' => $user->id, 'status' => 'open']);
+        $message = \App\Models\Communication\Message::create([
+            'conversation_id' => $conversation->id, 'user_id' => $user->id, 'channel' => $channel, 'direction' => 'outbound',
+            'recipient' => $destination, 'body' => $body, 'status' => 'queued',
+            'idempotency_key' => 'otp:'.$purpose.':'.$user->id.':'.bin2hex(random_bytes(8)),
+            'metadata' => ['purpose' => $purpose, 'channel' => $channel],
+        ]);
+        app(\Addons\CommunicationWhatsapp\Services\CommunicationProviderGateway::class)->send($message);
     }
 
     public function sendRegistration(User $user, string $channel, int $expiryMinutes = 10, int $maxAttempts = 5): void
@@ -109,7 +117,7 @@ class OtpChallengeService
     private function normalizePurpose(string $purpose): string
     {
         return match ($purpose) {
-            'transaction_pin_change', 'password_change', 'password_forgot', 'new_device_login', 'registration' => $purpose,
+            'transaction_pin_change', 'password_change', 'password_forgot', 'pin_forgot', 'new_device_login', 'registration', 'whatsapp_link' => $purpose,
             default => throw new \InvalidArgumentException('Unsupported OTP purpose.'),
         };
     }
