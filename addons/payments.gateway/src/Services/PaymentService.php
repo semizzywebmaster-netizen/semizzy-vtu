@@ -46,6 +46,7 @@ final class PaymentService
                         'customer_name' => $user->name ?? null,
                         'description' => 'SEMIZZY ONE wallet funding',
                         'redirect_url' => url('/payments'),
+                        'callback_url' => route('payments.webhook', ['provider' => $provider->code]),
                         'metadata' => ['wallet_account_id' => $wallet->id, 'purpose' => 'wallet_funding'],
                     ]),
                 ];
@@ -55,7 +56,8 @@ final class PaymentService
             $data = is_array($result['data']) ? $result['data'] : [];
             $checkoutUrl = data_get($data, 'checkout_url')
                 ?? data_get($data, 'authorization_url')
-                ?? data_get($data, 'checkoutUrl');
+                ?? data_get($data, 'checkoutUrl')
+                ?? data_get($data, 'cashierUrl');
 
             $providerReference = (string) (data_get($data, 'reference') ?? data_get($data, 'transactionReference') ?? $reference);
 
