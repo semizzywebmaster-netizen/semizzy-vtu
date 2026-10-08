@@ -185,9 +185,9 @@ class WebsiteBuilderService
         if (!filter_var($subdomain, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
             throw ValidationException::withMessages(['subdomain' => 'Enter a valid hostname, for example shop.example.com.']);
         }
-        if (WebsiteSite::where('subdomain', $subdomain)->whereKeyNot($site->id)->exists()
-            || WebsiteSite::where('active_domain', $subdomain)->whereKeyNot($site->id)->exists()
-            || WebsiteDomain::where('domain', $subdomain)->whereKeyNot($site->domains()->pluck('id')->all())->exists()) {
+        if (WebsiteSite::where('subdomain', $subdomain)->where('id', '!=', $site->id)->exists()
+            || WebsiteSite::where('active_domain', $subdomain)->where('id', '!=', $site->id)->exists()
+            || WebsiteDomain::where('domain', $subdomain)->where('website_site_id', '!=', $site->id)->exists()) {
             throw ValidationException::withMessages(['subdomain' => 'This hostname is already assigned to another website or domain.']);
         }
         $site->update(['subdomain' => $subdomain]);
