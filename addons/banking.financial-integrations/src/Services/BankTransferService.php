@@ -18,6 +18,15 @@ class BankTransferService
   if ($existing) return $existing;
   $accountNumber = preg_replace('/\D+/', '', $accountNumber) ?? '';
   if (strlen($accountNumber) < 6 || strlen($accountNumber) > 20) throw new RuntimeException('Invalid bank account number.');
+  $min = (float) (($limits['bank_transfer_min_amount_minor'] ?? 0) / 100);
+  $max = (float) (($limits['bank_transfer_max_amount_minor'] ?? PHP_INT_MAX) / 100);
+  if ($amount < $min) throw new RuntimeException('Transfer amount is below the configured minimum.');
+  if ($amount > $max) throw new RuntimeException('Transfer amount exceeds the configured maximum.');
+  $components = $limits['bank_transfer_fee_components'] ?? [];
+  $transferFee = (float) (($components['transfer_fee_minor'] ?? $limits['bank_transfer_fee_minor'] ?? 0) / 100);
+  $vatFee = (float) (($components['vat_minor'] ?? 0) / 100);
+  $otherFee = (float) (($components['other_ng_fee_minor'] ?? 0) / 100);
+  $totalFee = $transferFee + $vatFee + $otherFee;
   return BankingTransfer::create([
    'user_id'=>$userId,
    'bank_directory_id'=>$bank->id,
