@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'role:ADMIN,STAFF,SUPPORT', 'verified', 'ensure.addon:vtu.digital-services'])
     ->prefix('admin/vtu')
     ->group(function (): void {
+        Route::get('/schedule-policy', [VtuAdminController::class, 'schedulePolicy'])->middleware('permission:vtu.settings.manage')->name('admin.vtu.schedule-policy');
+        Route::post('/schedule-policy', [VtuAdminController::class, 'saveSchedulePolicy'])->middleware('permission:vtu.settings.manage')->name('admin.vtu.schedule-policy.save');
         Route::get('/', [VtuAdminController::class, 'dashboard'])->middleware('permission:vtu.view')->name('admin.vtu.dashboard');
         Route::get('/services', [VtuAdminController::class, 'services'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services');
         Route::post('/services/bootstrap', [VtuAdminController::class, 'bootstrap'])->middleware('permission:vtu.services.manage')->name('admin.vtu.services.bootstrap');
