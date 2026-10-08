@@ -11,6 +11,7 @@ class BankTransferService
  public function create(int $userId, int $bankId, string $accountNumber, float $amount, string $currency='NGN', ?string $idempotencyKey=null): BankingTransfer
  {
   if ($amount <= 0) throw new RuntimeException('Transfer amount must be greater than zero.');
+  $limits = (array) config('banking.financial_integrations', []);
   $bank = BankDirectory::query()->whereKey($bankId)->where('active', true)->first();
   if (!$bank) throw new RuntimeException('Selected bank is not available.');
   $key = $idempotencyKey ?: 'BT-'.Str::uuid();
@@ -36,6 +37,12 @@ class BankTransferService
    'amount'=>$amount,
    'currency'=>strtoupper($currency),
    'status'=>'pending',
+   'fee'=>$totalFee,
+   'transfer_fee'=>$transferFee,
+   'vat_fee'=>$vatFee,
+   'other_ng_fee'=>$otherFee,
+   'total_fee'=>$totalFee,
+   'total_debit'=>$amount + $totalFee,
   ]);
  }
 
