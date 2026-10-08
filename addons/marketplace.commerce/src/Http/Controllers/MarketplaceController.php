@@ -38,6 +38,11 @@ final class MarketplaceController
     }
 
 
+    public function sell()
+    {
+        return Inertia::render('Marketplace/Sell');
+    }
+
     public function categoryForm(Request $request, int $category)
     {
         $item = MarketplaceCategory::query()->with('parent')->where('active', true)->findOrFail($category);
