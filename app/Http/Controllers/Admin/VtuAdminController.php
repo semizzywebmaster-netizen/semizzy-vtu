@@ -131,6 +131,19 @@ class VtuAdminController extends Controller
   $bulkService->recalculate($bulk);
   return back()->with('success',"Bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
  }
+ public function requeryBulkItem(Request $r,VtuBulkOperation $bulk,VtuBulkService $bulkService,VtuTransactionService $service): JsonResponse|\\Illuminate\\Http\\RedirectResponse{
+  $data=$r->validate(['item_ids'=>['required','array','min:1','max:100'],'item_ids.*'=>['integer','distinct']]);
+  $items=$bulk->items()->whereIn('id',$data['item_ids'])->with('transaction')->get();
+  $checked=0;$changed=0;$skipped=0;
+  foreach($items as $item){
+   if(!$item->transaction||!$item->transaction->provider_reference||$item->transaction->isTerminal()){$skipped++;continue;}
+   $checked++;
+   try{$before=$item->transaction->status;$after=$service->requery($item->transaction);if($after->status!==$before)$changed++;$bulkService->recalculate($bulk);}catch(\\Throwable $e){$skipped++;report($e);}
+  }
+  $message="Bulk item requery checked {$checked}; {$changed} state change(s), {$skipped} skipped/failed.";
+  return $r->expectsJson()?response()->json(['status'=>'completed','checked'=>$checked,'changed'=>$changed,'skipped'=>$skipped,'message'=>$message]):back()->with('success',$message);
+ }
+
  public function cancelBulk(Request $r,VtuBulkOperation $bulk,VtuBulkService $bulkService): JsonResponse{
   $data=$r->validate(['reason'=>['required','string','max:500']]);
   $result=$bulkService->cancelAdmin($bulk,(int)$r->user()->id,$data['reason']);
