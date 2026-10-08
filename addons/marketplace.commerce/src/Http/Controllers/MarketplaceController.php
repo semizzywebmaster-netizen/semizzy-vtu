@@ -111,7 +111,11 @@ final class MarketplaceController
 
     public function productStore(Request $request)
     {
-        $data = $this->validatedProductData($request);
+        try {
+            $data = $this->validatedProductData($request);
+        } catch (RuntimeException $e) {
+            return response()->json(['success'=>false,'message'=>$e->getMessage()],422);
+        }
         $product = MarketplaceProduct::create($this->normaliseProductData($data, (int) $request->user()->id));
 
         return response()->json(['success'=>true,'product'=>$product->fresh('category')],201);
@@ -121,7 +125,11 @@ final class MarketplaceController
     {
         if ((int)$product->seller_id !== (int)$request->user()->id && !$request->user()->hasPermission('marketplace.manage')) abort(403);
 
-        $data = $this->validatedProductData($request, $product);
+        try {
+            $data = $this->validatedProductData($request, $product);
+        } catch (RuntimeException $e) {
+            return response()->json(['success'=>false,'message'=>$e->getMessage()],422);
+        }
         $product->forceFill($this->normaliseProductData($data, (int) $product->seller_id, $product))->save();
 
         return response()->json(['success'=>true,'product'=>$product->fresh('category')]);
