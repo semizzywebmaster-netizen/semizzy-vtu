@@ -485,6 +485,43 @@ class VtuBulkService
         });
     }
 
+    public function cancelAdminSelected(array $bulkIds, int $operatorId, string $reason): array
+    {
+        $cancelled = 0;
+        $skipped = 0;
+        foreach (VtuBulkOperation::query()->whereIn('id', $bulkIds)->orderBy('id')->get() as $bulk) {
+            try {
+                $result = DB::transaction(function () use ($bulk, $operatorId, $reason): array {
+                    $locked = VtuBulkOperation::query()->lockForUpdate()->findOrFail($bulk->id);
+                    if (in_array($locked->status, ['successful','failed','partial','cancelled'], true)) {
+                        return ['cancelled'=>false,'skipped'=>true];
+                    }
+                    $items = $locked->items()->lockForUpdate()->with('transaction')->get();
+                    $changed = 0;
+                    foreach ($items as $item) {
+                        if (!in_array($item->status, ['pending','processing','scheduled'], true) || !$item->transaction) continue;
+                        try {
+                            $tx = $this->transactions->cancelPending($item->transaction, $reason);
+                            $item->update(['status'=>$tx->status,'amount_minor'=>$tx->total_minor,'error_message'=>$tx->failure_message]);
+                            if ($tx->status === 'cancelled') $changed++;
+                        } catch (\Throwable $e) {
+                            Log::warning('VTU selected bulk cancellation skipped an unsafe item.', ['bulk_operation_id'=>$locked->id,'bulk_item_id'=>$item->id,'operator_id'=>$operatorId,'exception'=>get_class($e)]);
+                        }
+                    }
+                    $locked->metadata=array_merge((array)$locked->metadata,['last_admin_cancellation_at'=>now()->toIso8601String(),'last_admin_cancellation_by'=>$operatorId,'last_admin_cancellation_reason'=>$reason]);
+                    $locked->save();
+                    $this->recalculate($locked->fresh('items'));
+                    return ['cancelled'=>$changed>0,'skipped'=>$changed===0];
+                });
+                $result['cancelled'] ? $cancelled++ : $skipped++;
+            } catch (\Throwable $e) {
+                report($e);
+                $skipped++;
+            }
+        }
+        return ['cancelled'=>$cancelled,'skipped'=>$skipped];
+    }
+
     public function recoverStaleOperations(int $limit = 50, int $staleMinutes = 10): int
     {
         $recovered = 0;
