@@ -59,6 +59,15 @@ class WhatsAppWebhookService
   return $stored;
  }
 
+ private function canonicalPhone(?string $phone): ?string
+ {
+  $p=preg_replace('/[^0-9+]/','',(string)$phone);
+  if($p==='')return null;
+  if(str_starts_with($p,'234'))return '+'.$p;
+  if(str_starts_with($p,'0'))return '+234'.substr($p,1);
+  return str_starts_with($p,'+')?$p:null;
+ }
+
  private function extract(array $payload): array
  {
   $events=[];
@@ -70,7 +79,7 @@ class WhatsAppWebhookService
      $body=$message['text']['body'] ?? $message['button']['text'] ?? $message['interactive']['button_reply']['title'] ?? $message['interactive']['list_reply']['title'] ?? '['.$type.']';
      $events[]=[
       'external_id'=>$message['id'] ?? null,
-      'from'=>$message['from'] ?? null,
+      'from'=>$this->canonicalPhone($message['from'] ?? null),
       'thread_id'=>$value['metadata']['phone_number_id'] ?? null,
       'body'=>$body,
       'metadata'=>['type'=>$type,'raw'=>$message]
@@ -81,7 +90,7 @@ class WhatsAppWebhookService
   if(!$events && isset($payload['message'])){
    $events[]=[
     'external_id'=>$payload['id'] ?? $payload['message_id'] ?? null,
-    'from'=>$payload['from'] ?? $payload['sender'] ?? null,
+    'from'=>$this->canonicalPhone($payload['from'] ?? $payload['sender'] ?? null),
     'thread_id'=>$payload['thread_id'] ?? null,
     'body'=>(string)$payload['message'],
     'metadata'=>['raw'=>$payload]
