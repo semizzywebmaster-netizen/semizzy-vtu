@@ -113,6 +113,8 @@ class RegisteredUserController extends Controller
                 return back()->withErrors(['verification_channel'=>'Verification could not be sent. Please try again or choose another enabled channel.'])->withInput();
             }
             $request->session()->put('pending_registration_user_id', $user->id);
+            $request->session()->put('registration_channel', $selectedChannel);
+            $request->session()->put('registration_otp_sent_at', now());
             $request->session()->put('pending_registration_device_cookie', $deviceCookie);
             return redirect()->route('registration.verify')->withCookie(cookie('semizzy_device_key', $deviceCookie, 525600, null, null, true, true, false, 'lax'))->with('success','Account created. Enter the verification code sent to your selected channel.');
         }
