@@ -21,10 +21,33 @@ final class AdminSchoolAdmissionController extends Controller {
   foreach((array)$r->input('utme_combinations',[]) as $combo){$m=$req->utmeCombinations()->create(['name'=>$combo['name']??'UTME combination','minimum_subject_count'=>$combo['minimum_subject_count']??null,'notes'=>$combo['notes']??null]); foreach((array)($combo['subjects']??[]) as $s){$m->subjects()->create($s);} }
   foreach((array)$r->input('direct_entry_qualifications',[]) as $q){$req->directEntryQualifications()->create($q);}
   foreach((array)$r->input('result_bodies',[]) as $b){$req->resultBodies()->create($b);}
-  $req->sources()->create(['programme_admission_id'=>$req->programme_admission_id,'source_type'=>'official_admission_document','title'=>$d['source_title'],'url'=>$d['source_url'],'publisher'=>$r->input('publisher'),'publication_date'=>$r->input('source_published_at'),'retrieved_at'=>now(),'verification_status'=>'researched']);
+  $req->sources()->create(['programme_admission_id'=>$req->programme_admission_id,'admission_requirement_id'=>$req->id,'source_type'=>'official_admission_document','title'=>$d['source_title'],'url'=>$d['source_url'],'publisher'=>$r->input('publisher'),'publication_date'=>$r->input('source_published_at'),'retrieved_at'=>now(),'verification_status'=>'researched']);
   return back()->with('success','Structured admission requirements saved for research/review.');
  }
  public function cutoff(Request $r){$d=$r->validate(['programme_admission_id'=>'required|exists:education_programme_admissions,id','cutoff_type'=>'required|string|max:40','score'=>'required|numeric|min:0','score_scale'=>'nullable|numeric|min:0','candidate_category'=>'nullable|string|max:80','notes'=>'nullable|string','source_url'=>'required|url','source_title'=>'required|string|max:190']); $d['verified_at']=null; \\Semizzy\\Addons\\Education\\Models\\EducationAdmissionCutoff::create($d); return back()->with('success','Cut-off saved for research/review.');}
  public function screening(Request $r){$d=$r->validate(['programme_admission_id'=>'required|exists:education_programme_admissions,id','required'=>'boolean','screening_type'=>'required|string|max:60','minimum_score'=>'nullable|numeric|min:0','registration_required'=>'boolean','first_choice_required'=>'nullable|boolean','result_upload_required'=>'nullable|boolean','screening_url'=>'nullable|url','start_date'=>'nullable|date','end_date'=>'nullable|date','notes'=>'nullable|string','source_url'=>'required|url','source_title'=>'required|string|max:190']); \\Semizzy\\Addons\\Education\\Models\\EducationAdmissionScreeningRule::create($d); return back()->with('success','Screening rule saved for research/review.');}
+ public function verify(EducationProgrammeAdmission $admission){
+  $admission->load(['sources','requirements.sources']);
+  abort_unless($admission->official_source_url && $admission->source_title,422,'Official admission source is required before verification.');
+  if($admission->requirements->contains(fn($r)=>$r->status==='draft' || $r->verification_status==='draft' || $r->sources->isEmpty())){
+   abort(422,'Every admission requirement must be researched and have source provenance before verification.');
+  }
+  $admission->update(['verification_status'=>'verified','admission_status'=>'verified','verified_at'=>now()]);
+  return back()->with('success','Admission record verified.');
+ }
+ public function publish(EducationProgrammeAdmission $admission){
+  $admission->load(['sources','requirements.sources']);
+  abort_unless($admission->verification_status==='verified',422,'Only verified admission records can be published.');
+  abort_unless($admission->official_source_url && $admission->source_title,422,'Official admission source is required before publication.');
+  if($admission->requirements->contains(fn($r)=>$r->verification_status!=='verified' || $r->sources->isEmpty())){
+   abort(422,'Every admission requirement must be verified and have source provenance before publication.');
+  }
+  $admission->update(['verification_status'=>'published','admission_status'=>'published','published_at'=>now()]);
+  return back()->with('success','Admission record published.');
+ }
+ public function archive(EducationProgrammeAdmission $admission){
+  $admission->update(['verification_status'=>'archived','admission_status'=>'archived']);
+  return back()->with('success','Admission record archived.');
+ }
  public function seedRoutes(){foreach([['code'=>'utme','name'=>'UTME'],['code'=>'direct_entry','name'=>'Direct Entry']] as $x) EducationAdmissionRoute::firstOrCreate(['code'=>$x['code']],$x);return back()->with('success','Admission routes synchronized.');}
 }
