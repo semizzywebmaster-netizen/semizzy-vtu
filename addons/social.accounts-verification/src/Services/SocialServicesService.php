@@ -49,7 +49,7 @@ final class SocialServicesService {
   if($order->order_type!=='number') throw new RuntimeException('Requery is only available for verification-number orders.');
   if(!$order->provider_id) throw new RuntimeException('No provider is recorded for this order; automatic requery is unavailable.');
   if(!$order->provider_reference) throw new RuntimeException('No provider reference is recorded for this order.');
-  $provider=\\App\\Models\\ApiProvider::query()->whereKey((int)$order->provider_id)->firstOrFail();
+  $provider=\App\Models\ApiProvider::query()->whereKey((int)$order->provider_id)->firstOrFail();
   $item=SocialNumberInventory::query()->find($order->inventory_id);
   $payload=['reference'=>$order->reference,'provider_reference'=>$order->provider_reference,'inventory_id'=>$order->inventory_id,'metadata'=>$order->metadata];
   if($item){$payload['country_code']=$item->country_code;$payload['country_name']=$item->country_name;$payload['service_key']=$item->service_key;$payload['phone_number']=$item->phone_number;}
