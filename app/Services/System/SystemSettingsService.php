@@ -18,6 +18,12 @@ class SystemSettingsService
             'platform_name' => (string) config('app.name', 'SEMIZZY ONE'),
             'support_email' => '',
             'support_notice' => '',
+            'registration_enabled' => true,
+            'registration_verification_enabled' => true,
+            'registration_otp_channels' => ['email'],
+            'registration_otp_expiry_minutes' => 10,
+            'registration_otp_max_attempts' => 5,
+            'registration_otp_resend_seconds' => 60,
             'kyc_bvn_lookup_charge_minor' => 0,
             'kyc_nin_lookup_charge_minor' => 0,
             'kyc_bvn_lookup_charge' => '0.00',
@@ -53,11 +59,15 @@ class SystemSettingsService
                     if (isset($stored[$key]) && is_string($stored[$key]) && $stored[$key] !== '') $settings[$key] = $stored[$key];
                 }
 
-                foreach (['theme_custom_light','theme_custom_dark','business','social','assets','footer_menu','smtp'] as $key) {
+                foreach (['registration_otp_channels','theme_custom_light','theme_custom_dark','business','social','assets','footer_menu','smtp'] as $key) {
                     if (!isset($stored[$key]) || !is_string($stored[$key])) continue;
                     $decoded = json_decode($stored[$key], true);
                     if (!is_array($decoded)) continue;
 
+                    if ($key === 'registration_otp_channels') {
+                        $settings[$key] = array_values(array_intersect((array) $decoded, ['email','sms','whatsapp'])) ?: ['email'];
+                        continue;
+                    }
                     if ($key === 'smtp') {
                         // Backward compatibility with the original single-SMTP object.
                         if (isset($decoded['host']) && !isset($decoded['profiles'])) {
