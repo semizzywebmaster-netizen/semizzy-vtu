@@ -7,6 +7,8 @@ use App\Models\Addon;
 use App\Services\Addons\AddonRegistry;
 use App\Services\Commercial\CommercialServiceRegistry;
 use Semizzy\Addons\MailerSmtp\Services\MailerSmtpService;
+use Addons\WhatsAppBot\Observers\VtuTransactionObserver;
+use App\Models\VtuTransaction;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
@@ -20,6 +22,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        try {
+            VtuTransaction::observe(VtuTransactionObserver::class);
+        } catch (\Throwable) {
+            // WhatsApp transaction notifications are optional and must never block Core boot.
+        }
         try {
             $addons = app(AddonRegistry::class);
             $addons->registerAutoloaders();
