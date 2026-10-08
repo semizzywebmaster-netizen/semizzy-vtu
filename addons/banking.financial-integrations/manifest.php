@@ -59,6 +59,8 @@ return [
     ],
     'migrations' => [
         '2026_10_08_001000_create_banking_providers.php',
+        '2026_10_08_001001_create_banking_bank_directories.php',
+        '2026_10_08_001002_create_banking_account_verifications.php',
     ],
     'web_route_files' => [],
     'api_route_files' => [],
