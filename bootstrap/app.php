@@ -41,7 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'device.session' => EnsureDeviceSession::class,
         ]);
         $middleware->append([RequestId::class, SecurityHeaders::class]);
-        $middleware->web(prepend: [EnsureApplicationInstalled::class]);
+        $middleware->web(prepend: [EnsureApplicationInstalled::class, \App\Http\Middleware\ResolvePublishedWebsiteHost::class]);
         $middleware->web(append: [ApplySystemSettings::class, EnsureActiveAccount::class, EnsureDeviceSession::class, HandleInertiaRequests::class]);
         $middleware->api(append: [EnsureActiveApiAccount::class]);
     })
