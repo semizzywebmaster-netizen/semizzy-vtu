@@ -57,7 +57,9 @@ final class PaymentService
             $checkoutUrl = data_get($data, 'checkout_url')
                 ?? data_get($data, 'authorization_url')
                 ?? data_get($data, 'checkoutUrl')
-                ?? data_get($data, 'cashierUrl');
+                ?? data_get($data, 'cashierUrl')
+                ?? data_get($data, 'link')
+                ?? data_get($data, 'payment_link');
 
             $providerReference = (string) (data_get($data, 'reference') ?? data_get($data, 'transactionReference') ?? $reference);
 
