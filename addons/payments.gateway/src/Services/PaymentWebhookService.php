@@ -28,7 +28,7 @@ final class PaymentWebhookService
         if ($provider->driver === 'flutterwave') {
             $this->validateFlutterwaveCallback($signature, $secret);
         } elseif ($provider->driver === 'opay') {
-            $this->validateOpayCallback($payload, $secret);
+            $this->validateOpayCallback($raw, $headers, $secret);
         } elseif ($provider->driver === 'monnify') {
             $this->validateMonnifyCallback($raw, $signature, $secret);
         } elseif ($provider->driver === 'kora') {
@@ -187,31 +187,30 @@ final class PaymentWebhookService
         }
     }
 
-    private function validateOpayCallback(array $payload, string $secret): void
+    private function validateOpayCallback(string $raw, array $headers, string $secret): void
     {
-        if ($secret === '') throw new RuntimeException('OPay webhook secret/private key is not configured.');
+        if ($secret === '') {
+            throw new RuntimeException('OPay private key is not configured.');
+        }
 
-        $callback = is_array($payload['payload'] ?? null) ? $payload['payload'] : [];
-        $provided = (string) ($payload['sha512'] ?? '');
-        if ($provided === '' || !$callback) throw new RuntimeException('Invalid OPay callback signature payload.');
+        $signature = $this->header($headers, 'Signature');
+        $timestamp = $this->header($headers, 'RequestTimestamp');
 
-        $content = sprintf(
-            '{Amount:"%s",Currency:"%s",Reference:"%s",Refunded:%s,Status:"%s",Timestamp:"%s",Token:"%s",TransactionID:"%s"}',
-            (string) ($callback['amount'] ?? ''),
-            (string) ($callback['currency'] ?? ''),
-            (string) ($callback['reference'] ?? ''),
-            !empty($callback['refunded']) ? 't' : 'f',
-            (string) ($callback['status'] ?? ''),
-            (string) ($callback['timestamp'] ?? ''),
-            (string) ($callback['token'] ?? ''),
-            (string) ($callback['transactionId'] ?? '')
-        );
+        if ($signature === '' || $timestamp === '') {
+            throw new RuntimeException('OPay callback signature headers are missing.');
+        }
 
-        $candidate = hash_hmac('sha3-512', $content, $secret);
-        if (!hash_equals(strtolower($candidate), strtolower($provided))) {
-            throw new RuntimeException('Invalid OPay webhook callback signature.');
+        $candidate = hash_hmac('sha512', $timestamp.$raw, $secret);
+        if (!hash_equals(strtolower($candidate), strtolower($signature))) {
+            throw new RuntimeException('Invalid OPay callback signature.');
+        }
+
+        $sentAt = ctype_digit($timestamp) ? (int) $timestamp : 0;
+        if ($sentAt > 0 && abs(time() - $sentAt) > 600) {
+            throw new RuntimeException('OPay callback timestamp is outside the accepted replay window.');
         }
     }
+
 
     private function config(PaymentGatewayProvider $provider): array
     {
