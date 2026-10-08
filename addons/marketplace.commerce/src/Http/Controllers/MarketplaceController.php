@@ -468,10 +468,9 @@ final class MarketplaceController
 
     private function syncExternalVideo(MarketplaceProduct $product, ?string $url, ?string $altText = null): ?\Semizzy\Addons\Marketplace\Models\MarketplaceProductMedia
     {
+        if ($url) $this->validateExternalVideoUrl($url);
         $product->media()->where('media_type', 'video')->delete();
         if (!$url) return null;
-
-        $this->validateExternalVideoUrl($url);
         return \Semizzy\Addons\Marketplace\Models\MarketplaceProductMedia::create([
             'product_id' => $product->id,
             'media_type' => 'video',
