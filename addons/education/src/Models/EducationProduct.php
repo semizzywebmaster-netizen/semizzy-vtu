@@ -7,6 +7,7 @@ final class EducationProduct extends Model {
  protected $table='education_products'; protected $guarded=[];
  protected $casts=['provider_amount_minor'=>'integer','selling_amount_minor'=>'integer','requires_institution'=>'boolean','requires_student_reference'=>'boolean','requires_session'=>'boolean','active'=>'boolean','fields'=>'array','metadata'=>'array'];
  public function institution(){return $this->belongsTo(EducationInstitution::class,'institution_id');}
+ public function examBody(){return $this->belongsTo(EducationExamBody::class,'exam_body_id');}
  public function transactions(){return $this->hasMany(EducationTransaction::class,'education_product_id');}
  public function provider(){return $this->belongsTo(\App\Models\ApiProvider::class,'provider_id');}
 }
