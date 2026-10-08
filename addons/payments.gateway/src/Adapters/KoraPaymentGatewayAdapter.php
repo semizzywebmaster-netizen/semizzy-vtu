@@ -42,7 +42,7 @@ final class KoraPaymentGatewayAdapter implements PaymentGatewayAdapter
                 'currency' => strtoupper($payload['currency'] ?? 'NGN'),
                 'reference' => $payload['reference'],
                 'redirect_url' => $payload['redirect_url'] ?? null,
-                'notification_url' => $payload['webhook_url'] ?? null,
+                'notification_url' => $payload['webhook_url'] ?? ($payload['callback_url'] ?? null),
                 'narration' => $payload['description'] ?? 'SEMIZZY ONE payment',
                 'channels' => $payload['channels'] ?? ['card', 'bank_transfer', 'pay_with_bank'],
                 'metadata' => $metadata,
