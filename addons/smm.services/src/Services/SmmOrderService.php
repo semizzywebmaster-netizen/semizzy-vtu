@@ -91,8 +91,11 @@ final class SmmOrderService
    return $order->fresh();
   } catch(\Throwable $e) {
    $order->refresh();
-   try{$this->wallets->settle($order,false);}catch(\Throwable $settlementError){$order->metadata=['settlement_error'=>$settlementError->getMessage()];$order->save();throw $settlementError;}
-   $order->status='failed'; $order->failure_message=$e->getMessage(); $order->metadata=array_merge((array)$order->metadata,['error'=>$e->getMessage()]); $order->save(); throw $e;
+   $order->status='pending';
+   $order->failure_message='Provider outcome is uncertain; wallet funds remain held until requery confirms the final state.';
+   $order->metadata=array_merge((array)$order->metadata,['provider_exception'=>$e->getMessage(),'financial_state'=>'held','requery_required'=>true]);
+   $order->save();
+   return $order->fresh();
   }
  }
  private function multiply(string $a,string $b):string {
