@@ -60,7 +60,7 @@ return new class extends Migration {
             'vehicles','phones-tablets','electronics','computers-accessories','home-furniture-appliances','fashion',
             'beauty-personal-care','health-wellness','baby-kids-toys','sports-fitness','gaming','books-music-collectibles',
             'food-agriculture-farming','animals-pets','commercial-equipment-tools','building-construction','services',
-            'digital-products','business-industry',
+            'digital-products','business-industry','real-estate',
         ])->pluck('id');
 
         DB::table('marketplace_categories')->whereIn('parent_id', $parents)->delete();
