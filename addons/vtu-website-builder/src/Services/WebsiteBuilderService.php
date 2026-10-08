@@ -176,6 +176,22 @@ class WebsiteBuilderService
         return $existing??WebsiteDomain::create(['website_site_id'=>$site->id,'domain'=>$domain,'type'=>'custom','status'=>'pending','verification_method'=>'dns_txt','verification_token'=>Str::random(40)]);
     }
 
+    public function setPrimaryDomain(WebsiteSite $site, WebsiteDomain $domain): WebsiteDomain
+    {
+        if ((int) $domain->website_site_id !== (int) $site->id) {
+            throw ValidationException::withMessages(['domain' => 'Domain does not belong to this website.']);
+        }
+        if ($domain->status !== 'verified') {
+            throw ValidationException::withMessages(['domain' => 'Only verified domains can be primary.']);
+        }
+        return DB::transaction(function () use ($site, $domain) {
+            $site->domains()->update(['primary' => false]);
+            $domain->update(['primary' => true]);
+            $site->update(['active_domain' => $domain->domain]);
+            return $domain->fresh();
+        });
+    }
+
     public function verifyDomain(WebsiteDomain $domain,string $token): WebsiteDomain
     {
         if(!hash_equals((string)$domain->verification_token,trim($token))) throw ValidationException::withMessages(['token'=>'Domain verification token is invalid.']);
