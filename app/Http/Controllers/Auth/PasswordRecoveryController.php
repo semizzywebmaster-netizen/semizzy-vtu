@@ -24,12 +24,12 @@ class PasswordRecoveryController extends Controller
 
     public function requestOtp(Request $request, OtpChallengeService $otp, SecurityEventLogger $events): RedirectResponse
     {
-        $data = $request->validate(['email' => ['required', 'email']]);
+        $data = $request->validate(['email' => ['required', 'email'], 'otp_channel' => ['required', 'in:email,sms,whatsapp']]);
         $user = User::query()->where('email', $data['email'])->first();
 
         if ($user) {
             try {
-                $otp->sendToUser($user, 'password_forgot', 'password recovery');
+                $otp->sendToUser($user, 'password_forgot', 'password recovery', $data['otp_channel']);
 
             } catch (\Throwable $e) {
                 report($e);
