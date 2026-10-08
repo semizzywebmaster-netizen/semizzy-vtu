@@ -15,6 +15,7 @@ use Illuminate\Support\ServiceProvider;
 use Semizzy\Addons\Payments\Services\PaymentGatewayAdapterRegistry;
 use Semizzy\Addons\Payments\Adapters\MonnifyPaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Adapters\PaystackPaymentGatewayAdapter;
+use Semizzy\Addons\Payments\Adapters\FlutterwavePaymentGatewayAdapter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
             $registry = new PaymentGatewayAdapterRegistry();
             $registry->register('paystack', fn () => new PaystackPaymentGatewayAdapter());
             $registry->register('monnify', fn () => new MonnifyPaymentGatewayAdapter());
+            $registry->register('flutterwave', fn () => new FlutterwavePaymentGatewayAdapter());
             return $registry;
         });
     }
