@@ -8,10 +8,23 @@ use Semizzy\Addons\Investments\Models\InvestmentCorporateAction;
 use Semizzy\Addons\Investments\Models\InvestmentHolding;
 use Semizzy\Addons\Investments\Models\InvestmentProduct;
 use Semizzy\Addons\Investments\Models\InvestmentSecurity;
+use Semizzy\Addons\Investments\Models\InvestmentProvider;
 use Semizzy\Addons\Investments\Services\InvestmentService;
 
 class InvestmentController extends Controller
 {
+    private function latestApprovedQuoteQuery()
+    {
+        return fn ($q) => $q
+            ->whereHas('provider', fn ($p) => $p
+                ->where('status', 'enabled')
+                ->where('verified', true)
+                ->where('is_data_provider', true))
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->latest('observed_at')
+            ->limit(1);
+    }
+
     public function index(Request $r)
     {
         return inertia('Investments', [
@@ -24,7 +37,7 @@ class InvestmentController extends Controller
     {
         return inertia('Investments/Market', [
             'securities' => InvestmentSecurity::where('status', 'published')
-                ->with(['quotes' => fn ($q) => $q->latest('observed_at')->limit(1)])
+                ->with(['quotes' => $this->latestApprovedQuoteQuery()])
                 ->orderBy('name')
                 ->paginate(30),
         ]);
@@ -34,7 +47,7 @@ class InvestmentController extends Controller
     {
         return response()->json([
             'data' => InvestmentSecurity::where('status', 'published')
-                ->with(['quotes' => fn ($q) => $q->latest('observed_at')->limit(1)])
+                ->with(['quotes' => $this->latestApprovedQuoteQuery()])
                 ->orderBy('name')
                 ->paginate(30),
         ]);
@@ -56,7 +69,10 @@ class InvestmentController extends Controller
     {
         return response()->json([
             'data' => InvestmentCorporateAction::whereHas('security', fn ($q) => $q->where('status', 'published'))
-                ->with('security')
+                ->whereHas('provider', fn ($q) => $q
+                    ->where('status', 'enabled')
+                    ->where('verified', true))
+                ->with(['security', 'provider'])
                 ->whereIn('status', ['announced', 'confirmed', 'processed'])
                 ->orderByRaw('COALESCE(payment_date, ex_date, record_date) ASC')
                 ->paginate(30),
