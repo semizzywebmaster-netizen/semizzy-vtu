@@ -1,6 +1,6 @@
 <?php
 return [
- 'identifier'=>'marketplace.commerce','name'=>'Marketplace','version'=>'1.3.0',
+ 'identifier'=>'marketplace.commerce','name'=>'Marketplace','version'=>'1.3.1',
  'description'=>'Unified multi-vendor commerce marketplace for physical new/used products, digital products and services with inventory, delivery, orders, seller earnings, reviews, refunds and addon-safe payment integration.',
  'compatibility'=>'>=2.0.0','dependencies'=>[],
  'permissions'=>['marketplace.view','marketplace.buy','marketplace.sell','marketplace.manage','marketplace.orders.view','marketplace.orders.manage','marketplace.products.manage','marketplace.settings.manage'],
