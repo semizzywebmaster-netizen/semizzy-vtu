@@ -12,6 +12,7 @@ use Inertia\Response;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
 use Semizzy\Addons\Payments\Models\PaymentIntent;
 use Semizzy\Addons\Payments\Services\PaymentGatewayAdapterRegistry;
+use Semizzy\Addons\Payments\Services\PaymentReconciliationService;
 
 final class AdminPaymentsController extends Controller
 {
@@ -145,6 +146,16 @@ final class AdminPaymentsController extends Controller
             return request()->expectsJson()
                 ? response()->json(['status'=>'FAILED','message'=>'Gateway health check failed safely.'], 502)
                 : back()->with('error', 'Gateway health check failed safely. Review the provider configuration.');
+        }
+    }
+
+    public function requeryPayment(int $payment, PaymentReconciliationService $reconciliation): RedirectResponse
+    {
+        try {
+            $reconciliation->requery(PaymentIntent::query()->findOrFail($payment));
+            return back()->with('success', 'Provider requery completed.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Provider requery did not complete: '.$e->getMessage());
         }
     }
 
