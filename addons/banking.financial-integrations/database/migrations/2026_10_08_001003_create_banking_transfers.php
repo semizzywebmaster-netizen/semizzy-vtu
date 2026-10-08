@@ -16,6 +16,9 @@ return new class extends Migration {
    $table->decimal('amount',20,2);
    $table->string('currency',3)->default('NGN');
    $table->decimal('fee',20,2)->default(0);
+   $table->boolean('requires_otp')->default(false);
+   $table->boolean('requires_pin')->default(true);
+   $table->timestamp('security_verified_at')->nullable();
    $table->string('provider')->nullable();
    $table->string('provider_reference')->nullable();
    $table->string('status',32)->default('pending');
