@@ -63,6 +63,16 @@ class AdminInvestmentsController extends Controller
         return back()->with('success', 'Security saved as draft.');
     }
 
+    public function verifySecurity(InvestmentSecurity $security)
+    {
+        if (! $security->source_name || ! $security->source_reference || ! $security->source_checked_at) {
+            return back()->withErrors(['security' => 'Complete security provenance before verification.']);
+        }
+
+        $security->update(['verified' => true]);
+        return back()->with('success', 'Security provenance verified.');
+    }
+
     public function publishSecurity(InvestmentSecurity $security)
     {
         if (! $security->verified || ! $security->source_name || ! $security->source_reference || ! $security->source_checked_at) {
