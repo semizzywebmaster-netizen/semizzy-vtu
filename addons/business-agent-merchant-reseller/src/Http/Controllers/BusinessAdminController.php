@@ -128,6 +128,31 @@ class BusinessAdminController
   return response()->json(['status'=>'completed','changed'=>$changed,'skipped'=>$skipped,'message'=>"Bulk pricing completed: {$changed} changed, {$skipped} skipped."]);
  }
 
+ public function bulkDeletePricing(Request $r){
+  $d=$r->validate([
+   'partner_ids'=>['required','array','min:1','max:100'],
+   'partner_ids.*'=>['integer','distinct','exists:business_partners,id'],
+   'service_key'=>['required','string','max:100'],
+   'product_key'=>['nullable','string','max:150'],
+  ]);
+  $ids=array_map('intval',$d['partner_ids']); $actor=$r->user(); $deleted=0; $skipped=0;
+  foreach(BusinessPartner::query()->whereIn('id',$ids)->get() as $partner){
+   try{
+    DB::transaction(function()use($partner,$actor,$d,&$deleted){
+     $q=DB::table('business_pricing_rules')->where('business_partner_id',$partner->id)->where('service_key',$d['service_key']);
+     $product=$d['product_key']??null;
+     $q=$product===null?$q->whereNull('product_key'):$q->where('product_key',$product);
+     $rows=$q->pluck('id')->all();
+     if(!$rows) return;
+     DB::table('business_pricing_rules')->whereIn('id',$rows)->delete();
+     $partner->events()->create(['actor_user_id'=>$actor->id,'action'=>'pricing_rules_bulk_deleted','status'=>$partner->status,'metadata'=>['rule_ids'=>$rows,'service_key'=>$d['service_key'],'product_key'=>$product,'bulk'=>true]]);
+     $deleted+=count($rows);
+    });
+   }catch(\\Throwable $e){report($e);$skipped++;}
+  }
+  return response()->json(['status'=>'completed','deleted'=>$deleted,'skipped'=>$skipped,'message'=>"Bulk pricing removal completed: {$deleted} rule(s) removed, {$skipped} partner(s) skipped."]);
+ }
+
  public function update(Request $r,BusinessPartner $partner){
   $d=$r->validate([
    'status'=>'sometimes|in:pending,active,suspended,rejected',
