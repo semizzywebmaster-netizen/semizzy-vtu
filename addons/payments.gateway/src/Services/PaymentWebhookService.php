@@ -3,7 +3,6 @@
 namespace Semizzy\Addons\Payments\Services;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use RuntimeException;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
 use Semizzy\Addons\Payments\Models\PaymentIntent;
@@ -85,7 +84,7 @@ final class PaymentWebhookService
 
             app(\App\Services\Finance\WalletCreditService::class)->credit(
                 $payment->user()->firstOrFail(),
-                bcdiv((string) $payment->amount_minor, '100', 2),
+                $this->majorFromMinor((string) $payment->amount_minor),
                 'payment:intent:'.$payment->id,
                 'PAY-CREDIT-'.$event->id,
                 'payment_funding',
@@ -102,6 +101,14 @@ final class PaymentWebhookService
         });
 
         return $event->fresh();
+    }
+
+    private function majorFromMinor(string $minor): string
+    {
+        $minor = ltrim($minor, '0') ?: '0';
+        if (strlen($minor) === 1) return '0.0'.$minor;
+        if (strlen($minor) === 2) return '0.'.$minor;
+        return substr($minor, 0, -2).'.'.substr($minor, -2);
     }
 
     private function header(array $headers, string $name): string
