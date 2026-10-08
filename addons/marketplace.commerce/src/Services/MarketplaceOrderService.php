@@ -21,7 +21,7 @@ final class MarketplaceOrderService
                 throw new RuntimeException('This product is not available.');
             }
             $quantity = (string) (int) $data['quantity'];
-            if ((int) $product->stock_quantity < (int) $quantity) {
+            if ($product->isPhysical() && (int) $product->stock_quantity < (int) $quantity) {
                 throw new RuntimeException('Insufficient product stock.');
             }
             if ((int) $product->seller_id === $buyerId) {
@@ -80,7 +80,7 @@ final class MarketplaceOrderService
             if ($product->status !== 'active') {
                 throw new RuntimeException('This product is no longer available.');
             }
-            if ((int) $product->stock_quantity < (int) $order->quantity) {
+            if ($product->isPhysical() && (int) $product->stock_quantity < (int) $order->quantity) {
                 throw new RuntimeException('Insufficient product stock.');
             }
 
@@ -111,9 +111,17 @@ final class MarketplaceOrderService
             $buyerWallet->forceFill(['available_minor' => $buyerAfter])->save();
             $sellerWallet->forceFill(['available_minor' => $sellerAfter])->save();
 
-            $product->forceFill([
-                'stock_quantity' => self::subtract((string) $product->stock_quantity, (string) $order->quantity),
-            ])->save();
+            if ($product->isPhysical()) {
+                $product->forceFill([
+                    'stock_quantity' => self::subtract((string) $product->stock_quantity, (string) $order->quantity),
+                ])->save();
+            }
+
+            $fulfillment = match ($product->product_type) {
+                'digital' => ['fulfillment_status' => 'ready', 'delivery_status' => 'available'],
+                'service' => ['fulfillment_status' => 'in_progress', 'service_status' => 'in_progress'],
+                default => ['fulfillment_status' => 'unfulfilled', 'delivery_status' => 'pending'],
+            };
 
             WalletMovement::create([
                 'wallet_account_id' => $buyerWallet->id,
@@ -144,7 +152,7 @@ final class MarketplaceOrderService
             ]);
 
             MarketplaceEarning::create(['order_id'=>$order->id,'seller_id'=>$order->seller_id,'gross_minor'=>$amount,'fee_minor'=>$fee,'net_minor'=>$sellerNet,'currency'=>$currency,'status'=>'credited']);
-            $order->forceFill(['status' => 'paid', 'paid_at' => now()])->save();
+            $order->forceFill(array_merge(['status' => 'paid', 'paid_at' => now()], $fulfillment))->save();
 
             return $order->fresh(['product', 'buyer', 'seller']);
         });
@@ -183,7 +191,7 @@ final class MarketplaceOrderService
             WalletMovement::create(['wallet_account_id'=>$buyer->id,'operation_key'=>'marketplace:'.$order->reference.':refund:buyer','reference'=>$order->reference,'type'=>'marketplace_refund','amount_minor'=>$amount,'currency'=>$currency,'available_before_minor'=>$buyerBefore,'available_after_minor'=>$buyerAfter,'held_before_minor'=>(string)$buyer->held_minor,'held_after_minor'=>(string)$buyer->held_minor,'metadata'=>['order_id'=>$order->id,'side'=>'buyer']]);
             WalletMovement::create(['wallet_account_id'=>$seller->id,'operation_key'=>'marketplace:'.$order->reference.':refund:seller','reference'=>$order->reference,'type'=>'marketplace_refund','amount_minor'=>$amount,'currency'=>$currency,'available_before_minor'=>$sellerBefore,'available_after_minor'=>$sellerAfter,'held_before_minor'=>(string)$seller->held_minor,'held_after_minor'=>(string)$seller->held_minor,'metadata'=>['order_id'=>$order->id,'side'=>'seller']]);
             $product=MarketplaceProduct::query()->lockForUpdate()->find($order->product_id);
-            if($product){$product->forceFill(['stock_quantity'=>self::add((string)$product->stock_quantity,(string)$order->quantity)])->save();}
+            if($product && $product->isPhysical()){$product->forceFill(['stock_quantity'=>self::add((string)$product->stock_quantity,(string)$order->quantity)])->save();}
             MarketplaceEarning::query()->where('order_id',$order->id)->update(['status'=>'refunded']);
             $order->forceFill(['status'=>'refunded','refunded_at'=>now()])->save();
             return $order->fresh(['product','buyer','seller']);
