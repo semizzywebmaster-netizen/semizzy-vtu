@@ -2,10 +2,10 @@
 
 namespace Semizzy\Addons\Payments\Services;
 
-use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
 use Semizzy\Addons\Payments\Models\PaymentIntent;
+use Semizzy\Addons\Payments\Services\PaymentGatewayAdapterRegistry;
 
 final class PaymentReconciliationService
 {
