@@ -47,10 +47,10 @@ export default function Index({
   const [type, setType] = useState('all');
   const [category, setCategory] = useState('all');
 
-  const allCategories = useMemo(
-    () => categories.flatMap((item) => [item, ...(item.children || [])]),
-    [categories],
-  );
+  const allCategories = useMemo(() => {
+    const flatten = (items: Category[]): Category[] => items.flatMap((item) => [item, ...(item.children ? flatten(item.children) : [])]);
+    return flatten(categories);
+  }, [categories]);
 
   const selectedCategory = allCategories.find((item) => String(item.id) === category);
 
@@ -59,10 +59,16 @@ export default function Index({
     return products.data.filter((product) => {
       const matchesQuery = !q || product.name.toLowerCase().includes(q) || (product.description || '').toLowerCase().includes(q);
       const matchesType = type === 'all' || product.product_type === type;
-      const matchesCategory = category === 'all' || String(product.category?.id) === category;
+      const selectedIds = category === 'all'
+        ? null
+        : (() => {
+            const selected = allCategories.find((item) => String(item.id) === category);
+            return selected ? [selected.id, ...(selected.children || []).map((child) => child.id)] : [];
+          })();
+      const matchesCategory = selectedIds === null || selectedIds.includes(product.category?.id || -1);
       return matchesQuery && matchesType && matchesCategory;
     });
-  }, [products.data, query, type, category]);
+  }, [products.data, query, type, category, allCategories]);
 
   return (
     <>
