@@ -37,6 +37,35 @@ final class MarketplaceController
         ]);
     }
 
+
+    public function categoryForm(Request $request, int $category)
+    {
+        $item = MarketplaceCategory::query()->with('parent')->where('active', true)->findOrFail($category);
+        $schema = $this->categorySchema($item);
+        return response()->json([
+            'success'=>true,
+            'category'=>[
+                'id'=>$item->id,'name'=>$item->name,'slug'=>$item->slug,
+                'description'=>$item->description,'icon'=>$item->icon,'icon_type'=>$item->icon_type,
+                'parent_id'=>$item->parent_id,'product_type'=>$item->product_type,
+                'listing_type'=>$item->listing_type,'attribute_schema'=>$schema,
+            ],
+        ]);
+    }
+
+    public function sellerCategories(Request $request)
+    {
+        return response()->json([
+            'success'=>true,
+            'categories'=>MarketplaceCategory::query()
+                ->where('active',true)
+                ->orderByRaw('COALESCE(parent_id, id)')
+                ->orderBy('parent_id')->orderBy('sort_order')->orderBy('name')->get([
+                    'id','parent_id','name','slug','description','icon','icon_type','product_type','listing_type','attribute_schema'
+                ]),
+        ]);
+    }
+
     public function categories()
     {
         $categories = MarketplaceCategory::query()
