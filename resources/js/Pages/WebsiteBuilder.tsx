@@ -3,7 +3,7 @@ import {router} from '@inertiajs/react';
 
 type Page={id:number,title:string,slug:string,is_home:boolean,status:string,sort_order:number,content?:{sections?:Section[]}};
 type Section={id:string,type:string,data:Record<string,any>};
-type Site={id:number,name:string,slug:string,status:string,template_key:string,subdomain?:string|null,settings?:Record<string,any>,pages?:Page[],domains?:Array<{id:number,domain:string,status:string}>};
+type Site={id:number,name:string,slug:string,status:string,template_key:string,subdomain?:string|null,settings?:Record<string,any>,pages?:Page[],domains?:Array<{id:number,domain:string,status:string,verification_token?:string|null,verification_method?:string,primary?:boolean}>};
 
 const templates=['modern-corporate','clean-saas','opay-inspired','palmpay-inspired','luxury-executive','sky-enterprise','forest-growth','crimson-modern','sunset-commerce','slate-professional'];
 
@@ -56,7 +56,7 @@ export default function WebsiteBuilder({sites=[]}:{sites:Site[]}) {
       <div className="font-semibold text-sm">Domains</div>
       {site.domains.map(d=><div key={d.id} className="flex flex-wrap items-center gap-2 text-xs">
        <span className="flex-1"><b>{d.domain}</b> — {d.status}{d.primary?' · PRIMARY':''}</span>
-       {d.status==='pending'&&<button className="border rounded px-2 py-1" onClick={()=>{const token=window.prompt('DNS TXT verification token for '+d.domain);if(token)router.post('/website-builder/sites/'+site.id+'/domains/'+d.id+'/verify',{token})}}>Verify</button>}
+       {d.status==='pending'&&<div className="w-full rounded bg-gray-50 p-2 text-[11px]">DNS TXT value: <code className="break-all">{d.verification_token||'Generate a new domain to obtain a verification value.'}</code><button className="ml-2 border rounded px-2 py-1" onClick={()=>{const token=window.prompt('Enter the DNS TXT value after adding it for '+d.domain,d.verification_token||'');if(token)router.post('/website-builder/sites/'+site.id+'/domains/'+d.id+'/verify',{token})}}>Verify</button></div>}
        {d.status==='verified'&&!d.primary&&<button className="border rounded px-2 py-1" onClick={()=>router.post('/website-builder/sites/'+site.id+'/domains/'+d.id+'/primary')}>Set primary</button>}
       </div>)}
       <p className="text-[11px] opacity-60">Add the verification token as a DNS TXT record, then enter the token above to verify ownership.</p>
