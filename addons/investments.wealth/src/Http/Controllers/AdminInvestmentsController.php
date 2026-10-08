@@ -3,7 +3,6 @@ namespace Semizzy\Addons\Investments\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Semizzy\Addons\Investments\Models\InvestmentAccount;
 use Semizzy\Addons\Investments\Models\InvestmentMarketQuote;
@@ -20,7 +19,10 @@ class AdminInvestmentsController extends Controller
         return inertia('Admin/Investments', [
             'products' => InvestmentProduct::latest()->get(),
             'investments' => InvestmentAccount::with('product')->latest()->paginate(25),
-            'securities' => InvestmentSecurity::with(['quotes' => fn ($q) => $q->latest('observed_at')->limit(1)])->latest()->paginate(25, ['*'], 'securities_page'),
+            'securities' => InvestmentSecurity::with(['quotes' => fn ($q) => $q
+                ->whereHas('provider', fn ($p) => $p->where('status', 'enabled')->where('verified', true)->where('is_data_provider', true))
+                ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                ->latest('observed_at')->limit(1)])->latest()->paginate(25, ['*'], 'securities_page'),
             'providers' => InvestmentProvider::latest()->get(),
             'orders' => InvestmentOrder::with(['security','provider'])->latest()->paginate(25, ['*'], 'orders_page'),
             'corporateActions' => InvestmentCorporateAction::with(['security','provider'])->latest()->paginate(25, ['*'], 'corporate_actions_page'),
@@ -92,8 +94,18 @@ class AdminInvestmentsController extends Controller
 
     public function verifyProvider(InvestmentProvider $provider)
     {
-        $provider->update(['verified' => true, 'status' => 'enabled']);
-        return back()->with('success', 'Provider verified and enabled.');
+        if (! $provider->is_data_provider && ! $provider->is_execution_provider) {
+            return back()->withErrors(['provider' => 'Provider must be designated as a market-data provider or execution provider before verification.']);
+        }
+
+        $provider->update([
+            'verified' => true,
+            'status' => $provider->is_data_provider ? 'enabled' : 'disabled',
+        ]);
+
+        return back()->with('success', $provider->is_data_provider
+            ? 'Market-data provider verified and enabled.'
+            : 'Execution provider verified; it remains disabled until execution controls are configured.');
     }
 
     public function disableProvider(InvestmentProvider $provider)
@@ -122,6 +134,7 @@ class AdminInvestmentsController extends Controller
         $provider = InvestmentProvider::whereKey($data['provider_id'])
             ->where('status', 'enabled')
             ->where('verified', true)
+            ->where('is_data_provider', true)
             ->firstOrFail();
 
         InvestmentCorporateAction::updateOrCreate(
