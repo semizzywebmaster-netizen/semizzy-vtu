@@ -6,7 +6,7 @@ return [
  'permissions'=>[
   'education.view','education.purchase','education.verify','education.manage',
   'education.institutions.manage','education.providers.manage','education.products.manage',
-  'education.exam_bodies.manage','education.past_questions.manage',
+  'education.exam_bodies.manage','education.past_questions.manage','education.school_admission.view','education.school_admission.manage','education.school_admission.research','education.school_admission.verify','education.school_admission.publish','education.school_admission.archive',
   'education.transactions.view','education.settings.manage'
  ],
  'role_permissions'=>[
@@ -40,7 +40,7 @@ return [
   '2026_10_08_001006_create_exam_bodies_and_past_questions.php',
   '2026_10_08_001007_add_exam_body_to_education_products.php',
   '2026_10_08_001008_seed_exam_registration_bodies.php',
-  '2026_10_08_001009_add_education_categories.php',
+  '2026_10_08_001009_add_education_categories.php','2026_10_08_001010_create_school_admission_schema.php',
  ],
  'web_route_files'=>['addons/education/routes/web.php','addons/education/routes/admin.php'],
  'api_route_files'=>['addons/education/routes/api.php'],
