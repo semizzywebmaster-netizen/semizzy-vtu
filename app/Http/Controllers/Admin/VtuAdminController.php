@@ -217,6 +217,16 @@ class VtuAdminController extends Controller
   return back()->with('success','Bulk operation restored to the active bulk history.');
  }
 
+ public function unarchiveSelectedBulk(Request $r): JsonResponse|\\Illuminate\\Http\\RedirectResponse{
+  $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id']]);
+  $restored=0;$skipped=0;
+  foreach(VtuBulkOperation::query()->whereIn('id',array_map('intval',$data['bulk_ids']))->get() as $bulk){
+   if($bulk->archived_at){$bulk->forceFill(['archived_at'=>null])->save();$restored++;}else{$skipped++;}
+  }
+  $payload=['status'=>'completed','restored'=>$restored,'skipped'=>$skipped,'message'=>"Selected bulk unarchive completed: {$restored} restored, {$skipped} skipped."];
+  return $r->expectsJson()?response()->json($payload):back()->with('success',$payload['message']);
+ }
+
  public function bulkOperations(Request $r){
   $q=VtuBulkOperation::with(['user','service'])->latest();
   if($r->filled('status')){$allowed=['processing','pending','partial','successful','failed'];$status=(string)$r->input('status');if(in_array($status,$allowed,true))$q->where('status',$status);else$q->whereRaw('1=0');}
