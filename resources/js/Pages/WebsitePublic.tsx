@@ -22,7 +22,7 @@ const themes: Record<string, { bg: string; fg: string; muted: string; accent: st
 };
 
 const safeUrl = (value: any) =>
-  typeof value === 'string' && /^(https?:\\/\\/|\\/|#|mailto:|tel:)/i.test(value) ? value : '#';
+  typeof value === 'string' && /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(value) ? value : '#';
 
 function Text({ children, muted = false }: { children: React.ReactNode; muted?: boolean }) {
   return <p style={{ color: muted ? 'var(--muted)' : 'var(--fg)', lineHeight: 1.7 }}>{children}</p>;
