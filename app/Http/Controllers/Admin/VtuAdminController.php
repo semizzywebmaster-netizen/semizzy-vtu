@@ -136,6 +136,25 @@ class VtuAdminController extends Controller
   },$filename,['Content-Type'=>'text/csv; charset=UTF-8','Cache-Control'=>'no-store']);
  }
 
+ public function bulkStatement(VtuBulkOperation $bulk){
+  $bulk->load(['user','items.transaction','items.product']);
+  $currency=(string)($bulk->items->first()?->transaction?->currency ?? config('app.currency','NGN'));
+  $total=0;$successful=0;$failed=0;$pending=0;$processed=0;$successfulCount=0;$failedCount=0;
+  foreach($bulk->items as $item){
+   $amount=(int)($item->amount_minor ?? 0);$total+=$amount;
+   if($item->status==='successful'){$successful+=$amount;$successfulCount++;$processed++;}
+   elseif($item->status==='failed'){$failed+=$amount;$failedCount++;$processed++;}
+   elseif(in_array($item->status,['cancelled'],true)){$processed++;}
+   else{$pending++;}
+  }
+  return Inertia::render('Admin/VTU/BulkStatement',['statement'=>[
+   'reference'=>$bulk->reference,'status'=>$bulk->status,'currency'=>$currency,'created_at'=>$bulk->created_at?->toIso8601String(),
+   'user'=>$bulk->user?->only(['name','email']),'total_items'=>$bulk->items->count(),'successful_items'=>$successfulCount,'failed_items'=>$failedCount,
+   'processed_items'=>$processed,'pending_items'=>$pending,'total_amount_minor'=>(string)$total,'successful_amount_minor'=>(string)$successful,'failed_amount_minor'=>(string)$failed,
+   'items'=>$bulk->items->map(fn($item)=>['id'=>$item->id,'sequence'=>$item->sequence,'status'=>$item->status,'recipient'=>$item->recipient,'amount_minor'=>(string)$item->amount_minor,'product'=>$item->product?->only(['name']),'transaction'=>$item->transaction?->only(['reference','provider_reference']),'error_message'=>$item->error_message])->values(),
+  ]]);
+ }
+
  public function bulkReport(VtuBulkOperation $bulk): \Symfony\\Component\\HttpFoundation\\StreamedResponse{
   $bulk->load(['user','items.transaction','items.product']);
   $counts=['pending'=>0,'processing'=>0,'successful'=>0,'failed'=>0,'cancelled'=>0,'other'=>0];
