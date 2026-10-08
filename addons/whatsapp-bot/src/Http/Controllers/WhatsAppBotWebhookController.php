@@ -6,6 +6,7 @@ use Addons\CommunicationWhatsapp\Services\CommunicationProviderGateway;
 use App\Models\Communication\Conversation;
 use App\Models\Communication\Message;
 use App\Models\User;
+use App\Models\Addon;
 use App\Models\ServiceProduct;
 use App\Services\Vtu\VtuTransactionService;
 use App\Services\Vtu\VtuPayloadValidator;
@@ -17,6 +18,7 @@ use Illuminate\Http\Response;
 class WhatsAppBotWebhookController
 {
  public function receive(Request $request, WhatsAppWebhookService $webhook, CommunicationProviderGateway $gateway, VtuTransactionService $transactions, VtuPayloadValidator $validator): Response {
+  if(!Addon::query()->where('identifier','whatsapp.bot')->where('status','active')->exists()) return response('WhatsApp bot is currently disabled',503);
   $provider=$this->provider($request);
   if(!$provider) return response('WhatsApp bot provider unavailable',503);
   try { $webhook->handle($provider,$request->getContent(),$request->header('X-Hub-Signature-256')); } catch(\Throwable $e) { return response('Webhook rejected',400); }
@@ -59,6 +61,7 @@ class WhatsAppBotWebhookController
   return response('OK',200);
  }
  private function provider(?Request $request){return \App\Models\Communication\Provider::query()->where('channel','whatsapp')->where('enabled',true)->where('paused',false)->orderBy('priority')->first();}
- private function from(array $p): ?string { foreach(($p['entry']??[]) as $e) foreach(($e['changes']??[]) as $c) foreach(($c['value']['messages']??[]) as $m) if(!empty($m['from'])) return (string)$m['from']; return $p['from']??$p['sender']??null; }
+ private function from(array $p): ?string { foreach(($p['entry']??[]) as $e) foreach(($e['changes']??[]) as $c) foreach(($c['value']['messages']??[]) as $m) if(!empty($m['from'])) return $this->canonicalPhone((string)$m['from']); return $this->canonicalPhone($p['from']??$p['sender']??null); }
+ private function canonicalPhone(?string $phone): ?string { $p=preg_replace('/[^0-9+]/','',(string)$phone); if($p==='')return null; if(str_starts_with($p,'234'))return '+'.$p; if(str_starts_with($p,'0'))return '+234'.substr($p,1); return str_starts_with($p,'+')?$p:null; }
  private function body(array $p): ?string { foreach(($p['entry']??[]) as $e) foreach(($e['changes']??[]) as $c) foreach(($c['value']['messages']??[]) as $m) return $m['text']['body']??$m['button']['text']??null; return $p['message']??null; }
 }
