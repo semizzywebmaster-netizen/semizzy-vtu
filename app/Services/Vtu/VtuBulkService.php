@@ -19,6 +19,53 @@ class VtuBulkService
         private VtuPayloadValidator $validator,
     ) {}
 
+    private function scheduleEditMinutes(): int
+    {
+        $value=(int)(\App\Models\SystemSetting::query()->where('key','vtu_schedule_edit_lock_minutes')->value('value') ?? 120);
+        return in_array($value,[15,30,60,120,180,300,720,1440],true)?$value:120;
+    }
+    private function editUntil(\Carbon\CarbonInterface $scheduledAt): \Carbon\CarbonInterface
+    {
+        $delay=max(300,$scheduledAt->diffInSeconds(now(),false));
+        $lock=min($this->scheduleEditMinutes()*60,max(300,(int)floor($delay/2)));
+        return $scheduledAt->copy()->subSeconds($lock);
+    }
+    public function schedule(int $uid,array $items,string $tier,\Carbon\CarbonInterface $scheduledAt,?string $operationKey=null,?string $quoteFingerprint=null): VtuBulkOperation
+    {
+        if($scheduledAt->lte(now()->addMinutes(1))) throw new \RuntimeException('Scheduled time must be in the future.');
+        if(count($items)<50||count($items)>self::MAX_ITEMS) throw new \RuntimeException('Scheduled airtime/data bulk purchase must contain between 50 and 500 recipients.');
+        $operationKey ??= 'vtu-bulk-scheduled-'.Str::uuid();
+        $quote=$this->quote($items,$tier);
+        if($quoteFingerprint!==null && !hash_equals($quoteFingerprint,$quote['quote_fingerprint'])) throw new \RuntimeException('The bulk quote has expired or changed.');
+        $existing=VtuBulkOperation::query()->where('user_id',$uid)->where('idempotency_key',$operationKey)->first();
+        if($existing)return $existing->load('items');
+        $editUntil=$this->editUntil($scheduledAt);
+        $bulk=DB::transaction(function()use($uid,$items,$tier,$operationKey,$scheduledAt,$editUntil,$quote):VtuBulkOperation{
+            $bulk=VtuBulkOperation::create(['uuid'=>(string)Str::uuid(),'reference'=>'BULK-'.strtoupper(Str::random(20)),'user_id'=>$uid,'status'=>'scheduled','scheduled_at'=>$scheduledAt,'edit_until'=>$editUntil,'total_items'=>count($items),'idempotency_key'=>$operationKey,'metadata'=>['scheduled'=>true,'quote_fingerprint'=>$quote['quote_fingerprint'],'pending_items'=>count($items)]]);
+            foreach(array_values($items) as $i=>$item){
+                $product=ServiceProduct::query()->with('service')->findOrFail((int)$item['product_id']);
+                $payload=(array)($item['payload']??[]);
+                $this->validator->validate($product->service,$payload);
+                $key=(string)($item['idempotency_key']??($bulk->reference.':'.($i+1)));
+                $tx=$this->transactions->create($uid,$product,$payload,$tier,$key);
+                $bulk->items()->create(['sequence'=>$i+1,'idempotency_key'=>$key,'vtu_transaction_id'=>$tx->id,'recipient'=>$payload['recipient']??$payload['phone']??null,'product_id'=>$product->id,'amount_minor'=>$tx->total_minor,'status'=>'scheduled','metadata'=>['scheduled'=>true]]);
+            }
+            return $bulk;
+        });
+        return $bulk->fresh('items');
+    }
+    public function reschedule(int $uid,VtuBulkOperation $bulk,\Carbon\CarbonInterface $scheduledAt):VtuBulkOperation
+    {
+        if((int)$bulk->user_id!==$uid)abort(404);
+        $bulk->load('items');
+        if($bulk->status!=='scheduled')throw new \RuntimeException('Only scheduled operations can be edited.');
+        if($bulk->edit_until && now()->gte($bulk->edit_until))throw new \RuntimeException('The editing window has closed.');
+        if($scheduledAt->lte(now()->addMinutes(1)))throw new \RuntimeException('Scheduled time must be in the future.');
+        if($scheduledAt->lte(now()->addMinutes(5)))throw new \RuntimeException('Leave at least 5 minutes for safe execution.');
+        $bulk->scheduled_at=$scheduledAt;$bulk->edit_until=$this->editUntil($scheduledAt);$bulk->save();
+        return $bulk->fresh('items');
+    }
+
     public function quote(array $items, string $tier = 'USER'): array
     {
         if (count($items) < 1 || count($items) > self::MAX_ITEMS) {
@@ -97,8 +144,7 @@ class VtuBulkService
             ]);
         }
 
-        $items = array_values($items);
-        $seenKeys = [];
+        $items = array_values($items);        $seenKeys = [];
         $seenRecipients = [];
 
         foreach ($items as $index => $item) {
@@ -197,8 +243,7 @@ class VtuBulkService
             // A replay of an incomplete operation is a recovery/resume path.
             // Item-level transaction idempotency prevents duplicate provider fulfillment.
             $bulk = $existing->load('items');
-        } else {
-            try {
+        } else {            try {
                 $bulk = DB::transaction(function () use ($uid, $operationKey, $fingerprint, $items): VtuBulkOperation {
                     $bulk = VtuBulkOperation::create([
                         'uuid' => (string) Str::uuid(),
@@ -297,8 +342,7 @@ class VtuBulkService
                         ->where('user_id', $uid)
                         ->first();
 
-                    if ($transaction) {
-                        $this->syncItemFromTransaction($row, $transaction);
+                    if ($transaction) {                        $this->syncItemFromTransaction($row, $transaction);
                     } else {
                         $row->update([
                             'status' => 'pending',
@@ -398,7 +442,6 @@ class VtuBulkService
                     ]);
                 }
             }
-
             $metadata = array_merge((array) $locked->metadata, [
                 'cancelled_at' => now()->toIso8601String(),
                 'cancelled_by' => $userId,
@@ -497,8 +540,7 @@ class VtuBulkService
             }
 
             $metadata = array_merge((array) $bulk->metadata, [
-                'last_recovery_at' => now()->toIso8601String(),
-            ]);
+                'last_recovery_at' => now()->toIso8601String(),            ]);
             $bulk->metadata = $metadata;
             $bulk->save();
             $this->recalculate($bulk->fresh('items'));
@@ -597,8 +639,7 @@ class VtuBulkService
         $metadata = (array) $bulk->metadata;
 
         if (($metadata['request_fingerprint'] ?? null) !== $fingerprint ||
-            (int) $bulk->total_items !== $itemCount) {
-            throw new \RuntimeException('Bulk idempotency key has already been used for a different request.');
+            (int) $bulk->total_items !== $itemCount) {            throw new \RuntimeException('Bulk idempotency key has already been used for a different request.');
         }
     }
 
