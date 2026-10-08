@@ -35,6 +35,8 @@ use App\Http\Controllers\WalletFundingController;
 use App\Http\Controllers\Admin\CommunicationController;
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\SecurityOtpController;
+use App\Http\Controllers\PhoneChangeRequestController;
+use App\Http\Controllers\Admin\PhoneChangeRequestController as AdminPhoneChangeRequestController;
 use App\Http\Controllers\TransactionPinController;
 use App\Http\Controllers\ApiAccessController;
 use App\Services\System\SystemSettingsService;
@@ -114,6 +116,8 @@ Route::middleware(['auth'])->group(function (): void {
     Route::post('/admin/communications/{campaign}/send', [CommunicationController::class, 'send'])->middleware('permission:communications.manage')->name('admin.communications.send');
     Route::get('/dashboard', DashboardController::class)->middleware('verified')->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::get('/profile/phone-change-request', [PhoneChangeRequestController::class, 'create'])->name('profile.phone-change-request');
+    Route::post('/profile/phone-change-request', [PhoneChangeRequestController::class, 'store'])->middleware(['throttle:3,10','transaction.pin'])->name('profile.phone-change-request.store');
     Route::get('/kyc', [KycController::class, 'index'])->name('kyc.index');
     Route::post('/kyc', [KycController::class, 'submit'])->middleware(['throttle:5,1','transaction.pin'])->name('kyc.submit');
     Route::post('/kyc/lookup', [KycController::class, 'lookup'])->middleware(['throttle:5,1','transaction.pin'])->name('kyc.lookup');
@@ -155,6 +159,10 @@ Route::middleware(['auth'])->group(function (): void {
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view')->name('admin.users.index');
         Route::get('/kyc', [AdminKycController::class, 'index'])->middleware('permission:users.verify')->name('admin.kyc.index');
         Route::get('/profile-change-requests', [AdminProfileChangeRequestController::class, 'index'])->middleware('permission:users.verify')->name('admin.profile-change-requests.index');
+        Route::get('/phone-change-requests', [AdminPhoneChangeRequestController::class, 'index'])->middleware('permission:users.verify')->name('admin.phone-change-requests.index');
+        Route::get('/phone-change-requests/{change}/screenshot', [AdminPhoneChangeRequestController::class, 'screenshot'])->whereNumber('change')->middleware('permission:users.verify')->name('admin.phone-change-requests.screenshot');
+        Route::post('/phone-change-requests/{change}/approve', [AdminPhoneChangeRequestController::class, 'approve'])->whereNumber('change')->middleware('permission:users.verify')->name('admin.phone-change-requests.approve');
+        Route::post('/phone-change-requests/{change}/decline', [AdminPhoneChangeRequestController::class, 'decline'])->whereNumber('change')->middleware('permission:users.verify')->name('admin.phone-change-requests.decline');
         Route::get('/profile-change-requests/{profileChangeRequest}/documents/{index}', [AdminProfileChangeRequestController::class, 'document'])->whereNumber('profileChangeRequest')->whereNumber('index')->middleware('permission:users.verify')->name('admin.profile-change-requests.document');
         Route::post('/profile-change-requests/{profileChangeRequest}/review', [AdminProfileChangeRequestController::class, 'review'])->whereNumber('profileChangeRequest')->middleware('permission:users.verify')->name('admin.profile-change-requests.review');
         Route::post('/users/{user}/kyc/review', [AdminKycController::class, 'review'])->whereNumber('user')->middleware('permission:users.verify')->name('admin.users.kyc.review');
