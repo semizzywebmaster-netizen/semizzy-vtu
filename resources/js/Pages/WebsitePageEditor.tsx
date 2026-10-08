@@ -1,8 +1,8 @@
-import React,{useMemo,useState} from 'react';
+import {useState} from 'react';
 import {router} from '@inertiajs/react';
 type Section={id:string,type:string,data:Record<string,any>};
 type Revision={id:number,version:number,status:string,created_by?:number|null,created_at?:string|null};
-type Props={site:{id:number,name:string,slug:string},page:{id:number,title:string,content?:{sections?:Section[]},seo?:Record<string,any>},sectionTypes:string[]};
+type Props={site:{id:number,name:string,slug:string},page:{id:number,title:string,slug:string,content?:{sections?:Section[]},seo?:Record<string,any>},sectionTypes:string[]};
 
 const defaults=(type:string)=>({
  hero:{heading:'Your headline',text:'Tell visitors what your business does.',button:'Get Started'},
