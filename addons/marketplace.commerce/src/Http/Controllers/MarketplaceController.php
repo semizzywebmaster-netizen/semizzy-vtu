@@ -468,10 +468,6 @@ final class MarketplaceController
         if (!$url) return null;
 
         $this->validateExternalVideoUrl($url);
-        $parts = parse_url($url);
-        $host = strtolower((string) ($parts['host'] ?? ''));
-        $path = strtolower((string) ($parts['path'] ?? ''));
-
         return \Semizzy\Addons\Marketplace\Models\MarketplaceProductMedia::create([
             'product_id' => $product->id,
             'media_type' => 'video',
@@ -502,16 +498,6 @@ final class MarketplaceController
             throw new RuntimeException('Use a YouTube, Vimeo, or direct HTTPS video URL.');
         }
 
-        return \Semizzy\Addons\Marketplace\Models\MarketplaceProductMedia::create([
-            'product_id' => $product->id,
-            'media_type' => 'video',
-            'url' => $url,
-            'disk' => null,
-            'path' => null,
-            'alt_text' => $altText,
-            'sort_order' => ((int) $product->media()->max('sort_order')) + 1,
-            'is_primary' => false,
-        ]);
     }
 
     private function categorySchema(MarketplaceCategory $category): array
