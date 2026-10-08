@@ -38,13 +38,9 @@ final class AdminPaymentsController extends Controller
         ]);
     }
 
-    public function storeProvider(Request $request, PaymentGatewayAdapterRegistry $registry): RedirectResponse
+    public function storeProvider(Request $request): RedirectResponse
     {
         $data = $this->validateProvider($request, true);
-        if (!$registry->has($data['driver'])) {
-            return back()->with('error', 'This gateway driver has no registered server adapter yet. Save it disabled until the adapter is implemented.');
-        }
-
         PaymentGatewayProvider::create([
             'name' => $data['name'],
             'code' => $data['code'],
@@ -127,7 +123,7 @@ final class AdminPaymentsController extends Controller
 
             $payload = ['status' => $ok ? 'SUCCESS' : 'FAILED', 'message' => $ok ? 'Gateway health check succeeded.' : 'Gateway health check failed. Provider remains disabled.'];
 
-            return $request = request()->expectsJson()
+            return request()->expectsJson()
                 ? response()->json($payload, $ok ? 200 : 502)
                 : back()->with($ok ? 'success' : 'error', $payload['message']);
         } catch (\Throwable $e) {
