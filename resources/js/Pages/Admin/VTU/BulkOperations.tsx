@@ -28,6 +28,7 @@ export default function BulkOperations({
   const [reconcilingId, setReconcilingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkReconciling, setBulkReconciling] = useState(false);
+  const [bulkAuditing, setBulkAuditing] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [auditId, setAuditId] = useState<number | null>(null);
   const [auditResult, setAuditResult] = useState<any>(null);
@@ -58,6 +59,18 @@ export default function BulkOperations({
       onSuccess: () => setSelectedIds([]),
       onFinish: () => setBulkReconciling(false),
     });
+  };
+
+  const auditSelected = async () => {
+    if (!selectedIds.length) return;
+    setBulkAuditing(true);
+    try {
+      const response = await fetch('/admin/vtu/bulk/audit-selected', { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' }, body: JSON.stringify({ bulk_ids: selectedIds }) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || 'Bulk integrity audit failed.');
+      window.alert(\`Integrity audit: \${payload.healthy ?? 0} healthy, \${payload.with_issues ?? 0} requiring attention.\`);
+    } catch (error) { window.alert(error instanceof Error ? error.message : 'Bulk integrity audit failed.'); }
+    finally { setBulkAuditing(false); }
   };
 
   const recoverStale = () => {
@@ -168,6 +181,7 @@ export default function BulkOperations({
               </a>
 
             <button type="button" onClick={toggleAll} disabled={!selectableIds.length} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{allSelected ? 'Clear selection' : 'Select pending'}</button>
+            <button type="button" onClick={auditSelected} disabled={!selectedIds.length || bulkAuditing} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{bulkAuditing ? 'Auditing selected…' : `Audit selected (${selectedIds.length})`}</button>
             <button type="button" onClick={reconcileSelected} disabled={!selectedIds.length || bulkReconciling} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">{bulkReconciling ? 'Reconciling selected…' : `Reconcile selected (${selectedIds.length})`}</button>
             <button type="button" onClick={recoverStale} disabled={recovering} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">{recovering ? 'Recovering stale…' : 'Recover stale operations'}</button>
             {selectedIds.length > 0 && <span className="text-xs text-slate-500">{selectedIds.length} bulk operation(s) selected</span>}
