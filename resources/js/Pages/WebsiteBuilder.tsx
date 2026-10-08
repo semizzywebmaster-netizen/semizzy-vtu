@@ -1,4 +1,4 @@
-import React,{useState} from 'react';
+import {useState} from 'react';
 import {router} from '@inertiajs/react';
 
 type Page={id:number,title:string,slug:string,is_home:boolean,status:string,sort_order:number,content?:{sections?:Section[]}};
