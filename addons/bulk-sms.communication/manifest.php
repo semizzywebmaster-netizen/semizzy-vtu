@@ -16,6 +16,6 @@ return [
  'api_route_files'=>['addons/bulk-sms.communication/routes/api.php'],
  'routes'=>['/bulk-sms'],'api_routes'=>['/api/v1/bulk-sms'],
  'provider_integrations'=>['Core ProviderManager'],'provider_capabilities'=>['sms_send','sms_status'],
- 'scheduled_tasks'=>['Bulk SMS scheduled dispatch and delivery reconciliation'],
+ 'scheduled_tasks'=>['Bulk SMS scheduled dispatch and delivery reconciliation','Schedule editing cutoff enforcement'],
  'events'=>['bulk_sms.campaign.created','bulk_sms.message.sent','bulk_sms.message.delivered','bulk_sms.message.failed'],
 ];
