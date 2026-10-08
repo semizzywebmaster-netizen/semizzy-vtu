@@ -12,7 +12,7 @@ return [
  'role_permissions'=>[
   'ADMIN'=>['education.view','education.purchase','education.verify','education.manage','education.institutions.manage','education.providers.manage','education.products.manage','education.exam_bodies.manage','education.past_questions.manage','education.transactions.view','education.settings.manage','education.school_admission.view','education.school_admission.manage','education.school_admission.research','education.school_admission.verify','education.school_admission.publish','education.school_admission.archive'],
   'STAFF'=>['education.view','education.purchase','education.verify','education.manage','education.institutions.manage','education.products.manage','education.exam_bodies.manage','education.past_questions.manage','education.transactions.view','education.school_admission.view'],
-  'SUPPORT'=>['education.view','education.transactions.view'],
+  'SUPPORT'=>['education.view','education.transactions.view','education.school_admission.view'],
   'USER'=>['education.view','education.purchase','education.verify','education.transactions.view','education.school_admission.view'],
  ],
  'navigation'=>[['id'=>'education','label'=>'Education','url'=>'/education','icon'=>'graduation-cap','permission'=>'education.view','section'=>'services','order'=>95]],
