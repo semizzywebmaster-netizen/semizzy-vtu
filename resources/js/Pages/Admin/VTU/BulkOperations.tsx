@@ -32,6 +32,7 @@ export default function BulkOperations({
   const [auditId, setAuditId] = useState<number | null>(null);
   const [auditResult, setAuditResult] = useState<any>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+  const [requeryingId, setRequeryingId] = useState<number | null>(null);
 
   const submitFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -79,6 +80,11 @@ export default function BulkOperations({
     if (!reason?.trim()) return;
     setCancellingId(id);
     router.post(`/admin/vtu/bulk/${id}/cancel`, { reason: reason.trim() }, { preserveScroll: true, onFinish: () => setCancellingId(null) });
+  };
+
+  const requeryPending = (id: number) => {
+    setRequeryingId(id);
+    router.post(`/admin/vtu/bulk/${id}/requery-items`, {}, { preserveScroll: true, onFinish: () => setRequeryingId(null) });
   };
 
   const toggleSelected = (id: number) => {
@@ -228,6 +234,9 @@ export default function BulkOperations({
                                 className="mr-2 rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50"
                               >
                                 {auditId === operation.id ? 'Auditing…' : 'Audit integrity'}
+                              </button>
+                              <button type="button" onClick={() => requeryPending(operation.id)} disabled={requeryingId === operation.id} className="ml-2 rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">
+                                {requeryingId === operation.id ? 'Requerying…' : 'Requery pending'}
                               </button>
                               <button
                                 type="button"
