@@ -42,3 +42,9 @@ Schedule::call(function (): void {
 
 Schedule::command('communication:campaigns')->everyMinute()->withoutOverlapping(2)->onOneServer();
 Artisan::command('communication:campaigns',function(\Addons\CommunicationWhatsapp\Services\CommunicationCampaignService $service){$count=0; \App\Models\Communication\Campaign::query()->whereIn('status',['draft','scheduled','running'])->where(fn($q)=>$q->whereNull('scheduled_at')->orWhere('scheduled_at','<=',now()))->orderBy('id')->limit(50)->get()->each(function($campaign)use($service,&$count){$service->process($campaign,500);$count++;}); $this->info("Processed {$count} communication campaigns.");});
+
+Schedule::command('forex:refresh-quotes')->everyMinute()->withoutOverlapping(2)->onOneServer();
+Artisan::command('forex:refresh-quotes', function (\Semizzy\Addons\ForexDigitalAssets\Services\ForexQuoteRefreshService $service) {
+    $result = $service->refresh();
+    $this->info(sprintf('Forex quote refresh: %d providers, %d quotes updated, %d providers failed.', $result['providers'], $result['updated'], $result['failed']));
+});
