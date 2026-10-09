@@ -59,3 +59,23 @@ The main Vite entrypoint currently discovers Inertia pages from `resources/js/Pa
 ## Branching and delivery
 
 All addons live in the same repository. Do not create one Git branch per addon. Use the agreed shared branch workflow, keep addon-specific commits focused, and do not report an addon as production-ready until migrations, permissions, route loading, page resolution, and relevant tests/build checks have been verified.
+
+
+## Current package-to-category map
+
+| Primary category | Addon directory / identifier |
+|---|---|
+| Core services & VTU | `vtu.digital-services`, `sim-hosting`, `vtu-website-builder` |
+| Education & examinations | `education`, `exams.results` |
+| Commerce & marketplace | `marketplace.commerce`, `escrow.protection`, `business-agent-merchant-reseller` |
+| Advertising & monetization | `ads.monetization` |
+| Payments, banking & transfers | `payments.gateway`, `banking.financial-integrations`, `p2p.transfers`, `crypto-payments.gateway`, `virtual-cards` |
+| Investments & digital assets | `forex-digital-assets`, `investments.wealth`, `savings.goals`, `loans.credit`, `insurance-protection` |
+| Identity, KYC & compliance | `kyc.identity-verification` |
+| Communications & messaging | `communication.whatsapp`, `whatsapp-bot`, `bulk-sms.communication`, `mailer-smtp`, `social.accounts-verification` |
+| Business & government services | `cac.business-services`, `government-registration-certificates` |
+| Travel, tickets & events | `travel-tickets`, `events-entertainment` |
+| Rewards & engagement | `rewards-referrals-promotions`, `gift-cards`, `spin-to-win` |
+| Social & digital services | `smm.services` |
+
+Other installed packages remain direct children of `addons/` and must be assigned a primary category when their purpose is confirmed. Do not infer that an addon is missing just because it is not listed in this documentation table; the live package directory and its manifest remain the source of truth.
