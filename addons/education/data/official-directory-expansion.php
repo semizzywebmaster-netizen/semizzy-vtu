@@ -27,7 +27,7 @@ return [
   ['name'=>'Regnum Medical University, Anthony','category'=>'private_university','state'=>'Lagos','official_url'=>null,'source_url'=>'https://enuc.nuc.edu.ng/nus'],
   ['name'=>'Miva Open University','category'=>'private_university','state'=>'FCT','official_url'=>'https://miva.university/','source_url'=>'https://enuc.nuc.edu.ng/nus'],
   ['name'=>'Muhammad Kamalud-Deen University, Ilorin','category'=>'private_university','state'=>'Kwara','official_url'=>null,'source_url'=>'https://enuc.nuc.edu.ng/nus'],
-  ['name'=>'National University of Science and Technology, Abuja','category'=>'private_university','state'=>'FCT','official_url'=>null,'source_url'=>'https://enuc.nuc.edu.ng/nus'],
+  ['name'=>'National University of Science and Technology, Abuja','category'=>'federal_university','state'=>'FCT','official_url'=>null,'source_url'=>'https://enuc.nuc.edu.ng/nus'],
   ['name'=>'Newgate University, Minna','category'=>'private_university','state'=>'Niger','official_url'=>'https://newgateuniversityminna.edu.ng/','source_url'=>'https://enuc.nuc.edu.ng/nus'],
   ['name'=>'Ojaja University, Eiyenkorin','category'=>'private_university','state'=>'Kwara','official_url'=>null,'source_url'=>'https://enuc.nuc.edu.ng/nus'],
   ['name'=>'Philomath University, Kuje','category'=>'private_university','state'=>'FCT','official_url'=>'https://philomath.edu.ng/','source_url'=>'https://enuc.nuc.edu.ng/nus'],
