@@ -19,7 +19,7 @@ This document records committed foundations and the limits of what CI or reposit
 
 ## Verification status
 
-The latest GitHub Actions runs verified during the current repository audit are General CI #713 and VTU Addon CI #147, both on commit c736a48a549702406ecdd1fb07b81e1348e3a569, and both completed successfully. That run verifies the repository's PHP lint, automated PHP feature tests, frontend TypeScript check, and Vite production build as configured in .github/workflows/ci.yml.
+Historical verification note (do not treat as current-main status): General CI #713 and VTU Addon CI #147 completed successfully on commit c736a48a549702406ecdd1fb07b81e1348e3a569. The repository has newer commits after that SHA, including wallet idempotency coverage, P2P requery authorization hardening, and blueprint roadmap corrections. Therefore those historical green runs do not prove the current main branch is green. Before release, inspect the latest GitHub Actions runs for the exact current main SHA and rerun any affected workflows. Current workflow status: not independently confirmed by this document. The configured CI checks PHP lint, automated PHP feature tests, frontend TypeScript checking, and the Vite production build in .github/workflows/ci.yml.
 
 Repository/CI inspection does not verify:
 - a fresh install on a real cPanel account;
