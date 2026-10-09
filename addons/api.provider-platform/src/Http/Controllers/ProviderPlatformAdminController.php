@@ -120,6 +120,85 @@ final class ProviderPlatformAdminController extends Controller
         ]);
     }
 
+    public function cataloguePage(Request $request): Response
+    {
+        $filters = $request->validate([
+            'provider_id' => ['nullable', 'integer', 'min:1'],
+            'status' => ['nullable', 'string', 'in:awaiting_approval,reviewed,approved,blocked,imported'],
+            'search' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $query = ProviderService::query()
+            ->with([
+                'provider:id,identifier,display_name,verification_status,integration_status,enabled,paused',
+                'category:id,external_name',
+                'imports',
+            ])
+            ->orderBy('api_provider_id')
+            ->orderBy('name');
+
+        if (!empty($filters['provider_id'])) {
+            $query->where('api_provider_id', $filters['provider_id']);
+        }
+        if (!empty($filters['status'])) {
+            $query->whereHas('imports', fn ($builder) => $builder->where('state', $filters['status']));
+        }
+        if (!empty($filters['search'])) {
+            $search = trim($filters['search']);
+            $query->where(function ($builder) use ($search): void {
+                $builder->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('external_service_code', 'like', '%' . $search . '%')
+                    ->orWhere('external_service_id', 'like', '%' . $search . '%');
+            });
+        }
+
+        $page = $query->paginate(50)->withQueryString();
+
+        return Inertia::render('Admin/ProviderPlatformCatalogue', [
+            'services' => $page->getCollection()->map(function (ProviderService $service): array {
+                $selection = $service->imports->first();
+
+                return [
+                    'id' => $service->id,
+                    'provider_id' => $service->api_provider_id,
+                    'provider' => $service->provider?->display_name ?? 'Unknown provider',
+                    'provider_verification_status' => $service->provider?->verification_status ?? 'unknown',
+                    'provider_integration_status' => $service->provider?->integration_status ?? 'unknown',
+                    'provider_enabled' => (bool) $service->provider?->enabled,
+                    'provider_paused' => (bool) $service->provider?->paused,
+                    'external_service_id' => $service->external_service_id,
+                    'external_service_code' => $service->external_service_code,
+                    'name' => $service->name,
+                    'category' => $service->category?->external_name,
+                    'service_type' => $service->service_type,
+                    'network' => $service->network,
+                    'source_price' => $service->provider_price,
+                    'currency' => $service->currency,
+                    'source_synced_at' => $service->last_synced_at?->toISOString(),
+                    'catalogue_status' => $service->status,
+                    'selection_state' => $selection?->state,
+                    'selected_for_review' => (bool) $selection,
+                    'approved_for_import' => (bool) ($selection?->approved),
+                    'imported' => (bool) ($selection?->imported),
+                    'auto_sync_allowed' => (bool) ($selection?->auto_sync_allowed),
+                ];
+            })->values(),
+            'meta' => [
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+            ],
+            'filters' => [
+                'provider_id' => $filters['provider_id'] ?? '',
+                'status' => $filters['status'] ?? '',
+                'search' => $filters['search'] ?? '',
+            ],
+            'providers' => ApiProvider::query()->orderBy('display_name')->get(['id', 'display_name']),
+            'safety_note' => 'Discovered catalogue data is not verified capability evidence. Selection does not import, publish, or enable routing.',
+        ]);
+    }
+
     public function catalogue(Request $request): JsonResponse
     {
         $filters = $request->validate([
@@ -220,6 +299,12 @@ final class ProviderPlatformAdminController extends Controller
                 'approved' => false,
                 'auto_sync_allowed' => false,
             ]);
+        }
+
+        if ($request->header('X-Inertia')) {
+            return back()->with('status', $selection->wasRecentlyCreated
+                ? 'Catalogue entry added to the review queue.'
+                : 'This entry already has a review record; its existing state was preserved.');
         }
 
         return response()->json([
