@@ -31,6 +31,7 @@ class AdminSystemSettingsTest extends TestCase
             'platform_name' => 'SEMIZZY ONE Core',
             'theme_key' => 'modern-corporate',
             'theme_primary' => '#4338CA',
+            'skin_default' => 'light',
             'support_email' => 'help@example.test',
             'support_notice' => 'Support is available weekdays.',
             'default_timezone' => 'Africa/Lagos',
