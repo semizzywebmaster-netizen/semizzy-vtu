@@ -29,7 +29,7 @@ return [
     'migrations' => [],
     'web_route_files' => ['addons/api.provider-platform/routes/admin.php'],
     'api_route_files' => [],
-    'routes' => ['/admin/provider-platform', '/admin/provider-platform/catalogue/review', '/admin/provider-platform/catalogue', '/admin/provider-platform/catalogue/{providerService}/select', '/admin/provider-platform/products/{product}/publish', '/admin/provider-platform/products/{product}/unpublish'],
+    'routes' => ['/admin/provider-platform', '/admin/provider-platform/catalogue/review', '/admin/provider-platform/catalogue', '/admin/provider-platform/catalogue/{providerService}/select', '/admin/provider-platform/catalogue/{providerService}/approve', '/admin/provider-platform/catalogue/{providerService}/map', '/admin/provider-platform/products/{product}/publish', '/admin/provider-platform/products/{product}/unpublish'],
     'api_routes' => [],
     'provider_integrations' => [
         'Core ApiProvider registry',
