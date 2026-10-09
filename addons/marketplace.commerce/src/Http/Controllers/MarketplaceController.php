@@ -242,7 +242,7 @@ final class MarketplaceController
 
     public function releaseEscrow(Request $request, MarketplaceOrder $order, MarketplaceOrderService $orders)
     {
-        $data = $request->validate(['admin_note' => ['nullable', 'string', 'max:1000']]);
+        $data = $request->validate(['admin_note' => ['required', 'string', 'min:5', 'max:1000']]);
         try {
             $order = $orders->releaseEscrow($order, (int) $request->user()->id, $data['admin_note'] ?? null);
         } catch (RuntimeException $e) {
