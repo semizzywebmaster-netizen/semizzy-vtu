@@ -17,6 +17,7 @@ return [
   '2026_10_06_000501_create_loans.php',
   '2026_10_06_000502_create_loan_repayments.php',
   '2026_10_06_000503_seed_default_loan_products.php',
+  '2026_10_09_130100_harden_loan_repayment_retention.php',
  ],
  'web_route_files'=>['addons/loans.credit/routes/web.php','addons/loans.credit/routes/admin.php'],
  'api_route_files'=>['addons/loans.credit/routes/api.php'],
