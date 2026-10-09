@@ -4,7 +4,7 @@ import AppLayout from '@/Layouts/AppLayout';
 
 type Transaction = {
   reference:string; status:string; amount_minor:number; currency:string; candidate_identifier:string|null;
-  customer_data:Record<string,unknown>|null; provider_reference:string|null; error:string|null; created_at:string;
+  provider_reference:string|null; error:string|null; created_at:string;
   product?:{name:string; service_type:string; institution?:{name:string}|null}|null;
 };
 export default function SchoolAdmissionTransactionPage({ transaction }: { transaction:Transaction }) {
