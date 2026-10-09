@@ -299,7 +299,7 @@ class AddonLifecycleService
             }
 
             $rootPath = base_path('database/migrations/'.$migration);
-            $path = $safeMatches[0] ?? (is_file($rootPath) ? realpath($rootPath) : false);
+            $path = $safeMatches[0] ?? (is_file($rootPath) ? $rootPath : false);
             if ($path === false || $path === null || !is_file($path)) {
                 throw new \RuntimeException("Addon migration file not found: {$migration}");
             }
