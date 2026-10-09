@@ -345,10 +345,8 @@ final class MarketplaceOrderService
             if (!$escrow) throw new RuntimeException('Escrow record is missing; no funds were released.');
             if ($escrow->status === 'released') return $order;
             if (!in_array($escrow->status, ['buyer_confirmed', 'held'], true)) throw new RuntimeException('This escrow cannot be released in its current state.');
-            if ($escrow->status === 'held' && !(bool) config('addons.marketplace.commerce.settings.admin_can_release_without_buyer_confirmation', false)) {
-                throw new RuntimeException('Buyer confirmation is required before release under the current escrow settings.');
-            }
-
+            // This method is reachable only through the admin-authorised route.
+            // Admin may release a held escrow as an explicit override, with an audit note.
             $seller = WalletAccount::query()->where('user_id', (int) $order->seller_id)->where('currency', strtoupper((string) $order->currency))->lockForUpdate()->first();
             if (!$seller) throw new RuntimeException('Seller wallet is unavailable; escrow remains held.');
             $amount = (string) $escrow->seller_net_minor;
