@@ -124,7 +124,7 @@ The repository contains 32 addon directories. This inventory identifies each add
 | Addon manifest identifier | Provider-relevant service / operations to inventory | Existing shared system / integration boundary | Evidence state and next check |
 |---|---|---|---|
 | `ai.chatbot` | AI model requests, embeddings/knowledge where enabled, usage/balance and provider failover | AI-specific provider configuration; avoid a duplicate outbound provider registry | Audit adapter classes, supported model APIs, auth schema, redaction and failover tests |
-| `api.provider-platform` | Cross-service provider directory, capabilities, catalogue import, service/product mapping, price sync and verification | Must reuse Core `ApiProvider`, mappings, credentials, routing, sync and audit | Admin coverage view, publication guard, paginated catalogue API and admin review UI, explicit approval, and disabled local-product mapping are implemented on development branch; provider-specific discovery/sync adapters and full operation matrix remain incomplete |
+| `api.provider-platform` | Cross-service provider directory, capabilities, catalogue import, service/product mapping, price sync and verification | Must reuse Core `ApiProvider`, mappings, credentials, routing, sync and audit | Admin coverage view and publication guard are implemented on the development branch. Provider catalogue discovery, sync, review, approval, import and mapping already belong to Core's ProviderEngineController/ProviderCatalogueManager; Addon #38 links into that existing workflow rather than cloning it. Provider-specific contract mapping and the full operation matrix remain incomplete |
 | `banking.financial-integrations` | Account/virtual-account operations, transfers/payouts, account resolution, reconciliation and status | Reconcile with Payments addon and Core provider engine; do not merge distinct capabilities | Inspect banking-specific adapters and official provider permissions per operation |
 | `bulk-sms.communication` | SMS send, sender IDs, delivery reports, bulk campaigns, status reconciliation | Shared SMS providers with Communication and SIM Hosting views | Verify provider adapters, DND/sender-ID behaviour, per-message pricing and delivery status |
 | `business.agent-merchant-reseller` | No inherent external provider operation; business tiers, limits and commercial pricing | Core users, tiers, price engine and audit | Normally internal; inventory only explicit provider-facing business services |
@@ -164,14 +164,7 @@ This table is the addon/service-family inventory baseline, not a claim that all 
 
 ## Addon #38 implementation checkpoint — 2026-10-09
 
-The current development branch now has an initial safe catalogue-review API slice:
-
-- `GET /admin/provider-platform/catalogue`: paginated provider-sourced catalogue records with optional provider, search and review-state filters. The response excludes raw provider payloads and makes source price/currency and last-sync timestamp visible when recorded.
-- `POST /admin/provider-platform/catalogue/{providerService}/select`: creates a review record in `awaiting_approval` state with import and auto-sync disabled by default. Repeating the selection does not reset an existing approved/imported record.
-- Both endpoints reuse the existing Core provider catalogue and `provider_service_imports` tables; no second provider registry or automatic product publication was introduced.
-- Feature tests cover safe catalogue output, review selection defaults, audit recording, and preservation of existing approval/import state.
-
-This slice is not a complete catalogue integration. There is not yet a provider-specific discovery/sync implementation or admin-facing catalogue review screen. Selection is not import approval, mapping, live capability evidence, or production routing. Those must remain separate gated steps.
+Addon #38 reuses the Core-owned catalogue manager rather than introducing a second review interface or competing approval/mapping endpoints. Core already exposes provider discovery, sync history, import preview, explicit approval/import, and provider-to-catalogue mapping. The coverage dashboard links to the Core provider manager. Addon #38's remaining work is provider-specific contract mapping, verified discovery/sync adapters, and evidence for each concrete operation.
 
 ### First operation-level audit queue
 
@@ -213,14 +206,9 @@ Audit status is intentionally split into code-path evidence versus provider-cont
 
 ### Catalogue workflow safety gates — implementation checkpoint
 
-The current development branch now separates the workflow into explicit states/actions:
+Core's existing workflow separates catalogue discovery, import preview, approval/import, and mapping. Addon #38 must continue to call these Core endpoints and avoid changing Core-owned approval or mapping state directly. Any extension should add only missing service-specific adapters or evidence—not a duplicate catalogue manager.
 
-1. **Select for review** creates `awaiting_approval` with `approved=false`, `imported=false`, and `auto_sync_allowed=false`.
-2. **Approve for mapping** sets the review record to `approved`; it does not import a product or enable auto-sync.
-3. **Map to a local ServiceProduct** writes `provider_product_mappings_v2` with `mapping_status=mapped` and `enabled=false`. Existing mapping enablement is not changed by a repeat request.
-4. **Import, sync and routing enablement** remain separate operations and must not be inferred from approval or mapping.
+### Core workflow reuse boundary confirmed
 
-The new admin screen displays provider verification/integration state, provider service IDs/codes, source price/currency and last source sync timestamp. It deliberately does not expose raw provider payloads. Admin actions are permission-gated and approval/mapping changes are audit logged.
-
-Feature tests have been added for pending selection, approval-before-mapping, disabled mapping, audit records and the review page. These are not yet marked verified until the relevant development-branch CI run completes successfully.
+Code inspection found these existing Core endpoints in `routes/web.php` and `ProviderEngineController`: provider discovery, provider sync/history, service catalogue listing, import preview, explicit approve/import, and mapping create/toggle. The existing `Admin/ProviderCatalogueManager.tsx` already calls the Core sync and approval/import endpoints. Addon #38 therefore links to this screen and retains only its service-by-service coverage/reporting responsibility. The short-lived duplicate catalogue review implementation was removed before this development PR is considered ready.
 
