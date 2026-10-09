@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Payments;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -20,8 +19,8 @@ class PaymentWebhookReplayRegressionTest extends TestCase
     public function test_reused_provider_event_id_with_changed_payload_is_rejected(): void
     {
         $provider = $this->provider();
-        $manager = \\Mockery::mock(PaymentGatewayManager::class);
-        $adapter = \\Mockery::mock(PaymentGatewayAdapter::class);
+        $manager = \Mockery::mock(PaymentGatewayManager::class);
+        $adapter = \Mockery::mock(PaymentGatewayAdapter::class);
         $manager->shouldReceive('adapter')->once()->with($provider)->andReturn($adapter);
         $adapter->shouldReceive('verifyCollection')->once()->with($provider, 'pay-ref-1')->andReturn([
             'status' => 'success',
@@ -76,7 +75,7 @@ class PaymentWebhookReplayRegressionTest extends TestCase
             'processed_at' => now(),
         ]);
 
-        $manager = \\Mockery::mock(PaymentGatewayManager::class);
+        $manager = \Mockery::mock(PaymentGatewayManager::class);
         $manager->shouldNotReceive('adapter');
         $this->app->instance(PaymentGatewayManager::class, $manager);
         $this->setRawRequest($payload);
