@@ -3,6 +3,7 @@ namespace Semizzy\Addons\Education\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -13,7 +14,10 @@ final class AdminEducationPastQuestionController extends Controller {
   if($request->filled('category'))$q->where('category',$request->query('category'));
   if($request->filled('status'))$q->where('status',$request->query('status'));
   if($request->filled('q'))$q->where(function($s)use($request){$v=$request->query('q');$s->where('title','like','%'.$v.'%')->orWhere('institution','like','%'.$v.'%')->orWhere('exam_body','like','%'.$v.'%')->orWhere('subject','like','%'.$v.'%');});
-  return Inertia::render('Admin/Education/PastQuestions',['items'=>$q->paginate(25)->withQueryString(),'filters'=>$request->only(['category','status','q'])]);
+  $schools=DB::table('education_reference_catalogue')->where('kind','school')->where('is_active',true)->orderBy('name')->get(['name','category','state']);
+  $examBodies=DB::table('education_reference_catalogue')->where('kind','exam_body')->where('is_active',true)->orderBy('short_name')->get(['name','short_name']);
+  $examTypes=DB::table('education_reference_catalogue')->where('kind','exam_type')->where('is_active',true)->orderBy('name')->get(['name','metadata']);
+  return Inertia::render('Admin/Education/PastQuestions',['items'=>$q->paginate(25)->withQueryString(),'filters'=>$request->only(['category','status','q']),'schools'=>$schools,'examBodies'=>$examBodies,'examTypes'=>$examTypes]);
  }
  public function store(Request $request) {
   $data=$this->validateItem($request);
