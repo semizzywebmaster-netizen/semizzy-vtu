@@ -12,9 +12,11 @@ class SocialServicesTest extends TestCase {
  protected function setUp(): void
  {
   parent::setUp();
-  // Core RefreshDatabase intentionally excludes optional addon migrations.
+  // Addon migrations are intentionally separate from Core migrations.
   $migration = require base_path('addons/social.accounts-verification/database/migrations/2026_10_07_003000_create_social_services_tables.php');
   $migration->up();
+  $paymentMigration = require base_path('addons/social.accounts-verification/database/migrations/2026_10_09_120000_add_social_order_payment_tracking.php');
+  $paymentMigration->up();
  }
  public function test_user_can_create_number_order_from_admin_inventory():void{$u=User::factory()->create();$n=SocialNumberInventory::create(['country_code'=>'GB','country_name'=>'United Kingdom','phone_number'=>'+441234567890','phone_hash'=>hash('sha256','441234567890'),'service_key'=>'instagram','fulfillment_mode'=>'manual','price'=>'1000.00','currency'=>'NGN','status'=>'available']);$o=app(SocialServicesService::class)->createNumberOrder($u->id,$n->id);$this->assertSame('pending_payment',$o->status);$this->assertDatabaseHas('social_number_inventory',['id'=>$n->id,'status'=>'reserved']);}
  public function test_sms_is_scoped_to_number_order():void{$u=User::factory()->create();$o=SocialServiceOrder::create(['reference'=>'SOC-N-TEST','user_id'=>$u->id,'order_type'=>'number','status'=>'fulfilled','amount'=>'100','currency'=>'NGN']);$sms=app(SocialServicesService::class)->ingestSms($o,'Your code is 123456','Service','msg-1');$this->assertSame($o->id,$sms->order_id);}
