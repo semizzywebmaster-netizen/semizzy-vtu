@@ -1,12 +1,12 @@
 <?php
 
-namespace App\\Services\\Finance;
+namespace App\Services\Finance;
 
-use App\\Models\\FinancialOperation;
-use App\\Models\\User;
-use App\\Models\\WalletAccount;
-use App\\Models\\WalletMovement;
-use Illuminate\\Support\\Facades\\DB;
+use App\Models\FinancialOperation;
+use App\Models\User;
+use App\Models\WalletAccount;
+use App\Models\WalletMovement;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 final class WalletReversalService
