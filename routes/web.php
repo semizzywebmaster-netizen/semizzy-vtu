@@ -249,8 +249,8 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/routing/rules', [PricingRoutingController::class, 'storeRoutingRule'])->middleware('permission:providers.manage');
         Route::put('/routing/rules/{rule}', [PricingRoutingController::class, 'updateRoutingRule'])->whereNumber('rule')->middleware('permission:providers.manage');
         Route::delete('/routing/rules/{rule}', [PricingRoutingController::class, 'deleteRoutingRule'])->whereNumber('rule')->middleware('permission:providers.manage');
-        Route::post('/providers/{provider}/mappings', [ProviderEngineController::class, 'createMapping'])->whereNumber('provider')->middleware('permission:providers.manage');
-        Route::patch('/providers/{provider}/mappings/{mapping}', [ProviderEngineController::class, 'toggleMapping'])->whereNumber(['provider','mapping'])->middleware(['permission:catalogue.manage','throttle:30,1'])->name('admin.providers.mappings.toggle-v2');
+        Route::post('/providers/{provider}/mappings', [ProviderEngineController::class, 'createMapping'])->whereNumber('provider')->middleware(['permission:providers.manage','permission:catalogue.manage']);
+        Route::patch('/providers/{provider}/mappings/{mapping}', [ProviderEngineController::class, 'toggleMapping'])->whereNumber(['provider','mapping'])->middleware(['permission:providers.manage','permission:catalogue.manage','throttle:30,1'])->name('admin.providers.mappings.toggle-v2');
         Route::get('/providers/{provider}/provider-services/import-preview', [ProviderEngineController::class, 'importPreview'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.import-preview');
         Route::post('/providers/{provider}/provider-services/approve', [ProviderEngineController::class, 'approveImport'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.providers.approve-import');
         Route::post('/providers/{provider}/provider-services/import', [ProviderEngineController::class, 'importSelected'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.providers.provider-services.import');
@@ -270,7 +270,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/catalogue/products/{product}/disable', [CatalogueController::class, 'disableProduct'])->middleware('permission:catalogue.manage')->name('admin.catalogue.products.disable');
         Route::post('/catalogue/sync', [CatalogueController::class, 'syncProvider'])->middleware('permission:catalogue.manage')->name('admin.catalogue.sync');
         Route::post('/catalogue/sync-all', [CatalogueController::class, 'syncAllVerified'])->middleware('permission:catalogue.manage')->name('admin.catalogue.sync-all');
-        Route::post('/catalogue/mappings/{mapping}/toggle', [CatalogueController::class, 'toggleMapping'])->middleware('permission:catalogue.manage')->name('admin.catalogue.mappings.toggle');
+        Route::post('/catalogue/mappings/{mapping}/toggle', [CatalogueController::class, 'toggleMapping'])->middleware(['permission:providers.manage','permission:catalogue.manage'])->name('admin.catalogue.mappings.toggle');
 
         Route::get('/addons', [AddonController::class, 'index'])->middleware('permission:addons.view')->name('admin.addons.index');
         Route::post('/addons/register', [AddonController::class, 'register'])->middleware('permission:addons.manage')->name('admin.addons.register');
