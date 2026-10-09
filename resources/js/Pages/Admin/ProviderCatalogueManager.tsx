@@ -202,7 +202,7 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
     setError('');
     setMessage('');
     try {
-      const result = await requestJson(\`/admin/providers/\${provider.id}/mappings/\${row.product_mapping.id}\`, {
+      const result = await requestJson(`/admin/providers/${provider.id}/mappings/${row.product_mapping.id}`, {
         enabled: !row.product_mapping.enabled,
       }, 'PATCH');
       setMessage(result.message || (row.product_mapping.enabled ? 'Product mapping disabled.' : 'Product mapping activated.'));
@@ -221,7 +221,7 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
     setMessage('');
     const capabilities = rowMappingCapabilities[row.provider_service_id] ?? row.platform_mapping.capabilities;
     try {
-      const result = await requestJson(\`/admin/providers/\${provider.id}/service-mappings/\${row.platform_mapping.id}/capabilities\`, { capabilities }, 'PATCH');
+      const result = await requestJson(`/admin/providers/${provider.id}/service-mappings/${row.platform_mapping.id}/capabilities`, { capabilities }, 'PATCH');
       setMessage(result.message || 'Service mapping capabilities saved.');
       setRowMappingCapabilities((current) => {
         const next = { ...current };
@@ -242,7 +242,7 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
     setError('');
     setMessage('');
     try {
-      const result = await requestJson(\`/admin/providers/\${provider.id}/service-mappings/\${row.platform_mapping.id}\`, {
+      const result = await requestJson(`/admin/providers/${provider.id}/service-mappings/${row.platform_mapping.id}`, {
         enabled: !row.platform_mapping.enabled,
       }, 'PATCH');
       setMessage(result.message || (row.platform_mapping.enabled ? 'Service route disabled.' : 'Service route enabled.'));
