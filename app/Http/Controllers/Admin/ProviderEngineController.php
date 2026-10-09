@@ -41,6 +41,24 @@ class ProviderEngineController extends Controller
         return is_string($value) && strlen($value)>200 ? substr($value,0,200).'…' : $value;
     }
 
+    public function catalogueManager(ApiProvider $provider): Response
+    {
+        $provider->loadMissing('categories');
+        return Inertia::render('Admin/ProviderCatalogueManager', [
+            'provider' => [
+                'id' => $provider->id,
+                'identifier' => $provider->identifier,
+                'display_name' => $provider->display_name,
+                'verification_status' => $provider->verification_status,
+                'integration_status' => $provider->integration_status,
+                'enabled' => (bool) $provider->enabled,
+                'paused' => (bool) $provider->paused,
+                'service_categories' => $provider->service_categories ?? [],
+                'capabilities' => $provider->capabilities ?? [],
+            ],
+        ]);
+    }
+
     public function connections(ApiProvider $provider): JsonResponse
     {
         return response()->json([
