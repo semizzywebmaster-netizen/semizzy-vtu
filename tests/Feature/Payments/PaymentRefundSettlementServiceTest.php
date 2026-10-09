@@ -47,7 +47,7 @@ class PaymentRefundSettlementServiceTest extends TestCase
                 $table->text('last_error')->nullable();
                 $table->json('settings')->nullable();
                 $table->timestamps();
-                $table->index(['enabled', 'paused', 'maintenance', 'priority']);
+                $table->index(['enabled', 'paused', 'maintenance', 'priority'], 'pay_gateway_enabled_paused_prio_idx');
             });
             $this->createdProviderTable = true;
         }
