@@ -49,6 +49,7 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
   const [platformServiceId, setPlatformServiceId] = useState('');
   const [rowTargetServices, setRowTargetServices] = useState<Record<number, string>>({});
   const [rowTargetProducts, setRowTargetProducts] = useState<Record<number, string>>({});
+  const [rowMappingCapabilities, setRowMappingCapabilities] = useState<Record<number, string[]>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -213,6 +214,28 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
     }
   };
 
+  const saveServiceCapabilities = async (row: CatalogueRow) => {
+    if (!row.platform_mapping) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    const capabilities = rowMappingCapabilities[row.provider_service_id] ?? row.platform_mapping.capabilities;
+    try {
+      const result = await requestJson(\`/admin/providers/\${provider.id}/service-mappings/\${row.platform_mapping.id}/capabilities\`, { capabilities }, 'PATCH');
+      setMessage(result.message || 'Service mapping capabilities saved.');
+      setRowMappingCapabilities((current) => {
+        const next = { ...current };
+        delete next[row.provider_service_id];
+        return next;
+      });
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Service mapping capabilities could not be saved.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const toggleServiceRoute = async (row: CatalogueRow) => {
     if (!row.platform_mapping) return;
     setBusy(true);
@@ -312,7 +335,13 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
                         <p className="text-[11px] leading-4 text-slate-500">Creates a disabled draft mapping only. It never publishes or enables routing.</p>
                         {row.product_mapping && <button type="button" disabled={!canMapProducts || busy} onClick={() => void toggleProductMapping(row)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">{row.product_mapping.enabled ? 'Disable product mapping' : 'Activate product mapping'} · {row.product_mapping.mapping_status}</button>}
                         {row.platform_mapping && <button type="button" disabled={!canMapProducts || busy} onClick={() => void toggleServiceRoute(row)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">{row.platform_mapping.enabled ? 'Disable service route' : 'Enable service route'}</button>}
-                        {row.platform_mapping && !row.platform_mapping.capabilities.includes('transaction_initiation') && <p className="text-[11px] leading-4 text-amber-700">Configure transaction-initiation capability in provider settings before enabling this route.</p>}
+                        {row.platform_mapping && <div className="rounded-lg border border-slate-200 bg-white p-2">
+                          <p className="mb-2 text-[11px] font-bold text-slate-700">Service operations (only provider-declared capabilities)</p>
+                          {['catalogue_retrieval','transaction_initiation','transaction_status','refund','webhook'].filter((capability) => provider.capabilities.includes(capability)).length === 0
+                            ? <p className="text-[11px] text-amber-700">Declare verified provider capabilities first.</p>
+                            : ['catalogue_retrieval','transaction_initiation','transaction_status','refund','webhook'].filter((capability) => provider.capabilities.includes(capability)).map((capability) => <label key={capability} className="flex items-center gap-2 py-1 text-[11px] text-slate-700"><input type="checkbox" checked={(rowMappingCapabilities[row.provider_service_id] ?? row.platform_mapping!.capabilities).includes(capability)} disabled={!canMapProducts || busy || row.platform_mapping!.enabled} onChange={(event) => setRowMappingCapabilities((current) => ({ ...current, [row.provider_service_id]: event.target.checked ? Array.from(new Set([...(current[row.provider_service_id] ?? row.platform_mapping!.capabilities), capability])) : (current[row.provider_service_id] ?? row.platform_mapping!.capabilities).filter((item) => item !== capability) }))}/>{capability.replaceAll('_',' ')}</label>)}
+                          <button type="button" disabled={!canMapProducts || busy || row.platform_mapping.enabled} onClick={() => void saveServiceCapabilities(row)} className="mt-2 w-full rounded-lg border border-slate-300 px-2 py-2 text-[11px] font-bold text-slate-700 disabled:opacity-50">Save service capabilities</button>
+                        </div>}
                       </div>
                     </td>
                   </tr>)}
