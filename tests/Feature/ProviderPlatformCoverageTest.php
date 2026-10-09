@@ -274,7 +274,7 @@ class ProviderPlatformCoverageTest extends TestCase
 
     public function test_provider_catalogue_review_page_shows_only_safe_source_fields_and_review_actions(): void
     {
-        $admin = \\App\\Models\\User::factory()->create(['role' => 'ADMIN']);
+        $admin = \App\Models\User::factory()->create(['role' => 'ADMIN']);
         $provider = ApiProvider::query()->create([
             'identifier' => 'catalogue-page-provider',
             'display_name' => 'Catalogue Page Provider',
