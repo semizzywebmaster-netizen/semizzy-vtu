@@ -32,7 +32,7 @@ class AdminSystemSettingsTest extends TestCase
             'theme_key' => 'modern-corporate',
             'theme_primary' => '#4338CA',
             'skin_default' => 'light',
-            'theme_key' => 'premium-fintech',
+            'theme_key' => 'modern-corporate',
             'theme_primary' => '#4338CA',
             'skin_default' => 'light',
             'support_email' => 'help@example.test',
