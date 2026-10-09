@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\SystemHealthController;
 use App\Http\Controllers\Admin\GlobalSearchController;
 use App\Http\Controllers\Admin\OperationalRunbooksController;
 use App\Http\Controllers\Admin\FeatureRolloutController;
+use App\Http\Controllers\Admin\ProductPublicationController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\UserController;
@@ -260,6 +261,9 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/catalogue/services/generate-icons', [CatalogueController::class, 'generateServiceIcons'])->middleware('permission:catalogue.manage')->name('admin.catalogue.services.generate-icons');
         Route::post('/catalogue/services/{service}/icon', [CatalogueController::class, 'uploadServiceIcon'])->whereNumber('service')->middleware('permission:catalogue.manage')->name('admin.catalogue.services.icon');
         Route::post('/catalogue/products', [CatalogueController::class, 'storeProduct'])->middleware('permission:catalogue.manage')->name('admin.catalogue.products.store');
+        Route::get('/catalogue/products/{product}/publication-readiness', [ProductPublicationController::class, 'readiness'])->whereNumber('product')->middleware('permission:catalogue.manage')->name('admin.catalogue.products.publication-readiness');
+        Route::post('/catalogue/products/{product}/publish', [ProductPublicationController::class, 'publish'])->whereNumber('product')->middleware(['permission:catalogue.manage','throttle:20,1'])->name('admin.catalogue.products.publish');
+        Route::post('/catalogue/products/{product}/unpublish', [ProductPublicationController::class, 'unpublish'])->whereNumber('product')->middleware(['permission:catalogue.manage','throttle:20,1'])->name('admin.catalogue.products.unpublish');
         Route::post('/catalogue/products/{product}/disable', [CatalogueController::class, 'disableProduct'])->middleware('permission:catalogue.manage')->name('admin.catalogue.products.disable');
         Route::post('/catalogue/sync', [CatalogueController::class, 'syncProvider'])->middleware('permission:catalogue.manage')->name('admin.catalogue.sync');
         Route::post('/catalogue/sync-all', [CatalogueController::class, 'syncAllVerified'])->middleware('permission:catalogue.manage')->name('admin.catalogue.sync-all');
