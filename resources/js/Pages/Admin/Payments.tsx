@@ -70,8 +70,9 @@ export default function Payments({payments,providers=[],available_drivers=[],cap
       }
     }catch(err){form.setError('settings_json',err instanceof Error?err.message:'Invalid JSON.');return}
     const payload={...form.data,settings,credentials};
-    if(editing) form.transform(()=>payload).put('/admin/payments/providers/'+editing,{preserveScroll:true,onSuccess:()=>setShowForm(false)});
-    else form.transform(()=>payload).post('/admin/payments/providers',{preserveScroll:true,onSuccess:()=>{setShowForm(false);form.reset()}});
+    form.transform(()=>payload);
+    if(editing) form.put('/admin/payments/providers/'+editing,{preserveScroll:true,onSuccess:()=>setShowForm(false)});
+    else form.post('/admin/payments/providers',{preserveScroll:true,onSuccess:()=>{setShowForm(false);form.reset()}});
   };
   const action=(id:number,state:string)=>{
     setBusy(id);
