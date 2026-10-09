@@ -84,9 +84,7 @@ final class AdminSchoolAdmissionController extends Controller
             'display_order' => ['sometimes','integer','min:0','max:100000'],
             'requirements' => ['nullable','array'],
         ]);
-        if (!empty($data['programme_id']) && !empty($data['institution_id'])) {
-            abort_unless(SchoolAdmissionProgramme::whereKey($data['programme_id'])->where('institution_id',$data['institution_id'])->exists(), 422, 'Programme does not belong to the selected institution.');
-        }
+        $this->synchronizeProgrammeInstitution($data);
         $data['key'] = strtolower($data['key']);
         $data['currency'] = strtoupper($data['currency']);
         $data['active'] = (bool) ($data['active'] ?? true);
@@ -113,14 +111,24 @@ final class AdminSchoolAdmissionController extends Controller
             'display_order' => ['required','integer','min:0','max:100000'],
             'requirements' => ['nullable','array'],
         ]);
-        if (!empty($data['programme_id']) && !empty($data['institution_id'])) {
-            abort_unless(SchoolAdmissionProgramme::whereKey($data['programme_id'])->where('institution_id',$data['institution_id'])->exists(), 422, 'Programme does not belong to the selected institution.');
-        }
+        $this->synchronizeProgrammeInstitution($data);
         $data['key'] = strtolower($data['key']);
         $data['currency'] = strtoupper($data['currency']);
         $product->update($data);
 
         return back()->with('success','Admission product updated.');
+    }
+
+    private function synchronizeProgrammeInstitution(array &$data): void
+    {
+        if (empty($data['programme_id'])) return;
+
+        $programme = SchoolAdmissionProgramme::query()->findOrFail($data['programme_id']);
+        if (!empty($data['institution_id']) && (int) $data['institution_id'] !== (int) $programme->institution_id) {
+            abort(422, 'Programme does not belong to the selected institution.');
+        }
+
+        $data['institution_id'] = $programme->institution_id;
     }
 
     public function toggleProduct(SchoolAdmissionProduct $product)
