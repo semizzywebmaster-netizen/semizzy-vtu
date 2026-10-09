@@ -195,13 +195,13 @@ class VtuAdminController extends Controller
   },$filename,['Content-Type'=>'text/csv; charset=UTF-8','Cache-Control'=>'no-store']);
  }
 
- public function archiveBulk(VtuBulkOperation $bulk): \Illuminate\\Http\\RedirectResponse{
+ public function archiveBulk(VtuBulkOperation $bulk): \Illuminate\Http\RedirectResponse{
   if(!in_array($bulk->status,['successful','failed','partial','cancelled'],true)) return back()->with('error','Only terminal bulk operations can be archived.');
   if($bulk->archived_at) return back()->with('success','Bulk operation is already archived.');
   $bulk->forceFill(['archived_at'=>now()])->save();
   return back()->with('success','Bulk operation archived. Financial records and audit history remain intact.');
  }
- public function archiveSelectedBulk(Request $r): JsonResponse|\Illuminate\\Http\\RedirectResponse{
+ public function archiveSelectedBulk(Request $r): JsonResponse|\Illuminate\Http\RedirectResponse{
   $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id']]);
   $archived=0;$skipped=0;
   foreach(VtuBulkOperation::query()->whereIn('id',array_map('intval',$data['bulk_ids']))->get() as $bulk){
@@ -211,13 +211,13 @@ class VtuAdminController extends Controller
   return $r->expectsJson()?response()->json($payload):back()->with('success',"Selected bulk archive completed: {$archived} archived, {$skipped} skipped (only terminal unarchived operations can be archived).");
  }
 
- public function unarchiveBulk(VtuBulkOperation $bulk): \Illuminate\\Http\\RedirectResponse{
+ public function unarchiveBulk(VtuBulkOperation $bulk): \Illuminate\Http\RedirectResponse{
   if(!$bulk->archived_at) return back()->with('success','Bulk operation is not archived.');
   $bulk->forceFill(['archived_at'=>null])->save();
   return back()->with('success','Bulk operation restored to the active bulk history.');
  }
 
- public function unarchiveSelectedBulk(Request $r): JsonResponse|\\Illuminate\\Http\\RedirectResponse{
+ public function unarchiveSelectedBulk(Request $r): JsonResponse|\Illuminate\Http\RedirectResponse{
   $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id']]);
   $restored=0;$skipped=0;
   foreach(VtuBulkOperation::query()->whereIn('id',array_map('intval',$data['bulk_ids']))->get() as $bulk){
@@ -240,7 +240,7 @@ class VtuAdminController extends Controller
   $bulkService->recalculate($bulk);
   return back()->with('success',"Bulk reconciliation checked {$attempted} item(s); {$reconciled} state change(s) applied.");
  }
- public function requeryBulkItem(Request $r,VtuBulkOperation $bulk,VtuBulkService $bulkService,VtuTransactionService $service): JsonResponse|\\Illuminate\\Http\\RedirectResponse{
+ public function requeryBulkItem(Request $r,VtuBulkOperation $bulk,VtuBulkService $bulkService,VtuTransactionService $service): JsonResponse|\Illuminate\Http\RedirectResponse{
   $data=$r->validate(['item_ids'=>['nullable','array','max:100'],'item_ids.*'=>['integer','distinct']]);
   $query=$bulk->items()->with('transaction')->whereIn('status',['pending','processing']);
   if(!empty($data['item_ids'])) $query->whereIn('id',$data['item_ids']);
