@@ -6,6 +6,7 @@ use Semizzy\Addons\AIChatbot\Http\Controllers\AIChatbotController;
 Route::middleware(['auth','verified','role:ADMIN,STAFF,SUPPORT','ensure.addon:ai.chatbot'])->prefix('admin/ai-chatbot')->group(function():void{
  Route::get('/',[AIChatbotAdminController::class,'index'])->middleware('permission:ai_chatbot.settings.manage')->name('admin.ai-chatbot.index');
  Route::get('/conversations',[AIChatbotAdminController::class,'conversations'])->middleware('permission:ai_chatbot.conversations.view')->name('admin.ai-chatbot.conversations');
+ Route::get('/conversations/{uuid}',[AIChatbotAdminController::class,'conversation'])->whereUuid('uuid')->middleware('permission:ai_chatbot.conversations.view')->name('admin.ai-chatbot.conversations.show');
  Route::post('/providers',[AIChatbotAdminController::class,'storeProvider'])->middleware('permission:ai_chatbot.providers.manage')->name('admin.ai-chatbot.providers.store');
  Route::put('/providers/{provider}',[AIChatbotAdminController::class,'updateProvider'])->whereNumber('provider')->middleware('permission:ai_chatbot.providers.manage')->name('admin.ai-chatbot.providers.update');
  Route::post('/providers/{provider}/test',[AIChatbotAdminController::class,'testProvider'])->whereNumber('provider')->middleware('permission:ai_chatbot.providers.manage')->name('admin.ai-chatbot.providers.test');
