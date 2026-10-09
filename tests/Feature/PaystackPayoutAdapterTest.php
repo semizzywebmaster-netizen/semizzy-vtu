@@ -1,11 +1,11 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use Illuminate\\Support\\Facades\\Http;
-use Semizzy\\Addons\\Payments\\Adapters\\PaystackPaymentGatewayAdapter;
-use Semizzy\\Addons\\Payments\\Models\\PaymentGatewayProvider;
-use Tests\\TestCase;
+use Illuminate\Support\Facades\Http;
+use Semizzy\Addons\Payments\Adapters\PaystackPaymentGatewayAdapter;
+use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
+use Tests\TestCase;
 
 class PaystackPayoutAdapterTest extends TestCase
 {
@@ -43,7 +43,7 @@ class PaystackPayoutAdapterTest extends TestCase
                 ['amount_minor' => 2000, 'recipient_code' => 'RCP_b', 'reference' => 'semizzy_bulk_000001'],
             ]]);
             $this->fail('Duplicate references must be rejected.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('references must be unique', $exception->getMessage());
         }
         Http::assertNothingSent();
@@ -52,7 +52,7 @@ class PaystackPayoutAdapterTest extends TestCase
     public function test_single_payout_requires_valid_reference_and_positive_kobo_amount(): void
     {
         Http::fake();
-        $this->expectException(\\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         (new PaystackPaymentGatewayAdapter())->singlePayout($this->provider(), ['bank_code' => '044', 'account_number' => '0123456789', 'amount_minor' => 0, 'reference' => 'short']);
     }
 

@@ -1,12 +1,12 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\ApiProvider;
-use App\\Services\\Providers\\ProviderUrlGuard;
-use App\\Services\\Providers\\RestJsonProviderAdapter;
-use Illuminate\\Support\\Facades\\Http;
-use Tests\\TestCase;
+use App\Models\ApiProvider;
+use App\Services\Providers\ProviderUrlGuard;
+use App\Services\Providers\RestJsonProviderAdapter;
+use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
 
 class VtuFastReadOnlyAdapterTest extends TestCase
 {

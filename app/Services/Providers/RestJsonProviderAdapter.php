@@ -207,7 +207,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
             $status = $response->status();
             $uncertain = $status === 408 || $status === 429 || $status >= 500;
             return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'Interswitch could not verify the supplied bank account.', retryable: false, providerId: $provider->id);
-        } catch (\\Throwable) {
+        } catch (\Throwable) {
             return new ProviderResult(false, 'UNKNOWN', message: 'Interswitch verification request failed; check provider status before retrying.', retryable: false, providerId: $provider->id);
         }
     }
@@ -276,7 +276,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
             $duplicate = $operation === 'transaction_initiation' && str_contains($message, 'duplicate');
             $uncertain = $statusCode === 408 || $statusCode === 429 || $statusCode >= 500 || $duplicate;
             return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'VTUAgent request failed; inspect provider status before retry when the outcome is uncertain.', retryable: false, duplicateRisk: $operation === 'transaction_initiation' && $uncertain, providerId: $provider->id);
-        } catch (\\Throwable) {
+        } catch (\Throwable) {
             return new ProviderResult(false, 'UNKNOWN', message: 'VTUAgent request failed; requery the request_ref before retrying.', retryable: false, duplicateRisk: $operation === 'transaction_initiation', providerId: $provider->id);
         }
     }
@@ -339,7 +339,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
             $duplicate = $httpStatus === 409;
             $uncertain = $duplicate || $httpStatus === 408 || $httpStatus === 429 || $httpStatus >= 500;
             return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'CheapDataHub request failed; requery the provider transaction before retrying if its outcome is uncertain.', retryable: false, duplicateRisk: $operation === 'transaction_initiation' && $uncertain, providerId: $provider->id);
-        } catch (\\Throwable) {
+        } catch (\Throwable) {
             // No client-supplied request reference is documented for purchases; never
             // automatically fail over after a network exception that may follow a debit.
             return new ProviderResult(false, 'UNKNOWN', message: 'CheapDataHub request outcome is uncertain; reconcile the provider transaction before retrying.', retryable: false, duplicateRisk: $operation === 'transaction_initiation', providerId: $provider->id);
@@ -374,7 +374,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
             $code = $response->status();
             $uncertain = $code === 408 || $code === 429 || $code >= 500;
             return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'VTUFast read-only request failed.', providerId: $provider->id);
-        } catch (\\Throwable) {
+        } catch (\Throwable) {
             return new ProviderResult(false, 'UNKNOWN', message: 'VTUFast read-only request failed.', providerId: $provider->id);
         }
     }
