@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\ProviderController;
 use App\Http\Controllers\Admin\ProviderEngineController;
 use App\Http\Controllers\Admin\PricingRoutingController;
 use App\Http\Controllers\Admin\SystemHealthController;
+use App\Http\Controllers\Admin\GlobalSearchController;
+use App\Http\Controllers\Admin\OperationalRunbooksController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\UserController;
