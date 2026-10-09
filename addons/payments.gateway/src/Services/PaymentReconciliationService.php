@@ -47,12 +47,14 @@ final class PaymentReconciliationService
         if(!$provider->supports('refund') || !app(PaymentGatewayAdapterRegistry::class)->has($provider->driver)){
             throw new RuntimeException('The assigned provider does not expose a verified refund capability.');
         }
-        $result=$this->gateways->adapter($provider)->refund($provider,array_merge([
+        // Provider-specific extras may be supplied by trusted internal callers, but they
+        // must never override the payment amount, currency, or original reference.
+        $result=$this->gateways->adapter($provider)->refund($provider,array_merge($payload,[
             'amount_minor'=>(string)$payment->amount_minor,
             'currency'=>$payment->currency,
             'original_reference'=>$payment->provider_reference ?: $payment->reference,
             'reference'=>'REF-'.$payment->reference,
-        ],$payload));
+        ]));
         $payment->forceFill(['metadata'=>array_merge((array)$payment->metadata,[
             'refund_requested_at'=>now()->toISOString(),
             'refund_provider'=>$provider->code,
