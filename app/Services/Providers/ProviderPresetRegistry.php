@@ -348,11 +348,7 @@ final class ProviderPresetRegistry
                 'auth_type'=>'bearer',
                 'service_categories'=>['airtime','data','cable-tv','electricity'],
                 'capabilities'=>['balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status','webhook'],
-                'endpoints'=>[
-                    'transaction_initiation'=>'/airtime/purchase',
-                    'transaction_status'=>'/transactions',
-                ],
-                'api_version'=>'v1',
+                'endpoints'=>[],'api_version'=>'v1',
                 'mappings'=>[
                     ['service_key'=>'airtime','provider_service_id'=>'airtime','capabilities'=>['transaction_initiation','transaction_status']],
                     ['service_key'=>'data','provider_service_id'=>'data','capabilities'=>['transaction_initiation','transaction_status','catalogue_retrieval']],
@@ -370,13 +366,7 @@ final class ProviderPresetRegistry
                 'auth_type'=>'bearer',
                 'service_categories'=>['airtime','data','electricity','cable-tv','education'],
                 'capabilities'=>['balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status','webhook'],
-                'endpoints'=>[
-                    'balance_inquiry'=>'/wallet/balance/',
-                    'transaction_initiation'=>'/airtime/purchase/',
-                    'transaction_status'=>'/transactions/',
-                    'catalogue_retrieval'=>'/exam-pin/products/',
-                ],
-                'api_version'=>'v1',
+                'endpoints'=>[],'api_version'=>'v1',
                 'mappings'=>[
                     ['service_key'=>'airtime','provider_service_id'=>'airtime','capabilities'=>['transaction_initiation','transaction_status']],
                     ['service_key'=>'data','provider_service_id'=>'data','capabilities'=>['transaction_initiation','transaction_status','catalogue_retrieval']],
@@ -395,12 +385,7 @@ final class ProviderPresetRegistry
                 'auth_type'=>'bearer',
                 'service_categories'=>['airtime','data'],
                 'capabilities'=>['balance_inquiry','catalogue_retrieval','transaction_initiation'],
-                'endpoints'=>[
-                    'balance_inquiry'=>'/api.php?route=balance',
-                    'catalogue_retrieval'=>'/api.php?route=plans',
-                    'transaction_initiation'=>'/api.php?route=airtime',
-                ],
-                'api_version'=>'v1',
+                'endpoints'=>[],'api_version'=>'v1',
                 'mappings'=>[
                     ['service_key'=>'airtime','provider_service_id'=>'airtime','capabilities'=>['transaction_initiation','catalogue_retrieval']],
                     ['service_key'=>'data','provider_service_id'=>'data','capabilities'=>['transaction_initiation','catalogue_retrieval']],
@@ -416,10 +401,7 @@ final class ProviderPresetRegistry
                 'auth_type'=>'custom',
                 'service_categories'=>['verification'],
                 'capabilities'=>['account_verification','identity_verification'],
-                'endpoints'=>[
-                    'account_verification'=>'/nameenquiry/banks/accounts/names',
-                ],
-                'api_version'=>'v1',
+                'endpoints'=>[],'api_version'=>'v1',
                 'mappings'=>[
                     ['service_key'=>'account-verification','provider_service_id'=>'nameenquiry/banks/accounts/names','capabilities'=>['account_verification']],
                     ['service_key'=>'kyc-verification','provider_service_id'=>'kyc-identity-verification','capabilities'=>['identity_verification']],
