@@ -82,6 +82,11 @@ final class KoraPaymentGatewayAdapter implements PaymentGatewayAdapter
         throw new RuntimeException('Kora refund is not enabled in this collection gateway adapter.');
     }
 
+    public function verifyRefund(PaymentGatewayProvider $provider, string $refundReference, array $context = []): array
+    {
+        throw new RuntimeException('Verified refund status lookup is not implemented for this provider; do not settle the wallet from a refund request response.');
+    }
+
     public function healthCheck(PaymentGatewayProvider $provider): bool
     {
         $response = $this->request($provider)->get(
