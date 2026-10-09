@@ -299,9 +299,9 @@ class UserController extends Controller
 
     public function debit(Request $request, User $user, AdminWalletDebitService $debit, AuditLogger $audit): RedirectResponse
     {
-        $data=$request->validate(['amount'=>['required','string','max:30','regex:/^\\d+(?:\\.\\d{1,2})?$/'],'note'=>['nullable','string','max:255']]);
+        $data=$request->validate(['amount'=>['required','string','max:30','regex:/^\\d+(?:\\.\\d{1,2})?$/'],'note'=>['nullable','string','max:255'],'idempotency_key'=>['nullable','string','max:120']]);
         try {
-            $wallet=$debit->debit($user,$data['amount'],$request->user(),trim((string)($data['note']??'')));
+            $wallet=$debit->debit($user,$data['amount'],$request->user(),trim((string)($data['note']??'')),isset($data['idempotency_key'])?(string)$data['idempotency_key']:null);
             try { $audit->record('admin.user.wallet.debited',$user->fresh(),['target_user_id'=>$user->id,'amount_major'=>$data['amount'],'currency'=>$wallet->currency,'wallet_account_id'=>$wallet->id,'note'=>trim((string)($data['note']??''))?:null],$request); } catch(\Throwable $e){report($e);}
             return back()->with('success','User wallet debited successfully.');
         } catch (\Throwable $e) { report($e); return back()->with('error',$e->getMessage()?:'User debit failed safely.'); }
