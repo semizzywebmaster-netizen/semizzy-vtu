@@ -48,3 +48,46 @@ jobs:
       - run: npm run build
 
 # CI trigger checkpoint for full Core, CAC, analytics, communication, realtime, auth, security and VTU validation.
+
+  financial-mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: semizzy_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: semizzy_test
+      DB_USERNAME: root
+      DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, pcntl
+          coverage: none
+      - run: mkdir -p bootstrap/cache storage/app storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs
+      - run: composer validate --strict
+      - run: composer install --no-interaction --prefer-dist
+      - run: cp .env.example .env
+      - run: php artisan key:generate
+      - name: Run real MySQL wallet concurrency races
+        run: php artisan test tests/Feature/Finance/WalletConcurrencyMySqlTest.php
+      - name: Run real MySQL P2P transfer concurrency races
+        run: php artisan test tests/Feature/P2p/P2pTransferConcurrencyMySqlTest.php
+      - name: Verify reversal and refund settlement on MySQL
+        run: |
+          php artisan test tests/Feature/Finance/WalletReversalServiceTest.php
+          php artisan test tests/Feature/Payments/PaymentRefundSettlementServiceTest.php
