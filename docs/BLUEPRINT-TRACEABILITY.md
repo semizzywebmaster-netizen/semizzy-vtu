@@ -1,0 +1,83 @@
+# SEMIZZY ONE Blueprint Traceability and Remaining Work
+
+Audit baseline: `main` as inspected on 2026-10-09. This document maps the Nigerian VTU & Fintech Super Platform blueprint to repository evidence. It is not a production-readiness certificate.
+
+## How to interpret status
+
+- **Core foundation present** means relevant code and tests exist; it does not prove every production scenario.
+- **Addon code present; readiness unverified** means a manifest and some implementation files exist, but provider credentials, real API contracts, complete workflows, deployment behavior, and security are not certified.
+- **Remaining / not verified** means the blueprint requires explicit tests, integrations, operational setup, or implementation evidence before the feature should be called complete.
+
+## Repository inventory observed
+
+- 31 addon manifests under `addons/*/manifest.php`.
+- 98 addon-local PHP migration files.
+- 83 addon route files.
+- 74 PHP test files under `tests/`.
+- Core wallet/ledger, reconciliation, webhook replay-guard, provider routing, addon lifecycle, setup, PWA, support, and admin-security tests exist.
+- The latest commit at the time of this audit is recorded in the linked GitHub history; always use current Actions results rather than treating this document's counts as timeless.
+
+## Blueprint mapping
+
+| Blueprint area | Repository evidence | Status / work still required |
+|---|---|---|
+| 1. User & account system | Core auth, profiles, PIN, device/security foundations, admin/user tests | Foundation present. Verify end-to-end OTP channels, 2FA enrollment/recovery, session/device revocation, risk checks, and account restrictions on a deployed host. |
+| 2. KYC & identity | `kyc.identity-verification`, Core KYC routes/services and KYC tests | Addon code present. Verify every document type, duplicate identity race protection, provider verification, retention/deletion policy, reviewer permissions, and tier limits. |
+| 3. Wallet & financial system | Core `LedgerService`, wallet credit/debit services, movement integrity and reconciliation tests | Foundation present. Still require DB-backed concurrent debit/transfer/refund/reversal tests, complete double-entry accounting proof, and production reconciliation procedures. |
+| 4. Funding & virtual accounts | `payments.gateway`, banking integration addon, webhook and payment reconciliation services | Partial/integration-dependent. Verify each provider's current API contract, unique virtual account issuance, deposit matching, signed callbacks, amount/currency checks, duplicate credit and refund paths using sandbox/live-provider evidence. |
+| 5–6. VTU, telecom and dynamic data-plan marketplace | `vtu.digital-services`, provider/catalogue/pricing Core and VTU tests | Foundation and addon code present. Verify real provider mappings, all plan classes, product sync, tier/reseller pricing, bulk purchases, unknown outcomes, failover, and live requery. |
+| 7. Airtime/data conversion | No dedicated conversion addon in the current 31-manifest inventory | Not evidenced as a complete feature. Build a dedicated workflow with provider/manual processing, fraud checks, settlement, status tracking, and refunds. |
+| 8. Bills & digital subscriptions | VTU/service catalogue foundations | Verify electricity meter validation, cable/IUC checks, supported biller adapters, idempotency, provider reconciliation, and refunds. |
+| 9. Education | `education`, `exams.results` | Addon code present. Verify WAEC/NECO/JAMB/NABTEB products, real exam-body/provider integrations, school/institution payments, PIN delivery and refunds. |
+| 10–11. Government/document services and manual applications | `cac.business-services`, `government-registration-certificates`, related service/application code | Partial. Confirm each listed service has an actual workflow/provider or documented manual-fulfilment path, secure uploads, tracking, messaging, rejection/cancellation and refund handling. Do not infer government authorization from code presence. |
+| 12. Savings | `savings.goals`, movement-retention migration and reconciliation | Addon code present. Test schedules, maturity, locked/flexible rules, concurrent withdrawals, failed scheduled tasks, and balance reconciliation. |
+| 13. Loans & credit | `loans.credit` | Addon code present. Verify lender eligibility/provider integration, repayment allocation, delinquency, reversals, audit and production disclosures. |
+| 14. Virtual cards | `virtual-cards` | Manifest/code exists; README roadmap classification is inconsistent. Verify a licensed issuer, card lifecycle, OTP/3DS, funding, sensitive detail handling, limits and reconciliation before calling it built. |
+| 15. Gift cards | `gift-cards` | Manifest/code exists; README roadmap classification is inconsistent. Verify brand catalogue/rates, verification, fraud checks, settlement/payout, disputes and provider integration. |
+| 16. Travel & international | `travel-tickets` and international-service foundations | Manifest/code exists; production status unverified. Flight/hotel search and booking require real supplier integrations, booking confirmation, cancellation/refund, FX and reconciliation tests. |
+| 17. Investment & wealth | `investments.wealth` | Addon code present. Verify licensed providers/products, valuation freshness, holdings/transactions, settlement, risk disclosures and reconciliation. |
+| 18–20. Rewards, campaigns and coupons | `rewards-referrals-promotions`, `spin-to-win` | Partial. Verify approval rules, atomic claim limits, tier targeting, coupon stacking/expiry, abuse prevention and ledger-backed rewards. |
+| 22–24. Reseller, agent/merchant, developer API | `business-agent-merchant-reseller`, Core API tokens, banking/payment integrations | Partial. Verify onboarding/KYB, settlements, staff scopes, API product coverage, per-key rate limits, sandbox/production isolation, webhook delivery/retries and API billing. |
+| 25. VTU website builder | `vtu-website-builder` | Manifest/code exists; README roadmap classification is inconsistent. Verify tenant isolation, custom domain/DNS/TLS, tenant branding, billing, PWA, and prevention of cross-tenant data access. |
+| 27–31. Used goods, marketplace, escrow, property, services and digital products | `marketplace.commerce`, `escrow.protection`, shared marketplace foundations | Partial. Verify each marketplace vertical separately: listing moderation, image/file controls, orders, delivery, disputes/evidence, escrow state transitions, delayed payout and refunds. A general marketplace addon does not prove every vertical is complete. |
+| 33. P2P trading & escrow | `p2p.transfers`, `escrow.protection` | Active hardening. P2P offer requery was found to need participant ownership checks and a protected POST action; those changes were committed. Add dedicated tests for participant/non-participant access, offer races, escrow funding/release/refund and reconciliation. |
+| 34. Crypto wallet/blockchain | `crypto-payments.gateway` | Crypto payment-gateway code exists; this is not proof of a full custodial crypto wallet. Verify provider signatures against exact vendor specifications, status-transition matrix, duplicate/reordered callbacks, confirmation thresholds, asset/network validation, settlement and supported legal scope. |
+| 35. Insurance | `insurance-protection` | Manifest/code exists; production readiness unverified. Verify licensed insurer integrations, policy issuance/document storage, renewal, claims routing and commission/settlement. |
+| 36–38. Community, mentions, impersonation protection | No dedicated community addon is present in the manifest inventory; social verification addon is not a community implementation | Not evidenced as complete. Build community/groups/moderation, internal mention resolver, reserved-name policy, username history and impersonation review workflows. |
+| 39. Group savings/contributions | No dedicated group-savings addon manifest is present | Not evidenced as complete. Build group rules, membership/approvals, contribution schedules, member-level ledger, missed-payment tracking and dispute/audit paths. |
+| 40–41. Communication center and WhatsApp transaction bot | `communication.whatsapp`, `whatsapp-bot`, Core communications | Partial. Verify real Meta/provider webhook signatures, inbound idempotency under concurrency, user/phone linking, command authentication, PIN/OTP protections, opt-in/consent and all listed transaction intents. |
+| 56–58. Financial analytics, greeting/quotes, real-time updates | Core analytics/realtime foundations and dashboard pages | Partial. Verify all metrics against ledger truth, date-range/time-zone handling, exports, personalized content controls, terminal-state polling shutdown and private-channel authorization. |
+| 59–60. Advertising and advertising marketplace | No dedicated ads/monetization addon manifest is present | Not evidenced as complete. Build placement inventory, campaign payment/review/scheduling, impression/click deduplication, CTR analytics and advertiser isolation. |
+| 61. Help & support center | Core support tickets/help foundations | Foundation present. Verify searchable articles/FAQ, contextual help, AI assistant handoff, unanswered-question analytics and full staff permission matrix. |
+| 62. Security | Core security/audit, rate-limit and webhook foundations | Foundation present. Complete a threat-model-driven audit of all mutating routes, uploads, secrets, webhook replay/race conditions, account recovery, and admin actions. |
+| 63. Multi-provider engine | Core provider registry, routing, pricing and health foundations | Foundation present. Test provider priority/failover under timeout, ambiguous external success, cooldown, pause/maintenance, balance limits, retries and provider-specific response parsing. |
+| 64. Addon system | Registry, lifecycle, compatibility/dependency checks, route registrar and manifest integrity test | Foundation present. Add lifecycle integration tests for interrupted install/update, partial migrations, rollback/repair, disabled dependencies, route activation, and incompatible versions. |
+| 65. Admin control center | Core admin users/settings/providers/security and addon admin pages | Partial. Compare every admin section in the blueprint against real working pages/actions; do not treat a menu entry or manifest label as an implemented control. |
+| 66–67. PWA/mobile and sticky navigation | PWA shell, manifest, service worker and navigation foundations | Foundation present. Test install/update behavior on Android/iOS browsers, offline fallback, push permission/delivery, responsive admin/POS and admin-configured navigation. |
+| 68–69. Transaction tracking and analytics | Core transactions/receipts/requery foundations and analytics controller | Partial. Normalize statuses across services, enforce unique tracking IDs, support action-required/external-authority states, and verify notification/requery behavior per addon. |
+| 71. Installation/restricted mode | Web setup/installation guard | Setup foundation present. The blueprint's license/restricted-mode details must not be implemented as a license/anti-piracy subsystem; use safe installation/maintenance/support information only, consistent with Core's explicit no-license-system boundary. |
+| 72. Portable hosting | cPanel deployment files and docs | Documented target, not yet host-certified. Test actual cPanel PHP/extensions, Apache document root, build artifact, cron, database queues and file permissions. Optional infrastructure must remain optional. |
+| 73. Backup/disaster recovery | Admin/system foundations need verification against complete backup/restore workflows | Not proven complete. Implement/test encrypted database + application/config backup, retention, off-host copy, restore validation and recovery drills. |
+| 74. Maintenance/system management | Core maintenance, service toggles, health views and addon lifecycle | Foundation present. Verify emergency controls, scheduled tasks, alerting, log retention, provider disable behavior and safe recovery after partial failure. |
+| 75. Audit/compliance | Core audit/security events, financial movements and addon lifecycle events | Foundation present. Verify tamper resistance, retention/export, actor attribution, KYC/privacy access logs and complete coverage for every financial/admin mutation. |
+
+## Confirmed audit findings to keep in scope
+
+1. **Roadmap status inconsistency:** README classifies Travel, Gift Cards, WhatsApp, Insurance, Business/Agent/Merchant/Reseller, VTU Website Builder, Virtual Cards and Crypto as “NOT BUILT”, while their addon manifests exist. Manifest existence alone does not make them production-ready; the roadmap needs a more precise status such as scaffolded, implemented-but-unverified, hardening, or verified.
+2. **Authorization regression coverage:** P2P offer requery was changed to check that the requester is the offer's buyer or seller and to use a protected POST route. Add explicit regression tests; current CI passing is not a substitute for those tests.
+3. **Provider-specific webhook verification:** Payment and crypto webhook code contains provider-specific verification paths. Validate each path against current vendor documentation and fixture-based signature tests, then test duplicate/reordered callbacks and settlement retries.
+4. **Addon inventory is not a feature-completion count:** 31 manifests, 98 addon migrations and 83 addon route files show breadth of code, not completion of every item in the blueprint.
+5. **Runtime release gate:** CI does not verify production credentials, live provider API contracts, cPanel cron/queue execution, backup restore, load, external messaging delivery or live-domain security.
+
+## Recommended implementation order
+
+1. Add regression tests for the recent P2P authorization changes and crypto/payment webhook replay, race, and status-transition behavior.
+2. Complete the wallet/ledger integration suite: concurrent debit/credit, same-key/different-payload rejection, transfers, refunds, reversals and reconciliation.
+3. Audit every mutating addon route for authentication, active-addon guard, permission, PIN/step-up, rate limits, and record ownership.
+4. Reconcile every manifest's declared dependencies, permissions, routes, migrations, navigation and actual implementation. Keep provider dependencies optional only where runtime behavior safely handles absence.
+5. Repair the README addon status list and track every blueprint feature as not started, scaffolded, implemented, tested, or production-verified.
+6. Run staging acceptance tests with provider sandbox credentials; then perform cPanel deployment, cron/queue, SMTP/OTP, backup-restore and recovery drills before enabling real transactions.
+
+## Explicit exclusions
+
+The repository's architecture forbids a license server, license keys, domain-binding activation or anti-piracy subsystem. Do not treat these as undone work. Provider integrations must not be labelled live without verified provider documentation, credentials and test results. Production secrets, `composer.lock`, and `package-lock.json` are deployment-managed and are not audit defects merely because they are absent from the repository.
