@@ -49,7 +49,7 @@ class WhatsAppBotWebhookController
      $validator->validate($product->service,$payload);
      $tx=$transactions->process($transactions->create($user->id,$product,$payload,$user->role,'wa:'.Str::uuid()));
      $reply="Transaction ".$tx->reference." has been submitted. Status: ".strtoupper($tx->status).". You can continue receiving updates on WhatsApp.";
-    } catch(\\Throwable $e) {
+    } catch(\Throwable $e) {
      $reply='Transaction was not submitted: '.substr($e->getMessage(),0,180);
     }
    }
