@@ -3,6 +3,14 @@ on:
   push:
     branches: [main]
     paths:
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/migrations/**'
+      - 'routes/**'
+      - 'resources/**'
+      - 'tests/**'
+      - '.github/workflows/**'
       - 'addons/ai.chatbot/**'
       - 'resources/js/Components/AIChatbotWidget.tsx'
       - 'resources/js/Pages/Admin/AIChatbot.tsx'
@@ -16,6 +24,14 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/migrations/**'
+      - 'routes/**'
+      - 'resources/**'
+      - 'tests/**'
+      - '.github/workflows/**'
       - 'addons/ai.chatbot/**'
       - 'resources/js/Components/AIChatbotWidget.tsx'
       - 'resources/js/Pages/Admin/AIChatbot.tsx'
