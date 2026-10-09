@@ -63,6 +63,13 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'A.D. Rufa’i College of Education, Legal and General Studies','source_url'=>'https://ncce.gov.ng/AccreditedColleges']);
   $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'Miva Open University','category'=>'private_university']);
  }
+ public function test_official_directory_expansion_is_safe_to_rerun_without_duplicates():void {
+  $before=DB::table('education_reference_catalogue')->where('kind','school')->count();
+  $migration=require base_path('addons/education/database/migrations/2026_10_09_110300_expand_official_school_reference_catalogue.php');
+  $migration->up();
+  $after=DB::table('education_reference_catalogue')->where('kind','school')->count();
+  $this->assertSame($before,$after);
+ }
  public function test_reference_catalogue_has_room_for_admin_added_schools_and_exam_bodies():void {
   DB::table('education_reference_catalogue')->insert([
    'kind'=>'school','category'=>'private_university','name'=>'Admin Added University','catalogue_key'=>hash('sha256','school|private_university|Admin Added University'),
