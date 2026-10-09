@@ -2,11 +2,13 @@
 
 namespace Semizzy\Addons\ApiProviderPlatform\Services;
 
+use App\Models\ApiProvider;
 use App\Models\ProviderServiceMapping;
 use App\Models\ProviderServiceProduct;
 use App\Models\ServiceProduct;
 use App\Services\Pricing\PriceEngine;
 use App\Services\Audit\AuditLogger;
+use Brick\Math\BigDecimal;
 use Illuminate\Support\Facades\DB;
 
 final class ProductPublicationService
@@ -101,6 +103,7 @@ final class ProductPublicationService
 
         $providerProducts = $product->providerProducts()->with('provider')->get();
         $eligibleSourceFound = false;
+        $pricingProvider = null;
 
         foreach ($providerProducts as $providerProduct) {
             $provider = $providerProduct->provider;
@@ -140,6 +143,7 @@ final class ProductPublicationService
 
             if ($mappingExists && !$duplicateExternalId) {
                 $eligibleSourceFound = true;
+                $pricingProvider = $provider;
                 break;
             }
         }
@@ -156,9 +160,9 @@ final class ProductPublicationService
             $product->enabled = true;
             foreach (self::REQUIRED_TIERS as $tier) {
                 try {
-                    $quote = $this->priceEngine->quote($product, $tier);
+                    $quote = $this->priceEngine->quote($product, $tier, null, $pricingProvider);
                     if (isset($quote['provider_cost'], $quote['customer_price'])
-                        && (float) $quote['customer_price'] < (float) $quote['provider_cost']) {
+                        && BigDecimal::of((string) $quote['customer_price'])->isLessThan(BigDecimal::of((string) $quote['provider_cost']))) {
                         $blockers[] = "The {$tier} selling price is below provider cost.";
                     }
                 } catch (\Throwable $exception) {
