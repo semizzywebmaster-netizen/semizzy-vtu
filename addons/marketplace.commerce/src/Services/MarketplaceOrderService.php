@@ -361,9 +361,7 @@ final class MarketplaceOrderService
         }
         $percentage = '0';
         if ($bps > 0) {
-            $percentage = function_exists('bcmul')
-                ? bcdiv(bcmul($amount, (string) $bps, 0), '10000', 0)
-                : (string) intdiv((int) $amount * $bps, 10000);
+            $percentage = self::divideBySmall(self::multiply($amount, (string) $bps), 10000);
         }
         $total = self::add($percentage, $fixed);
         if (self::compare($total, $amount) > 0) {
@@ -375,8 +373,7 @@ final class MarketplaceOrderService
     private static function calculatePercentageFee(string $amount, int $bps): string
     {
         if ($bps <= 0) return '0';
-        if (function_exists('bcmul')) return bcdiv(bcmul($amount, (string) $bps, 0), '10000', 0);
-        return (string) intdiv((int) $amount * $bps, 10000);
+        return self::divideBySmall(self::multiply($amount, (string) $bps), 10000);
     }
 
     private static function calculateFee(string $amount): string
@@ -387,39 +384,115 @@ final class MarketplaceOrderService
         return (string) intdiv((int)$amount * $bps, 10000);
     }
 
+    /**
+     * Integer arithmetic for minor-unit amounts. BCMath is optional on cPanel
+     * hosting, so the fallback must never cast financial values to PHP ints.
+     */
+    private static function normalizeInteger(string $value): string
+    {
+        if (!preg_match('/^\\d+$/', $value)) {
+            throw new RuntimeException('Financial amounts must be non-negative integer minor units.');
+        }
+        return ltrim($value, '0') ?: '0';
+    }
+
     private static function multiply(string $a, string $b): string
     {
+        $a = self::normalizeInteger($a);
+        $b = self::normalizeInteger($b);
         if (function_exists('bcmul')) {
-            return bcmul($a, $b, 0);
+            return self::normalizeInteger(bcmul($a, $b, 0));
         }
-        return (string) ((int) $a * (int) $b);
+        if ($a === '0' || $b === '0') return '0';
+
+        $digitsA = array_map('intval', str_split($a));
+        $digitsB = array_map('intval', str_split($b));
+        $result = array_fill(0, count($digitsA) + count($digitsB), 0);
+        for ($i = count($digitsA) - 1; $i >= 0; $i--) {
+            for ($j = count($digitsB) - 1; $j >= 0; $j--) {
+                $result[$i + $j + 1] += $digitsA[$i] * $digitsB[$j];
+            }
+        }
+        for ($i = count($result) - 1; $i > 0; $i--) {
+            $carry = intdiv($result[$i], 10);
+            $result[$i] %= 10;
+            $result[$i - 1] += $carry;
+        }
+        return self::normalizeInteger(implode('', $result));
     }
 
     private static function compare(string $a, string $b): int
     {
-        if (function_exists('bccomp')) {
-            return bccomp($a, $b, 0);
-        }
-        return (int) $a <=> (int) $b;
+        $a = self::normalizeInteger($a);
+        $b = self::normalizeInteger($b);
+        if (function_exists('bccomp')) return bccomp($a, $b, 0);
+        if (strlen($a) !== strlen($b)) return strlen($a) <=> strlen($b);
+        return strcmp($a, $b) <=> 0;
     }
 
     private static function add(string $a, string $b): string
     {
-        if (function_exists('bcadd')) {
-            return bcadd($a, $b, 0);
+        $a = self::normalizeInteger($a);
+        $b = self::normalizeInteger($b);
+        if (function_exists('bcadd')) return self::normalizeInteger(bcadd($a, $b, 0));
+
+        $i = strlen($a) - 1;
+        $j = strlen($b) - 1;
+        $carry = 0;
+        $result = '';
+        while ($i >= 0 || $j >= 0 || $carry > 0) {
+            $sum = ($i >= 0 ? (int) $a[$i--] : 0)
+                + ($j >= 0 ? (int) $b[$j--] : 0) + $carry;
+            $result = (string) ($sum % 10).$result;
+            $carry = intdiv($sum, 10);
         }
-        return (string) ((int) $a + (int) $b);
+        return self::normalizeInteger($result);
     }
 
     private static function subtract(string $a, string $b): string
     {
+        $a = self::normalizeInteger($a);
+        $b = self::normalizeInteger($b);
         if (function_exists('bcsub')) {
-            return bcsub($a, $b, 0);
+            $result = bcsub($a, $b, 0);
+            if (self::compare($result, '0') < 0) {
+                throw new RuntimeException('Wallet balance cannot become negative.');
+            }
+            return self::normalizeInteger($result);
         }
-        $result = (int) $a - (int) $b;
-        if ($result < 0) {
+        if (self::compare($a, $b) < 0) {
             throw new RuntimeException('Wallet balance cannot become negative.');
         }
-        return (string) $result;
+
+        $i = strlen($a) - 1;
+        $j = strlen($b) - 1;
+        $borrow = 0;
+        $result = '';
+        while ($i >= 0) {
+            $digit = (int) $a[$i--] - $borrow - ($j >= 0 ? (int) $b[$j--] : 0);
+            if ($digit < 0) {
+                $digit += 10;
+                $borrow = 1;
+            } else {
+                $borrow = 0;
+            }
+            $result = (string) $digit.$result;
+        }
+        return self::normalizeInteger($result);
+    }
+
+    private static function divideBySmall(string $amount, int $divisor): string
+    {
+        $amount = self::normalizeInteger($amount);
+        if ($divisor < 1) throw new RuntimeException('Financial division requires a positive divisor.');
+        $remainder = 0;
+        $quotient = '';
+        $length = strlen($amount);
+        for ($i = 0; $i < $length; $i++) {
+            $current = ($remainder * 10) + (int) $amount[$i];
+            $quotient .= (string) intdiv($current, $divisor);
+            $remainder = $current % $divisor;
+        }
+        return self::normalizeInteger($quotient);
     }
 }
