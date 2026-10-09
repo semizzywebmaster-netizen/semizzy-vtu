@@ -90,11 +90,11 @@ class CatalogueController extends Controller
 
     public function storeProduct(Request $request, AuditLogger $audit): RedirectResponse
     {
-        $data=$request->validate(['service_id'=>'required|integer|exists:services,id','key'=>'required|string|max:120','name'=>'required|string|max:200','currency'=>'required|string|size:3|regex:/^[A-Za-z]{3}$/','metadata'=>'nullable|array','enabled'=>'nullable|boolean']);
+        $data=$request->validate(['service_id'=>'required|integer|exists:services,id','key'=>'required|string|max:120','name'=>'required|string|max:200','currency'=>'required|string|size:3|regex:/^[A-Za-z]{3}$/','metadata'=>'nullable|array']);
         try {
             if(ServiceProduct::query()->where('service_id',$data['service_id'])->where('key',$data['key'])->exists()) return back()->with('error','A product with this key already exists under this service.');
             $data['currency']=strtoupper($data['currency']);
-            $product=ServiceProduct::create($data+['enabled'=>$data['enabled']??false]);
+            $product=ServiceProduct::create($data+['enabled'=>false,'publication_status'=>'draft']);
             try { $audit->record('catalogue.product.created',$product,['service_id'=>$product->service_id,'key'=>$product->key],$request); } catch (\Throwable $auditException) { report($auditException); }
             return back()->with('success','Service product created.');
         } catch (\Throwable $e) { report($e); return back()->with('error','Service product could not be created safely.'); }
@@ -201,7 +201,7 @@ class CatalogueController extends Controller
         try { DB::transaction(function () use ($product): void {
             $product = ServiceProduct::query()->lockForUpdate()->findOrFail($product->id);
             ProviderServiceProduct::query()->where('service_product_id', $product->id)->lockForUpdate()->get()->each->update(['enabled' => false]);
-            $product->update(['enabled' => false]);
+            $product->update(['enabled' => false, 'publication_status' => 'unpublished']);
         }); } catch (\Throwable $e) { report($e); return back()->with('error','Catalogue product could not be disabled safely.'); }
         try { $audit->record('catalogue.product.disabled', $product, ['service_id' => $product->service_id], $request); } catch (\Throwable $e) { report($e); }
         return back()->with('success','Product and provider mappings disabled.');
