@@ -6,6 +6,7 @@ use App\Models\ApiProvider;
 use App\Models\ProviderServiceMapping;
 use App\Models\ProviderService;
 use App\Models\ProviderServiceImport;
+use App\Models\ProviderProductMappingV2;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\ServiceProduct;
@@ -314,6 +315,90 @@ class ProviderPlatformCoverageTest extends TestCase
             ->getJson('/admin/provider-platform/catalogue?status=awaiting_approval')
             ->assertOk()
             ->assertJsonPath('meta.total', 0);
+    }
+
+
+    public function test_catalogue_requires_explicit_approval_before_mapping_and_keeps_mapping_disabled(): void
+    {
+        $category = ServiceCategory::query()->create(['key' => 'catalogue-map-category', 'name' => 'Catalogue Map Category', 'enabled' => true]);
+        $service = Service::query()->create(['category_id' => $category->id, 'key' => 'catalogue-map-service', 'name' => 'Catalogue Map Service', 'enabled' => true, 'metadata' => []]);
+        $product = ServiceProduct::query()->create(['service_id' => $service->id, 'key' => 'catalogue-map-product', 'name' => 'Catalogue Map Product', 'currency' => 'NGN', 'enabled' => false]);
+        $provider = ApiProvider::query()->create([
+            'identifier' => 'catalogue-map-provider',
+            'display_name' => 'Catalogue Map Provider',
+            'environment' => 'sandbox',
+            'verification_status' => 'unverified',
+            'integration_status' => 'draft',
+            'enabled' => false,
+            'paused' => true,
+            'capabilities' => [],
+            'service_categories' => [],
+        ]);
+        $providerService = ProviderService::query()->create([
+            'api_provider_id' => $provider->id,
+            'external_service_id' => 'MAP-EXT-001',
+            'external_service_code' => 'MAP-001',
+            'name' => 'Map Catalogue Entry',
+            'provider_price' => '50.0000',
+            'currency' => 'NGN',
+            'status' => 'discovered',
+            'metadata' => [],
+        ]);
+        ProviderServiceImport::query()->create([
+            'api_provider_id' => $provider->id,
+            'provider_service_id' => $providerService->id,
+            'selection_scope' => 'product',
+            'imported' => false,
+            'approved' => false,
+            'auto_sync_allowed' => false,
+            'state' => 'awaiting_approval',
+        ]);
+
+        $this->withoutMiddleware()
+            ->postJson('/admin/provider-platform/catalogue/' . $providerService->id . '/map', [
+                'catalogue_product_id' => $product->id,
+            ])
+            ->assertStatus(409);
+
+        $this->withoutMiddleware()
+            ->postJson('/admin/provider-platform/catalogue/' . $providerService->id . '/approve')
+            ->assertOk()
+            ->assertJsonPath('status', 'approved')
+            ->assertJsonPath('imported', false)
+            ->assertJsonPath('auto_sync_allowed', false);
+
+        $this->assertDatabaseHas('provider_service_imports', [
+            'provider_service_id' => $providerService->id,
+            'state' => 'approved',
+            'approved' => true,
+            'imported' => false,
+            'auto_sync_allowed' => false,
+        ]);
+
+        $this->withoutMiddleware()
+            ->postJson('/admin/provider-platform/catalogue/' . $providerService->id . '/map', [
+                'catalogue_product_id' => $product->id,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('status', 'mapped')
+            ->assertJsonPath('enabled', false);
+
+        $this->assertDatabaseHas('provider_product_mappings_v2', [
+            'api_provider_id' => $provider->id,
+            'provider_service_id' => $providerService->id,
+            'catalogue_product_id' => $product->id,
+            'catalogue_product_type' => 'service_product',
+            'mapping_status' => 'mapped',
+            'enabled' => false,
+        ]);
+        $this->assertDatabaseHas('audit_events', [
+            'event' => 'provider_platform.catalogue_service_approved',
+            'auditable_id' => $providerService->id,
+        ]);
+        $this->assertDatabaseHas('audit_events', [
+            'event' => 'provider_platform.catalogue_service_mapped',
+            'auditable_id' => $providerService->id,
+        ]);
     }
 
 }
