@@ -74,9 +74,14 @@ final class P2pTransferService
 
                 $recipient = $matches->first();
 
+                // Do not lock a missing idempotency row: under InnoDB REPEATABLE READ,
+                // that can take a next-key/gap lock and deadlock concurrent requests before
+                // they reach the deterministically ordered wallet locks. The unique database
+                // constraint remains the arbiter; a duplicate insert rolls back the losing
+                // transaction and is resolved to the already-committed transfer below.
                 $existing = P2pTransfer::where('sender_id', $senderId)
                     ->where('idempotency_key', $idempotencyKey)
-                    ->lockForUpdate()->first();
+                    ->first();
 
                 if ($existing) {
                     if ((string) $existing->amount_minor !== $amountMinor || (int) $existing->recipient_id !== (int) $recipient->id) {
