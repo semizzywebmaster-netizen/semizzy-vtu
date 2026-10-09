@@ -57,6 +57,11 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
     public function bulkPayout(PaymentGatewayProvider $provider, array $payload): array { throw new RuntimeException('Paystack bulk payout adapter not enabled in this bulk action.'); }
     public function refund(PaymentGatewayProvider $provider, array $payload): array { throw new RuntimeException('Paystack refund adapter not enabled in this bulk action.'); }
 
+    public function verifyRefund(PaymentGatewayProvider $provider, string $refundReference, array $context = []): array
+    {
+        throw new RuntimeException('Verified refund status lookup is not implemented for this provider; do not settle the wallet from a refund request response.');
+    }
+
     public function healthCheck(PaymentGatewayProvider $provider): bool
     {
         $response = $this->request($provider)->get(rtrim($provider->base_url ?: 'https://api.paystack.co', '/').'/bank');
