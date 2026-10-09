@@ -180,11 +180,11 @@ export default function ProviderCatalogueManager({ provider, platformServices }:
     setMessage('');
     try {
       const productId = rowTargetProducts[row.provider_service_id];
-      const result = await requestJson(\`/admin/providers/\${provider.id}/provider-services/\${row.provider_service_id}/map-to-platform\`, {
+      const result = await requestJson(`/admin/providers/${provider.id}/provider-services/${row.provider_service_id}/map-to-platform`, {
         service_id: Number(serviceId),
         ...(productId ? { service_product_id: Number(productId) } : {}),
       });
-      setMessage(\`\${result.product?.name || row.service?.name || 'Provider product'} saved as a draft. Configure tier prices and verify routing before publishing.\`);
+      setMessage(`${result.product?.name || row.service?.name || 'Provider product'} saved as a draft. Configure tier prices and verify routing before publishing.`);
       await refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Provider product could not be mapped.');
@@ -262,11 +262,11 @@ export default function ProviderCatalogueManager({ provider, platformServices }:
                     <td className="p-3 text-xs text-slate-500">{row.service?.last_synced_at ? new Date(row.service.last_synced_at).toLocaleString() : 'Not recorded'}</td>
                     <td className="min-w-72 p-3">
                       <div className="space-y-2">
-                        <select aria-label={\`Platform service for \${row.service?.name || 'provider product'}\`} value={rowTargetServices[row.provider_service_id] ?? platformServiceId} onChange={(event) => { setRowTargetServices((current) => ({ ...current, [row.provider_service_id]: event.target.value })); setRowTargetProducts((current) => ({ ...current, [row.provider_service_id]: '' })); }} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs">
+                        <select aria-label={`Platform service for ${row.service?.name || 'provider product'}`} value={rowTargetServices[row.provider_service_id] ?? platformServiceId} onChange={(event) => { setRowTargetServices((current) => ({ ...current, [row.provider_service_id]: event.target.value })); setRowTargetProducts((current) => ({ ...current, [row.provider_service_id]: '' })); }} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs">
                           <option value="">Choose platform service</option>
                           {platformServices.map((service) => <option key={service.id} value={service.id}>{service.category} — {service.name}</option>)}
                         </select>
-                        <select aria-label={\`Draft product variant for \${row.service?.name || 'provider product'}\`} value={rowTargetProducts[row.provider_service_id] ?? ''} onChange={(event) => setRowTargetProducts((current) => ({ ...current, [row.provider_service_id]: event.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs" disabled={!(rowTargetServices[row.provider_service_id] || platformServiceId)}>
+                        <select aria-label={`Draft product variant for ${row.service?.name || 'provider product'}`} value={rowTargetProducts[row.provider_service_id] ?? ''} onChange={(event) => setRowTargetProducts((current) => ({ ...current, [row.provider_service_id]: event.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs" disabled={!(rowTargetServices[row.provider_service_id] || platformServiceId)}>
                           <option value="">Create new draft variant</option>
                           {(platformServices.find((service) => String(service.id) === (rowTargetServices[row.provider_service_id] || platformServiceId))?.products ?? []).map((product) => <option key={product.id} value={product.id}>{product.name} ({product.key})</option>)}
                         </select>
