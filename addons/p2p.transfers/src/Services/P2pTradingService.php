@@ -127,10 +127,13 @@ final class P2pTradingService
         return DB::transaction(fn () => P2pTradeOffer::where('status','pending')->whereNotNull('expires_at')->where('expires_at','<=',now())->update(['status'=>'expired']));
     }
 
-    public function requeryOffer(int $offerId): P2pTradeOffer
+    public function requeryOffer(int $offerId, int $requestingUserId): P2pTradeOffer
     {
-        return DB::transaction(function () use ($offerId) {
+        return DB::transaction(function () use ($offerId, $requestingUserId) {
             $offer=P2pTradeOffer::with('listing')->lockForUpdate()->findOrFail($offerId);
+            if ($offer->buyer_id !== $requestingUserId && $offer->seller_id !== $requestingUserId) {
+                throw new RuntimeException('Only the buyer or seller involved in this offer can requery it.');
+            }
             if ($offer->escrow_transaction_id) {
                 $escrow=EscrowTransaction::find($offer->escrow_transaction_id);
                 if ($escrow && in_array($escrow->status,['released','refunded','cancelled'],true)) {
