@@ -3,7 +3,7 @@
 return [
     'identifier' => 'api.provider-platform',
     'name' => 'Developer & API Provider Platform',
-    'version' => '0.1.0',
+    'version' => '0.2.0',
     'description' => 'Phase A: service-by-service oversight of SEMIZZY ONE outbound API providers using the existing Core provider engine. The separate inbound Developer API Platform is reserved for Phase B.',
     'category' => 'Platform Infrastructure',
     'autoload_namespace' => 'Semizzy\\Addons\\ApiProviderPlatform',
@@ -29,7 +29,7 @@ return [
     'migrations' => [],
     'web_route_files' => ['addons/api.provider-platform/routes/admin.php'],
     'api_route_files' => [],
-    'routes' => ['/admin/provider-platform'],
+    'routes' => ['/admin/provider-platform', '/admin/provider-platform/products/{product}/publish', '/admin/provider-platform/products/{product}/unpublish'],
     'api_routes' => [],
     'provider_integrations' => [
         'Core ApiProvider registry',
@@ -43,5 +43,8 @@ return [
         'outbound_provider_coverage',
         'service_by_service_verification_visibility',
         'provider_gap_reporting',
+        'guarded_product_publication',
+        'audited_product_publish_unpublish',
+        'live_provider_and_tier_price_readiness_checks',
     ],
 ];
