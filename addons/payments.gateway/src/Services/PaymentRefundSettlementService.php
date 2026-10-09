@@ -31,7 +31,7 @@ final class PaymentRefundSettlementService
         if ($providerRefundReference === '') {
             throw new RuntimeException('A verified provider refund reference is required.');
         }
-        if (!in_array($verifiedProviderStatus, ['success', 'successful', 'completed', 'complete', 'refunded'], true)) {
+        if (!in_array($verifiedProviderStatus, ['success', 'successful', 'succeeded', 'refunded', 'completed-bank-transfer', 'completed-momo', 'completed-mpgs', 'completed-offline', 'completed-preauth'], true)) {
             throw new RuntimeException('Provider refund status is not confirmed successful.');
         }
         if ($reason === '') {
