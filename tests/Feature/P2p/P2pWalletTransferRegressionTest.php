@@ -47,6 +47,20 @@ class P2pWalletTransferRegressionTest extends TestCase
         $this->assertDatabaseCount('wallet_movements', 2);
     }
 
+    public function test_reusing_transfer_key_for_a_different_recipient_is_rejected(): void
+    {
+        [$sender, $recipient] = $this->usersWithWallets('10000', '500');
+        $otherRecipient = User::factory()->create();
+        $service = app(P2pTransferService::class);
+
+        $service->transfer($sender->id, $recipient->username, '2500', null, 'transfer-recipient-key');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('This idempotency key has already been used for a different transfer.');
+
+        $service->transfer($sender->id, $otherRecipient->username, '2500', null, 'transfer-recipient-key');
+    }
+
     public function test_insufficient_funds_roll_back_transfer_and_leave_both_wallets_unchanged(): void
     {
         [$sender, $recipient] = $this->usersWithWallets('100', '500');
