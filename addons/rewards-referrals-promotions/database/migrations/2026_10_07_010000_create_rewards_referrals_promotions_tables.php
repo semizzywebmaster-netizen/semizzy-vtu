@@ -32,9 +32,12 @@ return new class extends Migration {
    $t->id(); $t->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
    $t->foreignId('rule_id')->nullable()->constrained('reward_rules')->nullOnDelete();
    $t->string('event_key',100); $t->string('operation_key',180)->unique();
-   $t->string('status',30)->default('pending'); $t->decimal('amount',18,2)->default(0);
+   $t->string('status',30)->default('pending');
+   $t->string('approval_status',20)->default('pending'); $t->unsignedBigInteger('approved_by')->nullable();
+   $t->timestamp('approved_at')->nullable(); $t->text('approval_note')->nullable();
+   $t->decimal('amount',18,2)->default(0);
    $t->char('currency',3)->default('NGN'); $t->string('wallet_reference',120)->nullable();
-   $t->json('metadata')->nullable(); $t->timestamps(); $t->index(['user_id','event_key','status']);
+   $t->json('metadata')->nullable(); $t->timestamps(); $t->index(['user_id','event_key','status']); $t->index(['approval_status','event_key']);
   });
   Schema::create('reward_campaigns', function(Blueprint $t){
    $t->id(); $t->string('name',180); $t->string('code',100)->unique()->nullable();
