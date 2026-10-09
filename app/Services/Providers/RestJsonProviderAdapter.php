@@ -27,6 +27,9 @@ class RestJsonProviderAdapter implements ProviderAdapter
         if ($provider->identifier === 'vtuagent' && in_array($operation, ['transaction_initiation', 'transaction_status', 'catalogue_retrieval'], true)) {
             return $this->executeVtuAgent($provider, $operation, $payload, $idempotencyKey);
         }
+        if ($provider->identifier === 'cheapdatahub' && in_array($operation, ['transaction_initiation', 'transaction_status'], true)) {
+            return $this->executeCheapDataHub($provider, $operation, $payload, $idempotencyKey);
+        }
 
         if (!$this->supports($operation)) {
             throw new RuntimeException("Unsupported REST operation: {$operation}");
@@ -272,6 +275,71 @@ class RestJsonProviderAdapter implements ProviderAdapter
             return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'VTUAgent request failed; inspect provider status before retry when the outcome is uncertain.', retryable: false, duplicateRisk: $operation === 'transaction_initiation' && $uncertain, providerId: $provider->id);
         } catch (\\Throwable) {
             return new ProviderResult(false, 'UNKNOWN', message: 'VTUAgent request failed; requery the request_ref before retrying.', retryable: false, duplicateRisk: $operation === 'transaction_initiation', providerId: $provider->id);
+        }
+    }
+
+    /** CheapDataHub reseller API. Its purchase API does not document a client reference field. */
+    private function executeCheapDataHub(ApiProvider $provider, string $operation, array $payload, ?string $idempotencyKey): ProviderResult
+    {
+        $credentials = (array) ($provider->credentials ?? []);
+        $apiKey = (string) ($credentials['api_key'] ?? $credentials['token'] ?? $credentials['secret_key'] ?? '');
+        if ($apiKey === '') return new ProviderResult(false, 'FAILED', message: 'CheapDataHub API key is required.', providerId: $provider->id);
+
+        $base = rtrim((string) $provider->base_url, '/');
+        $method = 'POST';
+        $path = '';
+        $body = [];
+        if ($operation === 'transaction_status') {
+            $id = (string) ($payload['provider_reference'] ?? $payload['transaction_id'] ?? $payload['reference'] ?? '');
+            if ($id === '' || !ctype_digit($id)) return new ProviderResult(false, 'FAILED', message: 'CheapDataHub transaction ID is required for status lookup.', providerId: $provider->id);
+            $method = 'GET';
+            $path = '/transactions/' . rawurlencode($id) . '/';
+        } elseif (array_key_exists('bundle_id', $payload)) {
+            if (!ctype_digit((string) $payload['bundle_id']) || empty($payload['phone_number'] ?? $payload['phone'] ?? '')) {
+                return new ProviderResult(false, 'FAILED', message: 'CheapDataHub data purchase requires a numeric bundle_id and recipient phone.', providerId: $provider->id);
+            }
+            $path = '/data/purchase/';
+            $body = ['bundle_id' => (int) $payload['bundle_id'], 'phone_number' => (string) ($payload['phone_number'] ?? $payload['phone'])];
+        } else {
+            $providerId = $payload['provider_id'] ?? null;
+            $phone = (string) ($payload['phone_number'] ?? $payload['phone'] ?? '');
+            $amount = $payload['amount'] ?? null;
+            if (!is_numeric($providerId) || (int) $providerId < 1 || $phone === '' || !is_numeric($amount) || (float) $amount <= 0) {
+                return new ProviderResult(false, 'FAILED', message: 'CheapDataHub airtime requires provider_id, recipient phone and positive naira amount.', providerId: $provider->id);
+            }
+            $path = '/airtime/purchase/';
+            $body = ['provider_id' => (int) $providerId, 'phone_number' => $phone, 'amount' => $amount];
+        }
+
+        $url = $base . $path;
+        try {
+            $this->guard->validate($url);
+            $request = Http::acceptJson()->withToken($apiKey)->asJson()
+                ->withOptions(['allow_redirects' => false])
+                ->timeout(max(1, (int) ($provider->timeout_seconds ?: 15)));
+            if ($idempotencyKey !== null && $idempotencyKey !== '') $request = $request->withHeaders(['Idempotency-Key' => $idempotencyKey]);
+            $response = $method === 'GET' ? $request->get($url) : $request->post($url, $body);
+            $responseBody = $response->json();
+            if ($response->successful() && is_array($responseBody)) {
+                $flag = strtolower((string) ($responseBody['status'] ?? ''));
+                if (in_array($flag, ['true', '1', 'success', 'successful'], true)) {
+                    $reference = $this->providerReference($responseBody);
+                    $status = $operation === 'transaction_status' ? $this->normalizeStatus($responseBody, $operation) : 'ACCEPTED';
+                    if ($operation === 'transaction_status' && $status === 'UNKNOWN') {
+                        return new ProviderResult(false, 'UNKNOWN', $reference, $responseBody, 'CheapDataHub status response did not contain a recognized final state.', duplicateRisk: false, providerId: $provider->id);
+                    }
+                    return new ProviderResult($status === 'ACCEPTED', $status, $reference, $responseBody, 'CheapDataHub request processed.', duplicateRisk: false, providerId: $provider->id);
+                }
+                if ($flag === 'false' || $flag === '0') return new ProviderResult(false, 'FAILED', message: 'CheapDataHub rejected the request.', providerId: $provider->id);
+            }
+            $httpStatus = $response->status();
+            $duplicate = $httpStatus === 409;
+            $uncertain = $duplicate || $httpStatus === 408 || $httpStatus === 429 || $httpStatus >= 500;
+            return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'CheapDataHub request failed; requery the provider transaction before retrying if its outcome is uncertain.', retryable: false, duplicateRisk: $operation === 'transaction_initiation' && $uncertain, providerId: $provider->id);
+        } catch (\\Throwable) {
+            // No client-supplied request reference is documented for purchases; never
+            // automatically fail over after a network exception that may follow a debit.
+            return new ProviderResult(false, 'UNKNOWN', message: 'CheapDataHub request outcome is uncertain; reconcile the provider transaction before retrying.', retryable: false, duplicateRisk: $operation === 'transaction_initiation', providerId: $provider->id);
         }
     }
 
@@ -593,6 +661,8 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
         $paths = [
             ['reference'],
+            ['transaction_id'],
+            ['data','transaction_id'],
             ['transaction_reference'],
             ['transactionReference'],
             ['request_id'],

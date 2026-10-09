@@ -365,11 +365,11 @@ final class ProviderPresetRegistry
                 'official_website'=>'https://www.cheapdatahub.ng/',
                 'auth_type'=>'bearer',
                 'service_categories'=>['airtime','data','electricity','cable-tv','education'],
-                'capabilities'=>['balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status','webhook'],
+                'capabilities'=>['transaction_initiation','transaction_status'],
                 'endpoints'=>[],'api_version'=>'v1',
                 'mappings'=>[
                     ['service_key'=>'airtime','provider_service_id'=>'airtime','capabilities'=>['transaction_initiation','transaction_status']],
-                    ['service_key'=>'data','provider_service_id'=>'data','capabilities'=>['transaction_initiation','transaction_status','catalogue_retrieval']],
+                    ['service_key'=>'data','provider_service_id'=>'data','capabilities'=>['transaction_initiation','transaction_status']],
                     ['service_key'=>'electricity','provider_service_id'=>'electricity','capabilities'=>['transaction_initiation','transaction_status']],
                     ['service_key'=>'cable-tv','provider_service_id'=>'cable','capabilities'=>['transaction_initiation','transaction_status']],
                     ['service_key'=>'education','provider_service_id'=>'exam-pin','capabilities'=>['transaction_initiation','catalogue_retrieval']],
