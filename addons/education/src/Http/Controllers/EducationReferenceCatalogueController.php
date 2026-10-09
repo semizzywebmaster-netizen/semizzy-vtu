@@ -32,6 +32,7 @@ final class EducationReferenceCatalogueController extends Controller {
   if(DB::table('education_reference_catalogue')->where('catalogue_key',$key)->exists()) return back()->withErrors(['name'=>'This reference already exists.']);
   $data['catalogue_key']=$key; $data['is_active']=true;
   $data['metadata']=json_encode(['catalogue_source'=>'admin_added']);
+  $data['created_by']=$request->user()->id; $data['updated_by']=$request->user()->id;
   $data['created_at']=now(); $data['updated_at']=now();
   DB::table('education_reference_catalogue')->insert($data);
   return back()->with('success','Reference added to the catalogue.');
@@ -46,6 +47,7 @@ final class EducationReferenceCatalogueController extends Controller {
    'source_url'=>'nullable|url|max:500','is_active'=>'required|boolean',
   ]);
   $data['catalogue_key']=hash('sha256',$entry->kind.'|'.($data['category']??'').'|'.$data['name']);
+  if(DB::table('education_reference_catalogue')->where('catalogue_key',$data['catalogue_key'])->where('id','!=',$id)->exists()) return back()->withErrors(['name'=>'Another reference already uses this name and category.']);
   $data['updated_by']=$request->user()->id; $data['updated_at']=now();
   DB::table('education_reference_catalogue')->where('id',$id)->update($data);
   return back()->with('success','Reference updated.');
