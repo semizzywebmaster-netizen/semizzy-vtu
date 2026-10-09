@@ -12,6 +12,8 @@ Route::middleware([
 ])->group(function (): void {
     Route::get('/admin/provider-platform', [ProviderPlatformAdminController::class, 'index'])
         ->name('admin.provider-platform.index');
+    Route::get('/admin/provider-platform/catalogue/review', [ProviderPlatformAdminController::class, 'cataloguePage'])
+        ->name('admin.provider-platform.catalogue.review');
     Route::get('/admin/provider-platform/catalogue', [ProviderPlatformAdminController::class, 'catalogue'])
         ->name('admin.provider-platform.catalogue');
     Route::post('/admin/provider-platform/catalogue/{providerService}/select', [ProviderPlatformAdminController::class, 'selectCatalogueService'])
