@@ -1,10 +1,10 @@
 <?php
 
-namespace Semizzy\\Addons\\SchoolAdmission\\Models;
+namespace Semizzy\Addons\SchoolAdmission\Models;
 
-use Illuminate\\Database\\Eloquent\\Model;
-use Illuminate\\Database\\Eloquent\\SoftDeletes;
-use Illuminate\\Database\\Eloquent\\Relations\\HasMany;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 final class SchoolAdmissionInstitution extends Model
 {
