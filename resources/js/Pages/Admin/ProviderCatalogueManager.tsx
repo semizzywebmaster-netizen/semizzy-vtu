@@ -191,7 +191,7 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
       const productId = rowTargetProducts[row.provider_service_id];
       const result = await requestJson(`/admin/providers/${provider.id}/provider-services/${row.provider_service_id}/map-to-platform`, {
         service_id: Number(serviceId),
-        provider_service_id: providerServiceCode,
+        provider_service_identifier: providerServiceCode,
         ...(productId ? { service_product_id: Number(productId) } : {}),
       });
       setMessage(`${result.product?.name || row.service?.name || 'Provider product'} saved as a draft. Configure tier prices and verify routing before publishing.`);
