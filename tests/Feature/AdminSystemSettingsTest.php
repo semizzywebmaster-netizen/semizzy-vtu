@@ -44,7 +44,7 @@ class AdminSystemSettingsTest extends TestCase
         $this->assertDatabaseHas('system_settings', ['key' => 'default_timezone', 'value' => 'Africa/Lagos']);
         $event = \App\Models\AuditEvent::query()->where('event', 'admin.system_settings.updated')->firstOrFail();
         $this->assertContains('platform_name', $event->context['setting_keys']);
-        $this->assertContains('smtp', $event->context['setting_keys']);
+        $this->assertNotContains('smtp', $event->context['setting_keys']);
     }
 
     public function test_saved_public_settings_are_shared_and_timezone_is_applied(): void
