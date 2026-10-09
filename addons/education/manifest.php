@@ -22,7 +22,7 @@ return [
   ['key'=>'default_currency','type'=>'string','default'=>'NGN'],
   ['key'=>'max_upload_size_mb','type'=>'integer','default'=>20],
  ],
- 'migrations'=>['2026_10_09_110000_create_education_past_question_library.php'],
+ 'migrations'=>['2026_10_08_001003_harden_education_products_provider_id.php','2026_10_09_110000_create_education_past_question_library.php'],
  'web_route_files'=>['addons/education/routes/web.php','addons/education/routes/admin.php'],
  'routes'=>['/education/school-past-questions','/education/exam-past-questions'],
  'provider_integrations'=>['Core ProviderManager (existing education service only)'],
