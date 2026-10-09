@@ -19,6 +19,7 @@ return new class extends Migration {
                     'bulk_payout',
                     'webhook',
                     'requery',
+                    'refund',
                     'refunds',
                 ]),
                 'settings' => json_encode([
