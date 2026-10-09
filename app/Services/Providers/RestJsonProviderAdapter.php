@@ -30,6 +30,9 @@ class RestJsonProviderAdapter implements ProviderAdapter
         if ($provider->identifier === 'cheapdatahub' && in_array($operation, ['transaction_initiation', 'transaction_status'], true)) {
             return $this->executeCheapDataHub($provider, $operation, $payload, $idempotencyKey);
         }
+        if ($provider->identifier === 'vtufast' && in_array($operation, ['balance_inquiry', 'catalogue_retrieval'], true)) {
+            return $this->executeVtuFastReadOnly($provider, $operation, $payload);
+        }
 
         if (!$this->supports($operation)) {
             throw new RuntimeException("Unsupported REST operation: {$operation}");
@@ -340,6 +343,39 @@ class RestJsonProviderAdapter implements ProviderAdapter
             // No client-supplied request reference is documented for purchases; never
             // automatically fail over after a network exception that may follow a debit.
             return new ProviderResult(false, 'UNKNOWN', message: 'CheapDataHub request outcome is uncertain; reconcile the provider transaction before retrying.', retryable: false, duplicateRisk: $operation === 'transaction_initiation', providerId: $provider->id);
+        }
+    }
+
+    /** VTUFast documented account balance and plan catalogue operations only. */
+    private function executeVtuFastReadOnly(ApiProvider $provider, string $operation, array $payload): ProviderResult
+    {
+        $credentials = (array) ($provider->credentials ?? []);
+        $apiKey = (string) ($credentials['api_key'] ?? $credentials['token'] ?? $credentials['secret_key'] ?? '');
+        if ($apiKey === '') return new ProviderResult(false, 'FAILED', message: 'VTUFast API key is required.', providerId: $provider->id);
+
+        $service = strtolower((string) ($payload['service'] ?? $payload['service_key'] ?? 'data'));
+        if ($operation === 'catalogue_retrieval' && !in_array($service, ['airtime', 'data'], true)) {
+            return new ProviderResult(false, 'FAILED', message: 'VTUFast catalogue service must be airtime or data.', providerId: $provider->id);
+        }
+        $query = $operation === 'balance_inquiry'
+            ? ['route' => 'balance']
+            : ['route' => 'plans', 'service' => $service, 'search' => (string) ($payload['search'] ?? 'ALL')];
+        $url = rtrim((string) $provider->base_url, '/');
+        if (!str_ends_with(strtolower($url), '/api.php')) $url .= '/api.php';
+
+        try {
+            $this->guard->validate($url);
+            $response = Http::acceptJson()->withToken($apiKey)->withOptions(['allow_redirects' => false])
+                ->timeout(max(1, (int) ($provider->timeout_seconds ?: 15)))->get($url, $query);
+            $body = $response->json();
+            if ($response->successful() && is_array($body) && (($body['success'] ?? false) === true || ($body['success'] ?? null) === 'true')) {
+                return new ProviderResult(true, 'ACCEPTED', data: $body['data'] ?? $body, message: 'VTUFast read-only request completed.', providerId: $provider->id);
+            }
+            $code = $response->status();
+            $uncertain = $code === 408 || $code === 429 || $code >= 500;
+            return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'VTUFast read-only request failed.', providerId: $provider->id);
+        } catch (\\Throwable) {
+            return new ProviderResult(false, 'UNKNOWN', message: 'VTUFast read-only request failed.', providerId: $provider->id);
         }
     }
 

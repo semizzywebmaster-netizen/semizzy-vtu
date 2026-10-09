@@ -379,16 +379,17 @@ final class ProviderPresetRegistry
             [
                 'identifier'=>'vtufast',
                 'display_name'=>'VTUFast',
-                'base_url'=>'https://vtufast.com',
+                'base_url'=>'https://vtufast.com/api.php',
                 'documentation_url'=>'https://vtufast.com/api-docs.php',
                 'official_website'=>'https://vtufast.com/',
                 'auth_type'=>'bearer',
                 'service_categories'=>['airtime','data'],
-                'capabilities'=>['balance_inquiry','catalogue_retrieval','transaction_initiation'],
+                // Purchase remains intentionally unavailable until a documented status/requery contract exists.
+                'capabilities'=>['balance_inquiry','catalogue_retrieval'],
                 'endpoints'=>[],'api_version'=>'v1',
                 'mappings'=>[
-                    ['service_key'=>'airtime','provider_service_id'=>'airtime','capabilities'=>['transaction_initiation','catalogue_retrieval']],
-                    ['service_key'=>'data','provider_service_id'=>'data','capabilities'=>['transaction_initiation','catalogue_retrieval']],
+                    ['service_key'=>'airtime','provider_service_id'=>'airtime','capabilities'=>['catalogue_retrieval']],
+                    ['service_key'=>'data','provider_service_id'=>'data','capabilities'=>['catalogue_retrieval']],
                 ],
                 'priority'=>26,
             ],
