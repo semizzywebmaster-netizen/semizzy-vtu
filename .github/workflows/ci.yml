@@ -83,6 +83,8 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: cp .env.example .env
       - run: php artisan key:generate
+      - name: Prepare dedicated MySQL test schema
+        run: php artisan migrate:fresh --force
       - name: Run real MySQL wallet concurrency races
         run: php artisan test tests/Integration/Finance/WalletConcurrencyMySqlTest.php
       - name: Run real MySQL P2P transfer concurrency races
