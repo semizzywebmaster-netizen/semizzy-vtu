@@ -30,6 +30,9 @@ class RestJsonProviderAdapter implements ProviderAdapter
         if ($provider->identifier === 'cheapdatahub' && in_array($operation, ['transaction_initiation', 'transaction_status'], true)) {
             return $this->executeCheapDataHub($provider, $operation, $payload, $idempotencyKey);
         }
+        if ($provider->identifier === 'vtufast' && in_array($operation, ['transaction_initiation', 'transaction_status'], true)) {
+            return new ProviderResult(false, 'UNSUPPORTED', message: 'VTUFast purchase/status routing is disabled until a documented requery contract is available.', providerId: $provider->id);
+        }
         if ($provider->identifier === 'vtufast' && in_array($operation, ['balance_inquiry', 'catalogue_retrieval'], true)) {
             return $this->executeVtuFastReadOnly($provider, $operation, $payload);
         }
