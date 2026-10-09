@@ -17,7 +17,7 @@ final class EducationReferenceCatalogueController extends Controller {
    'filters'=>$request->only(['kind','category','q']),
    'flash'=>['success'=>session('success'),'error'=>session('error')],
    'validationErrors'=>$request->session()->get('errors') ? $request->session()->get('errors')->getBag('default')->all() : [],
-   'categories'=>DB::table('education_reference_categories')->where('is_active',true)->orderBy('sort_order')->orderBy('name')->get(),
+   'categories'=>DB::table('education_reference_categories')->orderBy('sort_order')->orderBy('name')->get(),
    'categoryOptions'=>DB::table('education_reference_catalogue')->where('kind','school')->whereNotNull('category')->distinct()->orderBy('category')->pluck('category'),
   ]);
  }
@@ -70,7 +70,10 @@ final class EducationReferenceCatalogueController extends Controller {
  public function updateCategory(Request $request,int $id) {
   $data=$request->validate(['name'=>'required|string|max:120','description'=>'nullable|string|max:1000','sort_order'=>'nullable|integer|min:0|max:999999','is_active'=>'required|boolean']);
   $category=DB::table('education_reference_categories')->where('id',$id)->first(); abort_unless($category,404);
-  DB::table('education_reference_categories')->where('id',$id)->update(['name'=>$data['name'],'slug'=>Str::slug($data['name']),'description'=>$data['description']??null,'sort_order'=>$data['sort_order']??0,'is_active'=>$data['is_active'],'updated_by'=>$request->user()->id,'updated_at'=>now()]);
+  $slug=Str::slug($data['name']);
+  if($slug==='' ) $slug='category-'.$id;
+  if(DB::table('education_reference_categories')->where('kind',$category->kind)->where('slug',$slug)->where('id','!=',$id)->exists()) return back()->withErrors(['category_name'=>'Another category already uses this name for this reference type.']);
+  DB::table('education_reference_categories')->where('id',$id)->update(['name'=>$data['name'],'slug'=>$slug,'description'=>$data['description']??null,'sort_order'=>$data['sort_order']??0,'is_active'=>$data['is_active'],'updated_by'=>$request->user()->id,'updated_at'=>now()]);
   return back()->with('success','Reference category updated.');
  }
 }
