@@ -1,10 +1,10 @@
 <?php
-namespace Addons\\VirtualCards\\Services;
-use Addons\\VirtualCards\\Models\\{VirtualCard,VirtualCardTransaction};
-use Illuminate\\Support\\Facades\\Crypt;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Str;
-use Illuminate\\Validation\\ValidationException;
+namespace Addons\VirtualCards\Services;
+use Addons\VirtualCards\Models\{VirtualCard,VirtualCardTransaction};
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 class VirtualCardService {
  public function request(int $userId,string $currency='NGN',array $metadata=[]): VirtualCard {
   $currency=strtoupper($currency);
