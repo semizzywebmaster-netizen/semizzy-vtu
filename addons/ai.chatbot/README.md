@@ -15,7 +15,7 @@ Addon identifier: ai.chatbot. Category: AI & Automation. Core compatibility: >=2
 - Audit records for provider/settings changes and successful answers.
 
 ## Setup
-Install and activate the addon in the Core addon manager, open Admin > AI Chatbot, configure an official provider key and supported model, test the connection, add approved knowledge items, then enable the assistant. To make a provider the primary choice, give it the lowest priority number; later providers are fallbacks. Admins can edit provider models and limits without replacing the stored key. No AI key is required to install or deactivate it.
+Install and activate the addon in the Core addon manager, open Admin > AI Chatbot, configure an official provider key and supported model, test the connection, add approved knowledge items, then enable the assistant. To make a provider the primary choice, give it the lowest priority number; later providers are fallbacks. Admins can edit provider models and limits without replacing the stored key, and use **Make primary** to select the preferred provider. No AI key is required to install or deactivate it.
 
 ## Security and privacy
 Credentials are encrypted with Laravel Crypt and never returned to the browser. Only official HTTPS provider endpoints are used; arbitrary endpoints are deliberately disabled to avoid SSRF. Conversation ownership is checked on the server. The assistant has no arbitrary SQL, shell, financial or account-management tools. Never share passwords, OTPs, PINs or payment secrets in chat. Public visitors can chat, but support ticket creation requires sign-in.
