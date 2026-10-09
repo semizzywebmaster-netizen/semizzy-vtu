@@ -2,12 +2,14 @@
 
 namespace Semizzy\Addons\Marketplace\Http\Controllers;
 
+use App\Models\WalletMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use RuntimeException;
 use Semizzy\Addons\Marketplace\Models\MarketplaceCategory;
+use Semizzy\Addons\Marketplace\Models\MarketplaceEarning;
 use Semizzy\Addons\Marketplace\Models\MarketplaceDigitalAsset;
 use Semizzy\Addons\Marketplace\Models\MarketplaceDigitalDelivery;
 use Semizzy\Addons\Marketplace\Models\MarketplaceServiceMilestone;
@@ -106,11 +108,70 @@ final class MarketplaceController
 
     public function admin()
     {
+        $reconciliationOrders = MarketplaceOrder::query()->latest()->limit(100)->get();
+        $references = $reconciliationOrders->pluck('reference')->filter()->values();
+        $movementKeys = [];
+        foreach ($references as $reference) {
+            foreach (['buyer', 'seller', 'refund:buyer', 'refund:seller'] as $suffix) {
+                $movementKeys[] = 'marketplace:'.$reference.':'.$suffix;
+            }
+        }
+        $movements = WalletMovement::query()->whereIn('operation_key', $movementKeys)->get()->keyBy('operation_key');
+        $earnings = MarketplaceEarning::query()->whereIn('order_id', $reconciliationOrders->pluck('id'))->get()->keyBy('order_id');
+        $reconciliation = [];
+        foreach ($reconciliationOrders as $order) {
+            $earning = $earnings->get($order->id);
+            $buyerKey = 'marketplace:'.$order->reference.':buyer';
+            $sellerKey = 'marketplace:'.$order->reference.':seller';
+            $refundBuyerKey = 'marketplace:'.$order->reference.':refund:buyer';
+            $refundSellerKey = 'marketplace:'.$order->reference.':refund:seller';
+            $hasBuyerMovement = $movements->has($buyerKey);
+            $hasSellerMovement = $movements->has($sellerKey);
+            $hasRefundBuyer = $movements->has($refundBuyerKey);
+            $hasRefundSeller = $movements->has($refundSellerKey);
+            $issues = [];
+            if ($order->status === 'pending' && ($hasBuyerMovement || $hasSellerMovement || $earning)) {
+                $issues[] = 'Pending order has settlement records';
+            }
+            if ($order->status === 'paid') {
+                if (!$hasBuyerMovement) $issues[] = 'Buyer debit movement missing';
+                if (!$hasSellerMovement) $issues[] = 'Seller credit movement missing';
+                if (!$earning) $issues[] = 'Earning record missing';
+                elseif ($earning->status !== 'credited') $issues[] = 'Earning status does not match paid order';
+                if ($hasRefundBuyer || $hasRefundSeller) $issues[] = 'Refund movement exists while order is paid';
+            }
+            if ($order->status === 'refunded') {
+                if (!$hasRefundBuyer) $issues[] = 'Buyer refund movement missing';
+                if (!$hasRefundSeller) $issues[] = 'Seller reversal movement missing';
+                if (!$earning) $issues[] = 'Earning record missing';
+                elseif ($earning->status !== 'refunded') $issues[] = 'Earning status does not match refunded order';
+            }
+            if ($order->status === 'cancelled' && ($hasBuyerMovement || $hasSellerMovement || $earning)) {
+                $issues[] = 'Cancelled order has settlement records';
+            }
+            if ($issues) {
+                $reconciliation[] = [
+                    'order_id' => $order->id,
+                    'reference' => $order->reference,
+                    'status' => $order->status,
+                    'currency' => $order->currency,
+                    'gross_minor' => (string) $order->total_minor,
+                    'earning_status' => $earning?->status,
+                    'issues' => $issues,
+                ];
+            }
+        }
+
         return Inertia::render('Admin/Marketplace/Index', [
             'products' => MarketplaceProduct::query()->with(['seller','category'])->latest()->paginate(30),
             'orders' => MarketplaceOrder::query()->with(['buyer', 'seller', 'product'])->latest()->paginate(30),
             'earnings' => MarketplaceEarning::query()->with(['seller', 'category', 'order'])->latest()->paginate(30),
             'categories' => MarketplaceCategory::query()->with('parent')->orderBy('sort_order')->orderBy('name')->get(),
+            'reconciliation' => [
+                'checked_orders' => $reconciliationOrders->count(),
+                'issue_count' => count($reconciliation),
+                'items' => $reconciliation,
+            ],
         ]);
     }
 
