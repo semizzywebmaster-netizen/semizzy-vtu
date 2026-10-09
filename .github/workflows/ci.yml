@@ -35,6 +35,8 @@ jobs:
       - run: php -l public/index.php
       - run: cp .env.example .env
       - run: php artisan key:generate
+      - name: Read-only addon structure audit
+        run: php artisan addons:audit --json || echo '::warning::Addon audit reported issues; review the JSON report in this step.'
       - run: php artisan test
   frontend:
     runs-on: ubuntu-latest

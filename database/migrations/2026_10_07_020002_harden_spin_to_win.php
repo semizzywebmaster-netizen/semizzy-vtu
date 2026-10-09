@@ -17,7 +17,7 @@ return new class extends Migration {
    $t->timestamp('rewarded_at')->nullable()->after('played_at');
    $t->index(['campaign_id','status','played_at']);
   });
- };
+ }
  public function down(): void {
   Schema::table('spin_plays', function(Blueprint $t){$t->dropIndex(['campaign_id','status','played_at']);$t->dropUnique(['reward_event_key']);$t->dropColumn(['reward_event_key','rewarded_at']);});
   Schema::table('spin_prizes', function(Blueprint $t){$t->dropColumn(['coupon_code','eligibility']);});

@@ -44,7 +44,8 @@ class ResolvePublishedWebsiteHost
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Addon::query()->where('identifier', 'vtu.website-builder')->where('status', 'active')->exists()) {
+        // Core and the PWA shell must remain available before addon migrations have been run.
+        if (!Schema::hasTable('addons') || !Addon::query()->where('identifier', 'vtu.website-builder')->where('status', 'active')->exists()) {
             return $next($request);
         }
 

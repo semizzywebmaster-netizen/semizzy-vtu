@@ -5,7 +5,8 @@ use App\Models\Communication\Conversation;
 use App\Models\Communication\Message;
 use App\Models\Communication\DeliveryAttempt;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;\nuse Inertia\Inertia;
+use Illuminate\Http\JsonResponse;
+use Inertia\Inertia;
 
 class CommunicationCenterController
 {

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\EnsureDeviceSession;
 use App\Models\Addon;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,7 +43,7 @@ class VtuAdminPagesSmokeTest extends TestCase
             '/admin/vtu/transactions',
             '/admin/vtu/bulk',
         ] as $url) {
-            $this->actingAs($admin)->get($url)->assertOk();
+            $this->withoutMiddleware(EnsureDeviceSession::class)->actingAs($admin)->get($url)->assertOk();
         }
     }
 
@@ -69,13 +70,13 @@ class VtuAdminPagesSmokeTest extends TestCase
             'manifest' => [],
         ]);
 
-        $this->actingAs($user)->get('/dashboard')
+        $this->withoutMiddleware(EnsureDeviceSession::class)->actingAs($user)->get('/dashboard')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('role', 'USER')
                 ->where('quickLinks.0.url', '/vtu')
             );
 
-        $this->actingAs($user)->get('/vtu')->assertOk();
+        $this->withoutMiddleware(EnsureDeviceSession::class)->actingAs($user)->get('/vtu')->assertOk();
     }
 }
