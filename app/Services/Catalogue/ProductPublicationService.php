@@ -39,8 +39,6 @@ class ProductPublicationService
             ->with('provider')
             ->where('service_product_id', $product->id)
             ->where('enabled', true)
-            ->whereNotNull('provider_product_id')
-            ->where('provider_product_id', '!=', '')
             ->whereNotNull('provider_cost')
             ->where('currency', strtoupper($product->currency))
             ->whereHas('provider', function ($query): void {
@@ -51,7 +49,10 @@ class ProductPublicationService
             })
             ->whereHas('provider.serviceMappings', function ($query) use ($product): void {
                 $query->where('enabled', true)
-                    ->where('service_id', $product->service_id)
+                    ->where(function ($nested) use ($product): void {
+                        $nested->where('service_id', $product->service_id)
+                            ->orWhere(fn ($legacy) => $legacy->whereNull('service_id')->where('service_key', $product->service->key));
+                    })
                     ->whereJsonContains('capabilities', 'transaction_initiation');
             })
             ->orderBy('provider_cost')
@@ -64,13 +65,17 @@ class ProductPublicationService
                 $blockers[] = 'The selected provider source cost is missing or older than 24 hours. Refresh the provider catalogue before publishing.';
             }
 
-            $duplicate = ProviderServiceProduct::query()
-                ->where('api_provider_id', $candidate->api_provider_id)
-                ->where('provider_product_id', $candidate->provider_product_id)
-                ->where('service_product_id', '!=', $product->id)
-                ->exists();
-            if ($duplicate) {
-                $blockers[] = 'This provider external product ID is already mapped to a different platform product. Resolve the duplicate mapping first.';
+            if (trim((string) $candidate->provider_product_id) === '') {
+                $blockers[] = 'The selected provider product is missing its external product ID.';
+            } else {
+                $duplicate = ProviderServiceProduct::query()
+                    ->where('api_provider_id', $candidate->api_provider_id)
+                    ->where('provider_product_id', $candidate->provider_product_id)
+                    ->where('service_product_id', '!=', $product->id)
+                    ->exists();
+                if ($duplicate) {
+                    $blockers[] = 'This provider external product ID is already mapped to a different platform product. Resolve the duplicate mapping first.';
+                }
             }
         }
 
