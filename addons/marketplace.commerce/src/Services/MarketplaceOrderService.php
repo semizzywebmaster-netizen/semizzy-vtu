@@ -77,6 +77,17 @@ final class MarketplaceOrderService
                 throw new RuntimeException('This order cannot be paid in its current state.');
             }
 
+            // A pending order with settlement records is inconsistent. Do not
+            // repeat a wallet debit/credit; leave it for reconciliation.
+            $paymentKeys = [
+                'marketplace:'.$order->reference.':buyer',
+                'marketplace:'.$order->reference.':seller',
+            ];
+            if (WalletMovement::query()->whereIn('operation_key', $paymentKeys)->exists()
+                || MarketplaceEarning::query()->where('order_id', $order->id)->exists()) {
+                throw new RuntimeException('This order has existing settlement records while still pending. Reconcile it before retrying payment.');
+            }
+
             $product = MarketplaceProduct::query()->lockForUpdate()->findOrFail($order->product_id);
             if ($product->status !== 'active') {
                 throw new RuntimeException('This product is no longer available.');
@@ -239,6 +250,14 @@ final class MarketplaceOrderService
             }
             if ($order->status !== 'paid') {
                 throw new RuntimeException('Only paid orders can be refunded.');
+            }
+
+            $refundKeys = [
+                'marketplace:'.$order->reference.':refund:buyer',
+                'marketplace:'.$order->reference.':refund:seller',
+            ];
+            if (WalletMovement::query()->whereIn('operation_key', $refundKeys)->exists()) {
+                throw new RuntimeException('Refund wallet movements already exist while the order is still paid. Reconcile this order before retrying.');
             }
 
             $earning = MarketplaceEarning::query()->where('order_id', $order->id)->lockForUpdate()->first();
