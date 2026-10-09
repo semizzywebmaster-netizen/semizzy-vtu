@@ -28,7 +28,7 @@ export default function FeatureRollouts({ addons }: { addons: AddonRollout[] }) 
           <header className="mt-4">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-700">Release safety</p>
             <h1 className="mt-2 text-3xl font-extrabold text-slate-950">Safe Rollout Controls</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Release active addon routes gradually to a stable percentage of signed-in users. Changes are audited. Administrators retain access for verification and recovery. This controls route access, not financial eligibility, provider verification or product-publishing readiness.</p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Release active addon web routes gradually to a stable percentage of signed-in users. Changes are audited. Administrators retain access for verification and recovery. This controls route access, not financial eligibility, provider verification or product-publishing readiness.</p>
           </header>
 
           <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
