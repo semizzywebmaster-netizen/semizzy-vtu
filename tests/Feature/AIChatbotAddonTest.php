@@ -85,4 +85,37 @@ class AIChatbotAddonTest extends TestCase
 
         app(AIProviderService::class)->answer([['role' => 'user', 'content' => 'Hello']], 'Safe system prompt');
     }
+
+    public function test_answer_falls_back_to_the_next_enabled_provider_after_a_provider_error(): void
+    {
+        foreach ([
+            ['name' => 'Primary', 'model' => 'primary-model', 'priority' => 1],
+            ['name' => 'Fallback', 'model' => 'fallback-model', 'priority' => 2],
+        ] as $provider) {
+            DB::table('ai_chatbot_providers')->insert([
+                'name' => $provider['name'], 'driver' => 'openai',
+                'api_key_encrypted' => Crypt::encryptString('test-key-'.$provider['name']),
+                'model' => $provider['model'], 'enabled' => true, 'priority' => $provider['priority'],
+                'timeout_seconds' => 5, 'max_output_tokens' => 64, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+
+        Http::fake([
+            'api.openai.com/v1/chat/completions' => Http::sequence()
+                ->push(['error' => ['message' => 'temporary provider failure']], 503)
+                ->push([
+                    'choices' => [['message' => ['content' => 'Fallback answer']]],
+                    'usage' => ['prompt_tokens' => 7, 'completion_tokens' => 3],
+                ], 200),
+        ]);
+
+        $answer = app(AIProviderService::class)->answer(
+            [['role' => 'user', 'content' => 'Help me']],
+            'Only answer safely.'
+        );
+
+        $this->assertSame('Fallback answer', $answer['content']);
+        $this->assertSame('fallback-model', $answer['model']);
+        Http::assertSentCount(2);
+    }
 }
