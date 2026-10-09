@@ -12,6 +12,7 @@ class AddonManifestIntegrityTest extends TestCase
         $this->assertNotEmpty($manifestFiles, 'No addon manifests were found.');
 
         $identifiers = [];
+        $loadedManifests = [];
         $errors = [];
 
         foreach ($manifestFiles as $manifestFile) {
@@ -36,6 +37,7 @@ class AddonManifestIntegrityTest extends TestCase
                 $errors[] = "{$source}: duplicate identifier [{$identifier}] also used by [{$identifiers[$identifier]}]";
             } else {
                 $identifiers[$identifier] = $source;
+                $loadedManifests[strtolower($identifier)] = ['source' => $source, 'manifest' => $manifest];
             }
 
             if (!empty($manifest['autoload_namespace']) && !is_dir(base_path("addons/{$source}/src"))) {
@@ -80,6 +82,30 @@ class AddonManifestIntegrityTest extends TestCase
                 foreach ((array) ($manifest[$routeKey] ?? []) as $routeFile) {
                     if (!is_string($routeFile) || $routeFile === '' || !is_file(base_path($routeFile))) {
                         $errors[] = "{$source}: declared {$routeKey} file [".(is_scalar($routeFile) ? (string) $routeFile : 'invalid')."] does not exist";
+                    }
+                }
+            }
+        }
+
+        foreach ($loadedManifests as $identifier => $entry) {
+            $source = $entry['source'];
+            $manifest = $entry['manifest'];
+
+            foreach ((array) ($manifest['dependencies'] ?? []) as $dependency) {
+                $dependencyIdentifier = is_string($dependency)
+                    ? strtolower(trim($dependency))
+                    : strtolower(trim((string) ($dependency['identifier'] ?? '')));
+                if ($dependencyIdentifier === '' || !isset($loadedManifests[$dependencyIdentifier])) {
+                    $errors[] = "{$source}: dependency [".($dependencyIdentifier !== '' ? $dependencyIdentifier : 'invalid')."] has no matching addon manifest";
+                }
+            }
+
+            $declaredPermissions = array_fill_keys(array_filter((array) ($manifest['permissions'] ?? []), 'is_string'), true);
+            foreach (['navigation', 'admin_navigation'] as $navigationKey) {
+                foreach ((array) ($manifest[$navigationKey] ?? []) as $item) {
+                    if (!is_array($item) || empty($item['permission'])) continue;
+                    if (!isset($declaredPermissions[$item['permission']])) {
+                        $errors[] = "{$source}: {$navigationKey} item [".(string) ($item['id'] ?? 'unknown')."] references undeclared permission [".(string) $item['permission']."]";
                     }
                 }
             }
