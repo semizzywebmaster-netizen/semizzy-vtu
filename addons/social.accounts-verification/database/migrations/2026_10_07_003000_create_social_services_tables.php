@@ -25,7 +25,7 @@ return new class extends Migration {
    $t->id(); $t->string('reference',40)->unique(); $t->foreignId('user_id')->constrained()->cascadeOnDelete();
    $t->string('order_type',20); $t->unsignedBigInteger('inventory_id')->nullable(); $t->string('status',30)->default('pending_payment');
    $t->decimal('amount',20,2); $t->string('currency',3)->default('NGN'); $t->string('provider_reference')->nullable();
-   $t->string('provider_id')->nullable(); $t->string('payment_status',30)->default('unpaid'); $t->string('payment_reference',80)->nullable()->unique(); $t->timestamp('paid_at')->nullable(); $t->timestamp('delivered_at')->nullable(); $t->timestamp('expires_at')->nullable();
+   $t->string('provider_id')->nullable(); $t->timestamp('delivered_at')->nullable(); $t->timestamp('expires_at')->nullable();
    $t->json('metadata')->nullable(); $t->timestamps(); $t->index(['user_id','status']); $t->index(['order_type','inventory_id']);
   });
   Schema::create('social_number_sms', function(Blueprint $t){
