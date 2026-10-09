@@ -12,6 +12,8 @@ use Tests\TestCase;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Semizzy\Addons\AIChatbot\Http\Controllers\AIChatbotController;
+use Semizzy\Addons\AIChatbot\Http\Controllers\AIChatbotAdminController;
+use App\Services\Audit\AuditLogger;
 
 class AIChatbotAddonTest extends TestCase
 {
@@ -273,5 +275,33 @@ class AIChatbotAddonTest extends TestCase
         } catch (\Throwable $e) {
             $this->assertInstanceOf(HttpException::class, $e->getPrevious() ?? $e);
         }
+    }
+
+    public function test_editing_provider_without_a_new_key_preserves_encrypted_credential(): void
+    {
+        $apiKey = 'keep-this-encrypted-key';
+        $id = DB::table('ai_chatbot_providers')->insertGetId([
+            'name' => 'Existing provider', 'driver' => 'openai',
+            'api_key_encrypted' => Crypt::encryptString($apiKey), 'model' => 'old-model',
+            'enabled' => true, 'priority' => 5, 'timeout_seconds' => 15, 'max_output_tokens' => 256,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $before = DB::table('ai_chatbot_providers')->where('id', $id)->value('api_key_encrypted');
+        $request = Request::create('/', 'PUT', [
+            'name' => 'Renamed provider', 'model' => 'new-model', 'priority' => 2,
+            'timeout_seconds' => 25, 'max_output_tokens' => 900, 'enabled' => true,
+        ]);
+        $request->setUserResolver(fn () => (object) ['id' => 1]);
+
+        app(AIChatbotAdminController::class)->updateProvider($request, $id, app(AuditLogger::class));
+
+        $provider = DB::table('ai_chatbot_providers')->where('id', $id)->first();
+        $this->assertSame('Renamed provider', $provider->name);
+        $this->assertSame('new-model', $provider->model);
+        $this->assertSame(2, (int) $provider->priority);
+        $this->assertSame(25, (int) $provider->timeout_seconds);
+        $this->assertSame(900, (int) $provider->max_output_tokens);
+        $this->assertSame($before, $provider->api_key_encrypted);
+        $this->assertSame($apiKey, Crypt::decryptString($provider->api_key_encrypted));
     }
 }
