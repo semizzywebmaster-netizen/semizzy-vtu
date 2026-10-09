@@ -189,3 +189,25 @@ This slice is not a complete catalogue integration. There is not yet a provider-
 
 Every row starts as `unknown` until the matching adapter/controller, official contract, tests and authorised sandbox evidence are linked. Provider preset counts are leads only and must not be counted as successful integrations.
 
+## First code-to-contract audit — airtime/data and SIM Hosting
+
+Audit status is intentionally split into code-path evidence versus provider-contract/live evidence. A Core operation being implemented does not certify a provider integration.
+
+| Provider/service path | Operation | Code evidence | Contract / live status | Finding / next fix |
+|---|---|---|---|---|
+| Core generic REST adapter | Transaction initiation/status, catalogue, balance, SMS send | `RestJsonProviderAdapter::supports`, endpoint configuration, auth dispatch, idempotency header and safe ambiguous-state handling | Generic code path: supported; vendor-specific payload/auth mapping: unknown | Generic POST/GET is not a provider-specific adapter. Each provider still needs exact field mappings, response normalization, credentials and sandbox tests. |
+| Reloadly airtime/data | Catalogue/operators | Preset points to `GET /operators`; Core catalogue sync expects `catalogue_retrieval` | Official API docs describe bearer-token auth and operator catalogue; no authenticated sandbox run recorded | Source: https://docs.reloadly.com/airtime/Top-ups . OAuth token acquisition/refresh and response normalization remain unknown in this app. |
+| Reloadly airtime/data | Purchase | Preset points to `POST /topups`; generic adapter can dispatch the operation if the endpoint and capability are configured | Official API docs describe `operatorId`, amount, custom identifier and recipient data; no verified request mapper or sandbox evidence in this repository | Must map local network/plan identifiers to Reloadly operator IDs and normalize amount/recipient fields before enabling. |
+| Reloadly airtime/data | Status/requery | Current preset uses a generic `/transactions` status path | Official docs expose `GET /topups/{transactionId}/status`; exact path and response mapping are not represented by the simple static endpoint preset | Mark provider status as unknown until a dynamic path/endpoint adapter and fixture-backed tests are added. Refund/reversal/webhook support remains unknown. |
+| VTpass airtime/data/bills | Catalogue, purchase, requery | Preset includes `/services`, `/pay`, `/requery`; generic adapter has no VTpass-specific payload/response mapper | Official docs list airtime, data, electricity, TV and education products; the requery contract uses `request_id`. No sandbox result is recorded | Source: https://vtpass.com/documentation/introduction/ and https://vtpass.com/documentation/foreign-airtime/ . Validate auth signatures, required fields, service IDs and transaction status normalisation with fixtures before enabling. |
+| VTU.ng airtime/data/bills | Purchase/status/requery/webhook | Preset declares transaction capabilities but lacks a static `transaction_initiation` endpoint; its status preset is a generic `/api/v2/orders` path | Official docs describe airtime/data endpoints, `/api/v2/requery`, and HMAC-SHA256 webhook signatures; no verified adapter/test result recorded | Source: https://vtu.ng/api/ . This preset is not evidence of working purchase/status/webhook integration. Implement request IDs, correct endpoint mapping, requery, signature verification and status fixtures before enabling. |
+| SIM Hosting addon → Core | Airtime/data/catalogue/balance/status/requery | Addon used operation names such as `airtime_purchase`, `data_purchase`, `data_catalogue`, `provider_balance` and `transaction_requery`, which do not match Core's shared operation vocabulary. Those calls would be rejected by the Core capability registry/REST adapter. | Code defect confirmed; fix and tests are on the development branch, awaiting CI | Adapter now translates these business operation names to Core's `transaction_initiation`, `catalogue_retrieval`, `balance_inquiry`, and `transaction_status`. Core REST support for number reserve/release is also added. Do not mark this fix verified until the SIM Hosting workflow passes. |
+
+### Operation ledger rules applied
+
+- `supported` means an app code path is present and covered by a relevant test; it does not mean a vendor operation is live-verified.
+- `unsupported` means the current app explicitly rejects the operation or has no route/adapter path.
+- `unknown` means code or docs are insufficient to confirm exact operation semantics, identifiers, auth, refund behavior or live result.
+- For Reloadly and VTU.ng, refund/reversal is still `unknown`; no generic refund capability should be inferred from purchase/status.
+- For every provider, the next evidence artifacts are: official endpoint/schema link, redacted request/response fixture, test result, sandbox verification record, and a reviewer/date. No credentials or live secrets belong in this register.
+
