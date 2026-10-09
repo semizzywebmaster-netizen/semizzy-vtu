@@ -2,16 +2,42 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Http;
 use Semizzy\Addons\AIChatbot\Services\AIProviderService;
 use Tests\TestCase;
 
 class AIChatbotAddonTest extends TestCase
 {
-    use RefreshDatabase;
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Schema::dropIfExists('ai_chatbot_providers');
+        Schema::create('ai_chatbot_providers', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name');
+            $table->string('driver');
+            $table->text('api_key_encrypted');
+            $table->string('model');
+            $table->boolean('enabled')->default(false);
+            $table->unsignedInteger('priority')->default(100);
+            $table->unsignedSmallInteger('timeout_seconds')->default(20);
+            $table->unsignedInteger('max_output_tokens')->default(600);
+            $table->timestamp('last_tested_at')->nullable();
+            $table->string('last_test_status')->nullable();
+            $table->text('last_test_message')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    protected function tearDown(): void
+    {
+        Schema::dropIfExists('ai_chatbot_providers');
+        parent::tearDown();
+    }
 
     public function test_manifest_is_registered_with_expected_identifier_and_routes(): void
     {
@@ -29,9 +55,6 @@ class AIChatbotAddonTest extends TestCase
 
     public function test_openai_provider_connection_test_uses_encrypted_credentials_and_parses_response(): void
     {
-        $migration = require base_path('addons/ai.chatbot/database/migrations/2026_10_09_100000_create_ai_chatbot_tables.php');
-        $migration->up();
-
         $apiKey = 'unit-test-secret-key';
         $id = DB::table('ai_chatbot_providers')->insertGetId([
             'name' => 'Test OpenAI', 'driver' => 'openai', 'api_key_encrypted' => Crypt::encryptString($apiKey),
