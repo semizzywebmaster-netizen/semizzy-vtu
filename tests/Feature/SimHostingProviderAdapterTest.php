@@ -24,8 +24,7 @@ class SimHostingProviderAdapterTest extends TestCase
         $manager->shouldReceive('execute')->once()->with('sim-hosting', 'catalogue_retrieval', ['network' => 'test-network'], null)->andReturn($accepted);
         $manager->shouldReceive('execute')->once()->with('sim-hosting', 'sms_send', ['to' => '08000000000', 'message' => 'test'], 'sms-idem')->andReturn($accepted);
         $manager->shouldReceive('execute')->once()->with('sim-hosting', 'balance_inquiry', ['account' => 'provider'], null)->andReturn($accepted);
-        $manager->shouldReceive('execute')->once()->with('sim-hosting', 'transaction_status', ['reference' => 'provider-ref'], null)->andReturn($accepted);
-        $manager->shouldReceive('execute')->once()->with('sim-hosting', 'transaction_status', ['reference' => 'provider-ref'], null)->andReturn($accepted);
+        $manager->shouldReceive('execute')->twice()->with('sim-hosting', 'transaction_status', ['reference' => 'provider-ref'], null)->andReturn($accepted);
 
         $adapter = new SimHostingProviderAdapter($manager);
 
