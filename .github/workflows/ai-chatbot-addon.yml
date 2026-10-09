@@ -1,0 +1,47 @@
+name: SEMIZZY ONE AI Chatbot Addon CI
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'addons/ai.chatbot/**'
+      - 'resources/js/Components/AIChatbotWidget.tsx'
+      - 'resources/js/Pages/Admin/AIChatbot.tsx'
+      - 'resources/js/app.tsx'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'tests/Feature/AIChatbotAddonTest.php'
+      - '.github/workflows/ai-chatbot-addon.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'addons/ai.chatbot/**'
+      - 'resources/js/Components/AIChatbotWidget.tsx'
+      - 'resources/js/Pages/Admin/AIChatbot.tsx'
+      - 'resources/js/app.tsx'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'tests/Feature/AIChatbotAddonTest.php'
+      - '.github/workflows/ai-chatbot-addon.yml'
+  workflow_dispatch:
+jobs:
+  ai-chatbot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, pdo_sqlite, sqlite3
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: mkdir -p bootstrap/cache storage/app storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs
+      - run: composer validate --strict
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm install
+      - run: npm run build
+      - run: find addons/ai.chatbot tests/Feature/AIChatbotAddonTest.php -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: cp .env.example .env
+      - run: php artisan key:generate
+      - run: php artisan test --filter=AIChatbotAddonTest
