@@ -185,7 +185,7 @@ class AIChatbotAddonTest extends TestCase
         try {
             app(AIProviderService::class)->answer([['role' => 'user', 'content' => 'Hello']], 'Safe system prompt');
             $this->fail('Expected the rejected provider to fail safely.');
-        } catch (\\RuntimeException $e) {
+        } catch (\RuntimeException $e) {
             $this->assertStringContainsString('rejected its credentials', $e->getMessage());
             $this->assertStringNotContainsString($apiKey, $e->getMessage());
             $this->assertStringNotContainsString('invalid api key', $e->getMessage());
