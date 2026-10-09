@@ -57,6 +57,9 @@ final class PaymentRefundSettlementService
         }
 
         $provider = PaymentGatewayProvider::query()->findOrFail($current->provider_id);
+        if (!hash_equals((string) $provider->code, (string) $currentMetadata['refund_provider'])) {
+            throw new RuntimeException('Refund provider does not match the payment intent provider.');
+        }
         if (!$provider->supports('refund')) {
             throw new RuntimeException('The assigned provider does not declare refund capability.');
         }
