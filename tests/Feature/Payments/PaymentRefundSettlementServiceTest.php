@@ -63,7 +63,7 @@ class PaymentRefundSettlementServiceTest extends TestCase
 
     public function test_verified_full_refund_reverses_wallet_credit_once(): void
     {
-        [$payment, $wallet, $movement] = $this->paidFundingPayment();
+        [$payment, $wallet, $movement] = $this->paidFundingPayment('500', 'provider-refund-123');
         $this->fakeRefundStatus('provider-refund-123', 'completed-bank-transfer');
         $actor = User::factory()->create();
         $service = app(PaymentRefundSettlementService::class);
@@ -85,7 +85,7 @@ class PaymentRefundSettlementServiceTest extends TestCase
 
     public function test_unconfirmed_provider_refund_status_cannot_change_payment_or_wallet(): void
     {
-        [$payment, $wallet] = $this->paidFundingPayment();
+        [$payment, $wallet] = $this->paidFundingPayment('500', 'refund-pending-123');
         $this->fakeRefundStatus('refund-pending-123', 'completed');
 
         $this->expectException(RuntimeException::class);
@@ -102,7 +102,7 @@ class PaymentRefundSettlementServiceTest extends TestCase
 
     public function test_confirmed_provider_refund_with_spent_wallet_requires_manual_reconciliation(): void
     {
-        [$payment, $wallet] = $this->paidFundingPayment('100');
+        [$payment, $wallet] = $this->paidFundingPayment('100', 'provider-refund-spent-wallet');
         $this->fakeRefundStatus('provider-refund-spent-wallet', 'completed-bank-transfer');
 
         try {
@@ -145,7 +145,7 @@ class PaymentRefundSettlementServiceTest extends TestCase
         ]);
     }
 
-    private function paidFundingPayment(string $currentAvailableMinor = '500'): array
+    private function paidFundingPayment(string $currentAvailableMinor = '500', string $refundReference = 'provider-refund-123'): array
     {
         $provider = PaymentGatewayProvider::query()->create([
             'name' => 'Flutterwave Test',
@@ -181,6 +181,7 @@ class PaymentRefundSettlementServiceTest extends TestCase
             'metadata' => [
                 'refund_requested_at' => now()->toISOString(),
                 'refund_provider' => $provider->code,
+                'refund_provider_reference' => $refundReference,
                 'provider_transaction_id' => '123',
                 'refund_accounting_status' => 'pending_provider_confirmation',
             ],
