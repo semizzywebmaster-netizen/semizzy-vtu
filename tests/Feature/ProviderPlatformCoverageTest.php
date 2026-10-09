@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ApiProvider;
 use App\Models\ProviderServiceMapping;
 use App\Models\ProviderService;
+use App\Models\ProviderServiceImport;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\ServiceProduct;
@@ -241,6 +242,32 @@ class ProviderPlatformCoverageTest extends TestCase
         $this->assertDatabaseHas('audit_events', [
             'event' => 'provider_platform.catalogue_service_selected',
             'auditable_id' => $providerService->id,
+        ]);
+
+        $selection = ProviderServiceImport::query()->where('provider_service_id', $providerService->id)->firstOrFail();
+        $selection->forceFill([
+            'state' => 'imported',
+            'approved' => true,
+            'imported' => true,
+            'auto_sync_allowed' => true,
+        ])->save();
+
+        $this->withoutMiddleware()
+            ->postJson('/admin/provider-platform/catalogue/' . $providerService->id . '/select', [
+                'selection_scope' => 'product',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'imported')
+            ->assertJsonPath('selection.approved', true)
+            ->assertJsonPath('selection.imported', true)
+            ->assertJsonPath('selection.auto_sync_allowed', true);
+
+        $this->assertDatabaseHas('provider_service_imports', [
+            'id' => $selection->id,
+            'state' => 'imported',
+            'approved' => true,
+            'imported' => true,
+            'auto_sync_allowed' => true,
         ]);
     }
 
