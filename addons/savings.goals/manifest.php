@@ -57,6 +57,7 @@ return [
         '2026_10_06_000402_create_savings_movements.php',
         '2026_10_06_000403_seed_default_savings_plans.php',
         '2026_10_07_000901_expand_savings_product_lifecycle.php',
+        '2026_10_09_130200_harden_savings_movement_retention.php',
     ],
     'web_route_files' => [
         'addons/savings.goals/routes/web.php',
