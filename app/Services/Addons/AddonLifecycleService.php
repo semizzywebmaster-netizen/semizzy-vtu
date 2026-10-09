@@ -298,6 +298,7 @@ class AddonLifecycleService
                 throw new \RuntimeException("Ambiguous addon migration filename: {$migration}");
             }
 
+            $isAddonMigration = $safeMatches !== [];
             $rootPath = base_path('database/migrations/'.$migration);
             $path = $safeMatches[0] ?? (is_file($rootPath) ? $rootPath : false);
             if ($path === false || $path === null || !is_file($path)) {
@@ -305,7 +306,7 @@ class AddonLifecycleService
             }
 
             $arguments = ['--path' => $path, '--force' => true];
-            if (!str_starts_with($path, rtrim(base_path('database/migrations'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)) {
+            if ($isAddonMigration) {
                 $arguments['--realpath'] = true;
             }
             $exit = Artisan::call('migrate', $arguments);
