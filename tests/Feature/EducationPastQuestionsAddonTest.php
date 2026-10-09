@@ -2,6 +2,7 @@
 namespace Tests\Feature;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use Semizzy\Addons\Education\Models\EducationLibraryItem;
 use Tests\TestCase;
 class EducationPastQuestionsAddonTest extends TestCase {
@@ -39,10 +40,10 @@ class EducationPastQuestionsAddonTest extends TestCase {
  }
  public function test_reference_catalogue_imports_exam_bodies_exam_types_and_categorised_schools():void {
   $this->assertTrue(Schema::hasTable('education_reference_catalogue'));
-  $this->assertGreaterThanOrEqual(20,\Illuminate\\Support\\Facades\\DB::table('education_reference_catalogue')->where('kind','exam_body')->count());
-  $this->assertGreaterThanOrEqual(20,\Illuminate\\Support\\Facades\\DB::table('education_reference_catalogue')->where('kind','exam_type')->count());
-  $this->assertGreaterThanOrEqual(50,\Illuminate\\Support\\Facades\\DB::table('education_reference_catalogue')->where('kind','school')->count());
-  $this->assertGreaterThanOrEqual(3,\Illuminate\\Support\\Facades\\DB::table('education_reference_catalogue')->where('kind','school')->distinct()->count('category'));
+  $this->assertGreaterThanOrEqual(20,DB::table('education_reference_catalogue')->where('kind','exam_body')->count());
+  $this->assertGreaterThanOrEqual(20,DB::table('education_reference_catalogue')->where('kind','exam_type')->count());
+  $this->assertGreaterThanOrEqual(50,DB::table('education_reference_catalogue')->where('kind','school')->count());
+  $this->assertGreaterThanOrEqual(3,DB::table('education_reference_catalogue')->where('kind','school')->distinct()->count('category'));
   $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'exam_body','short_name'=>'WAEC']);
   $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'University of Lagos','category'=>'federal_university']);
  }
