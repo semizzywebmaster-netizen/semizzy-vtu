@@ -1,15 +1,15 @@
 <?php
 
-namespace Tests\\Feature\\Finance;
+namespace Tests\Feature\Finance;
 
-use App\\Models\\User;
-use App\\Models\\WalletAccount;
-use App\\Models\\WalletMovement;
-use App\\Services\\Finance\\AdminWalletDebitService;
-use App\\Services\\Finance\\WalletCreditService;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
+use App\Models\User;
+use App\Models\WalletAccount;
+use App\Models\WalletMovement;
+use App\Services\Finance\AdminWalletDebitService;
+use App\Services\Finance\WalletCreditService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
-use Tests\\TestCase;
+use Tests\TestCase;
 
 class WalletFinancialRegressionTest extends TestCase
 {
