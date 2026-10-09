@@ -11,6 +11,10 @@ The reference-data migration imports a starting directory of **28+ examination o
 
 The catalogue is reference metadata, not a claim that every listed school has downloadable past-question files already. It supplies filter options and admin autocomplete; actual papers must be uploaded/licensed separately. Schools and exam bodies can be extended from the same reference data file. Regulator/source directories used include [NUC](https://www.nuc.edu.ng/approved-affiliations/), [NBTE](https://web.nbte.gov.ng/tvet%20institutions), [NCCE](https://www.ncce.gov.ng/AccreditedColleges), [Federal Ministry of Education](https://education.gov.ng/government-polytechnics/), [JUPEB](https://jupeb.edu.ng/) and [Lagos State Examinations Board](https://examsboard.lagosstate.gov.ng/).
 
+## Admin-managed reference catalogue
+
+Administrators can open **Admin → Education Reference Catalogue** to add schools/institutions, examination bodies, and exam types after installation. They can create reusable categories, search/filter the reference list, attach official/source URLs and locations, and remove obsolete references (school records already used by library resources are protected). The catalogue is database-backed and is not limited to the entries shipped in the initial seed file. Added references are available to the past-question catalogue filters and admin upload suggestions; adding a reference does not automatically create a past-question document.
+
 ## Capabilities
 
 - Admin/staff can upload PDF, DOC and DOCX files (20 MB maximum), manage metadata, publish or archive resources, and set free or NGN-priced access.
