@@ -86,10 +86,10 @@ jobs:
       - name: Prepare dedicated MySQL test schema
         run: php artisan migrate:fresh --force
       - name: Run real MySQL wallet concurrency races
-        run: php artisan test tests/Integration/Finance/WalletConcurrencyMySqlTest.php
+        run: vendor/bin/phpunit -c phpunit.mysql.xml tests/Integration/Finance/WalletConcurrencyMySqlTest.php
       - name: Run real MySQL P2P transfer concurrency races
-        run: php artisan test tests/Integration/P2p/P2pTransferConcurrencyMySqlTest.php
+        run: vendor/bin/phpunit -c phpunit.mysql.xml tests/Integration/P2p/P2pTransferConcurrencyMySqlTest.php
       - name: Verify reversal and refund settlement on MySQL
         run: |
-          php artisan test tests/Feature/Finance/WalletReversalServiceTest.php
-          php artisan test tests/Feature/Payments/PaymentRefundSettlementServiceTest.php
+          vendor/bin/phpunit -c phpunit.mysql.xml tests/Feature/Finance/WalletReversalServiceTest.php
+          vendor/bin/phpunit -c phpunit.mysql.xml tests/Feature/Payments/PaymentRefundSettlementServiceTest.php
