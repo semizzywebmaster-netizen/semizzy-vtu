@@ -3,6 +3,7 @@ namespace Semizzy\Addons\Education\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Semizzy\Addons\Education\Models\EducationLibraryItem;
