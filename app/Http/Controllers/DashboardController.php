@@ -38,22 +38,22 @@ class DashboardController extends Controller
 
         if ($isAdmin) {
             $metrics = [
-                ['label' => 'User accounts', 'value' => User::query()->count(), 'description' => 'Registered accounts'],
-                ['label' => 'Eligible providers', 'value' => ApiProvider::query()->eligibleForNewTransactions()->count(), 'description' => 'Verified, enabled and unpaused'],
-                ['label' => 'Active addons', 'value' => Addon::query()->where('status', 'active')->count(), 'description' => 'Currently active core extensions'],
-                ['label' => 'Enabled products', 'value' => ServiceProduct::query()->where('enabled', true)->count(), 'description' => 'Catalogue products enabled in core'],
-                ['label' => 'Open support tickets', 'value' => SupportTicket::query()->whereIn('status', ['open', 'pending'])->count(), 'description' => 'Tickets awaiting attention'],
+                ['label' => 'User accounts', 'value' => User::query()->count(), 'description' => 'Registered accounts', 'url' => '/admin/users'],
+                ['label' => 'Eligible providers', 'value' => ApiProvider::query()->eligibleForNewTransactions()->count(), 'description' => 'Verified, enabled and unpaused', 'url' => '/admin/providers'],
+                ['label' => 'Active addons', 'value' => Addon::query()->where('status', 'active')->count(), 'description' => 'Currently active core extensions', 'url' => '/admin/addons'],
+                ['label' => 'Enabled products', 'value' => ServiceProduct::query()->where('enabled', true)->count(), 'description' => 'Catalogue products enabled in core', 'url' => '/admin/catalogue'],
+                ['label' => 'Open support tickets', 'value' => SupportTicket::query()->whereIn('status', ['open', 'pending'])->count(), 'description' => 'Tickets awaiting attention', 'url' => '/support'],
                 ['label' => 'Providers needing verification', 'value' => ApiProvider::query()->where('enabled', true)->where(function ($query): void {
                     $query->where('verification_status', '!=', 'live_verified')
                         ->orWhere('integration_status', '!=', 'live_verified');
-                })->count(), 'description' => 'Enabled providers not fully live-verified'],
+                })->count(), 'description' => 'Enabled providers not fully live-verified', 'url' => '/admin/providers'],
             ];
             if (Schema::hasTable('vtu_transactions')) {
-                $metrics[] = ['label' => 'Pending VTU transactions', 'value' => VtuTransaction::query()->whereNotIn('status', ['successful', 'failed', 'reversed', 'cancelled'])->count(), 'description' => 'Transactions needing status confirmation'];
-                $metrics[] = ['label' => 'Failed VTU transactions (24h)', 'value' => VtuTransaction::query()->where('status', 'failed')->where('created_at', '>=', now()->subDay())->count(), 'description' => 'Recent failures to investigate'];
+                $metrics[] = ['label' => 'Pending VTU transactions', 'value' => VtuTransaction::query()->whereNotIn('status', ['successful', 'failed', 'reversed', 'cancelled'])->count(), 'description' => 'Transactions needing status confirmation', 'url' => '/admin/vtu/transactions?status=pending'];
+                $metrics[] = ['label' => 'Failed VTU transactions (24h)', 'value' => VtuTransaction::query()->where('status', 'failed')->where('created_at', '>=', now()->subDay())->count(), 'description' => 'Recent failures to investigate', 'url' => '/admin/vtu/transactions?status=failed'];
             }
             if (Schema::hasTable('provider_syncs')) {
-                $metrics[] = ['label' => 'Failed provider syncs (24h)', 'value' => ProviderSync::query()->where('status', 'failed')->where('created_at', '>=', now()->subDay())->count(), 'description' => 'Catalogue sync failures to review'];
+                $metrics[] = ['label' => 'Failed provider syncs (24h)', 'value' => ProviderSync::query()->where('status', 'failed')->where('created_at', '>=', now()->subDay())->count(), 'description' => 'Catalogue sync failures to review', 'url' => '/admin/providers'];
             }
         } elseif ($isStaff) {
             if ($can('providers.view')) {
