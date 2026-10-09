@@ -80,9 +80,6 @@ class AIChatbotAddonTest extends TestCase
 
     public function test_chat_service_does_not_call_any_provider_when_none_is_enabled(): void
     {
-        $migration = require base_path('addons/ai.chatbot/database/migrations/2026_10_09_100000_create_ai_chatbot_tables.php');
-        $migration->up();
-
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('The AI assistant is not configured yet.');
 
