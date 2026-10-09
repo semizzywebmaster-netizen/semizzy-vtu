@@ -12,6 +12,9 @@ use App\Models\User;
 use App\Models\VtuTransaction;
 use App\Models\WalletAccount;
 use App\Models\WalletMovement;
+use App\Models\ProviderSync;
+use App\Models\SystemSetting;
+use Illuminate\Support\Facades\Schema;
 use App\Services\Dashboard\DashboardMessageService;
 use App\Services\Platform\TierLimitService;
 use Illuminate\Http\Request;
@@ -40,7 +43,32 @@ class DashboardController extends Controller
                 ['label' => 'Active addons', 'value' => Addon::query()->where('status', 'active')->count(), 'description' => 'Currently active core extensions'],
                 ['label' => 'Enabled products', 'value' => ServiceProduct::query()->where('enabled', true)->count(), 'description' => 'Catalogue products enabled in core'],
                 ['label' => 'Open support tickets', 'value' => SupportTicket::query()->whereIn('status', ['open', 'pending'])->count(), 'description' => 'Tickets awaiting attention'],
+
+            ['label' => 'Providers needing verification', 'value' => ApiProvider::query()->where('enabled', true)->where(function ($query): void {
+                $query->where('verification_status', '!=', 'live_verified')
+                    ->orWhere('integration_status', '!=', 'live_verified');
+            })->count(), 'description' => 'Enabled providers not fully live-verified'],
             ];
+            if (Schema::hasTable('vtu_transactions')) {
+                $metrics[] = ['label' => 'Pending VTU transactions', 'value' => VtuTransaction::query()->whereNotIn('status', ['successful', 'failed', 'reversed', 'cancelled'])->count(), 'description' => 'Transactions needing status confirmation'];
+                $metrics[] = ['label' => 'Failed VTU transactions (24h)', 'value' => VtuTransaction::query()->where('status', 'failed')->where('created_at', '>=', now()->subDay())->count(), 'description' => 'Recent failures to investigate'];
+            }
+            if (Schema::hasTable('provider_syncs')) {
+                $metrics[] = ['label' => 'Failed provider syncs (24h)', 'value' => ProviderSync::query()->where('status', 'failed')->where('created_at', '>=', now()->subDay())->count(), 'description' => 'Catalogue sync failures to review'];
+            }
+            $vtuEnabled = filter_var(SystemSetting::query()->where('key', 'vtu_enabled')->value('value') ?? '1', FILTER_VALIDATE_BOOL);
+            $vtuActive = Addon::query()->where('identifier', 'vtu.digital-services')->where('status', 'active')->exists();
+            if ($vtuEnabled && $vtuActive) {
+                array_push($quickLinks,
+                    ['label' => 'VTU Control Center', 'url' => '/admin/vtu'],
+                    ['label' => 'VTU Services', 'url' => '/admin/vtu/services'],
+                    ['label' => 'VTU Products', 'url' => '/admin/vtu/products'],
+                    ['label' => 'VTU Providers', 'url' => '/admin/providers'],
+                    ['label' => 'VTU Mappings', 'url' => '/admin/vtu/mappings'],
+                    ['label' => 'VTU Transactions', 'url' => '/admin/vtu/transactions'],
+                    ['label' => 'VTU Bulk Operations', 'url' => '/admin/vtu/bulk'],
+                );
+            }
         } elseif ($isStaff) {
             if ($can('providers.view')) {
                 $metrics[] = ['label' => 'Eligible providers', 'value' => ApiProvider::query()->eligibleForNewTransactions()->count(), 'description' => 'Verified, enabled and unpaused'];
@@ -76,6 +104,8 @@ class DashboardController extends Controller
                 ['label' => 'Service catalogue', 'url' => '/admin/catalogue'],
                 ['label' => 'Addon manager', 'url' => '/admin/addons'],
                 ['label' => 'System health', 'url' => '/admin/health'],
+                ['label' => 'Operational runbooks', 'url' => '/admin/runbooks'],
+                ['label' => 'Safe rollout controls', 'url' => '/admin/feature-rollouts'],
                 ['label' => 'System settings', 'url' => '/admin/settings'],
                 ['label' => 'Email & SMTP', 'url' => '/admin/settings#smtp'],
                 ['label' => 'Backup & Maintenance', 'url' => '/admin/settings#maintenance'],
@@ -85,13 +115,13 @@ class DashboardController extends Controller
                 ['label' => 'Profile change requests', 'url' => '/admin/profile-change-requests'],
                 ['label' => 'Audit events', 'url' => '/admin/audit-events'],
                 ['label' => 'Security events', 'url' => '/admin/security-events'],
-                ['label' => 'VTU Control Center', 'url' => '/admin/vtu'],
-                ['label' => 'VTU Services', 'url' => '/admin/vtu/services'],
-                ['label' => 'VTU Products', 'url' => '/admin/vtu/products'],
-                ['label' => 'VTU Providers', 'url' => '/admin/providers'],
-                ['label' => 'VTU Mappings', 'url' => '/admin/vtu/mappings'],
-                ['label' => 'VTU Transactions', 'url' => '/admin/vtu/transactions'],
-                ['label' => 'VTU Bulk Operations', 'url' => '/admin/vtu/bulk'],
+
+
+
+
+
+
+
                 ['label' => 'Support desk', 'url' => '/support'],
             ];
         } elseif ($isStaff) {
