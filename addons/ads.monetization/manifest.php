@@ -38,6 +38,6 @@ return [
  'api_routes'=>[],
  'provider_integrations'=>[],
  'provider_capabilities'=>[],
- 'scheduled_tasks'=>[],
- 'events'=>['ads.campaign.submitted','ads.campaign.approved','ads.campaign.paused','ads.impression.recorded','ads.click.recorded','ads.budget.exhausted','ads.promotion.submitted','ads.promotion.approved'],
+ 'scheduled_tasks'=>['ads:expire-promotions: Hourly expiry of elapsed seller listing promotions via Laravel scheduler/cPanel cron.'],
+ 'events'=>['ads.promotion.submitted','ads.promotion.approved','ads.promotion.expired','ads.campaign.submitted','ads.campaign.approved','ads.campaign.paused','ads.impression.recorded','ads.click.recorded','ads.budget.exhausted','ads.promotion.submitted','ads.promotion.approved'],
 ];
