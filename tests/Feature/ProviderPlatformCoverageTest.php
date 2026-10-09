@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ApiProvider;
 use App\Models\ProviderServiceMapping;
+use App\Models\ProviderService;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\ServiceProduct;
@@ -184,4 +185,63 @@ class ProviderPlatformCoverageTest extends TestCase
         $this->assertNotNull($result['product']->published_at);
         $this->assertDatabaseHas('audit_events', ['event' => 'provider_platform.product_published', 'auditable_id' => $product->id]);
     }
+
+    public function test_provider_catalogue_selection_is_pending_and_does_not_publish_or_enable_routing(): void
+    {
+        $provider = ApiProvider::query()->create([
+            'identifier' => 'catalogue-review-provider',
+            'display_name' => 'Catalogue Review Provider',
+            'environment' => 'sandbox',
+            'verification_status' => 'unverified',
+            'integration_status' => 'draft',
+            'enabled' => false,
+            'paused' => true,
+            'capabilities' => [],
+            'service_categories' => [],
+        ]);
+        $providerService = ProviderService::query()->create([
+            'api_provider_id' => $provider->id,
+            'external_service_id' => 'DISCOVERED-001',
+            'external_service_code' => 'DISC-001',
+            'name' => 'Discovered Catalogue Entry',
+            'provider_price' => '125.0000',
+            'currency' => 'NGN',
+            'status' => 'discovered',
+            'metadata' => ['source' => 'test-fixture'],
+            'raw_provider_data' => ['secret_like_field' => 'must-not-be-returned'],
+            'last_synced_at' => now(),
+        ]);
+
+        $this->withoutMiddleware()
+            ->getJson('/admin/provider-platform/catalogue?provider_id=' . $provider->id)
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.external_service_id', 'DISCOVERED-001')
+            ->assertJsonPath('data.0.source_price', '125.0000')
+            ->assertJsonMissingPath('data.0.raw_provider_data');
+
+        $this->withoutMiddleware()
+            ->postJson('/admin/provider-platform/catalogue/' . $providerService->id . '/select', [
+                'selection_scope' => 'product',
+            ])
+            ->assertStatus(202)
+            ->assertJsonPath('status', 'awaiting_approval')
+            ->assertJsonPath('selection.approved', false)
+            ->assertJsonPath('selection.imported', false)
+            ->assertJsonPath('selection.auto_sync_allowed', false);
+
+        $this->assertDatabaseHas('provider_service_imports', [
+            'api_provider_id' => $provider->id,
+            'provider_service_id' => $providerService->id,
+            'state' => 'awaiting_approval',
+            'approved' => false,
+            'imported' => false,
+            'auto_sync_allowed' => false,
+        ]);
+        $this->assertDatabaseHas('audit_events', [
+            'event' => 'provider_platform.catalogue_service_selected',
+            'auditable_id' => $providerService->id,
+        ]);
+    }
+
 }
