@@ -92,7 +92,7 @@ return [
   ['name'=>'Federal Polytechnic, Ede','category'=>'federal_polytechnic','state'=>'Osun','official_url'=>'https://www.federalpolyede.edu.ng/'],
   ['name'=>'Auchi Polytechnic','category'=>'federal_polytechnic','state'=>'Edo','official_url'=>'https://auchipoly.edu.ng/'],
   ['name'=>'Yaba College of Technology','category'=>'federal_polytechnic','state'=>'Lagos','official_url'=>'https://www.yabatech.edu.ng/'],
-  ['name'=>'Kaduna Polytechnic','category'=>'federal_polytechnic','state'=>'Kaduna','official_url'=>'https:// kadunapolytechnic.edu.ng/'],
+  ['name'=>'Kaduna Polytechnic','category'=>'federal_polytechnic','state'=>'Kaduna','official_url'=>'https://kadunapolytechnic.edu.ng/'],
   ['name'=>'The Polytechnic, Ibadan','category'=>'state_polytechnic','state'=>'Oyo','official_url'=>'https://polyibadan.edu.ng/'],
   ['name'=>'Lagos State Polytechnic (LASPOTECH)','category'=>'state_polytechnic','state'=>'Lagos','official_url'=>'https://laspotech.edu.ng/'],
   ['name'=>'Kwara State Polytechnic','category'=>'state_polytechnic','state'=>'Kwara','official_url'=>'https://kwarastatepolytechnic.edu.ng/'],
