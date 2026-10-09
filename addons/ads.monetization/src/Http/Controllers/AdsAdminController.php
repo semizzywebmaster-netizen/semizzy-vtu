@@ -112,6 +112,7 @@ class AdsAdminController
    'requires_integration'=>['required','boolean'],'integration_key'=>['nullable','required_if:requires_integration,1','string','max:120'],
    'is_active'=>['required','boolean'],
   ]);
+  if($data['is_active'] && $data['requires_integration']) return response()->json(['success'=>false,'message'=>'This format requires a delivery integration. It cannot be enabled until that integration is implemented and verified.'],422);
   if($type->is_system && !$data['is_active']) {
    $used=DB::table('ad_placements')->where('format',$type->key)->where('is_active',true)->exists();
    if($used) return response()->json(['success'=>false,'message'=>'Disable its active placements before disabling this built-in type.'],422);
