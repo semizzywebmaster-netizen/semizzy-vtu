@@ -104,3 +104,14 @@ The names above are navigation examples; the final service list must come from t
 - Never duplicate provider records merely to show a provider in multiple addons. Use capability assignments/views into the shared Core registry.
 - Providers without a verified capability stay visibly marked pending and cannot be selected for production routing.
 - Every service page displays its own counts for discovered, documented, configured, sandbox-tested and live-verified providers, plus the genuine gap to the target of ten verified integrations.
+
+
+## Required provider-specific service and price import/update controls
+
+Every provider must have a **Services & Prices** area reachable from both the global provider centre and the relevant addon-specific provider view. Admins need category/subcategory filtering, live catalogue refresh where officially supported, preview-and-select import/update, source-price comparison, and sync history/reporting.
+
+For every imported row, retain provider identity, category/subcategory, external product/service ID, provider label, currency, source cost, status, source timestamp and sync timestamp. Show new/changed/price-changed/unavailable/removed/unmapped records before changes are applied. Keep provider source price distinct from SEMIZZY ONE's customer selling price and profit rules; never silently replace selling prices, publish newly discovered products, or route transactions to an unverified provider.
+
+Support category-level manual sync and explicit per-provider/category auto-sync approval. Incomplete or paginated catalogue responses must not trigger destructive removal. Use provider-specific auth, documented endpoint paths, pagination, rate limits and response parsing. Where a provider has no official catalogue endpoint, disclose that limitation and offer a validated manual/CSV mapping workflow if safe; never invent prices or IDs.
+
+The Core routes for discovery, provider services, sync history/summary, import preview, approval and selected import already exist. Audit/reuse these routes first and only add missing behaviour after tests establish the gap. Addon pages are contextual views over the same Core provider and service records; do not duplicate provider or price registries.
