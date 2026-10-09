@@ -85,6 +85,26 @@ final class MarketplaceController
         return response()->json(['success' => true, 'categories' => $categories]);
     }
 
+    public function updateEscrowPolicies(Request $request)
+    {
+        $data = $request->validate([
+            'physical_dispatch_hours' => ['required','integer','min:1','max:720'],
+            'service_delivery_hours' => ['required','integer','min:1','max:2160'],
+            'buyer_confirmation_hours' => ['required','integer','min:1','max:720'],
+            'reminders_enabled' => ['required','boolean'],
+            'auto_release_enabled' => ['required','boolean'],
+            'auto_release_grace_hours' => ['required','integer','min:1','max:720'],
+            'max_dispute_open_days' => ['required','integer','min:1','max:90'],
+        ]);
+        $current = DB::table('marketplace_escrow_policies')->orderBy('id')->first();
+        if ($current) {
+            DB::table('marketplace_escrow_policies')->where('id', $current->id)->update($data + ['updated_by' => $request->user()->id, 'updated_at' => now()]);
+        } else {
+            DB::table('marketplace_escrow_policies')->insert($data + ['updated_by' => $request->user()->id, 'created_at' => now(), 'updated_at' => now()]);
+        }
+        return response()->json(['success' => true, 'message' => 'Escrow policy settings saved. Automatic release remains disabled until enabled here and implemented by a scheduled, dispute-aware task.']);
+    }
+
     public function updateCategoryProfit(Request $request, MarketplaceCategory $category)
     {
         $data = $request->validate([
@@ -170,6 +190,7 @@ final class MarketplaceController
         }
 
         return Inertia::render('Admin/Marketplace/Index', [
+            'escrowPolicies' => DB::table('marketplace_escrow_policies')->orderBy('id')->first(),
             'products' => MarketplaceProduct::query()->with(['seller','category'])->latest()->paginate(30),
             'orders' => MarketplaceOrder::query()->with(['buyer', 'seller', 'product'])->latest()->paginate(30),
             'earnings' => MarketplaceEarning::query()->with(['seller', 'category', 'order'])->latest()->paginate(30),
