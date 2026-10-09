@@ -213,7 +213,7 @@ final class MarketplaceController
         $escrows = DB::table('marketplace_escrows')->whereIn('order_id', $orders->getCollection()->pluck('id'))
             ->get(['order_id','status as escrow_status','buyer_confirmed_at','released_at'])
             ->keyBy('order_id');
-        $orders->getCollection()->transform(function ($order) use ($escrows) {
+        $orders->getCollection()->transform(function ($order) use ($escrows, $disputes) {
             $order->escrow = $escrows->get($order->id);
             $order->disputes = $disputes->get($order->id, collect())->values();
             return $order;
