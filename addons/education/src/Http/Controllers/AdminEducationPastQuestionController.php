@@ -17,6 +17,7 @@ final class AdminEducationPastQuestionController extends Controller {
  }
  public function store(Request $request) {
   $data=$this->validateItem($request);
+  $data['is_free']=(bool)$request->boolean('is_free');
   $file=$data['file']; unset($data['file']);
   $data['slug']=$this->uniqueSlug($data['title']);
   $data['file_path']=$file->store('education/past-questions','local');
@@ -28,9 +29,10 @@ final class AdminEducationPastQuestionController extends Controller {
  }
  public function update(Request $request,EducationLibraryItem $item) {
   $data=$request->validate(['category'=>['required',Rule::in(['school_past_question','exam_past_question'])],'title'=>'required|string|max:200','institution'=>'nullable|string|max:180','faculty'=>'nullable|string|max:180','department'=>'nullable|string|max:180','course_code'=>'nullable|string|max:80','course_title'=>'nullable|string|max:180','education_level'=>'nullable|string|max:80','semester'=>'nullable|string|max:80','academic_session'=>'nullable|string|max:40','exam_body'=>'nullable|string|max:100','exam_type'=>'nullable|string|max:100','subject'=>'nullable|string|max:140','exam_year'=>'nullable|integer|min:1900|max:2100','description'=>'nullable|string|max:5000','is_free'=>'required|boolean','price_minor'=>'required|integer|min:0','currency'=>'required|string|size:3','file'=>'nullable|file|mimes:pdf,doc,docx|max:20480']);
+  $data['is_free']=(bool)$request->boolean('is_free');
+  if($item->status==='published' && $item->category!==$data['category']) return back()->withErrors(['category'=>'Unpublish the resource before changing its section.']);
   if($data['is_free'])$data['price_minor']=0;
   if(isset($data['file'])) { $file=$data['file'];$newPath=$file->store('education/past-questions','local');if(Storage::disk('local')->exists($item->file_path))Storage::disk('local')->delete($item->file_path);$data['file_path']=$newPath;$data['file_name']=$file->getClientOriginalName();$data['mime_type']=$file->getMimeType()?:'application/octet-stream';$data['file_size']=$file->getSize()?:0;unset($data['file']); }
-  if($item->status==='published' && $item->category!==$data['category']) return back()->withErrors(['category'=>'Unpublish the resource before changing its section.']);
   $item->fill($data)->save(); return back()->with('success','Resource updated.');
  }
  public function publish(EducationLibraryItem $item) {
