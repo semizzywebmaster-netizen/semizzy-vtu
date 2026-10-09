@@ -3,12 +3,28 @@ on:
   push:
     branches: [main]
     paths:
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/migrations/**'
+      - 'routes/**'
+      - 'resources/**'
+      - 'tests/**'
+      - '.github/workflows/**'
       - 'addons/cac.business-services/**'
       - 'composer.json'
       - 'composer.lock'
   pull_request:
     branches: [main]
     paths:
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/migrations/**'
+      - 'routes/**'
+      - 'resources/**'
+      - 'tests/**'
+      - '.github/workflows/**'
       - 'addons/cac.business-services/**'
       - 'composer.json'
       - 'composer.lock'
