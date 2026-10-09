@@ -126,6 +126,11 @@ final class OpayPaymentGatewayAdapter implements PaymentGatewayAdapter
         ));
     }
 
+    public function verifyRefund(PaymentGatewayProvider $provider, string $refundReference, array $context = []): array
+    {
+        throw new RuntimeException('Verified refund status lookup is not implemented for this provider; do not settle the wallet from a refund request response.');
+    }
+
     public function healthCheck(PaymentGatewayProvider $provider): bool
     {
         $reference = 'SEMIZZY_HEALTHCHECK_'.bin2hex(random_bytes(6));
