@@ -1,4 +1,3 @@
-import React from 'react';
 import {Head,Link} from '@inertiajs/react';
 type Conversation={uuid:string;title:string;status:string;supportTicketId:number|null;createdAt:string;lastMessageAt:string|null;userName:string|null;userEmail:string|null;lastMessage:string|null};
 type Props={conversations:{data:Conversation[];current_page:number;last_page:number;links:Array<{url:string|null;label:string;active:boolean}>}};
