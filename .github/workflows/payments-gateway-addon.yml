@@ -4,6 +4,22 @@ on:
     branches: [main]
     paths:
       - 'addons/payments.gateway/**'
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/migrations/**'
+      - 'routes/**'
+      - 'resources/**'
+      - 'tests/**'
+      - '.github/workflows/**'
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/migrations/**'
+      - 'routes/**'
+      - 'resources/**'
+      - 'tests/**'
+      - '.github/workflows/**'
       - 'composer.json'
       - 'composer.lock'
   pull_request:
