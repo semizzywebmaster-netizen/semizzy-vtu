@@ -38,6 +38,8 @@ export default function SystemHealth({ health }: Props) {
             </div>
           </div>
 
+          <div className="mt-4"><Link href="/admin/runbooks" className="inline-flex items-center rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-sm font-bold text-indigo-700 hover:bg-indigo-50">Open operational runbooks →</Link></div>
+
           <div className="mt-8 grid gap-4">
             {health.checks.map((check) => (
               <section key={check.key} className={`rounded-2xl border p-5 ${statusClass[check.status]}`}>
