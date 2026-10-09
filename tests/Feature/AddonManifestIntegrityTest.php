@@ -82,6 +82,16 @@ class AddonManifestIntegrityTest extends TestCase
                 foreach ((array) ($manifest[$routeKey] ?? []) as $routeFile) {
                     if (!is_string($routeFile) || $routeFile === '' || !is_file(base_path($routeFile))) {
                         $errors[] = "{$source}: declared {$routeKey} file [".(is_scalar($routeFile) ? (string) $routeFile : 'invalid')."] does not exist";
+                        continue;
+                    }
+
+                    $routeSource = file_get_contents(base_path($routeFile));
+                    if (!is_string($routeSource)) continue;
+                    preg_match_all('/permission:([A-Za-z0-9_.-]+)/', $routeSource, $permissionMatches);
+                    foreach (array_unique($permissionMatches[1] ?? []) as $routePermission) {
+                        if (!isset($declaredPermissions[$routePermission])) {
+                            $errors[] = "{$source}: route file [{$routeFile}] uses undeclared permission [{$routePermission}]";
+                        }
                     }
                 }
             }
