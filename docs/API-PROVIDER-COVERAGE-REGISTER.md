@@ -75,3 +75,32 @@ These are distinct provider identifiers present in the current preset mapping—
 - Travelstart flight API documentation: https://docs.travelstart.com/api/
 
 These are initial leads only; pricing, availability, documentation completeness, credentials and live behaviour must be checked before integration or production claims.
+
+
+## Service-addon usability requirements
+
+The central Core provider engine is the single source of truth, but administrators should manage providers from the service where they need them.
+
+| Addon context | Show relevant provider capabilities |
+|---|---|
+| VTU / Telecom | Airtime top-up, data bundles, network/operator catalogue and plan prices |
+| Electricity | DisCo/biller codes, meter validation, token purchase and supported tariff/product IDs |
+| Cable TV | Provider/biller, package IDs, smart-card validation and package prices |
+| Education / Exams | Exam types, PIN products, result-checking operations and their distinct product IDs |
+| Payments / Banking | Payment collection, virtual-account issuance, transfer/payout, account resolution as separate capabilities |
+| KYC / Identity | NIN/BVN/licence/passport/CAC verification only where officially supported and approved |
+| Messaging | SMS sending, OTP initiation/verification, delivery reports as distinct operations |
+| Travel | Flight/hotel search, booking, ticketing and cancellation capabilities individually |
+| Gift / Virtual Cards | Issuing, balance, activation and redemption only where the vendor supports those operations |
+| Other addons | Show only capabilities declared and reviewed for that addon's concrete service operations |
+
+The names above are navigation examples; the final service list must come from the full addon-manifest audit.
+
+### User-interface rules
+- Contextual service pages must show compatible providers only, with simple actions and clear statuses.
+- The global provider centre remains available for cross-service administration, search and coverage reporting.
+- Connecting a provider from a service page preselects the service, capability and environment.
+- The same provider identity and credentials are reused safely across addons when appropriate; service-specific mappings and verification remain separate.
+- Never duplicate provider records merely to show a provider in multiple addons. Use capability assignments/views into the shared Core registry.
+- Providers without a verified capability stay visibly marked pending and cannot be selected for production routing.
+- Every service page displays its own counts for discovered, documented, configured, sandbox-tested and live-verified providers, plus the genuine gap to the target of ten verified integrations.
