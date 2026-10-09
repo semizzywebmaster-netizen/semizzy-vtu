@@ -32,10 +32,12 @@ class VtuFastReadOnlyAdapterTest extends TestCase
         $this->assertSame(12500, $result->data['balance']);
     }
 
-    public function test_purchase_capability_is_not_advertised_without_documented_requery(): void
+    public function test_purchase_is_not_sent_until_a_documented_requery_contract_exists(): void
     {
-        $this->assertFalse((new RestJsonProviderAdapter(new ProviderUrlGuard()))->supports('transaction_initiation') && false);
-        // The provider preset intentionally exposes read-only capabilities only; a purchase is not routed here.
-        $this->assertFalse(in_array('transaction_initiation', ['balance_inquiry', 'catalogue_retrieval'], true));
+        Http::fake();
+        $result = (new RestJsonProviderAdapter(new ProviderUrlGuard()))->execute($this->provider(), 'transaction_initiation', ['price_id' => 123, 'network' => 'MTN', 'phone' => '08012345678', 'transaction_pin' => '1234']);
+        $this->assertFalse($result->accepted);
+        $this->assertSame('UNSUPPORTED', $result->status);
+        Http::assertNothingSent();
     }
 }
