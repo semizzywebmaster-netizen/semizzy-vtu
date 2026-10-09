@@ -79,8 +79,8 @@ class FinancialOperationIntegrityTest extends TestCase
     public function test_completed_financial_operation_can_be_reversed_once_but_not_reopened(): void
     {
         $operation = FinancialOperation::create([
-            'uuid' => (string) \\Illuminate\\Support\\Str::uuid(),
-            'reference' => 'finance-reversal-'.\\Illuminate\\Support\\Str::random(8),
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'reference' => 'finance-reversal-'.\Illuminate\Support\Str::random(8),
             'type' => 'transfer',
             'status' => 'completed',
             'amount_minor' => '500',
