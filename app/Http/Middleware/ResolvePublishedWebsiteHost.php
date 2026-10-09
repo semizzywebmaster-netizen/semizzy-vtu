@@ -6,6 +6,7 @@ use Addons\VtuWebsiteBuilder\Services\WebsiteBuilderService;
 use App\Models\Addon;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -44,6 +45,10 @@ class ResolvePublishedWebsiteHost
 
     public function handle(Request $request, Closure $next): Response
     {
+        if (!Schema::hasTable('addons')) {
+            return $next($request);
+        }
+
         if (!Addon::query()->where('identifier', 'vtu.website-builder')->where('status', 'active')->exists()) {
             return $next($request);
         }
