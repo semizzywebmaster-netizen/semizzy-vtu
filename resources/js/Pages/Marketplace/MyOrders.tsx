@@ -5,12 +5,28 @@ type Order = {
  id:number; reference:string; status:string; currency:string; total_minor:string; quantity:string;
  product?:{name?:string}|null; seller?:{name?:string}|null;
  escrow?:{escrow_status:string;buyer_confirmed_at?:string|null;released_at?:string|null}|null;
+ disputes?:{id:number;reason:string;description:string;status:string;resolution_note?:string|null}[];
+ shipping_carrier?:string|null; tracking_number?:string|null; tracking_url?:string|null;
 };
 type Props = { orders:{data:Order[]; current_page:number; last_page:number; links?:any[]} };
 
 export default function MyOrders({orders}:Props) {
  const [busy,setBusy]=useState<number|null>(null);
  const [message,setMessage]=useState('');
+ const [disputeOrder,setDisputeOrder]=useState<number|null>(null);
+ const [reason,setReason]=useState('item_not_received');
+ const [description,setDescription]=useState('');
+ const submitDispute=async(orderId:number)=>{
+  if(description.trim().length<10){setMessage('Please describe the problem in at least 10 characters.');return;}
+  setBusy(orderId);setMessage('');
+  const xs=document.cookie.split('; ').find(v=>v.startsWith('XSRF-TOKEN='));
+  const token=xs?decodeURIComponent(xs.split('=').slice(1).join('=')):'';
+  try{
+   const res=await fetch('/marketplace/orders/'+orderId+'/disputes',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json','X-XSRF-TOKEN':token},body:JSON.stringify({reason,description})});
+   const data=await res.json();setMessage(data.message||'Dispute submitted');if(res.ok)window.location.reload();
+  }catch{setMessage('Unable to submit dispute. Please try again.');}
+  finally{setBusy(null);}
+ };
  const confirmReceipt=async(orderId:number)=>{
   if(!window.confirm('Confirm that you have received this order? Your confirmation will notify the admin, but funds will remain in escrow until an authorised admin releases them.')) return;
   setBusy(orderId);setMessage('');
