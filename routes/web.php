@@ -255,6 +255,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/providers/{provider}/provider-services/approve', [ProviderEngineController::class, 'approveImport'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.providers.approve-import');
         Route::post('/providers/{provider}/provider-services/import', [ProviderEngineController::class, 'importSelected'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.providers.provider-services.import');
         Route::post('/providers/{provider}/provider-services/{providerService}/map-to-platform', [ProviderEngineController::class, 'mapServiceToPlatform'])->whereNumber('provider')->whereNumber('providerService')->middleware(['permission:providers.manage','permission:catalogue.manage','throttle:30,1'])->name('admin.providers.provider-services.map-to-platform');
+        Route::patch('/providers/{provider}/service-mappings/{mapping}', [ProviderEngineController::class, 'togglePlatformServiceMapping'])->whereNumber(['provider','mapping'])->middleware(['permission:providers.manage','permission:catalogue.manage','throttle:20,1'])->name('admin.providers.service-mappings.toggle');
 
         Route::get('/catalogue', [CatalogueController::class, 'index'])->middleware('permission:catalogue.view')->name('admin.catalogue.index');
         Route::post('/catalogue/categories', [CatalogueController::class, 'storeCategory'])->middleware('permission:catalogue.manage')->name('admin.catalogue.categories.store');
