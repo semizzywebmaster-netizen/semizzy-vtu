@@ -3,7 +3,7 @@ return [
  'identifier'=>'insurance.protection','name'=>'Insurance & Protection','version'=>'1.0.0',
  'autoload_namespace' => 'Addons\\InsuranceProtection',
  'description'=>'Provider-driven insurance marketplace for configurable protection products, policy issuance, renewals and claims.',
- 'core_compatibility'=>'>=2.0.0','dependencies'=>[],
+ 'compatibility'=>'>=2.0.0','dependencies'=>[],
  'permissions'=>['insurance.view','insurance.buy','insurance.manage','insurance.providers.manage','insurance.policies.manage','insurance.claims.manage','insurance.refunds.manage','insurance.settings.manage','insurance.audit'],
  'role_permissions'=>[
   'ADMIN'=>['insurance.view','insurance.buy','insurance.manage','insurance.providers.manage','insurance.policies.manage','insurance.claims.manage','insurance.refunds.manage','insurance.settings.manage','insurance.audit'],
