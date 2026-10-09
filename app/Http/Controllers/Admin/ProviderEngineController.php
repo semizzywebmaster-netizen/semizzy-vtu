@@ -704,7 +704,7 @@ class ProviderEngineController extends Controller
     {
         $rows = ProviderServiceImport::query()
             ->where('api_provider_id', $provider->id)
-            ->with(['service.category', 'service.subcategory', 'service.platformMapping'])
+            ->with(['service.category', 'service.subcategory'])
             ->latest()
             ->get();
 
@@ -714,10 +714,21 @@ class ProviderEngineController extends Controller
             ->get()
             ->keyBy('provider_service_id');
 
-        return response()->json(['data' => $rows->map(function (ProviderServiceImport $import) use ($productMappings): array {
+        $mappedProducts = ServiceProduct::query()
+            ->whereIn('id', $productMappings->pluck('catalogue_product_id')->unique())
+            ->get(['id', 'service_id'])
+            ->keyBy('id');
+        $serviceMappings = ProviderServiceMapping::query()
+            ->where('api_provider_id', $provider->id)
+            ->whereIn('service_id', $mappedProducts->pluck('service_id')->unique())
+            ->get()
+            ->keyBy('service_id');
+
+        return response()->json(['data' => $rows->map(function (ProviderServiceImport $import) use ($productMappings, $mappedProducts, $serviceMappings): array {
             $service = $import->service;
-            $platformMapping = $service?->platformMapping;
             $productMapping = $productMappings->get($import->provider_service_id);
+            $mappedProduct = $productMapping ? $mappedProducts->get($productMapping->catalogue_product_id) : null;
+            $platformMapping = $mappedProduct ? $serviceMappings->get($mappedProduct->service_id) : null;
 
             return [
                 'id' => $import->id,
@@ -1004,34 +1015,29 @@ class ProviderEngineController extends Controller
                 if (! in_array('transaction_initiation', (array) $lockedMapping->capabilities, true)) {
                     return ['ok' => false, 'status' => 422, 'message' => 'Transaction-initiation capability is not verified/configured for this provider service mapping. Configure the provider capability first.'];
                 }
-                if (! $lockedMapping->provider_service_id) {
-                    return ['ok' => false, 'status' => 422, 'message' => 'This service mapping is not tied to a specific approved provider catalogue row. Map an approved row first.'];
-                }
-
-                $import = ProviderServiceImport::query()
-                    ->where('api_provider_id', $lockedProvider->id)
-                    ->where('provider_service_id', $lockedMapping->provider_service_id)
-                    ->first();
-                if (! $import || ! $import->approved || ! $import->imported) {
-                    return ['ok' => false, 'status' => 422, 'message' => 'Approve and import the provider catalogue row before enabling its service route.'];
-                }
-
                 $hasSourceCost = ProviderServiceProduct::query()
                     ->where('api_provider_id', $lockedProvider->id)
                     ->where('enabled', true)
                     ->whereHas('product', fn ($query) => $query->where('service_id', $lockedMapping->service_id))
                     ->exists();
                 $hasActiveProductMapping = DB::table('provider_product_mappings_v2 as m')
+                    ->join('provider_services as ps', 'ps.id', '=', 'm.provider_service_id')
+                    ->join('provider_service_imports as i', function ($join): void {
+                        $join->on('i.provider_service_id', '=', 'm.provider_service_id')
+                            ->on('i.api_provider_id', '=', 'm.api_provider_id');
+                    })
                     ->join('service_products as p', 'p.id', '=', 'm.catalogue_product_id')
                     ->where('m.api_provider_id', $lockedProvider->id)
-                    ->where('m.provider_service_id', $lockedMapping->provider_service_id)
                     ->where('m.enabled', true)
                     ->where('m.mapping_status', 'active')
+                    ->where('i.approved', true)
+                    ->where('i.imported', true)
+                    ->where('ps.status', '!=', 'removed')
                     ->where('p.service_id', $lockedMapping->service_id)
                     ->exists();
 
                 if (! $hasSourceCost || ! $hasActiveProductMapping) {
-                    return ['ok' => false, 'status' => 422, 'message' => 'Enable a valid source-cost mapping and activate the approved product-level mapping before enabling this service route.'];
+                    return ['ok' => false, 'status' => 422, 'message' => 'Enable a valid source-cost mapping and activate an approved product-level mapping for this platform service before enabling its service route.'];
                 }
             }
 
