@@ -1,6 +1,7 @@
 <?php
 return [
  'identifier'=>'communication.whatsapp','name'=>'Communication & WhatsApp','version'=>'1.0.0',
+ 'autoload_namespace'=>'Addons\\CommunicationWhatsapp',
  'description'=>'Unified WhatsApp, SMS, email and web-push communication center with conversations, campaigns, templates, consent and provider failover.',
  'compatibility'=>'>=2.0.0','dependencies'=>['bulk-sms.communication'],
  'permissions'=>[
