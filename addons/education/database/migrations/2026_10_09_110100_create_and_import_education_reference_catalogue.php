@@ -36,7 +36,10 @@ return new class extends Migration {
   foreach (array_chunk($rows,100) as $chunk) DB::table('education_reference_catalogue')->insert($chunk);
  }
  private static function sourceForCategory(string $category): string {
-  if (str_contains($category,'university')) return 'https://www.nuc.edu.ng/approved-affiliations/';
+  if ($category === 'federal_university') return 'https://www.nuc.edu.ng/nigerian-univerisities/federal-univeristies/';
+  if ($category === 'state_university') return 'https://www.nuc.edu.ng/nigerian-univerisities/state-univerisity/';
+  if ($category === 'private_university') return 'https://www.nuc.edu.ng/nigerian-univerisities/private-univeristies/';
+  if (str_contains($category,'university')) return 'https://www.nuc.edu.ng/nigerian-univerisities/';
   if (str_contains($category,'polytechnic')) return 'https://web.nbte.gov.ng/tvet%20institutions';
   if (str_contains($category,'college_education')) return 'https://www.ncce.gov.ng/AccreditedColleges';
   return 'https://web.nbte.gov.ng/tvet%20institutions';
