@@ -549,6 +549,8 @@ class AddonLifecycleService
 
     private function validateManifest(array $manifest): array
     {
+        $manifest['compatibility'] ??= $manifest['core_compatibility'] ?? null;
+
         foreach (['identifier','name','version'] as $key) {
             if (!isset($manifest[$key]) || !is_string($manifest[$key]) || trim($manifest[$key]) === '') throw ValidationException::withMessages([$key => "Addon manifest field [{$key}] is required."]);
         }
