@@ -13,6 +13,8 @@ type Provider = {
   capabilities: string[];
 };
 
+type PlatformService = { id: number; key: string; name: string; category: string };
+
 type CatalogueRow = {
   id: number;
   provider_service_id: number;
@@ -37,11 +39,12 @@ type CatalogueRow = {
   } | null;
 };
 
-export default function ProviderCatalogueManager({ provider }: { provider: Provider }) {
+export default function ProviderCatalogueManager({ provider, platformServices }: { provider: Provider; platformServices: PlatformService[] }) {
   const [rows, setRows] = useState<CatalogueRow[]>([]);
   const [category, setCategory] = useState('all');
   const [selected, setSelected] = useState<number[]>([]);
   const [autoSync, setAutoSync] = useState(false);
+  const [platformServiceId, setPlatformServiceId] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -114,6 +117,27 @@ export default function ProviderCatalogueManager({ provider }: { provider: Provi
     }
   };
 
+  const syncPlatformService = async () => {
+    if (!platformServiceId) return;
+    const service = platformServices.find((item) => String(item.id) === platformServiceId);
+    if (!service) return;
+    if (!window.confirm(`Sync ${provider.display_name} catalogue and source prices for ${service.category} → ${service.name}? The provider must be eligible for catalogue sync. Customer selling prices remain governed by the platform pricing rules.`)) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await requestJson('/admin/catalogue/sync', {
+        api_provider_id: provider.id,
+        service_id: Number(platformServiceId),
+      });
+      setMessage(result.message || `Catalogue sync completed for ${service.name}. Processed ${result.products_processed ?? 0} product record(s).`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Platform catalogue sync failed.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const importSelected = async () => {
     if (!selected.length) return;
     if (!window.confirm(`Approve and import/update ${selected.length} selected provider service(s)? This imports provider catalogue entries; it does not change SEMIZZY ONE selling prices or enable provider routing.`)) return;
@@ -162,6 +186,18 @@ export default function ProviderCatalogueManager({ provider }: { provider: Provi
             <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs font-semibold uppercase text-slate-500">Discovered entries</p><p className="mt-1 text-2xl font-bold text-slate-900">{rows.length}</p></div>
             <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs font-semibold uppercase text-slate-500">Imported entries</p><p className="mt-1 text-2xl font-bold text-slate-900">{rows.filter((row) => row.imported).length}</p></div>
             <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs font-semibold uppercase text-slate-500">Awaiting approval</p><p className="mt-1 text-2xl font-bold text-slate-900">{rows.filter((row) => !row.approved).length}</p></div>
+          </section>
+
+          <section className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4 md:p-5">
+            <h2 className="text-base font-bold text-slate-900">Sync prices into a platform service category</h2>
+            <p className="mt-1 max-w-3xl text-sm text-slate-600">This uses the Core catalogue importer for a specific platform service, so provider product costs can be refreshed against the existing service catalogue. Only providers that pass Core eligibility and capability checks can complete the sync.</p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+              <select value={platformServiceId} onChange={(event) => setPlatformServiceId(event.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white p-3 text-sm" aria-label="Platform service category">
+                <option value="">Choose platform service category / service…</option>
+                {platformServices.map((service) => <option key={service.id} value={service.id}>{service.category} — {service.name} ({service.key})</option>)}
+              </select>
+              <button type="button" disabled={!platformServiceId || busy} onClick={syncPlatformService} className="rounded-xl border border-indigo-300 bg-white px-4 py-3 text-sm font-bold text-indigo-800 disabled:opacity-50">{busy ? 'Working…' : 'Sync selected category prices'}</button>
+            </div>
           </section>
 
           <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
