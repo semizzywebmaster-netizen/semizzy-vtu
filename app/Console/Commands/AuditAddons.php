@@ -83,9 +83,20 @@ class AuditAddons extends Command
             }
         }
 
-        $educationRoot = $root.'/education';
-        if (is_dir($educationRoot) && !is_file($educationRoot.'/manifest.php')) {
-            $issues[] = $this->issue('warning', 'category_directory_without_manifest', 'education', 'Directory has no root manifest; investigate its contents before treating it as an installable addon.');
+        foreach (glob($root.'/*', GLOB_ONLYDIR) ?: [] as $topLevelDirectory) {
+            if (is_file($topLevelDirectory.'/manifest.php')) continue;
+            $children = glob($topLevelDirectory.'/*', GLOB_ONLYDIR) ?: [];
+            if ($children !== []) {
+                $relativeCategory = basename($topLevelDirectory);
+                $issues[] = $this->issue('warning', 'category_directory_without_manifest', $relativeCategory, 'Directory contains nested folders but no root manifest; confirm these are categorized addons or document the intended structure.');
+            }
+        }
+
+        foreach ($migrationOwners as $name => $sources) {
+            $uniqueSources = array_values(array_unique($sources));
+            if (count($uniqueSources) > 1) {
+                $issues[] = $this->issue('warning', 'migration_declared_by_multiple_addons', implode(', ', $uniqueSources), "Migration [{$name}] is declared by multiple addon manifests.");
+            }
         }
 
         $summary = [
