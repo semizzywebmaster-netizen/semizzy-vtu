@@ -16,6 +16,12 @@ Route::middleware([
         ->name('admin.provider-platform.catalogue.review');
     Route::get('/admin/provider-platform/catalogue', [ProviderPlatformAdminController::class, 'catalogue'])
         ->name('admin.provider-platform.catalogue');
+    Route::post('/admin/provider-platform/catalogue/{providerService}/approve', [ProviderPlatformAdminController::class, 'approveCatalogueService'])
+        ->middleware('permission:provider_platform.manage')
+        ->name('admin.provider-platform.catalogue.approve');
+    Route::post('/admin/provider-platform/catalogue/{providerService}/map', [ProviderPlatformAdminController::class, 'mapCatalogueService'])
+        ->middleware('permission:provider_platform.manage')
+        ->name('admin.provider-platform.catalogue.map');
     Route::post('/admin/provider-platform/catalogue/{providerService}/select', [ProviderPlatformAdminController::class, 'selectCatalogueService'])
         ->middleware('permission:provider_platform.manage')
         ->name('admin.provider-platform.catalogue.select');
