@@ -6,15 +6,12 @@ use App\Models\User;
 use App\Models\WalletAccount;
 use App\Models\WalletMovement;
 use App\Services\Finance\AdminWalletDebitService;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\TestCase;
 
 class WalletConcurrencyMySqlTest extends TestCase
 {
-    use DatabaseMigrations;
-
     public function test_concurrent_same_key_admin_debits_only_apply_one_movement(): void
     {
         $this->requireMySqlAndPcntl();
