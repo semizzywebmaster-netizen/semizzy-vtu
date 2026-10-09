@@ -11,6 +11,7 @@ Route::middleware(['web','auth','role:ADMIN,STAFF','ensure.addon:education','per
 });
 
 use Semizzy\Addons\Education\Http\Controllers\EducationReferenceCatalogueController;
+use Semizzy\Addons\Education\Http\Controllers\EducationReferenceImportController;
 Route::middleware(['web','auth','role:ADMIN','ensure.addon:education','permission:education.content.manage'])->prefix('admin/education/references')->group(function(){
  Route::get('/',[EducationReferenceCatalogueController::class,'index'])->name('admin.education.references');
  Route::post('/',[EducationReferenceCatalogueController::class,'store'])->name('admin.education.references.store');
@@ -18,4 +19,5 @@ Route::middleware(['web','auth','role:ADMIN','ensure.addon:education','permissio
  Route::delete('/{id}',[EducationReferenceCatalogueController::class,'destroy'])->whereNumber('id')->name('admin.education.references.destroy');
  Route::post('/categories',[EducationReferenceCatalogueController::class,'storeCategory'])->name('admin.education.references.categories.store');
  Route::put('/categories/{id}',[EducationReferenceCatalogueController::class,'updateCategory'])->whereNumber('id')->name('admin.education.references.categories.update');
+ Route::post('/import-csv',[EducationReferenceImportController::class,'importCsv'])->name('admin.education.references.import-csv');
 });
