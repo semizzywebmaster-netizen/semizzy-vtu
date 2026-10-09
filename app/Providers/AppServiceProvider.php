@@ -39,14 +39,23 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Register addon autoloaders before resolving classes supplied by optional addons.
+        // Otherwise the transaction observer may fail to autoload and silently disable notifications.
+        try {
+            $addons = app(AddonRegistry::class);
+            $addons->registerAutoloaders();
+        } catch (\Throwable) {
+            // Core must still boot if an optional addon manifest is unavailable.
+        }
+
         try {
             VtuTransaction::observe(VtuTransactionObserver::class);
         } catch (\Throwable) {
             // WhatsApp transaction notifications are optional and must never block Core boot.
         }
+
         try {
             $addons = app(AddonRegistry::class);
-            $addons->registerAutoloaders();
             $registry = app(CommercialServiceRegistry::class);
             foreach ($addons->commercialAdapters() as $definition) {
                 $addon = Addon::query()
