@@ -22,7 +22,7 @@ type CatalogueRow = {
   approved: boolean;
   auto_sync_allowed: boolean;
   state: string;
-  platform_mapping?: { id: number; service_id: number; service_key: string; enabled: boolean; capabilities: string[] } | null;
+  platform_mapping?: { id: number; service_id: number; service_key: string; provider_service_id: string | null; enabled: boolean; capabilities: string[] } | null;
   product_mapping?: { id: number; catalogue_product_id: number; enabled: boolean; mapping_status: string } | null;
   category: string | null;
   subcategory: string | null;
@@ -49,6 +49,7 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
   const [platformServiceId, setPlatformServiceId] = useState('');
   const [rowTargetServices, setRowTargetServices] = useState<Record<number, string>>({});
   const [rowTargetProducts, setRowTargetProducts] = useState<Record<number, string>>({});
+  const [rowProviderServiceIds, setRowProviderServiceIds] = useState<Record<number, string>>({});
   const [rowMappingCapabilities, setRowMappingCapabilities] = useState<Record<number, string[]>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -177,6 +178,11 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
       setError('Approve and import this provider catalogue row before mapping it to My Services.');
       return;
     }
+    const providerServiceCode = (rowProviderServiceIds[row.provider_service_id] ?? row.platform_mapping?.provider_service_id ?? row.service?.service_type ?? '').trim();
+    if (!providerServiceCode) {
+      setError('Enter the provider service identifier documented for this platform service. The external product ID is stored separately.');
+      return;
+    }
 
     setBusy(true);
     setError('');
@@ -185,6 +191,7 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
       const productId = rowTargetProducts[row.provider_service_id];
       const result = await requestJson(`/admin/providers/${provider.id}/provider-services/${row.provider_service_id}/map-to-platform`, {
         service_id: Number(serviceId),
+        provider_service_id: providerServiceCode,
         ...(productId ? { service_product_id: Number(productId) } : {}),
       });
       setMessage(`${result.product?.name || row.service?.name || 'Provider product'} saved as a draft. Configure tier prices and verify routing before publishing.`);
@@ -323,6 +330,7 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
                     <td className="p-3 text-xs text-slate-500">{row.service?.last_synced_at ? new Date(row.service.last_synced_at).toLocaleString() : 'Not recorded'}</td>
                     <td className="min-w-72 p-3">
                       <div className="space-y-2">
+                        <label className="block"><span className="mb-1 block text-[11px] font-semibold text-slate-600">Provider service ID (verify against official docs)</span><input value={rowProviderServiceIds[row.provider_service_id] ?? row.platform_mapping?.provider_service_id ?? row.service?.service_type ?? ''} onChange={(event) => setRowProviderServiceIds((current) => ({ ...current, [row.provider_service_id]: event.target.value }))} placeholder="e.g. data or documented service code" className="w-full rounded-lg border border-slate-300 p-2 text-xs" /></label>
                         <select aria-label={`Platform service for ${row.service?.name || 'provider product'}`} value={rowTargetServices[row.provider_service_id] ?? platformServiceId} onChange={(event) => { setRowTargetServices((current) => ({ ...current, [row.provider_service_id]: event.target.value })); setRowTargetProducts((current) => ({ ...current, [row.provider_service_id]: '' })); }} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs">
                           <option value="">Choose platform service</option>
                           {platformServices.map((service) => <option key={service.id} value={service.id}>{service.category} — {service.name}</option>)}
