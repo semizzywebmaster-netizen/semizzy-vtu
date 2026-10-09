@@ -9,6 +9,10 @@ use App\Models\ProviderCredential;
 use App\Models\ProviderEndpoint;
 use App\Models\ProviderService;
 use App\Models\ProviderServiceImport;
+use App\Models\ProviderServiceMapping;
+use App\Models\ProviderServiceProduct;
+use App\Models\ServiceProduct;
+use App\Services\Audit\AuditLogger;
 use App\Models\ProviderHealthCheck;
 use App\Models\ProviderOperationLog;
 use App\Models\ProviderCategory;
@@ -705,6 +709,154 @@ class ProviderEngineController extends Controller
             'auto_sync_allowed'=>(bool)($data['auto_sync_allowed'] ?? false),
         ]);
         return response()->json(['status'=>'approved','approved'=>$updated]);
+    }
+
+    public function mapServiceToPlatform(Request $request, ApiProvider $provider, ProviderService $providerService, AuditLogger $audit): JsonResponse
+    {
+        $data = $request->validate([
+            'service_id' => ['required', 'integer', 'exists:services,id'],
+            'service_product_id' => ['nullable', 'integer', 'exists:service_products,id'],
+        ]);
+
+        $providerService = $provider->providerServices()->whereKey($providerService->id)->firstOrFail();
+        $import = ProviderServiceImport::query()
+            ->where('api_provider_id', $provider->id)
+            ->where('provider_service_id', $providerService->id)
+            ->first();
+
+        if (! $import || ! $import->approved || ! $import->imported) {
+            return response()->json(['message' => 'Approve and import this provider catalogue row before mapping it to My Services.'], 422);
+        }
+
+        $externalId = trim((string) $providerService->external_service_id);
+        if ($externalId === '') {
+            return response()->json(['message' => 'This provider catalogue row has no external service/product ID. Refresh the official catalogue or configure a documented manual mapping.'], 422);
+        }
+
+        $platformService = Service::query()->findOrFail((int) $data['service_id']);
+        $created = false;
+
+        if (! empty($data['service_product_id'])) {
+            $product = ServiceProduct::query()->findOrFail((int) $data['service_product_id']);
+            if ((int) $product->service_id !== (int) $platformService->id) {
+                return response()->json(['message' => 'The selected product variant does not belong to the selected platform service.'], 422);
+            }
+            if ($product->enabled || $product->publication_status === 'published') {
+                return response()->json(['message' => 'A published product cannot receive a new provider mapping from this draft-mapping flow. Unpublish it and review its routing before changing mappings.'], 409);
+            }
+        } else {
+            $base = substr(Str::slug($providerService->name ?: 'provider-product'), 0, 80);
+            $suffix = substr(hash('sha256', $provider->identifier . '|' . $externalId), 0, 10);
+            $key = ($base !== '' ? $base : 'provider-product') . '-' . $suffix;
+            $product = ServiceProduct::query()->firstOrCreate(
+                ['service_id' => $platformService->id, 'key' => $key],
+                [
+                    'name' => $providerService->name ?: ('Provider product ' . $externalId),
+                    'currency' => strtoupper((string) $providerService->currency),
+                    'enabled' => false,
+                    'publication_status' => 'draft',
+                    'metadata' => [
+                        'catalogue_source' => 'provider_discovery',
+                        'provider_identifier' => $provider->identifier,
+                        'provider_service_id' => $providerService->id,
+                    ],
+                ],
+            );
+            $created = $product->wasRecentlyCreated;
+
+            if ($product->enabled || $product->publication_status === 'published') {
+                return response()->json(['message' => 'The matching draft key already belongs to a published product. Select an existing draft variant or review the live product first.'], 409);
+            }
+        }
+
+        if (strtoupper((string) $product->currency) !== strtoupper((string) $providerService->currency)) {
+            return response()->json(['message' => 'Provider and platform product currencies must match. Currency conversion is not inferred.'], 422);
+        }
+
+        $existingProductMap = ProviderServiceProduct::query()
+            ->where('api_provider_id', $provider->id)
+            ->where('provider_product_id', $externalId)
+            ->first();
+
+        if ($existingProductMap && (int) $existingProductMap->service_product_id !== (int) $product->id) {
+            return response()->json(['message' => 'This provider external ID is already mapped to a different platform product. Resolve that mapping explicitly before continuing.'], 409);
+        }
+
+        $cost = $providerService->provider_price === null ? null : (string) $providerService->provider_price;
+        $currency = strtoupper((string) $providerService->currency);
+        $validCost = $cost !== null && is_numeric($cost) && preg_match('/^[A-Z]{3}$/', $currency) === 1;
+        $mappingEnabled = $externalId !== '' && $validCost;
+
+        $providerProduct = ProviderServiceProduct::query()->updateOrCreate(
+            ['api_provider_id' => $provider->id, 'provider_product_id' => $externalId],
+            [
+                'service_product_id' => $product->id,
+                'provider_cost' => $validCost ? $cost : null,
+                'currency' => $currency,
+                'raw_catalogue' => $providerService->raw_provider_data ?? [],
+                'enabled' => $mappingEnabled,
+                'last_synced_at' => $providerService->last_synced_at,
+            ],
+        );
+
+        // The service-level route is created disabled. Mapping a catalogue row must never enable live routing.
+        ProviderServiceMapping::query()->firstOrCreate(
+            ['api_provider_id' => $provider->id, 'service_id' => $platformService->id],
+            [
+                'service_key' => $platformService->key,
+                'provider_service_id' => $providerService->id,
+                'capabilities' => array_values(array_intersect(
+                    (array) data_get($providerService->metadata, 'capabilities', []),
+                    ['catalogue_retrieval', 'transaction_initiation', 'status_requery', 'refund', 'webhook'],
+                )),
+                'enabled' => false,
+            ],
+        );
+
+        $productMapping = DB::table('provider_product_mappings_v2')
+            ->where('api_provider_id', $provider->id)
+            ->where('provider_service_id', $providerService->id)
+            ->first();
+
+        if ($productMapping && (int) $productMapping->catalogue_product_id !== (int) $product->id) {
+            return response()->json(['message' => 'This provider service already has a product-level mapping to a different platform product. Review the existing mapping before changing it.'], 409);
+        }
+
+        if (! $productMapping) {
+            DB::table('provider_product_mappings_v2')->insert([
+                'api_provider_id' => $provider->id,
+                'provider_service_id' => $providerService->id,
+                'catalogue_product_id' => $product->id,
+                'catalogue_product_type' => 'service_product',
+                'priority' => 100,
+                'enabled' => false,
+                'mapping_status' => 'pending',
+                'metadata' => json_encode(['mapped_by' => $request->user()->id]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $providerService->update(['status' => 'imported']);
+        $import->update(['state' => 'imported', 'last_imported_at' => now()]);
+
+        $audit->record('catalogue.provider_service.mapped_to_draft', $product, [
+            'api_provider_id' => $provider->id,
+            'provider_service_id' => $providerService->id,
+            'external_product_id' => $externalId,
+            'provider_product_mapping_id' => $providerProduct->id,
+            'published' => false,
+            'routing_enabled_by_mapping_action' => false,
+        ], $request);
+
+        return response()->json([
+            'status' => 'mapped_to_draft',
+            'created' => $created,
+            'product' => ['id' => $product->id, 'name' => $product->name, 'key' => $product->key, 'publication_status' => $product->publication_status],
+            'provider_mapping_enabled' => (bool) $providerProduct->enabled,
+            'route_enabled' => false,
+            'message' => 'Mapped to a draft platform product. Configure tier prices and explicitly verify/enable routing, then use Add to My Services when readiness checks pass.',
+        ]);
     }
 
     public function importSelected(Request $request, ApiProvider $provider): JsonResponse
