@@ -1,6 +1,6 @@
 <?php
 return [
- 'identifier'=>'education','name'=>'Education & Past Questions','version'=>'1.0.0',
+ 'identifier'=>'education','name'=>'Education & Past Questions','category'=>'Education & Student Services','version'=>'1.0.0',
  'description'=>'School past questions and national examination past questions with private document storage, searchable catalogues, admin publishing and wallet-backed paid downloads.',
  'compatibility'=>'>=2.0.0','dependencies'=>[],
  'permissions'=>['education.view','education.download','education.purchase','education.content.manage','education.transactions.view'],
