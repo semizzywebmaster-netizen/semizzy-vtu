@@ -4,7 +4,9 @@ namespace Tests\Feature\P2p;
 
 use App\Models\User;
 use App\Models\WalletAccount;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 use Semizzy\Addons\P2p\Services\P2pTransferService;
 use Tests\TestCase;
@@ -12,6 +14,32 @@ use Tests\TestCase;
 class P2pWalletTransferRegressionTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // P2P transfer tables are addon-owned migrations and are not part of
+        // the Core migration set used by the shared test database.
+        if (!Schema::hasTable('p2p_transfers')) {
+            Schema::create('p2p_transfers', function (Blueprint $table): void {
+                $table->id();
+                $table->foreignId('sender_id')->constrained('users')->restrictOnDelete();
+                $table->foreignId('recipient_id')->constrained('users')->restrictOnDelete();
+                $table->string('reference', 64)->unique();
+                $table->string('idempotency_key', 120);
+                $table->unsignedBigInteger('amount_minor');
+                $table->unsignedBigInteger('fee_minor')->default(0);
+                $table->unsignedBigInteger('total_debit_minor')->default(0);
+                $table->string('currency', 3);
+                $table->string('status', 24)->default('completed');
+                $table->string('note', 255)->nullable();
+                $table->json('metadata')->nullable();
+                $table->timestamps();
+                $table->unique(['sender_id', 'idempotency_key']);
+            });
+        }
+    }
 
     public function test_transfer_debits_and_credits_wallets_once_for_idempotent_retry(): void
     {
