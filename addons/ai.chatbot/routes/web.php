@@ -7,6 +7,7 @@ Route::middleware(['auth','verified','role:ADMIN,STAFF,SUPPORT','ensure.addon:ai
  Route::get('/',[AIChatbotAdminController::class,'index'])->middleware('permission:ai_chatbot.settings.manage')->name('admin.ai-chatbot.index');
  Route::get('/conversations',[AIChatbotAdminController::class,'conversations'])->middleware('permission:ai_chatbot.conversations.view')->name('admin.ai-chatbot.conversations');
  Route::get('/conversations/{uuid}',[AIChatbotAdminController::class,'conversation'])->whereUuid('uuid')->middleware('permission:ai_chatbot.conversations.view')->name('admin.ai-chatbot.conversations.show');
+ Route::put('/conversations/{uuid}/status',[AIChatbotAdminController::class,'updateConversationStatus'])->whereUuid('uuid')->middleware('permission:ai_chatbot.support.manage')->name('admin.ai-chatbot.conversations.status');
  Route::post('/providers',[AIChatbotAdminController::class,'storeProvider'])->middleware('permission:ai_chatbot.providers.manage')->name('admin.ai-chatbot.providers.store');
  Route::put('/providers/{provider}',[AIChatbotAdminController::class,'updateProvider'])->whereNumber('provider')->middleware('permission:ai_chatbot.providers.manage')->name('admin.ai-chatbot.providers.update');
  Route::post('/providers/{provider}/test',[AIChatbotAdminController::class,'testProvider'])->whereNumber('provider')->middleware('permission:ai_chatbot.providers.manage')->name('admin.ai-chatbot.providers.test');
