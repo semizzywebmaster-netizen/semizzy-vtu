@@ -7,10 +7,10 @@ return new class extends Migration {
  public function up(): void {
   Schema::create('education_reference_catalogue', function(Blueprint $t) {
    $t->id(); $t->string('kind',32)->index(); $t->string('category',80)->nullable()->index();
-   $t->string('name',220); $t->string('short_name',80)->nullable(); $t->string('state',80)->nullable()->index();
+   $t->string('name',220); $t->string('catalogue_key',64)->unique(); $t->string('short_name',80)->nullable(); $t->string('state',80)->nullable()->index();
    $t->string('country',100)->nullable(); $t->string('official_url',500)->nullable(); $t->string('source_url',500)->nullable();
    $t->json('metadata')->nullable(); $t->boolean('is_active')->default(true)->index();
-   $t->timestamps(); $t->unique(['kind','category','name'],'edu_ref_kind_category_name_unique');
+   $t->timestamps();
   });
   $catalogue = require base_path('addons/education/data/reference-catalogue.php');
   $now = now();
@@ -31,6 +31,8 @@ return new class extends Migration {
    'source_url'=>self::sourceForCategory($entry['category'] ?? ''),'metadata'=>json_encode(['catalogue_source'=>'official_regulator_directories','verification'=>'initial_reference_entry']),
    'is_active'=>true,'created_at'=>$now,'updated_at'=>$now,
   ];
+  foreach ($rows as &$row) $row['catalogue_key']=hash('sha256',$row['kind'].'|'.($row['category'] ?? '').'|'.$row['name']);
+  unset($row);
   foreach (array_chunk($rows,100) as $chunk) DB::table('education_reference_catalogue')->insert($chunk);
  }
  private static function sourceForCategory(string $category): string {
