@@ -294,13 +294,17 @@ class AddonLifecycleService
             }
 
             $rootPath = base_path('database/migrations/'.$migration);
-            $addonMatches = glob(base_path('addons/*/database/migrations/'.$migration)) ?: [];
-            if (count($addonMatches) > 1) {
-                throw new \RuntimeException("Ambiguous addon migration filename: {$migration}");
-            }
-            $path = $addonMatches[0] ?? $rootPath;
+            $registeredManifest = app(AddonRegistry::class)->find($addon->identifier);
+            $source = is_array($registeredManifest) ? (string) ($registeredManifest['source'] ?? '') : '';
+            $addonPath = $source !== ''
+                ? base_path('addons/'.$source.'/database/migrations/'.$migration)
+                : null;
+
+            // Resolve addon migrations only inside the owning addon directory.
+            // A same-named migration from an unrelated addon must never execute.
+            $path = $addonPath !== null && is_file($addonPath) ? $addonPath : $rootPath;
             if (!is_file($path)) {
-                throw new \RuntimeException("Addon migration file not found: {$migration}");
+                throw new \RuntimeException("Addon migration file not found in its own addon directory or legacy Core directory: {$migration}");
             }
             $arguments = ['--path' => $path, '--force' => true];
             if ($path !== $rootPath) {
