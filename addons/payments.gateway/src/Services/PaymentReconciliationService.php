@@ -49,8 +49,8 @@ final class PaymentReconciliationService
             throw new RuntimeException('The assigned provider does not expose a verified refund capability.');
         }
 
-        // Payment-bound values override all caller-supplied fields. Provider transaction
-        // identifiers come from the verified collection response stored on the intent.
+        // Payment-bound values override caller-supplied fields. Transaction IDs
+        // are taken from the verified collection response, never from the request.
         $providerPayload = array_merge($payload, [
             'amount_minor' => (string) $payment->amount_minor,
             'amount' => $this->majorFromMinor((string) $payment->amount_minor),
@@ -77,10 +77,6 @@ final class PaymentReconciliationService
         return $result;
     }
 
-    /**
-     * Verify the refund directly with the assigned provider before attempting
-     * Core wallet accounting. Unsupported provider lookups fail closed.
-     */
     public function verifyAndSettleRefund(
         PaymentIntent $payment,
         string $providerRefundReference,
@@ -88,65 +84,14 @@ final class PaymentReconciliationService
         ?User $actor = null,
         array $context = []
     ): PaymentIntent {
-        if (!$payment->provider_id) throw new RuntimeException('This payment has no assigned gateway provider.');
-        if ($payment->status !== 'paid' && $payment->status !== 'refunded') {
-            throw new RuntimeException('Only paid or already-refunded payment intents can be reconciled for a refund.');
-        }
-
-        $provider = PaymentGatewayProvider::query()->findOrFail($payment->provider_id);
-        if (!$provider->supports('refund')) {
-            throw new RuntimeException('The assigned provider does not declare refund capability.');
-        }
-
-        $verified = $this->gateways->adapter($provider)->verifyRefund($provider, $providerRefundReference, $context);
-        $returnedReference = (string) (
-            data_get($verified, 'flw_ref')
-            ?? data_get($verified, 'refund_reference')
-            ?? data_get($verified, 'reference')
-            ?? ''
-        );
-        if ($returnedReference === '' || !hash_equals(trim($providerRefundReference), $returnedReference)) {
-            throw new RuntimeException('Provider refund verification did not match the requested refund reference.');
-        }
-
-        $providerTransactionId = (string) (data_get($verified, 'transaction_id') ?? data_get($verified, 'tx_id') ?? '');
-        $expectedTransactionId = (string) data_get($payment->metadata, 'provider_transaction_id', '');
-        if ($expectedTransactionId !== '' && $providerTransactionId !== '' && !hash_equals($expectedTransactionId, $providerTransactionId)) {
-            throw new RuntimeException('Verified refund belongs to a different provider transaction.');
-        }
-
-        $amount = data_get($verified, 'amount_refunded');
-        if ($amount !== null && $this->majorToMinor((string) $amount) !== (string) $payment->amount_minor) {
-            throw new RuntimeException('Verified refund amount does not match the full payment amount; partial refunds require a separate ledger workflow.');
-        }
-        $currency = strtoupper((string) (data_get($verified, 'currency') ?? data_get($verified, 'currency_code') ?? ''));
-        if ($currency !== '' && $currency !== strtoupper((string) $payment->currency)) {
-            throw new RuntimeException('Verified refund currency does not match the payment currency.');
-        }
-
-        $status = strtolower(trim((string) data_get($verified, 'status', '')));
-        $finalSuccessStatuses = [
-            'success', 'successful', 'succeeded', 'refunded',
-            'completed-bank-transfer', 'completed-momo', 'completed-mpgs',
-            'completed-offline', 'completed-preauth',
-        ];
-        if (!in_array($status, $finalSuccessStatuses, true)) {
-            $metadata = (array) $payment->metadata;
-            $metadata['refund_last_verified_status'] = $status;
-            $metadata['refund_last_verified_at'] = now()->toISOString();
-            $metadata['refund_accounting_status'] = in_array($status, ['failed', 'failure', 'cancelled', 'canceled'], true)
-                ? 'provider_failed'
-                : 'pending_provider_confirmation';
-            $payment->forceFill(['metadata' => $metadata])->saveOrFail();
-            throw new RuntimeException('Provider refund is not confirmed finally successful; wallet accounting was not changed.');
-        }
-
+        // Settlement service performs the authenticated provider lookup itself;
+        // a caller cannot pass an arbitrary "success" status to release accounting.
         return app(PaymentRefundSettlementService::class)->settleVerified(
             $payment,
             $providerRefundReference,
-            $status,
             $reason,
-            $actor
+            $actor,
+            $context
         );
     }
 
@@ -156,15 +101,5 @@ final class PaymentReconciliationService
         if (strlen($minor) === 1) return '0.0'.$minor;
         if (strlen($minor) === 2) return '0.'.$minor;
         return substr($minor, 0, -2).'.'.substr($minor, -2);
-    }
-
-    private function majorToMinor(string $major): string
-    {
-        $major = trim($major);
-        if (!preg_match('/^\d+(?:\.\d{1,2})?$/', $major)) {
-            throw new RuntimeException('Provider refund amount is malformed.');
-        }
-        [$whole, $fraction] = array_pad(explode('.', $major, 2), 2, '');
-        return ltrim($whole.str_pad($fraction, 2, '0'), '0') ?: '0';
     }
 }
