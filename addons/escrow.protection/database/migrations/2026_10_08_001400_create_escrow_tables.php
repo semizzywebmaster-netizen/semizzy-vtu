@@ -43,6 +43,6 @@ return new class extends Migration {
    $table->timestamps();
    $table->index(['status','created_at']);
   });
- },
+ }
  public function down(): void { Schema::dropIfExists('escrow_disputes'); Schema::dropIfExists('escrow_transactions'); }
 };
