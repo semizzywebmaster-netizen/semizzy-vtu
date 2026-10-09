@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\\Support\\Facades\\Route;
-use Semizzy\\Addons\\ApiProviderPlatform\\Http\\Controllers\\ProviderPlatformAdminController;
+use Illuminate\Support\Facades\Route;
+use Semizzy\Addons\ApiProviderPlatform\Http\Controllers\ProviderPlatformAdminController;
 
 Route::middleware([
     'auth',
