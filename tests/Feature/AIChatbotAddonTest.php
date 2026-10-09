@@ -246,4 +246,32 @@ class AIChatbotAddonTest extends TestCase
             $this->assertInstanceOf(HttpException::class, $e->getPrevious() ?? $e);
         }
     }
+
+    public function test_authenticated_users_cannot_access_another_users_conversation(): void
+    {
+        $uuid = (string) \Illuminate\Support\Str::uuid();
+        DB::table('ai_chatbot_conversations')->insert([
+            'uuid' => $uuid, 'user_id' => 41, 'visitor_hash' => null,
+            'title' => 'Private user conversation', 'status' => 'open',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $controller = app(AIChatbotController::class);
+        $method = new \ReflectionMethod($controller, 'owned');
+
+        $ownerRequest = Request::create('/', 'GET');
+        $ownerRequest->setUserResolver(fn () => (object) ['id' => 41]);
+        $this->assertSame($uuid, $method->invoke($controller, $ownerRequest, $uuid)->uuid);
+
+        $otherUserRequest = Request::create('/', 'GET');
+        $otherUserRequest->setUserResolver(fn () => (object) ['id' => 42]);
+        try {
+            $method->invoke($controller, $otherUserRequest, $uuid);
+            $this->fail('An authenticated user must not read another user conversation.');
+        } catch (\ReflectionException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->assertInstanceOf(HttpException::class, $e->getPrevious() ?? $e);
+        }
+    }
 }
