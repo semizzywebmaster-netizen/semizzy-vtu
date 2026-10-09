@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 
 type ProviderOption = { id: number; display_name: string };
+type LocalProduct = { id: number; service_id: number; key: string; name: string; currency: string; enabled: boolean; service?: { id: number; name: string; key: string } };
 type CatalogueEntry = {
   id: number; provider_id: number; provider: string; provider_verification_status: string;
   provider_integration_status: string; provider_enabled: boolean; provider_paused: boolean;
@@ -27,13 +28,15 @@ function State({ value }: { value: string | null }) {
   return <span className="inline-flex rounded-full border px-2 py-1 text-xs font-medium">{humanize(value)}</span>;
 }
 
-export default function ProviderPlatformCatalogue({ services, meta, filters, providers, canManage, safety_note }: {
-  services: CatalogueEntry[]; meta: PageMeta; filters: Filters; providers: ProviderOption[];
+export default function ProviderPlatformCatalogue({ services, meta, filters, providers, products, canManage, safety_note }: {
+  services: CatalogueEntry[]; meta: PageMeta; filters: Filters; providers: ProviderOption[]; products: LocalProduct[];
   canManage: boolean; safety_note: string;
 }) {
   const [providerId, setProviderId] = useState(String(filters.provider_id || ''));
   const [status, setStatus] = useState(filters.status || '');
   const [search, setSearch] = useState(filters.search || '');
+  const [productChoices, setProductChoices] = useState<Record<number, string>>({});
+  const [notice, setNotice] = useState('');
 
   const applyFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -42,10 +45,22 @@ export default function ProviderPlatformCatalogue({ services, meta, filters, pro
     }, { preserveState: true, replace: true });
   };
 
+  const refreshCatalogue = () => router.reload({ only: ['services', 'meta', 'filters'] });
   const selectForReview = (entry: CatalogueEntry) => {
     router.post('/admin/provider-platform/catalogue/' + entry.id + '/select', { selection_scope: 'product' }, {
-      preserveScroll: true,
-      onSuccess: () => router.reload({ only: ['services', 'meta', 'filters'] }),
+      preserveScroll: true, onSuccess: () => { setNotice('Catalogue entry added to the review queue.'); refreshCatalogue(); },
+    });
+  };
+  const approveForMapping = (entry: CatalogueEntry) => {
+    router.post('/admin/provider-platform/catalogue/' + entry.id + '/approve', {}, {
+      preserveScroll: true, onSuccess: () => { setNotice('Entry approved for mapping review; it remains unpublished and disabled.'); refreshCatalogue(); },
+    });
+  };
+  const mapToProduct = (entry: CatalogueEntry) => {
+    const productId = productChoices[entry.id];
+    if (!productId) { setNotice('Choose a local product before saving the mapping.'); return; }
+    router.post('/admin/provider-platform/catalogue/' + entry.id + '/map', { catalogue_product_id: Number(productId) }, {
+      preserveScroll: true, onSuccess: () => { setNotice('Mapping saved disabled. Provider routing remains unchanged.'); refreshCatalogue(); },
     });
   };
 
@@ -60,6 +75,8 @@ export default function ProviderPlatformCatalogue({ services, meta, filters, pro
           </div>
           <Link href="/admin/provider-platform" className="inline-flex w-fit rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800">Back to coverage</Link>
         </div>
+
+        {notice && <div role="status" className="rounded-lg border p-3 text-sm dark:border-gray-700">{notice}</div>}
 
         <div className="rounded-xl border p-4 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">
           <strong>Safety boundary:</strong> {safety_note} Source prices are informational until their provider, currency, timestamp and product identifiers are verified.
@@ -121,10 +138,21 @@ export default function ProviderPlatformCatalogue({ services, meta, filters, pro
                     <div className="text-xs">{entry.approved_for_import ? 'Approved' : 'Not approved'} · {entry.imported ? 'Imported' : 'Not imported'}</div>
                     <div className="text-xs">{entry.auto_sync_allowed ? 'Auto-sync allowed' : 'Auto-sync off'}</div>
                   </td>
-                  <td className="px-4 py-3">
-                    {entry.selected_for_review ? <span className="text-xs text-gray-500">Already in review queue</span>
-                      : canManage ? <button type="button" onClick={() => selectForReview(entry)} className="whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800">Add to review</button>
-                      : <span className="text-xs text-gray-500">Admin action required</span>}
+                  <td className="space-y-2 px-4 py-3">
+                    {!entry.selected_for_review
+                      ? canManage ? <button type="button" onClick={() => selectForReview(entry)} className="whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800">Add to review</button>
+                        : <span className="text-xs text-gray-500">Admin action required</span>
+                      : !entry.approved_for_import
+                        ? canManage ? <button type="button" onClick={() => approveForMapping(entry)} className="whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800">Approve for mapping</button>
+                          : <span className="text-xs text-gray-500">Awaiting admin approval</span>
+                        : canManage ? <>
+                            <select aria-label={'Local product for ' + entry.name} className="max-w-56 rounded-lg border-gray-300 text-xs dark:border-gray-600 dark:bg-gray-900" value={productChoices[entry.id] || ''} onChange={(event) => setProductChoices((current) => ({ ...current, [entry.id]: event.target.value }))}>
+                              <option value="">Choose local product…</option>
+                              {products.map((product) => <option key={product.id} value={product.id}>{product.name} · {product.currency} · {product.service?.name || 'Service'}</option>)}
+                            </select>
+                            <button type="button" onClick={() => mapToProduct(entry)} className="whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800">Save disabled mapping</button>
+                          </>
+                          : <span className="text-xs text-gray-500">Approved; mapping requires admin</span>}
                   </td>
                 </tr>
               ))}
