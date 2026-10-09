@@ -15,6 +15,10 @@ final class EducationPastQuestionController extends Controller {
   $q=clone $base;
   $search=trim((string)$request->query('q',''));
   if($search!=='') $q->where(function($sub)use($search){$sub->where('title','like','%'.$search.'%')->orWhere('description','like','%'.$search.'%')->orWhere('institution','like','%'.$search.'%')->orWhere('course_title','like','%'.$search.'%')->orWhere('subject','like','%'.$search.'%')->orWhere('exam_body','like','%'.$search.'%');});
+  if($category==='school_past_question' && $request->filled('school_category')) {
+   $schoolNames=DB::table('education_reference_catalogue')->where('kind','school')->where('category',$request->query('school_category'))->where('is_active',true)->pluck('name')->all();
+   if($schoolNames) $q->whereIn('institution',$schoolNames); else $q->whereRaw('1 = 0');
+  }
   foreach(['institution','department','course_code','education_level','semester','academic_session','exam_body','exam_type','subject','exam_year'] as $field) if($request->filled($field)) $q->where($field,$request->query($field));
   $items=$q->latest('published_at')->paginate(18)->withQueryString()->through(fn($item)=>[
    'id'=>$item->id,'title'=>$item->title,'slug'=>$item->slug,'description'=>$item->description,
@@ -26,7 +30,14 @@ final class EducationPastQuestionController extends Controller {
   ]);
   $optionFields=$category==='school_past_question'?['institution','department','course_code','education_level','semester','academic_session']:['exam_body','exam_type','subject','exam_year'];
   $options=[]; foreach($optionFields as $field)$options[$field]=(clone $base)->whereNotNull($field)->distinct()->orderBy($field)->pluck($field)->values();
-  return Inertia::render($page,['title'=>$title,'items'=>$items,'options'=>$options,'filters'=>$request->only(['q','institution','department','course_code','education_level','semester','academic_session','exam_body','exam_type','subject','exam_year'])]);
+  if($category==='school_past_question') {
+   $options['institution']=collect($options['institution'])->merge(DB::table('education_reference_catalogue')->where('kind','school')->where('is_active',true)->orderBy('name')->pluck('name'))->unique()->sort()->values();
+   $options['school_category']=DB::table('education_reference_catalogue')->where('kind','school')->where('is_active',true)->whereNotNull('category')->distinct()->orderBy('category')->pluck('category')->values();
+  } else {
+   $options['exam_body']=collect($options['exam_body'])->merge(DB::table('education_reference_catalogue')->where('kind','exam_body')->where('is_active',true)->pluck('short_name'))->filter()->unique()->sort()->values();
+   $options['exam_type']=collect($options['exam_type'])->merge(DB::table('education_reference_catalogue')->where('kind','exam_type')->where('is_active',true)->pluck('name'))->unique()->sort()->values();
+  }
+  return Inertia::render($page,['title'=>$title,'items'=>$items,'options'=>$options,'filters'=>$request->only(['q','institution','school_category','department','course_code','education_level','semester','academic_session','exam_body','exam_type','subject','exam_year'])]);
  }
  public function preview(EducationLibraryItem $item) {
   abort_unless($item->status==='published' && $item->published_at && $item->preview_path,404);
