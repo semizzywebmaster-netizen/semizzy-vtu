@@ -21,10 +21,11 @@ class WhatsAppWebhookService
  {
   $credentials=$provider->credentials ?: [];
   $secret=$credentials['webhook_secret'] ?? null;
-  if($secret){
-   $expected='sha256='.hash_hmac('sha256',$rawBody,$secret);
-   if(!$signature || !hash_equals($expected,$signature)) throw new RuntimeException('Invalid webhook signature.');
+  if(!is_string($secret) || trim($secret)===''){
+   throw new RuntimeException('WhatsApp webhook secret is not configured.');
   }
+  $expected='sha256='.hash_hmac('sha256',$rawBody,$secret);
+  if(!$signature || !hash_equals($expected,$signature)) throw new RuntimeException('Invalid webhook signature.');
   $payload=json_decode($rawBody,true);
   if(!is_array($payload)) throw new RuntimeException('Malformed webhook payload.');
 
