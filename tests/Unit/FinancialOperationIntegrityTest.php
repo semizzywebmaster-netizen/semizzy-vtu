@@ -76,4 +76,24 @@ class FinancialOperationIntegrityTest extends TestCase
         $this->expectException(LogicException::class);
         $operation->delete();
     }
+    public function test_completed_financial_operation_can_be_reversed_once_but_not_reopened(): void
+    {
+        $operation = FinancialOperation::create([
+            'uuid' => (string) \\Illuminate\\Support\\Str::uuid(),
+            'reference' => 'finance-reversal-'.\\Illuminate\\Support\\Str::random(8),
+            'type' => 'transfer',
+            'status' => 'completed',
+            'amount_minor' => '500',
+            'currency' => 'NGN',
+        ]);
+
+        $operation->status = 'reversed';
+        $operation->save();
+        $this->assertSame('reversed', $operation->fresh()->status);
+
+        $operation->status = 'completed';
+        $this->expectException(LogicException::class);
+        $operation->save();
+    }
+
 }
