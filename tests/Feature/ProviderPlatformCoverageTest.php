@@ -173,13 +173,14 @@ class ProviderPlatformCoverageTest extends TestCase
             ]);
         }
 
-        $result = app(ProductPublicationService::class)->publish($product, 123);
+        $admin = \\App\\Models\\User::factory()->create(['role' => 'ADMIN']);
+        $result = app(ProductPublicationService::class)->publish($product, $admin->id);
 
         $this->assertTrue($result['published']);
         $this->assertSame([], $result['blockers']);
         $this->assertTrue($result['product']->enabled);
         $this->assertSame('published', $result['product']->publication_status);
-        $this->assertSame(123, (int) $result['product']->published_by);
+        $this->assertSame((int) $admin->id, (int) $result['product']->published_by);
         $this->assertNotNull($result['product']->published_at);
         $this->assertDatabaseHas('audit_events', ['event' => 'provider_platform.product_published', 'auditable_id' => $product->id]);
     }
