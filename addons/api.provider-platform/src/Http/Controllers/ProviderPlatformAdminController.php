@@ -7,6 +7,7 @@ use App\Models\ApiProvider;
 use App\Models\ProviderServiceMapping;
 use App\Models\ProviderService;
 use App\Models\ProviderServiceImport;
+use App\Models\ProviderProductMappingV2;
 use App\Models\Service;
 use App\Models\ServiceProduct;
 use Illuminate\Http\JsonResponse;
@@ -195,6 +196,7 @@ final class ProviderPlatformAdminController extends Controller
                 'search' => $filters['search'] ?? '',
             ],
             'providers' => ApiProvider::query()->orderBy('display_name')->get(['id', 'display_name']),
+            'products' => ServiceProduct::query()->with('service:id,name,key')->orderBy('name')->limit(500)->get(['id', 'service_id', 'key', 'name', 'currency', 'enabled']),
             'canManage' => $request->user()?->role === 'ADMIN',
             'safety_note' => 'Discovered catalogue data is not verified capability evidence. Selection does not import, publish, or enable routing.',
         ]);
@@ -323,6 +325,110 @@ final class ProviderPlatformAdminController extends Controller
                 'auto_sync_allowed' => (bool) $selection->auto_sync_allowed,
             ],
         ], $selection->wasRecentlyCreated ? 202 : 200);
+    }
+
+    public function approveCatalogueService(Request $request, ProviderService $providerService, AuditLogger $auditLogger): JsonResponse|\\Inertia\\Response|\\Illuminate\\Http\\RedirectResponse
+    {
+        $selection = ProviderServiceImport::query()
+            ->where('api_provider_id', $providerService->api_provider_id)
+            ->where('provider_service_id', $providerService->id)
+            ->first();
+
+        if (!$selection) {
+            return response()->json(['message' => 'Select this catalogue entry for review before approval.'], 409);
+        }
+        if ($selection->state === 'blocked') {
+            return response()->json(['message' => 'A blocked catalogue entry cannot be approved.'], 422);
+        }
+
+        $changed = !$selection->approved || $selection->state !== 'approved';
+        $selection->forceFill([
+            'approved' => true,
+            'state' => 'approved',
+            'imported' => (bool) $selection->imported,
+            'auto_sync_allowed' => false,
+        ])->save();
+
+        if ($changed) {
+            $auditLogger->record('provider_platform.catalogue_service_approved', $providerService, [
+                'provider_service_id' => $providerService->id,
+                'api_provider_id' => $providerService->api_provider_id,
+                'selection_id' => $selection->id,
+                'approved' => true,
+                'imported' => (bool) $selection->imported,
+                'auto_sync_allowed' => false,
+            ]);
+        }
+
+        if ($request->header('X-Inertia')) {
+            return back()->with('status', 'Catalogue entry approved for mapping review; it has not been imported or enabled.');
+        }
+
+        return response()->json([
+            'status' => 'approved',
+            'imported' => (bool) $selection->imported,
+            'auto_sync_allowed' => false,
+            'message' => 'Approved for mapping review only. No product was imported or enabled.',
+        ]);
+    }
+
+    public function mapCatalogueService(Request $request, ProviderService $providerService, AuditLogger $auditLogger): JsonResponse|\\Inertia\\Response|\\Illuminate\\Http\\RedirectResponse
+    {
+        $validated = $request->validate([
+            'catalogue_product_id' => ['required', 'integer', 'exists:service_products,id'],
+        ]);
+
+        $selection = ProviderServiceImport::query()
+            ->where('api_provider_id', $providerService->api_provider_id)
+            ->where('provider_service_id', $providerService->id)
+            ->first();
+
+        if (!$selection || !$selection->approved || $selection->state !== 'approved') {
+            return response()->json(['message' => 'Approve this catalogue entry before mapping it.'], 409);
+        }
+
+        $attributes = [
+            'api_provider_id' => $providerService->api_provider_id,
+            'provider_service_id' => $providerService->id,
+            'catalogue_product_id' => (int) $validated['catalogue_product_id'],
+            'catalogue_product_type' => 'service_product',
+        ];
+        $mapping = ProviderProductMappingV2::query()->firstOrNew($attributes);
+        $isNew = !$mapping->exists;
+        $wasPending = $mapping->mapping_status !== 'mapped';
+        if ($isNew) {
+            $mapping->fill([
+                'priority' => 100,
+                'enabled' => false,
+                'mapping_status' => 'mapped',
+                'metadata' => ['created_by' => $request->user()?->id],
+            ]);
+        } elseif ($wasPending) {
+            $mapping->mapping_status = 'mapped';
+        }
+        $mapping->save();
+
+        if ($isNew || $wasPending) {
+            $auditLogger->record('provider_platform.catalogue_service_mapped', $providerService, [
+                'provider_service_id' => $providerService->id,
+                'api_provider_id' => $providerService->api_provider_id,
+                'catalogue_product_id' => (int) $validated['catalogue_product_id'],
+                'mapping_id' => $mapping->id,
+                'mapping_status' => $mapping->mapping_status,
+                'enabled' => (bool) $mapping->enabled,
+            ]);
+        }
+
+        if ($request->header('X-Inertia')) {
+            return back()->with('status', 'Catalogue mapping saved disabled. Routing remains unchanged.');
+        }
+
+        return response()->json([
+            'status' => 'mapped',
+            'mapping_id' => $mapping->id,
+            'enabled' => (bool) $mapping->enabled,
+            'message' => 'Mapping saved; provider routing was not enabled.',
+        ], $isNew ? 201 : 200);
     }
 
     public function publishProduct(Request $request, ServiceProduct $product, ProductPublicationService $publication): JsonResponse
