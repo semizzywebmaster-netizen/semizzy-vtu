@@ -185,3 +185,15 @@ The existing Core engine already exposes provider discovery/sync and import-prev
 - A partial or failed catalogue response never marks unrelated services as removed or silently disables live products.
 - Each result identifies the provider, category, external ID, currency, source price and sync time.
 - Unsupported catalogue APIs are shown honestly with the documented alternative, not a fake “sync successful” state.
+
+## Explicit "Add to My Services" publishing workflow
+
+Add a visible **Add to My Services** action for each imported provider product/variant and for deliberate multi-select actions. This is a separate lifecycle stage from discovering, importing, syncing or approving provider catalogue data. Importing alone must never publish a product to customer-facing service lists or make it purchasable.
+
+The intended lifecycle is: Discover provider catalogue → Import/update source catalogue → map exact provider external ID to a platform category/service/product → configure and validate selling-price rules per eligible customer tier → run provider/product readiness checks → admin explicitly selects **Add to My Services** → product is published/enabled for the intended audience only when all required checks pass.
+
+The action must show a readiness checklist and actionable blockers: provider integration and required operation verified; provider is enabled/unpaused; external service/product ID and currency are valid; mapping is unique and correct; provider source cost is current enough for the configured policy; required tier prices resolve through the production PriceEngine; margin/negative-margin policy passes; service/category are enabled; routing is configured to an eligible provider; and any required approval/audit checks pass. Do not bypass any existing routing, verification, pricing, or authorization guard.
+
+Offer two clear outcomes: **Save as Draft** (mapped/configured but not customer-purchasable) and **Add to My Services** (publish only after checks pass). Where the system supports audience/tiers, let admin choose which eligible tiers can see/use it. If the product is not ready, keep it unpublished and list the exact missing setup. Provide an audited disable/unpublish action that does not delete historical transactions or provider mappings.
+
+Provider source-price sync must update only provider source-cost/history fields. It must not silently change tier price rules, publish new products, alter customer visibility, or enable routing. The button must call a real backend endpoint with server-side readiness checks and transaction-safe writes; a frontend-only toggle is not acceptable. Add tests for missing prices, unverified provider, duplicate external IDs, stale/missing source cost, no route, partial failure, permission denial and successful publication. Use existing ServiceProduct, ProviderServiceProduct, ProviderServiceMapping, PriceRule and PriceEngine structures; do not create a duplicate product/pricing registry.
