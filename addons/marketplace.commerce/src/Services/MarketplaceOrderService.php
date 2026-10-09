@@ -398,15 +398,10 @@ final class MarketplaceOrderService
     private static function calculateFee(string $amount): string
     {
         $bps = (int) config('addons.marketplace.commerce.settings.platform_fee_bps', 0);
-        if ($bps <= 0) return '0';
-        if (function_exists('bcmul')) return bcdiv(bcmul($amount, (string)$bps, 0), '10000', 0);
-        return (string) intdiv((int)$amount * $bps, 10000);
+        return self::calculatePercentageFee($amount, $bps);
     }
 
-    /**
-     * Integer arithmetic for minor-unit amounts. BCMath is optional on cPanel
-     * hosting, so the fallback must never cast financial values to PHP ints.
-     */
+
     private static function normalizeInteger(string $value): string
     {
         if (!preg_match('/^\\d+$/', $value)) {
