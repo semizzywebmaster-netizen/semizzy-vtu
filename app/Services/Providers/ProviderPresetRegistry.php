@@ -389,16 +389,16 @@ final class ProviderPresetRegistry
             [
                 'identifier'=>'vtufast',
                 'display_name'=>'VTUFast',
-                'base_url'=>'https://vtufast.com/api.php',
+                'base_url'=>'https://vtufast.com',
                 'documentation_url'=>'https://vtufast.com/api-docs.php',
                 'official_website'=>'https://vtufast.com/',
                 'auth_type'=>'bearer',
                 'service_categories'=>['airtime','data'],
                 'capabilities'=>['balance_inquiry','catalogue_retrieval','transaction_initiation'],
                 'endpoints'=>[
-                    'balance_inquiry'=>'?route=balance',
-                    'catalogue_retrieval'=>'?route=plans',
-                    'transaction_initiation'=>'?route=airtime',
+                    'balance_inquiry'=>'/api.php?route=balance',
+                    'catalogue_retrieval'=>'/api.php?route=plans',
+                    'transaction_initiation'=>'/api.php?route=airtime',
                 ],
                 'api_version'=>'v1',
                 'mappings'=>[
