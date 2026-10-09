@@ -3,7 +3,9 @@
 namespace Tests\Feature\Payments;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
@@ -15,6 +17,39 @@ use Tests\TestCase;
 class PaymentWebhookReplayRegressionTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Provider definitions are addon-owned; keep these tests independent
+        // of whether the addon installer has run in the test environment.
+        if (!Schema::hasTable('payment_gateway_providers')) {
+            Schema::create('payment_gateway_providers', function (Blueprint $table): void {
+                $table->id();
+                $table->string('name');
+                $table->string('code')->unique();
+                $table->string('driver');
+                $table->string('base_url')->nullable();
+                $table->text('credentials')->nullable();
+                $table->json('capabilities')->nullable();
+                $table->unsignedInteger('priority')->default(100);
+                $table->unsignedInteger('weight')->default(100);
+                $table->boolean('enabled')->default(false);
+                $table->boolean('paused')->default(false);
+                $table->boolean('maintenance')->default(false);
+                $table->unsignedInteger('failure_count')->default(0);
+                $table->timestamp('cooldown_until')->nullable();
+                $table->timestamp('last_health_check_at')->nullable();
+                $table->timestamp('last_success_at')->nullable();
+                $table->timestamp('last_failure_at')->nullable();
+                $table->text('last_error')->nullable();
+                $table->json('settings')->nullable();
+                $table->timestamps();
+                $table->index(['enabled', 'paused', 'maintenance', 'priority']);
+            });
+        }
+    }
 
     public function test_reused_provider_event_id_with_changed_payload_is_rejected(): void
     {
