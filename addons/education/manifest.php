@@ -16,13 +16,14 @@ return [
  ],
  'admin_navigation'=>[
   ['id'=>'education-past-questions-admin','label'=>'Education Library','url'=>'/admin/education/past-questions','icon'=>'graduation-cap','permission'=>'education.content.manage','section'=>'addons','order'=>100],
+  ['id'=>'education-reference-catalogue-admin','label'=>'Education Reference Catalogue','url'=>'/admin/education/references','icon'=>'library','permission'=>'education.content.manage','section'=>'addons','order'=>101],
  ],
  'settings'=>[
   ['key'=>'enabled','type'=>'boolean','default'=>true],
   ['key'=>'default_currency','type'=>'string','default'=>'NGN'],
   ['key'=>'max_upload_size_mb','type'=>'integer','default'=>20],
  ],
- 'migrations'=>['2026_10_09_110000_create_education_past_question_library.php','2026_10_09_110100_create_and_import_education_reference_catalogue.php'],
+ 'migrations'=>['2026_10_09_110000_create_education_past_question_library.php','2026_10_09_110100_create_and_import_education_reference_catalogue.php','2026_10_09_110200_add_admin_managed_education_reference_fields.php'],
  'web_route_files'=>['addons/education/routes/web.php','addons/education/routes/admin.php'],
  'routes'=>['/education/school-past-questions','/education/exam-past-questions'],
  'provider_integrations'=>['Core ProviderManager (existing education service only)'],
