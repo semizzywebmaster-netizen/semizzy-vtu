@@ -161,7 +161,7 @@ class ProviderPlatformCoverageTest extends TestCase
         ]);
 
         foreach (['USER', 'AGENT', 'RESELLER', 'MERCHANT'] as $tier) {
-            \\App\\Models\\PriceRule::query()->create([
+            \App\Models\PriceRule::query()->create([
                 'scope_type' => 'GLOBAL',
                 'scope_id' => null,
                 'customer_tier' => $tier,
@@ -173,7 +173,7 @@ class ProviderPlatformCoverageTest extends TestCase
             ]);
         }
 
-        $admin = \\App\\Models\\User::factory()->create(['role' => 'ADMIN']);
+        $admin = \App\Models\User::factory()->create(['role' => 'ADMIN']);
         $result = app(ProductPublicationService::class)->publish($product, $admin->id);
 
         $this->assertTrue($result['published']);
