@@ -341,14 +341,19 @@ final class ProviderPlatformAdminController extends Controller
         if ($selection->state === 'blocked') {
             return response()->json(['message' => 'A blocked catalogue entry cannot be approved.'], 422);
         }
+        if ($selection->imported || $selection->state === 'imported') {
+            return response()->json(['message' => 'This catalogue entry is already imported; approval state was not changed.'], 409);
+        }
 
         $changed = !$selection->approved || $selection->state !== 'approved';
-        $selection->forceFill([
-            'approved' => true,
-            'state' => 'approved',
-            'imported' => (bool) $selection->imported,
-            'auto_sync_allowed' => false,
-        ])->save();
+        if ($changed) {
+            $selection->forceFill([
+                'approved' => true,
+                'state' => 'approved',
+                'imported' => false,
+                'auto_sync_allowed' => false,
+            ])->save();
+        }
 
         if ($changed) {
             $auditLogger->record('provider_platform.catalogue_service_approved', $providerService, [
