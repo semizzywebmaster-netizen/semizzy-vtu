@@ -5,7 +5,7 @@ return [
  'name'=>'VTU Website Builder',
  'version'=>'1.0.0',
  'description'=>'No-code website builder for users, merchants and businesses with templates, pages, domains and versioned publishing.',
- 'core_compatibility'=>'>=2.0.0','dependencies'=>[],
+ 'compatibility'=>'>=2.0.0','dependencies'=>[],
  'permissions'=>['website.view','website.manage','website.publish','website.domains.manage','website.themes.manage','website.audit'],
  'role_permissions'=>[
   'ADMIN'=>['website.view','website.manage','website.publish','website.domains.manage','website.themes.manage','website.audit'],
