@@ -29,7 +29,7 @@ class AdminSystemSettingsTest extends TestCase
 
         $this->actingAs($admin)->put('/admin/settings', [
             'platform_name' => 'SEMIZZY ONE Core',
-            'theme_key' => 'premium-fintech',
+            'theme_key' => 'modern-corporate',
             'theme_primary' => '#4338CA',
             'skin_default' => 'light',
             'theme_key' => 'premium-fintech',
