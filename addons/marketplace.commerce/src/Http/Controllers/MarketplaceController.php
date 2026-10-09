@@ -196,6 +196,14 @@ final class MarketplaceController
         ]);
     }
 
+    public function sellerOrders(Request $request)
+    {
+        $orders = MarketplaceOrder::query()->with(['product','buyer'])
+            ->where('seller_id', (int) $request->user()->id)
+            ->where('status', 'paid')->latest()->paginate(20);
+        return Inertia::render('Marketplace/SellerOrders', ['orders' => $orders]);
+    }
+
     public function myOrders(Request $request)
     {
         $orders = MarketplaceOrder::query()->with(['product','seller'])
