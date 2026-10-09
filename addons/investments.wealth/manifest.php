@@ -18,6 +18,7 @@ return [
   '2026_10_06_000602_create_investment_movements.php',
   '2026_10_06_000603_seed_default_investment_products.php',
   '2026_10_06_000604_add_investment_creation_idempotency.php',
+  '2026_10_09_130000_harden_investment_movement_retention.php',
  ],
  'web_route_files'=>['addons/investments.wealth/routes/web.php','addons/investments.wealth/routes/admin.php'],
  'api_route_files'=>['addons/investments.wealth/routes/api.php'],
