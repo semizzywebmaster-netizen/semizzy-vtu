@@ -21,9 +21,16 @@ final class EducationPastQuestionController extends Controller {
    'course_title'=>$item->course_title,'education_level'=>$item->education_level,'semester'=>$item->semester,'academic_session'=>$item->academic_session,
    'exam_body'=>$item->exam_body,'exam_type'=>$item->exam_type,'subject'=>$item->subject,'exam_year'=>$item->exam_year,
    'is_free'=>$item->is_free,'price_minor'=>$item->price_minor,'currency'=>$item->currency,'file_size'=>$item->file_size,
-   'owned'=>$item->is_free || EducationLibraryPurchase::where('user_id',$request->user()->id)->where('item_id',$item->id)->where('status','successful')->exists(),
+   'has_preview'=>(bool)$item->preview_path,'owned'=>$item->is_free || EducationLibraryPurchase::where('user_id',$request->user()->id)->where('item_id',$item->id)->where('status','successful')->exists(),
   ]);
   return Inertia::render($page,['title'=>$title,'items'=>$items,'filters'=>$request->only(['q','institution','department','course_code','education_level','semester','academic_session','exam_body','exam_type','subject','exam_year'])]);
+ }
+ public function preview(EducationLibraryItem $item) {
+  abort_unless($item->status==='published' && $item->published_at && $item->preview_path,404);
+  abort_unless(Storage::disk('local')->exists($item->preview_path),404,'The preview file is unavailable.');
+  $mime=Storage::disk('local')->mimeType($item->preview_path)?:'application/octet-stream';
+  abort_unless(in_array($mime,['application/pdf','image/jpeg','image/png'],true),404);
+  return response()->file(Storage::disk('local')->path($item->preview_path),['Content-Type'=>$mime,'Content-Disposition'=>'inline; filename="preview"','X-Content-Type-Options'=>'nosniff']);
  }
  public function download(Request $request,EducationLibraryItem $item) {
   abort_unless(($item->status==='published' && $item->published_at) || $item->status==='archived',404);
