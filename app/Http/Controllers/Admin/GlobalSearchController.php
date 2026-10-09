@@ -22,10 +22,10 @@ class GlobalSearchController extends Controller
 
         $term = trim($data['q']);
         $like = '%' . addcslashes($term, '%_\\\\') . '%';
-        $permissions = config('semizzy.role_permissions.' . $request->user()->role, []);
+        $user = $request->user();
         $results = [];
 
-        if (in_array('users.view', $permissions, true)) {
+        if ($user->hasPermission('users.view')) {
             User::query()
                 ->where(function ($query) use ($like): void {
                     $query->where('name', 'like', $like)
@@ -44,7 +44,7 @@ class GlobalSearchController extends Controller
                 });
         }
 
-        if (in_array('providers.view', $permissions, true)) {
+        if ($user->hasPermission('providers.view')) {
             ApiProvider::query()
                 ->where(fn ($query) => $query->where('display_name', 'like', $like)->orWhere('identifier', 'like', $like))
                 ->orderBy('display_name')->limit(5)->get(['id', 'display_name', 'identifier', 'verification_status'])
@@ -58,7 +58,7 @@ class GlobalSearchController extends Controller
                 });
         }
 
-        if (in_array('catalogue.view', $permissions, true)) {
+        if ($user->hasPermission('catalogue.view')) {
             Service::query()
                 ->where(fn ($query) => $query->where('name', 'like', $like)->orWhere('key', 'like', $like))
                 ->with('category:id,name')->orderBy('name')->limit(5)->get(['id', 'category_id', 'name', 'key'])
@@ -84,7 +84,7 @@ class GlobalSearchController extends Controller
                 });
         }
 
-        if (in_array('help.manage', $permissions, true) || in_array('communications.manage', $permissions, true)) {
+        if ($user->hasPermission('help.manage') || $user->hasPermission('communications.manage')) {
             SupportTicket::query()
                 ->where(fn ($query) => $query->where('reference', 'like', $like)->orWhere('subject', 'like', $like))
                 ->orderByDesc('updated_at')->limit(5)->get(['id', 'reference', 'subject', 'status'])
@@ -98,7 +98,7 @@ class GlobalSearchController extends Controller
                 });
         }
 
-        if (in_array('addons.view', $permissions, true)) {
+        if ($user->hasPermission('addons.view')) {
             Addon::query()->where('status', 'active')
                 ->where(fn ($query) => $query->where('name', 'like', $like)->orWhere('identifier', 'like', $like))
                 ->orderBy('name')->limit(5)->get(['identifier', 'name', 'version', 'status'])
