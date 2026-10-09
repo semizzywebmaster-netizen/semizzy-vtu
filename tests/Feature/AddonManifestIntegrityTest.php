@@ -49,8 +49,13 @@ class AddonManifestIntegrityTest extends TestCase
                 }
 
                 $migrationPath = base_path("addons/{$source}/database/migrations/{$migration}");
-                if (!is_file($migrationPath)) {
-                    $errors[] = "{$source}: declared migration [{$migration}] was not found at addons/{$source}/database/migrations/";
+                $legacyCoreMigrationPath = base_path("database/migrations/{$migration}");
+
+                // Some existing addon-owned schema changes are still registered
+                // in Core's Laravel migration directory. Accept those legacy
+                // files until the migration registry is consolidated.
+                if (!is_file($migrationPath) && !is_file($legacyCoreMigrationPath)) {
+                    $errors[] = "{$source}: declared migration [{$migration}] was not found in the addon or legacy Core migration directory";
                 }
             }
 
