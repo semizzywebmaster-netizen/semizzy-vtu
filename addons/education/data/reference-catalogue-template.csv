@@ -1,0 +1,5 @@
+kind,name,category,short_name,state,country,official_url,source_url
+school,Example Federal University,federal_university,EFU,Lagos,Nigeria,https://example.edu.ng,https://www.nuc.edu.ng/nigerian-univerisities/federal-univeristies/
+school,Example Private University,private_university,EPU,Ogun,Nigeria,https://example.edu.ng,https://www.nuc.edu.ng/nigerian-univerisities/private-univeristies/
+exam_body,Example Examination Board,national_or_international,EEB,,Nigeria,https://example.org,https://example.org
+exam_type,Senior Certificate Examination,Example Examination Board,,,Nigeria,https://example.org,https://example.org
