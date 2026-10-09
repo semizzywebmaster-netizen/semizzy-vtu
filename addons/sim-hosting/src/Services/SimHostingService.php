@@ -139,7 +139,7 @@ class SimHostingService
                 $rental->save();
                 $rental->number->update(['provider_status'=>$result->status,'last_checked_at'=>now()]);
                 $count++;
-            } catch (\\Throwable $e) { report($e); }
+            } catch (\Throwable $e) { report($e); }
         }
         return $count;
     }
