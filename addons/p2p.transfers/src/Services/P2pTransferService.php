@@ -52,17 +52,6 @@ final class P2pTransferService
 
         try {
             return DB::transaction(function () use ($senderId, $recipientQuery, $amountMinor, $note, $idempotencyKey, $currency, $fee) {
-                $existing = P2pTransfer::where('sender_id', $senderId)
-                    ->where('idempotency_key', $idempotencyKey)
-                    ->lockForUpdate()->first();
-
-                if ($existing) {
-                    if ((string) $existing->amount_minor !== $amountMinor) {
-                        throw new RuntimeException('This idempotency key has already been used for a different transfer.');
-                    }
-                    return $existing;
-                }
-
                 $recipientQuery = trim($recipientQuery);
                 if ($recipientQuery === '') {
                     throw new RuntimeException('A recipient username, email, or phone number is required.');
@@ -84,6 +73,17 @@ final class P2pTransferService
                 }
 
                 $recipient = $matches->first();
+
+                $existing = P2pTransfer::where('sender_id', $senderId)
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->lockForUpdate()->first();
+
+                if ($existing) {
+                    if ((string) $existing->amount_minor !== $amountMinor || (int) $existing->recipient_id !== (int) $recipient->id) {
+                        throw new RuntimeException('This idempotency key has already been used for a different transfer.');
+                    }
+                    return $existing;
+                }
                 if ($recipient->id === $senderId) {
                     throw new RuntimeException('You cannot transfer to yourself.');
                 }
