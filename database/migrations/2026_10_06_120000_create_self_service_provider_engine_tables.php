@@ -132,7 +132,7 @@ return new class extends Migration {
             $table->string('state', 40)->default('awaiting_approval');
             $table->timestamp('last_imported_at')->nullable();
             $table->timestamps();
-            $table->unique(['api_provider_id', 'provider_service_id']);
+            $table->unique(['api_provider_id', 'provider_service_id'], 'provider_service_import_unique');
         });
 
         Schema::create('provider_syncs', function (Blueprint $table) {
