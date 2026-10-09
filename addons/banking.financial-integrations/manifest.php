@@ -4,6 +4,7 @@ return [
     'identifier' => 'banking.financial-integrations',
     'name' => 'Banking & Financial Integrations',
     'version' => '1.0.0',
+    'autoload_namespace' => 'Addons\\BankingFinancialIntegrations',
     'compatibility' => '>=2.0.0',
     'dependencies' => [],
     'role_permissions' => [
