@@ -1,9 +1,9 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Services\\Addons\\AddonRegistry;
-use Tests\\TestCase;
+use App\Services\Addons\AddonRegistry;
+use Tests\TestCase;
 
 final class SchoolAdmissionAddonTest extends TestCase
 {
