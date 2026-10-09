@@ -28,7 +28,6 @@ return [
   ['key'=>'high_amount_transfer_threshold_minor','type'=>'integer','default'=>100000000],
   ['key'=>'high_amount_transfer_require_otp','type'=>'boolean','default'=>true],
   ['key'=>'high_amount_transfer_require_pin','type'=>'boolean','default'=>true],
-  ['key'=>'max_transfer_minor','type'=>'integer','default'=>1000000000],
   ['key'=>'max_trade_minor','type'=>'integer','default'=>1000000000],
   ['key'=>'offer_expiry_hours','type'=>'integer','default'=>24],
  ],
