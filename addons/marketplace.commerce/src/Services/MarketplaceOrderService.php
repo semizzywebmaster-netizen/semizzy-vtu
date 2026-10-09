@@ -324,6 +324,11 @@ final class MarketplaceOrderService
             $order = MarketplaceOrder::query()->lockForUpdate()->findOrFail($order->id);
             if ((int) $order->buyer_id !== $buyerId) throw new RuntimeException('Only the buyer can confirm receipt.');
             if ($order->status !== 'paid') throw new RuntimeException('Only paid orders can be confirmed.');
+            $product = MarketplaceProduct::query()->findOrFail($order->product_id);
+            $fulfillment = (string) ($order->fulfillment_status ?? '');
+            if ($product->isPhysical() && !in_array($fulfillment, ['submitted', 'shipped', 'delivered', 'completed'], true)) throw new RuntimeException('The physical order must be marked shipped or delivered before receipt confirmation.');
+            if ($product->isDigital() && !in_array($fulfillment, ['ready', 'submitted', 'completed'], true)) throw new RuntimeException('The digital item must be marked ready before receipt confirmation.');
+            if ($product->product_type === 'service' && !in_array((string) ($order->service_status ?? ''), ['submitted', 'in_review', 'completed'], true)) throw new RuntimeException('The seller must submit the service before you can confirm completion.');
             $escrow = DB::table('marketplace_escrows')->where('order_id', $order->id)->lockForUpdate()->first();
             if (!$escrow) throw new RuntimeException('Escrow record is missing. Contact support; funds were not released.');
             if ($escrow->status === 'buyer_confirmed' || $escrow->status === 'released') return $order;
