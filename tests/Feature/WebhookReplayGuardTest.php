@@ -165,6 +165,39 @@ class WebhookReplayGuardTest extends TestCase
         $guard->claim($provider, '   ', '{}');
     }
 
+    public function test_same_event_id_with_different_signature_is_rejected(): void
+    {
+        $provider = $this->provider();
+        $guard = app(WebhookReplayGuard::class);
+
+        $guard->claim($provider, 'evt_signature_mismatch', '{"amount":100}', '1700000000.signature-a');
+
+        $this->expectException(\\RuntimeException::class);
+        $this->expectExceptionMessage('Webhook event ID was already claimed with a different signature.');
+
+        $guard->claim($provider, 'evt_signature_mismatch', '{"amount":100}', '1700000000.signature-b');
+    }
+
+    public function test_late_failure_cannot_regress_a_processed_webhook_event(): void
+    {
+        $provider = $this->provider();
+        $guard = app(WebhookReplayGuard::class);
+        $receipt = $guard->claim($provider, 'evt_out_of_order', '{"status":"success"}');
+
+        $this->assertTrue($guard->beginProcessing($receipt));
+        $processing = $receipt->fresh();
+        $token = $guard->processingToken($processing);
+        $guard->markProcessed($processing, $token);
+
+        $guard->markFailed($receipt->fresh(), 'Late stale failure callback.', $token);
+
+        $this->assertDatabaseHas('webhook_receipts', [
+            'id' => $receipt->id,
+            'status' => 'processed',
+        ]);
+        $this->assertFalse($guard->beginProcessing($receipt->fresh()));
+    }
+
     private function provider(): ApiProvider
     {
         return ApiProvider::create([
