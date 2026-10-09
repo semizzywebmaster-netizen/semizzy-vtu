@@ -792,7 +792,7 @@ class ProviderEngineController extends Controller
 
         $cost = $providerService->provider_price === null ? null : (string) $providerService->provider_price;
         $validCost = $cost !== null
-            && preg_match('/^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$/', $cost) === 1;
+            && preg_match('/^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/', $cost) === 1;
         $providerMappingEnabled = $externalId !== '' && $validCost;
 
         try {
@@ -807,7 +807,7 @@ class ProviderEngineController extends Controller
                     ->lockForUpdate()->firstOrFail();
 
                 if (! $lockedImport->approved || ! $lockedImport->imported) {
-                    throw new \\DomainException('The provider catalogue row must remain approved and imported while it is being mapped.');
+                    throw new \DomainException('The provider catalogue row must remain approved and imported while it is being mapped.');
                 }
 
                 $product = $existingByKey;
@@ -833,10 +833,10 @@ class ProviderEngineController extends Controller
                 }
 
                 if ($product->enabled || $product->publication_status === 'published') {
-                    throw new \\DomainException('The selected product became published while mapping. Reload the catalogue and review the live product before changing mappings.');
+                    throw new \DomainException('The selected product became published while mapping. Reload the catalogue and review the live product before changing mappings.');
                 }
                 if (strtoupper((string) $product->currency) !== $currency) {
-                    throw new \\DomainException('Provider and platform product currencies must match. Currency conversion is not inferred.');
+                    throw new \DomainException('Provider and platform product currencies must match. Currency conversion is not inferred.');
                 }
 
                 $currentProviderProduct = ProviderServiceProduct::query()
@@ -844,7 +844,7 @@ class ProviderEngineController extends Controller
                     ->where('provider_product_id', $externalId)
                     ->lockForUpdate()->first();
                 if ($currentProviderProduct && (int) $currentProviderProduct->service_product_id !== (int) $product->id) {
-                    throw new \\DomainException('This provider external ID is already mapped to a different platform product.');
+                    throw new \DomainException('This provider external ID is already mapped to a different platform product.');
                 }
 
                 $currentV2Map = DB::table('provider_product_mappings_v2')
@@ -852,7 +852,7 @@ class ProviderEngineController extends Controller
                     ->where('provider_service_id', $lockedService->id)
                     ->lockForUpdate()->first();
                 if ($currentV2Map && (int) $currentV2Map->catalogue_product_id !== (int) $product->id) {
-                    throw new \\DomainException('This provider service already has a product-level mapping to a different platform product.');
+                    throw new \DomainException('This provider service already has a product-level mapping to a different platform product.');
                 }
 
                 $providerProduct = ProviderServiceProduct::query()->updateOrCreate(
@@ -901,7 +901,7 @@ class ProviderEngineController extends Controller
 
                 return ['product' => $product->fresh(), 'provider_product' => $providerProduct, 'created' => $created];
             }, 3);
-        } catch (\\DomainException $exception) {
+        } catch (\DomainException $exception) {
             return response()->json(['message' => $exception->getMessage()], 409);
         }
 
@@ -914,7 +914,7 @@ class ProviderEngineController extends Controller
                 'published' => false,
                 'routing_enabled_by_mapping_action' => false,
             ], $request);
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             report($exception);
         }
 
