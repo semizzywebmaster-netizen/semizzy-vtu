@@ -193,9 +193,15 @@ class AdsAdminController
   $row=DB::table('ad_promotions')->where('id',$promotion)->first();
   if(!$row) abort(404);
   if($data['decision']==='approve' && $row->payment_status!=='paid') return response()->json(['success'=>false,'message'=>'Payment must be confirmed before a boost can be approved.'],422);
-  if($data['decision']==='approve' && (!$row->starts_at || !$row->ends_at)) return response()->json(['success'=>false,'message'=>'A paid boost needs a scheduled start and end time before approval.'],422);
   $status=$data['decision']==='approve'?'approved':($data['decision']==='reject'?'rejected':'paused');
-  DB::table('ad_promotions')->where('id',$promotion)->update(['status'=>$status,'admin_note'=>$data['admin_note'],'reviewed_by'=>$request->user()->id,'reviewed_at'=>now(),'updated_at'=>now()]);
+  $changes=['status'=>$status,'admin_note'=>$data['admin_note'],'reviewed_by'=>$request->user()->id,'reviewed_at'=>now(),'updated_at'=>now()];
+  if($data['decision']==='approve') {
+   $package=DB::table('ad_promotion_packages')->where('id',$row->package_id)->first();
+   if(!$package) return response()->json(['success'=>false,'message'=>'The promotion package no longer exists.'],422);
+   $changes['starts_at']=now();
+   $changes['ends_at']=now()->addDays((int)$package->duration_days);
+  }
+  DB::table('ad_promotions')->where('id',$promotion)->update($changes);
   return response()->json(['success'=>true,'message'=>'Promotion review saved.']);
  }
 }
