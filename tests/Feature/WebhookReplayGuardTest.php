@@ -172,7 +172,7 @@ class WebhookReplayGuardTest extends TestCase
 
         $guard->claim($provider, 'evt_signature_mismatch', '{"amount":100}', '1700000000.signature-a');
 
-        $this->expectException(\\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Webhook event ID was already claimed with a different signature.');
 
         $guard->claim($provider, 'evt_signature_mismatch', '{"amount":100}', '1700000000.signature-b');
