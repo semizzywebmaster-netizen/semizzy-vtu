@@ -28,14 +28,17 @@ export default function AdminLayout({ children }: PropsWithChildren) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     const query = search.trim();
     if (query.length < 2) {
       setSearchResults([]);
+      setSearchLoading(false);
       return;
     }
+    setSearchLoading(true);
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       fetch('/admin/global-search?q=' + encodeURIComponent(query), {
@@ -47,8 +50,12 @@ export default function AdminLayout({ children }: PropsWithChildren) {
         return response.json();
       }).then((data: { results?: SearchResult[] }) => {
         setSearchResults(Array.isArray(data.results) ? data.results : []);
+        setSearchLoading(false);
       }).catch((error: unknown) => {
-        if (error instanceof Error && error.name !== 'AbortError') setSearchResults([]);
+        if (error instanceof Error && error.name !== 'AbortError') {
+          setSearchResults([]);
+          setSearchLoading(false);
+        }
       });
     }, 250);
     return () => {
@@ -139,12 +146,12 @@ export default function AdminLayout({ children }: PropsWithChildren) {
             </label>
             {searchOpen && search.trim().length >= 2 && (
               <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[70vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-                {searchResults.length > 0 ? searchResults.map((result, index) => (
+                {searchLoading ? <p className="px-3 py-4 text-sm text-slate-500">Searching…</p> : searchResults.length > 0 ? searchResults.map((result, index) => (
                   <Link key={result.type + result.url + index} href={result.url} onClick={() => { setSearchOpen(false); setSearch(''); setOpen(false); }} className="block rounded-xl px-3 py-2.5 hover:bg-slate-50">
                     <span className="flex items-center justify-between gap-2"><span className="truncate text-sm font-semibold text-slate-900">{result.title}</span><span className="shrink-0 rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-500">{result.type}</span></span>
                     <span className="mt-1 block truncate text-xs text-slate-500">{result.description}</span>
                   </Link>
-                )) : <p className="px-3 py-4 text-sm text-slate-500">Searching… or no matching records found.</p>}
+                )) : <p className="px-3 py-4 text-sm text-slate-500">No matching records found.</p>}
                 <button type="button" onClick={() => setSearchOpen(false)} className="w-full border-t border-slate-100 px-3 py-2 text-left text-xs font-semibold text-indigo-700">Close results</button>
               </div>
             )}
