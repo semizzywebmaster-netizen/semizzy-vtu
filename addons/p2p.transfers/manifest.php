@@ -17,7 +17,7 @@ return [
   ['id'=>'p2p-transfers','label'=>'P2P Transfers & Trading','url'=>'/p2p/transfers','icon'=>'send','permission'=>'p2p.view','section'=>'services','order'=>130]
  ],
  'admin_navigation'=>[
-  ['id'=>'admin-p2p-transfers','label'=>'P2P Transfers & Trading','url'=>'/admin/p2p/transfers','icon'=>'send','permission'=>'p2p.view','section'=>'addons','order'=>130]
+  ['id'=>'admin-p2p-transfers','label'=>'P2P Transfers & Trading','url'=>'/admin/p2p/transfers','icon'=>'send','permission'=>'p2p.manage','section'=>'addons','order'=>130]
  ],
  'settings'=>[
   ['key'=>'enabled','type'=>'boolean','default'=>true],
