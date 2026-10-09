@@ -15,6 +15,11 @@ class AdminNavigationService
         }
 
         $permissions = config('semizzy.role_permissions.' . $user->role, []);
+        $featureSettings = SystemSetting::query()
+            ->whereIn('key', ['vtu_enabled', 'api_enabled'])
+            ->pluck('value', 'key')
+            ->map(fn ($value) => filter_var($value, FILTER_VALIDATE_BOOL))
+            ->all();
 
         $core = [
             ['id' => 'dashboard', 'label' => 'Dashboard', 'url' => '/dashboard', 'icon' => 'home', 'section' => 'core', 'order' => 10],
@@ -25,7 +30,7 @@ class AdminNavigationService
             ['id' => 'notifications', 'label' => 'Notifications', 'url' => '/notifications', 'icon' => 'bell', 'section' => 'core', 'order' => 60],
             ['id' => 'security', 'label' => 'Security', 'url' => '/admin/security-events', 'icon' => 'shield', 'section' => 'core', 'permission' => 'security.view', 'order' => 70],
             ['id' => 'support', 'label' => 'Support', 'url' => '/support', 'icon' => 'support', 'section' => 'core', 'roles' => ['ADMIN', 'STAFF', 'SUPPORT'], 'order' => 80],
-            ['id' => 'system', 'label' => 'System Health', 'url' => '/admin/health', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.view', 'order' => 90],
+            ['id' => 'system', 'label' => 'System Health', 'url' => '/admin/health', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.view', 'order' => 90],\n            ['id' => 'runbooks', 'label' => 'Operational Runbooks', 'url' => '/admin/runbooks', 'icon' => 'support', 'section' => 'core', 'permission' => 'system.view', 'order' => 95],
             ['id' => 'settings', 'label' => 'System Settings', 'url' => '/admin/settings', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.manage', 'order' => 100],
             ['id' => 'smtp', 'label' => 'Email & SMTP', 'url' => '/admin/settings#smtp', 'icon' => 'bell', 'section' => 'core', 'permission' => 'system.manage', 'order' => 105],
             ['id' => 'maintenance', 'label' => 'Backup & Maintenance', 'url' => '/admin/settings#maintenance', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.manage', 'order' => 106],
@@ -38,7 +43,7 @@ class AdminNavigationService
             ['id' => 'profile', 'label' => 'Profile', 'url' => '/profile', 'icon' => 'profile', 'section' => 'account', 'order' => 1000],
         ];
 
-        $items = array_values(array_filter($core, fn (array $item) => $this->visible($item, $user, $permissions)));
+        $items = array_values(array_filter($core, fn (array $item) => $this->visible($item, $user, $permissions, $featureSettings)));
 
         $addons = Addon::query()
             ->where('status', 'active')
@@ -74,7 +79,7 @@ class AdminNavigationService
         ]), $items);
     }
 
-    private function visible(array $item, User $user, array $permissions): bool
+    private function visible(array $item, User $user, array $permissions, array $featureSettings = []): bool
     {
         if (! empty($item['roles']) && ! in_array($user->role, (array) $item['roles'], true)) {
             return false;
