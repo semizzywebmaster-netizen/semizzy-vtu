@@ -5,7 +5,7 @@ return [
     'name' => 'Savings & Wallet Goals',
     'version' => '1.0.0',
     'description' => 'Goal-based and structured savings services built on the SEMIZZY ONE wallet ledger.',
-    'core_compatibility' => '>=2.0.0',
+    'compatibility' => '>=2.0.0',
     'dependencies' => [],
     'permissions' => [
         'savings.view',
