@@ -173,7 +173,14 @@ final class MarketplaceController
             'products' => MarketplaceProduct::query()->with(['seller','category'])->latest()->paginate(30),
             'orders' => MarketplaceOrder::query()->with(['buyer', 'seller', 'product'])->latest()->paginate(30),
             'earnings' => MarketplaceEarning::query()->with(['seller', 'category', 'order'])->latest()->paginate(30),
-            'escrows' => DB::table('marketplace_escrows as e')
+                        'disputes' => DB::table('marketplace_disputes as d')
+                ->join('marketplace_orders as o', 'o.id', '=', 'd.order_id')
+                ->join('users as b', 'b.id', '=', 'o.buyer_id')
+                ->join('users as s', 's.id', '=', 'o.seller_id')
+                ->select('d.id','d.order_id','d.reason','d.description','d.status as dispute_status','d.resolution','d.resolution_note','d.created_at','o.reference','o.currency','o.total_minor','b.name as buyer_name','s.name as seller_name')
+                ->orderByRaw("CASE WHEN d.status IN ('open','under_review','awaiting_evidence') THEN 0 ELSE 1 END")
+                ->orderByDesc('d.created_at')->limit(100)->get(),
+'escrows' => DB::table('marketplace_escrows as e')
                 ->join('marketplace_orders as o', 'o.id', '=', 'e.order_id')
                 ->join('users as b', 'b.id', '=', 'o.buyer_id')
                 ->join('users as s', 's.id', '=', 'o.seller_id')
@@ -194,14 +201,92 @@ final class MarketplaceController
         $orders = MarketplaceOrder::query()->with(['product','seller'])
             ->where('buyer_id', (int) $request->user()->id)
             ->latest()->paginate(20);
+        $disputes = DB::table('marketplace_disputes')->whereIn('order_id', $orders->getCollection()->pluck('id'))->orderByDesc('created_at')->get()->groupBy('order_id');
         $escrows = DB::table('marketplace_escrows')->whereIn('order_id', $orders->getCollection()->pluck('id'))
             ->get(['order_id','status as escrow_status','buyer_confirmed_at','released_at'])
             ->keyBy('order_id');
         $orders->getCollection()->transform(function ($order) use ($escrows) {
             $order->escrow = $escrows->get($order->id);
+            $order->disputes = $disputes->get($order->id, collect())->values();
             return $order;
         });
         return Inertia::render('Marketplace/MyOrders', ['orders' => $orders]);
+    }
+
+    public function updateShipping(Request $request, MarketplaceOrder $order)
+    {
+        if ((int) $order->seller_id !== (int) $request->user()->id) abort(403);
+        $data = $request->validate([
+            'shipping_carrier' => ['required', 'string', 'max:120'],
+            'tracking_number' => ['required', 'string', 'max:180'],
+            'tracking_url' => ['nullable', 'url', 'starts_with:https://', 'max:2000'],
+        ]);
+        if ($order->status !== 'paid') abort(422, 'Only paid orders can be shipped.');
+        $order->load('product');
+        if (!$order->product?->isPhysical()) abort(422, 'Tracking details are only available for physical products.');
+        $order->forceFill($data + ['fulfillment_status' => 'shipped', 'delivery_status' => 'shipped', 'shipped_at' => now()])->save();
+        return response()->json(['success' => true, 'message' => 'Shipping details saved.', 'order' => $order->fresh()]);
+    }
+
+    public function openDispute(Request $request, MarketplaceOrder $order)
+    {
+        if ((int) $order->buyer_id !== (int) $request->user()->id) abort(403);
+        if ($order->status !== 'paid') abort(422, 'Only paid orders can be disputed.');
+        $data = $request->validate([
+            'reason' => ['required', 'string', Rule::in(['item_not_received','item_damaged','item_not_as_described','digital_delivery_missing','service_not_completed','other'])],
+            'description' => ['required', 'string', 'min:10', 'max:5000'],
+        ]);
+        $existing = DB::table('marketplace_disputes')->where('order_id', $order->id)->whereIn('status', ['open','under_review','awaiting_evidence'])->exists();
+        if ($existing) return response()->json(['success' => false, 'message' => 'An active dispute already exists for this order.'], 422);
+        $id = DB::table('marketplace_disputes')->insertGetId([
+            'order_id' => $order->id, 'opened_by' => $request->user()->id, 'reason' => $data['reason'],
+            'description' => $data['description'], 'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        return response()->json(['success' => true, 'message' => 'Dispute submitted. Escrow will remain held while admin reviews it.', 'dispute_id' => $id], 201);
+    }
+
+    public function resolveDispute(Request $request, int $dispute)
+    {
+        $data = $request->validate([
+            'resolution' => ['required', 'string', Rule::in(['refund_buyer','release_seller','awaiting_evidence','dismiss'])],
+            'resolution_note' => ['required', 'string', 'min:5', 'max:2000'],
+        ]);
+        try {
+            DB::transaction(function () use ($request, $dispute, $data): void {
+                $case = DB::table('marketplace_disputes')->where('id', $dispute)->lockForUpdate()->first();
+                if (!$case || !in_array($case->status, ['open','under_review','awaiting_evidence'], true)) {
+                    throw new RuntimeException('This dispute is not open for resolution.');
+                }
+                if ($data['resolution'] === 'awaiting_evidence') {
+                    DB::table('marketplace_disputes')->where('id', $dispute)->update([
+                        'status' => 'awaiting_evidence', 'resolution_note' => $data['resolution_note'],
+                        'resolved_by' => $request->user()->id, 'updated_at' => now(),
+                    ]);
+                    return;
+                }
+                if ($data['resolution'] === 'dismiss') {
+                    DB::table('marketplace_disputes')->where('id', $dispute)->update([
+                        'status' => 'dismissed', 'resolution' => 'dismiss', 'resolution_note' => $data['resolution_note'],
+                        'resolved_by' => $request->user()->id, 'resolved_at' => now(), 'updated_at' => now(),
+                    ]);
+                    return;
+                }
+                DB::table('marketplace_disputes')->where('id', $dispute)->update([
+                    'status' => 'resolved', 'resolution' => $data['resolution'], 'resolution_note' => $data['resolution_note'],
+                    'resolved_by' => $request->user()->id, 'resolved_at' => now(), 'updated_at' => now(),
+                ]);
+                $order = MarketplaceOrder::query()->findOrFail($case->order_id);
+                $service = app(MarketplaceOrderService::class);
+                if ($data['resolution'] === 'refund_buyer') {
+                    $service->refund($order, (int) $request->user()->id, true);
+                } else {
+                    $service->releaseEscrow($order, (int) $request->user()->id, 'Dispute #'.$dispute.' resolution: '.$data['resolution_note']);
+                }
+            });
+        } catch (RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+        return response()->json(['success' => true, 'message' => 'Dispute decision recorded and any authorised financial action processed.']);
     }
 
     public function store(Request $request, MarketplaceOrderService $orders)
