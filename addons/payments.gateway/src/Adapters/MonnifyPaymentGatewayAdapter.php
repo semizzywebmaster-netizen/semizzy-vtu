@@ -131,6 +131,11 @@ class MonnifyPaymentGatewayAdapter implements PaymentGatewayAdapter
         throw new RuntimeException('Monnify refunds require provider-side activation; use the adapter capability only after activation.');
     }
 
+    public function verifyRefund(PaymentGatewayProvider $provider, string $refundReference, array $context = []): array
+    {
+        throw new RuntimeException('Verified refund status lookup is not implemented for this provider; do not settle the wallet from a refund request response.');
+    }
+
     public function healthCheck(PaymentGatewayProvider $provider): bool
     {
         $this->token($provider);
