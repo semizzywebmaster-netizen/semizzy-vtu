@@ -48,10 +48,11 @@ class ProviderEngineController extends Controller
         return is_string($value) && strlen($value)>200 ? substr($value,0,200).'…' : $value;
     }
 
-    public function catalogueManager(ApiProvider $provider): Response
+    public function catalogueManager(Request $request, ApiProvider $provider): Response
     {
         $provider->loadMissing('categories');
         return Inertia::render('Admin/ProviderCatalogueManager', [
+            'canMapProducts' => $request->user()?->hasPermission('providers.manage') && $request->user()?->hasPermission('catalogue.manage'),
             'provider' => [
                 'id' => $provider->id,
                 'identifier' => $provider->identifier,
