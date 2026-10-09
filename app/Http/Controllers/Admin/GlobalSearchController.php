@@ -9,6 +9,9 @@ use App\Models\Service;
 use App\Models\ServiceProduct;
 use App\Models\SupportTicket;
 use App\Models\User;
+use App\Models\VtuTransaction;
+use App\Models\AuditEvent;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -94,6 +97,37 @@ class GlobalSearchController extends Controller
                         'title' => $ticket->subject,
                         'description' => $ticket->reference . ' · ' . str_replace('_', ' ', $ticket->status),
                         'url' => '/support/' . $ticket->id,
+                    ];
+                });
+        }
+
+        if ($user->hasPermission('vtu.transactions.view') && Schema::hasTable('vtu_transactions')) {
+            VtuTransaction::query()
+                ->where(fn ($query) => $query->where('reference', 'like', $like)
+                    ->orWhere('provider_reference', 'like', $like)
+                    ->orWhere('recipient', 'like', $like))
+                ->with(['service:id,name'])
+                ->latest('created_at')->limit(5)->get(['id', 'reference', 'provider_reference', 'status', 'service_id'])
+                ->each(function (VtuTransaction $transaction) use (&$results): void {
+                    $results[] = [
+                        'type' => 'VTU transaction',
+                        'title' => $transaction->reference,
+                        'description' => ($transaction->service?->name ? $transaction->service->name . ' · ' : '') . str_replace('_', ' ', $transaction->status),
+                        'url' => '/admin/vtu/transactions?search=' . urlencode($transaction->reference),
+                    ];
+                });
+        }
+
+        if ($user->hasPermission('audit.view')) {
+            AuditEvent::query()
+                ->where(fn ($query) => $query->where('request_id', 'like', $like)->orWhere('event', 'like', $like))
+                ->latest('id')->limit(5)->get(['id', 'event', 'request_id', 'created_at'])
+                ->each(function (AuditEvent $event) use (&$results): void {
+                    $results[] = [
+                        'type' => 'Audit event',
+                        'title' => $event->event,
+                        'description' => 'Request ' . $event->request_id,
+                        'url' => '/admin/audit-events?request_id=' . urlencode($event->request_id),
                     ];
                 });
         }
