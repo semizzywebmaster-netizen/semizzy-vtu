@@ -77,57 +77,33 @@ CI also validates PHP syntax, application tests, frontend type checking and the 
 GitHub Actions runs PHP lint and feature tests plus frontend TypeScript checking and Vite builds. Passing CI proves only those configured checks. It does not prove a real cPanel deployment, live email/SMS delivery, external provider integration, restore-tested backups, load capacity or production security readiness. Consult docs/IMPLEMENTATION-STATUS.md for the current verified scope and limitations.
 
 
-## SEMIZZY ONE Addon Roadmap / Registry
+## SEMIZZY ONE Blueprint Tracking
 
-Status is intentionally separated into **BUILT**, **IN PROGRESS / HARDENING**, and **NOT BUILT**. Addons remain modular and are activated through Core.
+The complete feature-by-feature evidence map and remaining-work register is maintained in [docs/BLUEPRINT-TRACEABILITY.md](docs/BLUEPRINT-TRACEABILITY.md). Core foundations and addon source code are not the same as end-to-end completion or production verification.
 
-### BUILT
-1. VTU & Digital Services — `vtu.digital-services`
-2. CAC Business Services
-3. SIM Hosting
-4. Bulk SMS & Communication
-5. Exams & Results
-6. KYC & Identity Verification
-7. Payments Gateway
-8. Savings & Goals
-9. Loans & Credit
-10. Investments & Wealth
-11. Marketplace & Commerce
-12. P2P Transfers & Trading
-13. Escrow Protection
-14. Government Registration & Certificates
-15. Rewards, Referrals & Promotions
-16. Spin to Win / Rewards Game — `spin.to-win`
-17. Mailer SMTP / SMTP Mailer — `mailer.smtp`
+### Current repository inventory
 
-### IN PROGRESS / HARDENING
-1. KYC & Identity Verification — billing/provider-flow hardening
-2. P2P Transfers & Trading — security/financial hardening
-3. Escrow Protection — reconciliation/financial hardening
-4. SMM Services — foundation hardening
-5. Social Media Accounts & Foreign Verification Numbers — foundation/rebuild
-6. Government Registration & Certificates — payment/refund/provider hardening
-7. Rewards, Referrals & Promotions — approval/reward hardening
-8. Spin to Win / Rewards Game — production hardening after CI and database validation
-9. Mailer SMTP / SMTP Mailer — production health/failover hardening after CI and cPanel SMTP verification
-10. Education & Past Questions — School Past Questions and Exam Past Questions, imported exam-body/programme references, categorised school directory, admin autocomplete, private uploads/previews, and wallet-backed paid downloads (CI verification in progress)
+- 31 addon manifests are present under `addons/*/manifest.php`.
+- CI currently checks configured PHP syntax/tests and frontend typecheck/build. Review the latest [GitHub Actions runs](https://github.com/semizzywebmaster-netizen/semizzy-vtu/actions) after each change.
+- The presence of an addon manifest, route, migration, page, or capability label does not prove that every blueprint workflow is implemented, securely authorized, connected to a real provider, or production-ready.
+- Use these statuses in planning: **Core foundation present**, **addon source present—readiness unverified**, **in progress/hardening**, **not evidenced / needs implementation**, and **production-verified**. Reserve the last status for work supported by automated tests and staging/host/provider evidence.
 
-### NOT BUILT
-1. Travel & Tickets Booking
-2. Gift Cards Marketplace
-3. Communication & WhatsApp
-4. Insurance & Protection
-5. Business, Agent, Merchant & Reseller
-6. VTU Website Builder
-7. Virtual Cards
-8. Data & Airtime Conversion
-9. Banking & Financial Integrations
-10. Digital Assets & Crypto
-11. Community & Discussion
-12. Group Savings / Contributions
-13. Ads & Monetization
-14. Help & Support Center
-15. AI Assistant — second-to-last
-16. Developer / API Provider — absolute last
+### Main workstreams still requiring attention
 
-Spin to Win and Mailer SMTP are addons, not Core hard-coded features. The Mailer SMTP addon supports an unbounded number of SMTP profiles; any UI pagination or operational limit must not impose a product maximum.
+1. Financial correctness: database-backed concurrency tests for wallet debit/credit/transfer/refund/reversal, idempotency-key misuse, ledger balance and reconciliation.
+2. Provider reliability: vendor-specific webhook signature fixtures, replay/race protection, duplicate and reordered callbacks, ambiguous outcomes, timeout/failover safety, and sandbox evidence.
+3. Route authorization: test every mutating Core and addon route for authentication, addon activation, permission, transaction PIN/step-up, rate limits, and record/tenant ownership.
+4. Addon lifecycle and schema safety: install/update/disable/re-enable, interrupted migrations, partial failure recovery, dependency availability, and safe data retention.
+5. VTU/bills/education/government: verify each actual provider or manual fulfilment workflow, product mapping, PIN delivery, application tracking, refund/requery and provider reconciliation.
+6. Financial and business addons: verify licensed/provider-backed card, loan, savings, investment, insurance, gift-card, travel, merchant and escrow operations before enabling live money movement.
+7. Marketplace/P2P/community: finish vertical-specific order/dispute/refund workflows; community, internal mentions, group savings and advertising still need explicit implementation evidence as detailed in the traceability register.
+8. Communications: prove OTP, SMTP, SMS, push and WhatsApp delivery with configured accounts, verified webhooks, consent/opt-in, replay handling and delivery-failure paths.
+9. Admin completeness: map every blueprint control to a real working page/action and test permissions; a navigation item alone is not a completed feature.
+10. Operations/release: cPanel smoke test, scheduler and database-queue execution, backup-and-restore drill, monitoring, deployment rollback, performance/load checks and security review.
+
+### Deployment and project boundaries
+
+- Shared cPanel hosting remains a first-class target; optional infrastructure must not become mandatory.
+- Keep `composer.lock`, `package-lock.json` and production secrets managed by the deployment process as agreed; their absence is not a blueprint defect.
+- Core explicitly excludes license servers, license keys, domain binding, activation licensing and anti-piracy features. These are not undone work.
+- Do not enable real-money services merely because CI is green. Use provider sandbox/staging evidence and a verified recovery plan before production activation.
