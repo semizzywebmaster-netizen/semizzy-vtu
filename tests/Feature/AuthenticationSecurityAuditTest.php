@@ -52,6 +52,7 @@ class AuthenticationSecurityAuditTest extends TestCase
     {
         $this->post('/forgot-password/otp', [
             'email' => 'unknown@example.test',
+            'otp_channel' => 'email',
         ])->assertSessionHas('otp_sent');
 
         $event = SecurityEvent::where('event', 'auth.password_recovery.otp_requested')->latest('id')->firstOrFail();
