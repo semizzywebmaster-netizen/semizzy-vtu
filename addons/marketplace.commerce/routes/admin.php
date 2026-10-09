@@ -10,4 +10,5 @@ Route::middleware(['web','auth','ensure.addon:marketplace.commerce','permission:
  Route::post('/admin/marketplace/orders/{order}/release-escrow',[MarketplaceController::class,'releaseEscrow'])->name('admin.marketplace.orders.release-escrow');
  Route::post('/admin/marketplace/disputes/{dispute}/resolve',[MarketplaceController::class,'resolveDispute'])->name('admin.marketplace.disputes.resolve');
  Route::patch('/admin/marketplace/categories/{category}/profit',[MarketplaceController::class,'updateCategoryProfit'])->name('admin.marketplace.categories.profit');
+ Route::patch('/admin/marketplace/escrow-policies',[MarketplaceController::class,'updateEscrowPolicies'])->name('admin.marketplace.escrow-policies.update');
 });
