@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Http;
 use Semizzy\Addons\AIChatbot\Services\AIProviderService;
 use Tests\TestCase;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Semizzy\Addons\AIChatbot\Http\Controllers\AIChatbotController;
 
 class AIChatbotAddonTest extends TestCase
 {
