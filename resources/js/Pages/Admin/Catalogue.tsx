@@ -1,18 +1,35 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ServiceIcon, { SERVICE_ICONS, iconForService } from '../../Components/ServiceIcon';
 
 type Product={id:number;key:string;name:string;enabled:boolean};
 type Service={id:number;key:string;name:string;enabled:boolean;metadata?:Record<string,any>|null;products:Product[]};
 type Category={id:number;key:string;name:string;enabled:boolean;services:Service[]};
 
-export default function Catalogue({categories=[]}:{categories:Category[]}) {
+export default function Catalogue({categories=[],search=''}:{categories:Category[];search?:string}) {
   const category=useForm({key:'',name:'',description:'',sort_order:100,enabled:true});
   const service=useForm({category_id:'',key:'',name:'',description:'',icon:'',enabled:true});
   const product=useForm({service_id:'',key:'',name:'',currency:'NGN',enabled:false});
   const iconUpload=useForm<{icon:File|null}>({icon:null});
+  const [catalogueSearch,setCatalogueSearch]=useState(search);
   const [iconQuery,setIconQuery]=useState('');
   const [iconService,setIconService]=useState<Service|null>(null);
+
+  useEffect(() => setCatalogueSearch(search), [search]);
+
+  const filteredCategories = useMemo(() => {
+    const term = catalogueSearch.trim().toLowerCase();
+    if (!term) return categories;
+    return categories.map((category) => {
+      const categoryMatches = (category.name + ' ' + category.key).toLowerCase().includes(term);
+      const services = category.services.map((item) => {
+        const serviceMatches = (item.name + ' ' + item.key).toLowerCase().includes(term);
+        const matchingProducts = item.products.filter((entry) => (entry.name + ' ' + entry.key).toLowerCase().includes(term));
+        return { ...item, products: categoryMatches || serviceMatches ? item.products : matchingProducts };
+      }).filter((item) => categoryMatches || (item.name + ' ' + item.key).toLowerCase().includes(term) || item.products.length > 0);
+      return { ...category, services };
+    }).filter((category) => (category.name + ' ' + category.key).toLowerCase().includes(term) || category.services.length > 0);
+  }, [categories, catalogueSearch]);
 
   const iconChoices=useMemo(()=>Object.keys(SERVICE_ICONS).filter(k=>k!=='default'&&k.includes(iconQuery.trim().toLowerCase())),[iconQuery]);
 
@@ -42,7 +59,7 @@ export default function Catalogue({categories=[]}:{categories:Category[]}) {
 
       {iconService&&<section className="mt-5 rounded-2xl border border-indigo-200 bg-indigo-50 p-5"><div className="flex items-center gap-3"><ServiceIcon name={iconService.name} icon={iconService.metadata?.icon} iconUrl={iconService.metadata?.icon_url} /><div><h2 className="font-extrabold">Import icon for {iconService.name}</h2><p className="text-sm text-slate-600">SVG only, maximum 1 MB. Unsafe script/event markup is rejected.</p></div></div><form onSubmit={submitIcon} className="mt-4 flex flex-wrap gap-3"><input type="file" accept=".svg,image/svg+xml" required onChange={e=>iconUpload.setData('icon',e.target.files?.[0]||null)} className="rounded-xl border bg-white p-3"/><button disabled={iconUpload.processing} className="rounded-xl bg-indigo-700 px-4 py-3 font-semibold text-white">{iconUpload.processing?'Importing…':'Import SVG'}</button><button type="button" onClick={()=>setIconService(null)} className="rounded-xl border bg-white px-4 py-3 font-semibold">Cancel</button></form></section>}
 
-      <section className="mt-8 space-y-4">{categories.map(c=><article key={c.id} className="rounded-2xl bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><h2 className="text-xl font-bold">{c.name}</h2><span className="text-xs text-slate-500">{c.key}</span></div><div className="mt-4 space-y-3">{c.services.map(s=><div key={s.id} className="flex flex-col gap-4 rounded-xl border p-4 md:flex-row md:items-center md:justify-between"><div className="flex items-center gap-3"><ServiceIcon name={s.name} icon={s.metadata?.icon} iconUrl={s.metadata?.icon_url}/><div><div className="font-semibold">{s.name} <span className="text-xs text-slate-500">({s.key})</span></div><div className="text-xs text-slate-500">{s.products.length} product(s) · {s.enabled?'enabled':'disabled'}</div></div></div><div className="flex flex-wrap gap-2"><button type="button" onClick={()=>setIconService(s)} className="rounded-lg border px-3 py-2 text-sm font-semibold">Import SVG</button><div className="rounded-lg bg-slate-50 px-3 py-2 text-sm">Icon: {s.metadata?.icon||iconForService(s.name,s.key)}</div></div>{s.products.length>0&&<ul className="text-sm text-slate-600 md:max-w-sm">{s.products.slice(0,5).map(p=><li key={p.id}>{p.name} — {p.key} — {p.enabled?'enabled':'disabled'}</li>)}</ul>}</div>)}</div></article>)}</section>
+      <section className="mt-8 space-y-4"><div className="rounded-2xl border bg-white p-4 shadow-sm"><label className="block"><span className="mb-2 block text-sm font-semibold text-slate-700">Search categories, services and products</span><input value={catalogueSearch} onChange={e=>setCatalogueSearch(e.target.value)} placeholder="e.g. MTN SME 1 GB or electricity" className="w-full rounded-xl border p-3 text-sm outline-none focus:border-indigo-500"/>{catalogueSearch && <button type="button" onClick={()=>setCatalogueSearch('')} className="mt-2 text-xs font-bold text-indigo-700">Clear search</button>}</label></div>{filteredCategories.map(c=><article key={c.id} className="rounded-2xl bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><h2 className="text-xl font-bold">{c.name}</h2><span className="text-xs text-slate-500">{c.key}</span></div><div className="mt-4 space-y-3">{c.services.map(s=><div key={s.id} className="flex flex-col gap-4 rounded-xl border p-4 md:flex-row md:items-center md:justify-between"><div className="flex items-center gap-3"><ServiceIcon name={s.name} icon={s.metadata?.icon} iconUrl={s.metadata?.icon_url}/><div><div className="font-semibold">{s.name} <span className="text-xs text-slate-500">({s.key})</span></div><div className="text-xs text-slate-500">{s.products.length} product(s) · {s.enabled?'enabled':'disabled'}</div></div></div><div className="flex flex-wrap gap-2"><button type="button" onClick={()=>setIconService(s)} className="rounded-lg border px-3 py-2 text-sm font-semibold">Import SVG</button><div className="rounded-lg bg-slate-50 px-3 py-2 text-sm">Icon: {s.metadata?.icon||iconForService(s.name,s.key)}</div></div>{s.products.length>0&&<ul className="text-sm text-slate-600 md:max-w-sm">{s.products.slice(0,5).map(p=><li key={p.id}>{p.name} — {p.key} — {p.enabled?'enabled':'disabled'}</li>)}</ul>}</div>)}</div></article>)}</section>
     </div>
   </main></>;
 }
