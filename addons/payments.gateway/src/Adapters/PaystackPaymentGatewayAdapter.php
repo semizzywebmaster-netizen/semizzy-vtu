@@ -4,6 +4,8 @@ namespace Semizzy\Addons\Payments\Adapters;
 
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
+use Throwable;
+use Semizzy\Addons\Payments\Exceptions\AmbiguousPaymentGatewayException;
 use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
 
@@ -90,7 +92,11 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
         // Idempotency guard: if this reference already exists, return its provider state
         // instead of creating another transfer. Only a clear not-found response allows creation.
         $verifyUrl = rtrim($provider->base_url ?: 'https://api.paystack.co', '/') . '/transfer/verify/' . rawurlencode($reference);
-        $existingResponse = $this->request($provider)->get($verifyUrl);
+        try {
+            $existingResponse = $this->request($provider)->get($verifyUrl);
+        } catch (Throwable $exception) {
+            throw new AmbiguousPaymentGatewayException('Paystack could not verify the transfer reference; failover is suppressed to prevent a duplicate payout.', 0, $exception);
+        }
         $existingBody = $existingResponse->json();
         if ($existingResponse->successful() && ($existingBody['status'] ?? false) && is_array($existingBody['data'] ?? null)) {
             $existing = $existingBody['data'];
@@ -106,8 +112,11 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
                 'replayed' => true,
             ];
         }
+        if ($existingResponse->status() === 408 || $existingResponse->status() === 429 || $existingResponse->status() >= 500 || $existingResponse->successful()) {
+            throw new AmbiguousPaymentGatewayException('Paystack could not establish whether this transfer reference already exists; failover is suppressed.');
+        }
         if (!in_array($existingResponse->status(), [400, 404], true)) {
-            throw new RuntimeException('Paystack could not establish whether this transfer reference already exists; do not retry until status is checked.');
+            throw new RuntimeException('Paystack transfer-reference verification failed before payout initiation.');
         }
 
         $account = $this->nameEnquiry($provider, $bankCode, $accountNumber);
@@ -133,17 +142,28 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
 
         // The caller must persist this unique reference before calling. A retry must
         // verify this reference first rather than blindly starting another transfer.
-        $transfer = $this->result($this->request($provider)->post(
-            rtrim($provider->base_url ?: 'https://api.paystack.co', '/') . '/transfer',
-            [
-                'source' => 'balance',
-                'amount' => $amount,
-                'reference' => $reference,
-                'recipient' => $recipientCode,
-                'reason' => mb_substr((string) ($payload['reason'] ?? 'SEMIZZY ONE payout'), 0, 100),
-                'currency' => 'NGN',
-            ]
-        ));
+        try {
+            $transferResponse = $this->request($provider)->post(
+                rtrim($provider->base_url ?: 'https://api.paystack.co', '/') . '/transfer',
+                [
+                    'source' => 'balance',
+                    'amount' => $amount,
+                    'reference' => $reference,
+                    'recipient' => $recipientCode,
+                    'reason' => mb_substr((string) ($payload['reason'] ?? 'SEMIZZY ONE payout'), 0, 100),
+                    'currency' => 'NGN',
+                ]
+            );
+        } catch (Throwable $exception) {
+            throw new AmbiguousPaymentGatewayException('Paystack transfer request outcome is unknown; failover is suppressed until this reference is verified.', 0, $exception);
+        }
+        if ($transferResponse->status() === 408 || $transferResponse->status() === 429 || $transferResponse->status() >= 500) {
+            throw new AmbiguousPaymentGatewayException('Paystack transfer outcome is unknown; failover is suppressed until this reference is verified.');
+        }
+        $transfer = $this->result($transferResponse);
+        if (empty($transfer['reference']) && empty($transfer['transfer_code'])) {
+            throw new AmbiguousPaymentGatewayException('Paystack response did not provide a transfer reference; failover is suppressed.');
+        }
 
         return [
             'reference' => $transfer['reference'] ?? $reference,
@@ -184,10 +204,18 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
             throw new RuntimeException('Bulk transfer references must be unique within the batch.');
         }
 
-        return $this->result($this->request($provider)->post(
-            rtrim($provider->base_url ?: 'https://api.paystack.co', '/') . '/transfer/bulk',
-            ['source' => 'balance', 'currency' => 'NGN', 'transfers' => $normalized]
-        ));
+        try {
+            $response = $this->request($provider)->post(
+                rtrim($provider->base_url ?: 'https://api.paystack.co', '/') . '/transfer/bulk',
+                ['source' => 'balance', 'transfers' => $normalized]
+            );
+        } catch (Throwable $exception) {
+            throw new AmbiguousPaymentGatewayException('Paystack bulk transfer outcome is unknown; automatic failover is suppressed.', 0, $exception);
+        }
+        if ($response->status() === 408 || $response->status() === 429 || $response->status() >= 500) {
+            throw new AmbiguousPaymentGatewayException('Paystack bulk transfer outcome is unknown; automatic failover is suppressed.');
+        }
+        return $this->result($response);
     }
 
     /** Query Paystack by the caller's persisted reference before retrying an ambiguous payout. */

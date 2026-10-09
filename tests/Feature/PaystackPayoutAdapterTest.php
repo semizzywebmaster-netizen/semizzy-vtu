@@ -76,4 +76,14 @@ class PaystackPayoutAdapterTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_ambiguous_transfer_reference_check_suppresses_retry_before_creating_a_recipient(): void
+    {
+        Http::fake(['https://paystack.test/transfer/verify/semizzy_payout_000001' => Http::response(['message' => 'temporarily unavailable'], 503)]);
+        $this->expectException(\Semizzy\Addons\Payments\Exceptions\AmbiguousPaymentGatewayException::class);
+        (new PaystackPaymentGatewayAdapter())->singlePayout($this->provider(), [
+            'bank_code' => '044', 'account_number' => '0123456789', 'amount_minor' => 250000,
+            'reference' => 'semizzy_payout_000001',
+        ]);
+    }
+
 }
