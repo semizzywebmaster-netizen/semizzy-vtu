@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\\Support\\Facades\\Route;
-use Semizzy\\Addons\\SchoolAdmission\\Http\\Controllers\\SchoolAdmissionController;
+use Illuminate\Support\Facades\Route;
+use Semizzy\Addons\SchoolAdmission\Http\Controllers\SchoolAdmissionController;
 
 Route::middleware(['web','auth','ensure.addon:education.school-admission'])
     ->prefix('school-admission')
