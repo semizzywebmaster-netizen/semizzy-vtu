@@ -35,7 +35,7 @@ return new class extends Migration {
                 $t->json('capabilities')->nullable();
                 $t->timestamps();
                 $t->unique(['cac_service_product_id', 'api_provider_id'], 'cac_route_product_provider_uq');
-                $t->index(['cac_service_product_id', 'enabled', 'priority']);
+                $t->index(['cac_service_product_id', 'enabled', 'priority'], 'cac_route_product_enabled_priority_idx');
             });
         }
     }
