@@ -124,7 +124,7 @@ The repository contains 32 addon directories. This inventory identifies each add
 | Addon manifest identifier | Provider-relevant service / operations to inventory | Existing shared system / integration boundary | Evidence state and next check |
 |---|---|---|---|
 | `ai.chatbot` | AI model requests, embeddings/knowledge where enabled, usage/balance and provider failover | AI-specific provider configuration; avoid a duplicate outbound provider registry | Audit adapter classes, supported model APIs, auth schema, redaction and failover tests |
-| `api.provider-platform` | Cross-service provider directory, capabilities, catalogue import, service/product mapping, price sync and verification | Must reuse Core `ApiProvider`, mappings, credentials, routing, sync and audit | Admin coverage view and publication guard exist on development branch; catalogue workflow and full operation matrix remain incomplete |
+| `api.provider-platform` | Cross-service provider directory, capabilities, catalogue import, service/product mapping, price sync and verification | Must reuse Core `ApiProvider`, mappings, credentials, routing, sync and audit | Admin coverage view, publication guard, paginated catalogue read, and safe select-for-review endpoint are implemented on development branch; admin catalogue UI, provider-specific sync adapters, and full operation matrix remain incomplete |
 | `banking.financial-integrations` | Account/virtual-account operations, transfers/payouts, account resolution, reconciliation and status | Reconcile with Payments addon and Core provider engine; do not merge distinct capabilities | Inspect banking-specific adapters and official provider permissions per operation |
 | `bulk-sms.communication` | SMS send, sender IDs, delivery reports, bulk campaigns, status reconciliation | Shared SMS providers with Communication and SIM Hosting views | Verify provider adapters, DND/sender-ID behaviour, per-message pricing and delivery status |
 | `business.agent-merchant-reseller` | No inherent external provider operation; business tiers, limits and commercial pricing | Core users, tiers, price engine and audit | Normally internal; inventory only explicit provider-facing business services |
@@ -161,3 +161,31 @@ The repository contains 32 addon directories. This inventory identifies each add
 For each concrete service and operation above, record: (1) Core/addon route and controller; (2) provider adapter/manager and auth types; (3) official docs and price source; (4) product/service identifiers and currency; (5) request/response mapping; (6) initiation, validation, status/requery, webhook, refund/reversal and reconciliation support individually; (7) fixtures/unit/feature tests; (8) sandbox result and live verification evidence; (9) upstream/backend independence; (10) known blockers and reviewer/date. Use `supported`, `unsupported`, or `unknown` per operation—never infer support from a broad capability label.
 
 This table is the addon/service-family inventory baseline, not a claim that all underlying source files and every provider operation have already been fully audited. The remaining Phase 1 work is to walk the controllers, adapters, migrations, sync jobs and tests for each API-backed row and attach evidence links per operation before calling the inventory complete.
+
+## Addon #38 implementation checkpoint — 2026-10-09
+
+The current development branch now has an initial safe catalogue-review API slice:
+
+- `GET /admin/provider-platform/catalogue`: paginated provider-sourced catalogue records with optional provider, search and review-state filters. The response excludes raw provider payloads and makes source price/currency and last-sync timestamp visible when recorded.
+- `POST /admin/provider-platform/catalogue/{providerService}/select`: creates a review record in `awaiting_approval` state with import and auto-sync disabled by default. Repeating the selection does not reset an existing approved/imported record.
+- Both endpoints reuse the existing Core provider catalogue and `provider_service_imports` tables; no second provider registry or automatic product publication was introduced.
+- Feature tests cover safe catalogue output, review selection defaults, audit recording, and preservation of existing approval/import state.
+
+This slice is not a complete catalogue integration. There is not yet a provider-specific discovery/sync implementation or admin-facing catalogue review screen. Selection is not import approval, mapping, live capability evidence, or production routing. Those must remain separate gated steps.
+
+### First operation-level audit queue
+
+| Service family | First operations to audit independently | Required evidence before marking supported |
+|---|---|---|
+| Airtime | Catalogue/denomination discovery, purchase, status/requery, balance | Official product IDs and auth contract; successful sandbox purchase/status fixtures |
+| Data | Catalogue/plan sync, purchase, status/requery, balance | Exact network/plan IDs, current source-price provenance and sandbox result |
+| Electricity | Meter/customer validation, vend, token/result retrieval, status/requery | Supported meter types, validation/vend contract and provider-confirmed transaction outcomes |
+| Cable TV | Smartcard/customer validation, package sync, renewal/purchase, status | Package IDs, customer-validation contract and provider-confirmed status handling |
+| Education/exam products | Product/PIN sync, purchase, fulfilment/requery, refund/reversal if supported | Exam type/product identifiers and provider-specific fulfilment/refund documentation |
+| Payment collection | Intent/session creation, webhook signature/replay, status, refund | Provider-specific webhook/signature tests, idempotency and settlement evidence |
+| Virtual accounts and transfers | Account creation, account resolution, transfer/payout, status, reconciliation | Separate permission/contract evidence per operation; do not infer payout from collection support |
+| Identity verification | Identity/document-specific check, match result, status, audit | Official eligible document list, lawful access, approved account, data-minimisation and sandbox evidence |
+| SMS/OTP | Send, delivery report, sender-ID status, balance, failover | Channel-specific auth, sender-ID rules, pricing, delivery status and retry behaviour |
+
+Every row starts as `unknown` until the matching adapter/controller, official contract, tests and authorised sandbox evidence are linked. Provider preset counts are leads only and must not be counted as successful integrations.
+
