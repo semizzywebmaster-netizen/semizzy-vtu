@@ -10,6 +10,8 @@ Route::middleware(['web','auth','ensure.addon:marketplace.commerce','permission:
  Route::get('/marketplace/categories/{category}/form',[MarketplaceController::class,'categoryForm'])->name('marketplace.categories.form');
  Route::get('/marketplace/seller/categories',[MarketplaceController::class,'sellerCategories'])->name('marketplace.seller.categories');
  Route::post('/marketplace/orders/{order}/confirm-receipt',[MarketplaceController::class,'confirmReceipt'])->name('marketplace.orders.confirm-receipt');
+ Route::post('/marketplace/orders/{order}/disputes',[MarketplaceController::class,'openDispute'])->name('marketplace.orders.disputes.store');
+ Route::patch('/marketplace/orders/{order}/shipping',[MarketplaceController::class,'updateShipping'])->name('marketplace.orders.shipping.update');
 });
 Route::middleware(['web','auth','ensure.addon:marketplace.commerce','permission:marketplace.sell'])->group(function(){
  Route::post('/marketplace/products',[MarketplaceController::class,'productStore'])->name('marketplace.products.store');
