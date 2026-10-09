@@ -5,7 +5,7 @@ return [
  'name'=>'Virtual Cards',
  'version'=>'1.0.0',
  'description'=>'Provider-backed virtual card lifecycle, controls, limits and transaction records.',
- 'core_compatibility'=>'>=2.0.0','dependencies'=>[],
+ 'compatibility'=>'>=2.0.0','dependencies'=>[],
  'permissions'=>['virtual-cards.view','virtual-cards.manage','virtual-cards.freeze','virtual-cards.audit'],
  'role_permissions'=>[
   'ADMIN'=>['virtual-cards.view','virtual-cards.manage','virtual-cards.freeze','virtual-cards.audit'],
