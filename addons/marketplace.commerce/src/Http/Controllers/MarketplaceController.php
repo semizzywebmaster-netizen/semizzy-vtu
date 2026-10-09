@@ -14,6 +14,7 @@ use Semizzy\Addons\Marketplace\Models\MarketplaceDigitalAsset;
 use Semizzy\Addons\Marketplace\Models\MarketplaceDigitalDelivery;
 use Semizzy\Addons\Marketplace\Models\MarketplaceServiceMilestone;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Semizzy\Addons\Marketplace\Models\MarketplaceOrder;
 use Semizzy\Addons\Marketplace\Models\MarketplaceProduct;
 use Semizzy\Addons\Marketplace\Services\MarketplaceOrderService;
@@ -166,6 +167,13 @@ final class MarketplaceController
             'products' => MarketplaceProduct::query()->with(['seller','category'])->latest()->paginate(30),
             'orders' => MarketplaceOrder::query()->with(['buyer', 'seller', 'product'])->latest()->paginate(30),
             'earnings' => MarketplaceEarning::query()->with(['seller', 'category', 'order'])->latest()->paginate(30),
+            'escrows' => DB::table('marketplace_escrows as e')
+                ->join('marketplace_orders as o', 'o.id', '=', 'e.order_id')
+                ->join('users as b', 'b.id', '=', 'o.buyer_id')
+                ->join('users as s', 's.id', '=', 'o.seller_id')
+                ->select('e.id','e.order_id','e.reference','e.currency','e.gross_minor','e.seller_net_minor','e.platform_profit_minor','e.status as escrow_status','e.buyer_confirmed_at','e.released_at','e.admin_note','b.name as buyer_name','s.name as seller_name')
+                ->orderByRaw("CASE WHEN e.status IN ('held','buyer_confirmed') THEN 0 ELSE 1 END")
+                ->orderByDesc('e.created_at')->limit(100)->get(),
             'categories' => MarketplaceCategory::query()->with('parent')->orderBy('sort_order')->orderBy('name')->get(),
             'reconciliation' => [
                 'checked_orders' => $reconciliationOrders->count(),
@@ -199,6 +207,27 @@ final class MarketplaceController
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
         return response()->json(['success' => true, 'order' => $order]);
+    }
+
+    public function confirmReceipt(Request $request, MarketplaceOrder $order, MarketplaceOrderService $orders)
+    {
+        try {
+            $order = $orders->confirmReceipt($order, (int) $request->user()->id);
+        } catch (RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+        return response()->json(['success' => true, 'message' => 'Receipt confirmed. Escrow remains held until an admin authorises release.', 'order' => $order]);
+    }
+
+    public function releaseEscrow(Request $request, MarketplaceOrder $order, MarketplaceOrderService $orders)
+    {
+        $data = $request->validate(['admin_note' => ['nullable', 'string', 'max:1000']]);
+        try {
+            $order = $orders->releaseEscrow($order, (int) $request->user()->id, $data['admin_note'] ?? null);
+        } catch (RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+        return response()->json(['success' => true, 'message' => 'Escrow released to seller.', 'order' => $order]);
     }
 
     public function cancel(Request $request, MarketplaceOrder $order, MarketplaceOrderService $orders)
