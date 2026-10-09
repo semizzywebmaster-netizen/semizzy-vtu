@@ -110,6 +110,7 @@ final class ProductPublicationService
             if (!$provider || !$providerProduct->enabled || !$providerProduct->provider_product_id
                 || trim((string) $providerProduct->provider_product_id) === ''
                 || $providerProduct->provider_cost === null
+                || BigDecimal::of((string) $providerProduct->provider_cost)->isNegative()
                 || strtoupper((string) $providerProduct->currency) !== strtoupper((string) $product->currency)
                 || !$providerProduct->last_synced_at
                 || $providerProduct->last_synced_at->lt(now()->subHours(self::MAX_SOURCE_AGE_HOURS))) {
