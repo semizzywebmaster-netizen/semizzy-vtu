@@ -1,12 +1,13 @@
 <?php
 
-namespace Semizzy\\Addons\\ApiProviderPlatform\\Services;
+namespace Semizzy\Addons\ApiProviderPlatform\Services;
 
-use App\\Models\\ProviderServiceMapping;
-use App\\Models\\ServiceProduct;
-use App\\Services\\Pricing\\PriceEngine;
-use App\\Services\\Audit\\AuditLogger;
-use Illuminate\\Support\\Facades\\DB;
+use App\Models\ProviderServiceMapping;
+use App\Models\ProviderServiceProduct;
+use App\Models\ServiceProduct;
+use App\Services\Pricing\PriceEngine;
+use App\Services\Audit\AuditLogger;
+use Illuminate\Support\Facades\DB;
 
 final class ProductPublicationService
 {
@@ -131,7 +132,7 @@ final class ProductPublicationService
                 ->exists();
 
             $duplicateExternalId = $providerProduct->provider_product_id !== null
-                && $product->providerProducts()
+                && ProviderServiceProduct::query()
                     ->where('api_provider_id', $provider->id)
                     ->where('provider_product_id', $providerProduct->provider_product_id)
                     ->where('service_product_id', '!=', $product->id)
@@ -160,7 +161,7 @@ final class ProductPublicationService
                         && (float) $quote['customer_price'] < (float) $quote['provider_cost']) {
                         $blockers[] = "The {$tier} selling price is below provider cost.";
                     }
-                } catch (\\Throwable $exception) {
+                } catch (\Throwable $exception) {
                     $blockers[] = "A valid live provider route and selling-price rule are missing for the {$tier} tier.";
                 }
             }
