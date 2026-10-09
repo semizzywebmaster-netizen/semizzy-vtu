@@ -19,7 +19,7 @@ return [
   ['key'=>'reseller_enabled','type'=>'boolean','default'=>true],
   ['key'=>'approval_required','type'=>'boolean','default'=>true],
  ],
- 'migrations'=>['2026_10_07_070000_create_business_agent_merchant_reseller_tables.php','2026_10_07_072000_create_business_commission_settlements.php'],
+ 'migrations'=>['2026_10_07_070000_create_business_agent_merchant_reseller_tables.php','2026_10_07_071000_harden_business_commercial_controls.php','2026_10_07_072000_create_business_commission_settlements.php'],
  'web_route_files'=>['addons/business-agent-merchant-reseller/routes/web.php','addons/business-agent-merchant-reseller/routes/admin.php'],
  'api_route_files'=>['addons/business-agent-merchant-reseller/routes/api.php'],
  'provider_integrations'=>['Core ProviderManager','Core wallet/ledger','Core users','Core KYC','Core audit'],
