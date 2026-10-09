@@ -34,7 +34,7 @@ return new class extends Migration {
                 $t->json('endpoint_map')->nullable();
                 $t->json('capabilities')->nullable();
                 $t->timestamps();
-                $t->unique(['cac_service_product_id', 'api_provider_id']);
+                $t->unique(['cac_service_product_id', 'api_provider_id'], 'cac_route_product_provider_uq');
                 $t->index(['cac_service_product_id', 'enabled', 'priority']);
             });
         }
