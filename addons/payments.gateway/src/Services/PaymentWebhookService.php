@@ -58,6 +58,13 @@ final class PaymentWebhookService
             ]
         );
 
+        // Provider event IDs are idempotency keys. Do not silently accept the
+        // same ID with a changed payload, even when the sender signs both
+        // deliveries independently (for example, with a fresh timestamp).
+        if (!$event->wasRecentlyCreated && is_array($event->payload) && $event->payload != $payload) {
+            throw new RuntimeException('Webhook event ID was already received with a different payload.');
+        }
+
         if ($event->processed_at !== null) return $event;
 
         $verified = $this->gateways->adapter($provider)->verifyCollection($provider, $reference);
