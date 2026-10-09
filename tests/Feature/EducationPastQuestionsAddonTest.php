@@ -70,14 +70,14 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertDatabaseHas('education_reference_catalogue',['name'=>'New Exam Board','kind'=>'exam_body']);
  }
  public function test_admin_csv_import_adds_new_reference_rows_and_skips_duplicates():void {
-  $file=UploadedFile::fake()->createWithContent('references.csv',"kind,name,category,short_name,state,country,official_url,source_url\\nschool,CSV University,private_university,CSVU,Lagos,Nigeria,https://csv.example.edu,https://nuc.edu.ng\\nexam_body,CSV Exam Board,national_or_international,CEB,,Nigeria,https://exam.example.org,https://example.org\\n");
+  $file=UploadedFile::fake()->createWithContent('references.csv',"kind,name,category,short_name,state,country,official_url,source_url\nschool,CSV University,private_university,CSVU,Lagos,Nigeria,https://csv.example.edu,https://nuc.edu.ng\nexam_body,CSV Exam Board,national_or_international,CEB,,Nigeria,https://exam.example.org,https://example.org\n");
   $request=Request::create('/admin/education/references/import-csv','POST',[],[],['file'=>$file]);
   $request->setUserResolver(fn()=>(object)['id'=>1]);
   $response=app(EducationReferenceImportController::class)->importCsv($request);
   $this->assertSame(302,$response->getStatusCode());
   $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'CSV University','category'=>'private_university','created_by'=>1]);
   $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'exam_body','name'=>'CSV Exam Board']);
-  $duplicate=UploadedFile::fake()->createWithContent('duplicates.csv',"kind,name,category\\nschool,CSV University,private_university\\n");
+  $duplicate=UploadedFile::fake()->createWithContent('duplicates.csv',"kind,name,category\nschool,CSV University,private_university\n");
   $second=Request::create('/admin/education/references/import-csv','POST',[],[],['file'=>$duplicate]);
   $second->setUserResolver(fn()=>(object)['id'=>1]);
   app(EducationReferenceImportController::class)->importCsv($second);
