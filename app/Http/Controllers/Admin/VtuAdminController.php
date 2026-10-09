@@ -319,7 +319,7 @@ class VtuAdminController extends Controller
   if ($r->filled('search')) {
    $term = mb_substr(trim((string) $r->input('search')), 0, 80);
    if ($term !== '') {
-    $like = '%' . addcslashes($term, '%_\\\\\\\\') . '%';
+    $like = '%' . addcslashes($term, '\\\\%_') . '%';
     $q->where(function ($nested) use ($like): void {
      $nested->where('reference', 'like', $like)
       ->orWhere('provider_reference', 'like', $like)
