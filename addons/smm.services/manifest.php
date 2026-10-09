@@ -4,6 +4,7 @@ return [
     'identifier' => 'smm.services',
     'name' => 'SMM Services',
     'version' => '0.1.0',
+    'autoload_namespace' => 'Semizzy\\Addons\\Smm',
     'description' => 'Social media marketing services catalogue and order foundation with Core Provider Engine integration.',
     'compatibility' => '>=2.0.0',
     'dependencies' => [],
