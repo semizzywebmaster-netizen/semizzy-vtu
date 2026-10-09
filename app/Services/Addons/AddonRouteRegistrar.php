@@ -48,8 +48,10 @@ class AddonRouteRegistrar
                 // by an addon remains unavailable until that addon is active.
                 // Route files may add stricter middleware, but cannot accidentally
                 // omit the Core activation check.
-                Route::middleware('ensure.addon:'.(string) $manifest['identifier'])
-                    ->group(function () use ($path): void {
+                Route::middleware([
+                    'ensure.addon:'.(string) $manifest['identifier'],
+                    'feature.rollout:'.(string) $manifest['identifier'],
+                ])->group(function () use ($path): void {
                         require $path;
                     });
             }
