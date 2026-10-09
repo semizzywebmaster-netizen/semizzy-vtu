@@ -1,6 +1,7 @@
 <?php
 return [
  'identifier'=>'whatsapp.bot','name'=>'WhatsApp Bot','version'=>'1.0.0',
+ 'autoload_namespace'=>'Addons\\WhatsAppBot',
  'description'=>'Verified-account WhatsApp bot for service discovery, transaction commands, receipts and transaction updates. Only the WhatsApp number verified on a SEMIZZY ONE account may transact.',
  'compatibility'=>'>=2.0.0','dependencies'=>['communication.whatsapp','vtu.digital-services'],
  'permissions'=>['whatsapp_bot.view','whatsapp_bot.manage','whatsapp_bot.verify','whatsapp_bot.transact','whatsapp_bot.audit'],
