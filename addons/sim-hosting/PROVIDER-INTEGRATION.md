@@ -22,3 +22,9 @@ Consumers:
 No customer-facing SIM rental workflow is registered by this addon manifest. Legacy rental code remains isolated for migration compatibility and is not part of the active provider contract.
 
 Provider capabilities must only be enabled after real provider documentation, credentials and a successful test/verification cycle.
+
+## Core operation mapping
+
+The addon-facing names above are not all Core provider operation names. The adapter translates airtime/data purchase to `transaction_initiation`, data catalogue to `catalogue_retrieval`, provider/SMS balance to `balance_inquiry`, and transaction requery to `transaction_status`. These aliases do not assert that a particular vendor supports each operation: the enabled provider mapping and Core provider capability must still explicitly allow it.
+
+Number reservation and release are separate operations. Core's generic REST adapter accepts those operation names for configured endpoints, but each provider must have the corresponding endpoint, authentication, payload/response mapping, and tests configured before the capability is enabled. Webhook receipt is inbound and must be implemented through a verified webhook route/signature contract; it is not an outbound REST operation.
