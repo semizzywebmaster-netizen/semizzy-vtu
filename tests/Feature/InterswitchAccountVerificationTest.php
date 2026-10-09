@@ -10,24 +10,17 @@ use Tests\TestCase;
 
 class InterswitchAccountVerificationTest extends TestCase
 {
-    private function adapter(): RestJsonProviderAdapter
-    {
-        $guard = $this->createMock(ProviderUrlGuard::class);
-        $guard->method('validate');
-        return new RestJsonProviderAdapter($guard);
-    }
-
     public function test_it_signs_account_enquiry_and_returns_normalized_account_details(): void
     {
         Http::fake([
-            'https://interswitch.test/api/v1/nameenquiry/banks/accounts/names' => Http::response(['accountName' => 'Ada Okafor'], 200),
+            'https://example.com/api/v1/nameenquiry/banks/accounts/names' => Http::response(['accountName' => 'Ada Okafor'], 200),
         ]);
         $provider = new ApiProvider([
-            'identifier' => 'interswitch', 'base_url' => 'https://interswitch.test/api/v1', 'timeout_seconds' => 10,
+            'identifier' => 'interswitch', 'base_url' => 'https://example.com/api/v1', 'timeout_seconds' => 10,
             'credentials' => ['client_id' => 'client-123', 'secret_key' => 'secret-456', 'terminal_id' => 'terminal-789'],
         ]);
 
-        $result = $this->adapter()->execute($provider, 'account_verification', ['bank_code' => '044', 'account_number' => '0123456789']);
+        $result = (new RestJsonProviderAdapter(new ProviderUrlGuard()))->execute($provider, 'account_verification', ['bank_code' => '044', 'account_number' => '0123456789']);
 
         $this->assertTrue($result->accepted);
         $this->assertSame('ACCEPTED', $result->status);
@@ -35,7 +28,7 @@ class InterswitchAccountVerificationTest extends TestCase
         Http::assertSent(function ($request): bool {
             $headers = $request->headers();
             return $request->method() === 'GET'
-                && $request->url() === 'https://interswitch.test/api/v1/nameenquiry/banks/accounts/names'
+                && $request->url() === 'https://example.com/api/v1/nameenquiry/banks/accounts/names'
                 && ($headers['Authorization'][0] ?? '') === 'InterswitchAuth ' . base64_encode('client-123')
                 && ($headers['bankCode'][0] ?? '') === '044'
                 && ($headers['accountId'][0] ?? '') === '0123456789'
@@ -47,8 +40,8 @@ class InterswitchAccountVerificationTest extends TestCase
     public function test_it_fails_closed_when_required_credentials_or_account_fields_are_missing(): void
     {
         Http::fake();
-        $provider = new ApiProvider(['identifier' => 'interswitch', 'base_url' => 'https://interswitch.test/api/v1', 'credentials' => ['client_id' => 'client-123']]);
-        $result = $this->adapter()->execute($provider, 'account_verification', ['bank_code' => '044', 'account_number' => '0123456789']);
+        $provider = new ApiProvider(['identifier' => 'interswitch', 'base_url' => 'https://example.com/api/v1', 'credentials' => ['client_id' => 'client-123']]);
+        $result = (new RestJsonProviderAdapter(new ProviderUrlGuard()))->execute($provider, 'account_verification', ['bank_code' => '044', 'account_number' => '0123456789']);
         $this->assertFalse($result->accepted);
         $this->assertSame('FAILED', $result->status);
         Http::assertNothingSent();
@@ -56,9 +49,9 @@ class InterswitchAccountVerificationTest extends TestCase
 
     public function test_server_errors_remain_unknown_instead_of_being_treated_as_verification(): void
     {
-        Http::fake(['https://interswitch.test/api/v1/nameenquiry/banks/accounts/names' => Http::response(['message' => 'temporarily unavailable'], 503)]);
-        $provider = new ApiProvider(['identifier' => 'interswitch', 'base_url' => 'https://interswitch.test/api/v1', 'credentials' => ['client_id' => 'client-123', 'secret_key' => 'secret-456', 'terminal_id' => 'terminal-789']]);
-        $result = $this->adapter()->execute($provider, 'account_verification', ['bank_code' => '044', 'account_number' => '0123456789']);
+        Http::fake(['https://example.com/api/v1/nameenquiry/banks/accounts/names' => Http::response(['message' => 'temporarily unavailable'], 503)]);
+        $provider = new ApiProvider(['identifier' => 'interswitch', 'base_url' => 'https://example.com/api/v1', 'credentials' => ['client_id' => 'client-123', 'secret_key' => 'secret-456', 'terminal_id' => 'terminal-789']]);
+        $result = (new RestJsonProviderAdapter(new ProviderUrlGuard()))->execute($provider, 'account_verification', ['bank_code' => '044', 'account_number' => '0123456789']);
         $this->assertFalse($result->accepted);
         $this->assertSame('UNKNOWN', $result->status);
     }
