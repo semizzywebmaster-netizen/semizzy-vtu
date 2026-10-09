@@ -58,9 +58,9 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
     return cookie ? decodeURIComponent(cookie.slice('XSRF-TOKEN='.length)) : '';
   };
 
-  const requestJson = async (url: string, data: Record<string, unknown> = {}) => {
+  const requestJson = async (url: string, data: Record<string, unknown> = {}, method: 'POST' | 'PATCH' = 'POST') => {
     const response = await fetch(url, {
-      method: 'POST',
+      method,
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
@@ -193,6 +193,42 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
     }
   };
 
+  const toggleProductMapping = async (row: CatalogueRow) => {
+    if (!row.product_mapping) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await requestJson(\`/admin/providers/\${provider.id}/mappings/\${row.product_mapping.id}\`, {
+        enabled: !row.product_mapping.enabled,
+      }, 'PATCH');
+      setMessage(result.message || (row.product_mapping.enabled ? 'Product mapping disabled.' : 'Product mapping activated.'));
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Product mapping could not be updated.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleServiceRoute = async (row: CatalogueRow) => {
+    if (!row.platform_mapping) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await requestJson(\`/admin/providers/\${provider.id}/service-mappings/\${row.platform_mapping.id}\`, {
+        enabled: !row.platform_mapping.enabled,
+      }, 'PATCH');
+      setMessage(result.message || (row.platform_mapping.enabled ? 'Service route disabled.' : 'Service route enabled.'));
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Service route could not be updated.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
       <Head title={`${provider.display_name} — Services & Prices`} />
@@ -272,6 +308,9 @@ export default function ProviderCatalogueManager({ provider, platformServices, c
                         </select>
                         <button type="button" disabled={!canMapProducts || busy || !row.approved || !row.imported || !(rowTargetServices[row.provider_service_id] || platformServiceId)} onClick={() => void mapRowToMyServices(row)} className="w-full rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50">{!canMapProducts ? 'Catalogue permission required' : row.approved && row.imported ? 'Map as Draft' : 'Approve & import first'}</button>
                         <p className="text-[11px] leading-4 text-slate-500">Creates a disabled draft mapping only. It never publishes or enables routing.</p>
+                        {row.product_mapping && <button type="button" disabled={!canMapProducts || busy} onClick={() => void toggleProductMapping(row)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">{row.product_mapping.enabled ? 'Disable product mapping' : 'Activate product mapping'} · {row.product_mapping.mapping_status}</button>}
+                        {row.platform_mapping && <button type="button" disabled={!canMapProducts || busy} onClick={() => void toggleServiceRoute(row)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">{row.platform_mapping.enabled ? 'Disable service route' : 'Enable service route'}</button>}
+                        {row.platform_mapping && !row.platform_mapping.capabilities.includes('transaction_initiation') && <p className="text-[11px] leading-4 text-amber-700">Configure transaction-initiation capability in provider settings before enabling this route.</p>}
                       </div>
                     </td>
                   </tr>)}
