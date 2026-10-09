@@ -400,11 +400,10 @@ final class ProviderPresetRegistry
                 'official_website'=>'https://www.interswitchgroup.com/',
                 'auth_type'=>'custom',
                 'service_categories'=>['verification'],
-                'capabilities'=>['account_verification','identity_verification'],
+                'capabilities'=>['account_verification'],
                 'endpoints'=>[],'api_version'=>'v1',
                 'mappings'=>[
                     ['service_key'=>'account-verification','provider_service_id'=>'nameenquiry/banks/accounts/names','capabilities'=>['account_verification']],
-                    ['service_key'=>'kyc-verification','provider_service_id'=>'kyc-identity-verification','capabilities'=>['identity_verification']],
                 ],
                 'priority'=>32,
             ],

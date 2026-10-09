@@ -16,11 +16,15 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
     public function supports(string $operation): bool
     {
-        return in_array($operation, ['health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories','transaction_initiation','transaction_status','refund','reversal','sms_send','sms_status','whatsapp_send','social_account_purchase','foreign_number_purchase','foreign_number_status','foreign_number_sms','number_reservation','number_release','kyc_verification','network_lookup'], true);
+        return in_array($operation, ['account_verification','health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories','transaction_initiation','transaction_status','refund','reversal','sms_send','sms_status','whatsapp_send','social_account_purchase','foreign_number_purchase','foreign_number_status','foreign_number_sms','number_reservation','number_release','kyc_verification','network_lookup'], true);
     }
 
     public function execute(ApiProvider $provider, string $operation, array $payload = [], ?string $idempotencyKey = null): ProviderResult
     {
+        if ($provider->identifier === 'interswitch' && $operation === 'account_verification') {
+            return $this->executeInterswitchAccountVerification($provider, $payload);
+        }
+
         if (!$this->supports($operation)) {
             throw new RuntimeException("Unsupported REST operation: {$operation}");
         }
@@ -138,6 +142,64 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 retryable: false,
                 duplicateRisk: $operation === 'transaction_initiation'
             );
+        }
+    }
+
+    /**
+     * Interswitch's Nigerian account-name enquiry uses per-request signed auth,
+     * not a static bearer token. Keep this read-only operation provider-specific.
+     */
+    private function executeInterswitchAccountVerification(ApiProvider $provider, array $payload): ProviderResult
+    {
+        $credentials = (array) ($provider->credentials ?? []);
+        $clientId = (string) ($credentials['client_id'] ?? $credentials['clientId'] ?? '');
+        $secretKey = (string) ($credentials['secret_key'] ?? $credentials['secretKey'] ?? '');
+        $terminalId = (string) ($credentials['terminal_id'] ?? $credentials['terminalId'] ?? '');
+        $bankCode = (string) ($payload['bank_code'] ?? $payload['bankCode'] ?? '');
+        $accountNumber = (string) ($payload['account_number'] ?? $payload['accountId'] ?? '');
+
+        if ($clientId === '' || $secretKey === '' || $terminalId === '' || $bankCode === '' || $accountNumber === '') {
+            return new ProviderResult(false, 'FAILED', message: 'Interswitch account verification configuration or input is incomplete.', providerId: $provider->id);
+        }
+
+        $url = rtrim((string) $provider->base_url, '/') . '/nameenquiry/banks/accounts/names';
+
+        try {
+            $this->guard->validate($url);
+            $timestamp = (string) time();
+            $nonce = bin2hex(random_bytes(16));
+            $signatureSource = 'GET&' . urlencode($url) . '&' . $timestamp . '&' . $nonce . '&' . $clientId . '&' . $secretKey;
+            $signature = base64_encode(sha1($signatureSource, true));
+
+            $response = Http::acceptJson()
+                ->withOptions(['allow_redirects' => false])
+                ->timeout(max(1, (int) ($provider->timeout_seconds ?: 15)))
+                ->withHeaders([
+                    'Authorization' => 'InterswitchAuth ' . base64_encode($clientId),
+                    'Content-Type' => 'application/json',
+                    'Signature' => $signature,
+                    'Timestamp' => $timestamp,
+                    'Nonce' => $nonce,
+                    'SignatureMethod' => 'SHA1',
+                    'TerminalID' => $terminalId,
+                    'bankCode' => $bankCode,
+                    'accountId' => $accountNumber,
+                ])->get($url);
+
+            $body = $response->json();
+            if ($response->successful() && is_array($body) && filled($body['accountName'] ?? null)) {
+                return new ProviderResult(true, 'ACCEPTED', data: [
+                    'account_name' => (string) $body['accountName'],
+                    'bank_code' => $bankCode,
+                    'account_number' => $accountNumber,
+                ], message: 'Bank account name resolved.', providerId: $provider->id);
+            }
+
+            $status = $response->status();
+            $uncertain = $status === 408 || $status === 429 || $status >= 500;
+            return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'Interswitch could not verify the supplied bank account.', retryable: false, providerId: $provider->id);
+        } catch (\\Throwable) {
+            return new ProviderResult(false, 'UNKNOWN', message: 'Interswitch verification request failed; check provider status before retrying.', retryable: false, providerId: $provider->id);
         }
     }
 
