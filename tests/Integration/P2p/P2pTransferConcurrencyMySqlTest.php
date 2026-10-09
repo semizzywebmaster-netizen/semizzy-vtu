@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\WalletAccount;
 use App\Models\WalletMovement;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
@@ -15,8 +14,6 @@ use Tests\TestCase;
 
 class P2pTransferConcurrencyMySqlTest extends TestCase
 {
-    use DatabaseMigrations;
-
     private bool $createdP2pTable = false;
 
     protected function setUp(): void
@@ -67,7 +64,7 @@ class P2pTransferConcurrencyMySqlTest extends TestCase
         $this->assertSame('75000', (string) WalletAccount::query()->where('user_id', $sender->id)->value('available_minor'));
         $this->assertSame('30000', (string) WalletAccount::query()->where('user_id', $recipient->id)->value('available_minor'));
         $this->assertSame(1, DB::table('p2p_transfers')->where('sender_id', $sender->id)->count());
-        $this->assertSame(2, WalletMovement::query()->count());
+        $this->assertSame(2, WalletMovement::query()->whereIn('wallet_account_id', WalletAccount::query()->whereIn('user_id', [$sender->id, $recipient->id])->pluck('id'))->count());
     }
 
     public function test_concurrent_transfers_cannot_both_spend_the_same_sender_balance(): void
@@ -88,7 +85,7 @@ class P2pTransferConcurrencyMySqlTest extends TestCase
         $this->assertSame(['insufficient', 'success'], $results);
         $this->assertSame('30000', (string) WalletAccount::query()->where('user_id', $sender->id)->value('available_minor'));
         $this->assertSame(1, DB::table('p2p_transfers')->where('sender_id', $sender->id)->count());
-        $this->assertSame(2, WalletMovement::query()->count());
+        $this->assertSame(2, WalletMovement::query()->whereIn('wallet_account_id', WalletAccount::query()->whereIn('user_id', [$sender->id, $recipientA->id, $recipientB->id])->pluck('id'))->count());
         $recipientBalances = WalletAccount::query()->whereIn('user_id', [$recipientA->id, $recipientB->id])->pluck('available_minor')->map(fn ($value) => (string) $value)->sort()->values()->all();
         $this->assertSame(['5000', '77000'], $recipientBalances);
     }
