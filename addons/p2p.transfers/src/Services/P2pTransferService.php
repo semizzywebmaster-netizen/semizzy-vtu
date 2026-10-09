@@ -144,7 +144,16 @@ final class P2pTransferService
         } catch (QueryException $e) {
             if (str_contains(strtolower($e->getMessage()), 'unique') || str_contains(strtolower($e->getMessage()), 'duplicate')) {
                 $existing = P2pTransfer::where('sender_id', $senderId)->where('idempotency_key', $idempotencyKey)->first();
-                if ($existing && (string) $existing->amount_minor === $amountMinor) return $existing;
+                if ($existing) {
+                    if ((string) $existing->amount_minor !== $amountMinor || (int) $existing->recipient_id !== (int) User::query()->where(function ($q) use ($recipientQuery) {
+                        $q->where('username', trim($recipientQuery))
+                          ->orWhere('email', trim($recipientQuery))
+                          ->orWhere('phone', trim($recipientQuery));
+                    })->value('id')) {
+                        throw new RuntimeException('This idempotency key has already been used for a different transfer.');
+                    }
+                    return $existing;
+                }
             }
             throw $e;
         }
