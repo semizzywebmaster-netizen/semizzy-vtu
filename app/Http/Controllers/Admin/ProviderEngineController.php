@@ -638,7 +638,7 @@ class ProviderEngineController extends Controller
     public function createMapping(Request $request, ApiProvider $provider): JsonResponse
     {
         $data=$request->validate(['provider_service_id'=>'required|integer|exists:provider_services,id','catalogue_product_id'=>'required|integer|exists:service_products,id','priority'=>'nullable|integer|min:1|max:100000']);
-        if(!$provider->providerServices()->whereKey($data['provider_service_id'])->exists()) return response()->json(['message'=>'Provider service does not belong to this provider.'],422);
+        if(!$provider->providerServices()->whereKey($data['provider_service_identifier'])->exists()) return response()->json(['message'=>'Provider service does not belong to this provider.'],422);
         $exists=DB::table('provider_product_mappings_v2')->where('provider_service_id',$data['provider_service_id'])->where('catalogue_product_id',$data['catalogue_product_id'])->exists();
         if($exists) return response()->json(['message'=>'Mapping already exists.'],409);
         DB::table('provider_product_mappings_v2')->insert([
@@ -778,7 +778,7 @@ class ProviderEngineController extends Controller
     {
         $data = $request->validate([
             'service_id' => ['required', 'integer', 'exists:services,id'],
-            'provider_service_id' => ['required', 'string', 'max:120'],
+            'provider_service_identifier' => ['required', 'string', 'max:120'],
             'service_product_id' => ['nullable', 'integer', 'exists:service_products,id'],
         ]);
 
