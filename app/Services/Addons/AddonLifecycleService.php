@@ -266,39 +266,61 @@ class AddonLifecycleService
             throw ValidationException::withMessages(['migrations' => 'Addon migrations contract must be an array.']);
         }
 
+        $addonRoot = realpath(base_path('addons'));
         foreach ($migrations as $migration) {
             if (!is_string($migration) || trim($migration) === '') {
                 throw ValidationException::withMessages(['migrations' => 'Each addon migration entry must be a non-empty string.']);
             }
 
-            $migration = basename($migration);
+            $migration = basename(str_replace('\\\\', '/', trim($migration)));
             if (!str_ends_with(strtolower($migration), '.php')) {
                 $migration .= '.php';
             }
-            if (!preg_match('/^\d{4}_\d{2}_\d{2}_\d{6}_[A-Za-z0-9_]+\.php$/', $migration)) {
+            if (!preg_match('/^\\d{4}_\\d{2}_\\d{2}_\\d{6}_[A-Za-z0-9_]+\\.php$/', $migration)) {
                 throw ValidationException::withMessages(['migrations' => "Invalid addon migration filename [{$migration}]."]);
             }
 
+            $addonMatches = array_merge(
+                glob(base_path('addons/*/database/migrations/'.$migration)) ?: [],
+                glob(base_path('addons/*/*/database/migrations/'.$migration)) ?: [],
+            );
+            $safeMatches = [];
+            foreach ($addonMatches as $candidate) {
+                $real = realpath($candidate);
+                if ($real === false || !is_file($real) || $addonRoot === false || !$this->pathIsWithinRoot($real, $addonRoot)) {
+                    continue;
+                }
+                $safeMatches[$real] = $real;
+            }
+            $safeMatches = array_values($safeMatches);
+
+            if (count($safeMatches) > 1) {
+                throw new \\RuntimeException("Ambiguous addon migration filename: {$migration}");
+            }
+
             $rootPath = base_path('database/migrations/'.$migration);
-            $addonMatches = glob(base_path('addons/*/database/migrations/'.$migration)) ?: [];
-            if (count($addonMatches) > 1) {
-                throw new \RuntimeException("Ambiguous addon migration filename: {$migration}");
+            $path = $safeMatches[0] ?? (is_file($rootPath) ? realpath($rootPath) : false);
+            if ($path === false || $path === null || !is_file($path)) {
+                throw new \\RuntimeException("Addon migration file not found: {$migration}");
             }
-            $path = $addonMatches[0] ?? $rootPath;
-            if (!is_file($path)) {
-                throw new \RuntimeException("Addon migration file not found: {$migration}");
-            }
+
             $arguments = ['--path' => $path, '--force' => true];
-            if ($path !== $rootPath) {
+            if (!str_starts_with($path, rtrim(base_path('database/migrations'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)) {
                 $arguments['--realpath'] = true;
             }
             $exit = Artisan::call('migrate', $arguments);
             if ($exit !== 0) {
-                throw new \RuntimeException("Addon migration failed: {$migration}");
+                throw new \\RuntimeException("Addon migration failed: {$migration}");
             }
 
             $this->recordStep($addon, 'migration_'.sha1($migration), "Migration applied: {$migration}");
         }
+    }
+
+    private function pathIsWithinRoot(string $path, string $root): bool
+    {
+        $root = rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        return str_starts_with($path, $root);
     }
 
     private function runInstallerHook(Addon $addon): void
