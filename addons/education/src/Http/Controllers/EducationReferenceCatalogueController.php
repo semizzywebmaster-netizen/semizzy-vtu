@@ -16,7 +16,7 @@ final class EducationReferenceCatalogueController extends Controller {
    'entries'=>$q->orderBy('kind')->orderBy('name')->paginate(40)->withQueryString(),
    'filters'=>$request->only(['kind','category','q']),
    'categories'=>DB::table('education_reference_categories')->where('is_active',true)->orderBy('sort_order')->orderBy('name')->get(),
-   'categoryOptions'=>DB::table('education_reference_catalogue')->whereNotNull('category')->distinct()->orderBy('category')->pluck('category'),
+   'categoryOptions'=>DB::table('education_reference_catalogue')->where('kind','school')->whereNotNull('category')->distinct()->orderBy('category')->pluck('category'),
   ]);
  }
  public function store(Request $request) {
