@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\\Database\\Schema\\Blueprint;
+use Illuminate\\Support\\Facades\\Schema;
 
 return new class extends Migration {
     public function up(): void
@@ -34,8 +34,9 @@ return new class extends Migration {
                 $t->json('endpoint_map')->nullable();
                 $t->json('capabilities')->nullable();
                 $t->timestamps();
-                $t->unique(['cac_service_product_id', 'api_provider_id']);
-                $t->index(['cac_service_product_id', 'enabled', 'priority']);
+                // Keep the explicit name under MySQL's 64-character identifier limit.
+                $t->unique(['cac_service_product_id', 'api_provider_id'], 'cac_route_product_provider_uq');
+                $t->index(['cac_service_product_id', 'enabled', 'priority'], 'cac_route_product_state_idx');
             });
         }
     }
