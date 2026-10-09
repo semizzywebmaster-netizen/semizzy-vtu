@@ -64,6 +64,25 @@ class WalletFinancialRegressionTest extends TestCase
         $this->assertSame('approved adjustment', $movement->metadata['note']);
     }
 
+    public function test_admin_debit_idempotency_key_prevents_duplicate_debits_and_rejects_changed_amount(): void
+    {
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'ADMIN']);
+        $wallet = $this->wallet($user, '10000');
+        $service = app(AdminWalletDebitService::class);
+
+        $first = $service->debit($user, '25.00', $admin, 'approved adjustment', 'admin-debit-request-1');
+        $retry = $service->debit($user, '25.00', $admin, 'approved adjustment', 'admin-debit-request-1');
+
+        $this->assertSame('7500', (string) $wallet->fresh()->available_minor);
+        $this->assertDatabaseCount('wallet_movements', 1);
+        $this->assertSame((string) $first->available_minor, (string) $retry->available_minor);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('This idempotency key has already been used for a different wallet debit.');
+        $service->debit($user, '30.00', $admin, 'changed amount', 'admin-debit-request-1');
+    }
+
     private function wallet(User $user, string $availableMinor): WalletAccount
     {
         return WalletAccount::create([
