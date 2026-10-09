@@ -204,7 +204,7 @@ final class ProviderPlatformAdminController extends Controller
     {
         $filters = $request->validate([
             'provider_id' => ['nullable', 'integer', 'min:1'],
-            'status' => ['nullable', 'string', 'in:discovered,reviewed,approved,blocked'],
+            'status' => ['nullable', 'string', 'in:awaiting_approval,reviewed,approved,blocked,imported'],
             'search' => ['nullable', 'string', 'max:120'],
         ]);
 
