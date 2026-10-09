@@ -122,3 +122,40 @@ One row per service/provider pair, with at least:
 - A provider preset cannot bypass verification, credential masking, permission checks, audit logging or safe routing.
 - Tests and current CI results are attached to each implementation phase.
 - The Developer API Platform is started only after the outbound provider coverage and Core service contract have been reviewed; it must expose approved SEMIZZY ONE services, not vendor credentials or raw provider endpoints.
+
+
+## Admin usability and service-addon integration (required)
+
+The platform must be easy for a non-developer administrator to operate. Keep one Core provider engine and registry, but expose provider management contextually inside the relevant service addon.
+
+### Admin experience
+- Each service addon gets a clearly named **API Providers** section/tab, for example VTU → Airtime Providers, Electricity → Electricity Providers, Education → Exam/Pin Providers, Messaging → SMS/OTP Providers, Payments → Collection/Virtual Accounts/Transfers, and KYC → Identity Verification.
+- Each contextual list shows only providers with a declared, researched capability for that exact service/operation. Clearly label unsupported or pending capabilities; never imply that a provider supports every service in its broad category.
+- Provide simple actions: **Add Provider**, **Connect**, **Test Connection**, **Sync Services & Prices**, **Enable**, **Pause**, **Disable**, and **View Diagnostics**. Use guided setup, plain-language errors and a visible setup checklist.
+- Show provider cards/rows with provider name, supported services/products, connection state, verification state, last successful test, last catalogue sync, price source/time, latency/health where measured, and a clear next action.
+- Offer a global **API Providers** centre for cross-service search, provider health, coverage gaps and credentials/operations administration. This is an alternative view of the same registry, not a separate storage system.
+- When adding a provider from a service addon, preselect that service and only show compatible provider presets. Admin may still discover/import a provider for additional services later through an explicit capability assignment flow.
+- Avoid ambiguous labels such as simply “Provider API”. Use the actual service and operation names in navigation, filters and setup instructions.
+
+### Shared engine and addon contract
+- Core owns provider identity, encrypted credentials, endpoints, mappings, catalogue products/prices, health, routing, operation logs, verification states and audit trail.
+- Addons declare their service/operation capability keys and consume the Core provider engine via stable contracts. An addon must not create its own duplicate provider registry, credential store, health system or routing engine.
+- Provider configuration is shared by canonical provider identity. If one vendor serves multiple services, it can be connected once where credentials are shared, while service-specific mappings, capability checks and verification evidence remain separate. If vendor credentials differ by product/account/environment, store separate named connections securely.
+- A provider added from one addon must appear in other applicable addon views only after its relevant capability has been assigned and reviewed. Do not automatically expose unrelated capabilities.
+- Provider lifecycle and service-addon installation/activation must be handled safely: an addon may hide its contextual navigation when inactive, but must not delete shared provider credentials or break other addons that use the same provider.
+
+### Service-specific configuration and imported data
+- Import official service identifiers, product/variation IDs, supported operators/networks/billers, denominations, prices and catalogue sync rules when the provider documents an API or provides a trusted import format.
+- Store mappings per provider + service + product/operation; do not use a single generic ID field where the vendor distinguishes products, billers, networks, denominations, meter types or account operations.
+- Every imported value records source provider, external ID, currency, source price, import/sync timestamp and environment. Preserve a history of changes where price changes affect transaction quoting.
+- Clearly distinguish provider cost, SEMIZZY ONE selling price and profit rule. Use existing Core pricing precedence; never overwrite admin selling prices silently when provider costs sync.
+- If a provider lacks a catalogue endpoint, permit a documented admin import or manual mapping with validation and audit history; never invent service IDs or prices.
+- Keep secrets encrypted and masked; the UI must never show raw tokens after saving. The token is the only required input only when official provider authentication genuinely supports that setup. Clearly list additional required credentials and onboarding actions when necessary.
+
+### Usability acceptance checks
+- An admin can navigate from a service to its relevant providers in no more than two clicks.
+- The provider list is prefiltered to the selected service and operation.
+- A new connection has a guided checklist for required credentials, account approvals, IP allowlisting, sandbox test and production verification.
+- Failed tests explain the likely issue without exposing tokens, private keys, customer data or full sensitive payloads.
+- Sync history shows what was added/updated/removed and requires safe handling of products no longer returned by a provider.
+- Service addon pages and the global provider centre display consistent state because both read/write the same Core records.
