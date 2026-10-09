@@ -24,7 +24,7 @@ return [
   ['key'=>'number_fulfillment_mode','type'=>'string','default'=>'api_or_manual'],
   ['key'=>'sms_polling_enabled','type'=>'boolean','default'=>true],
  ],
- 'migrations'=>['2026_10_07_003000_create_social_services_tables.php'],
+ 'migrations'=>['2026_10_07_003000_create_social_services_tables.php','2026_10_09_000001_add_social_order_payment_fields.php'],
  'web_route_files'=>['addons/social.accounts-verification/routes/web.php','addons/social.accounts-verification/routes/admin.php'],
  'api_route_files'=>['addons/social.accounts-verification/routes/api.php'],
  'routes'=>['/social-services','/admin/social-services'],
