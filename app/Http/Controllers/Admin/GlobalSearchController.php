@@ -24,7 +24,7 @@ class GlobalSearchController extends Controller
         ]);
 
         $term = trim($data['q']);
-        $like = '%' . addcslashes($term, '%_\\\\') . '%';
+        $like = '%' . addcslashes($term, '\\%_') . '%';
         $user = $request->user();
         $results = [];
 
