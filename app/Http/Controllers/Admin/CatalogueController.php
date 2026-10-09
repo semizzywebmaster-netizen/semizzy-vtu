@@ -21,10 +21,12 @@ use Inertia\Response;
 
 class CatalogueController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $filters = $request->validate(['search' => ['nullable', 'string', 'max:120']]);
         return Inertia::render('Admin/Catalogue', [
             'categories' => ServiceCategory::query()->with(['services.products'])->orderBy('sort_order')->get(),
+            'search' => (string) ($filters['search'] ?? ''),
         ]);
     }
 
