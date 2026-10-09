@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ServiceProduct extends Model
 {
- protected $fillable=['service_id','key','name','provider_product_id','provider_cost','currency','metadata','enabled'];
- protected function casts():array{return ['provider_cost'=>'decimal:6','metadata'=>'array','enabled'=>'boolean'];}
+ protected $fillable=['service_id','key','name','provider_product_id','provider_cost','currency','metadata','enabled','publication_status','published_at','published_by','publication_blockers'];
+ protected function casts():array{return ['provider_cost'=>'decimal:6','metadata'=>'array','enabled'=>'boolean','published_at'=>'datetime','publication_blockers'=>'array'];}
  public function service():BelongsTo{return $this->belongsTo(Service::class);}
  public function providerProducts():HasMany{return $this->hasMany(ProviderServiceProduct::class);}
 }
