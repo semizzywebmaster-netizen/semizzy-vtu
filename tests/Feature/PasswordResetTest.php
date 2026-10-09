@@ -30,6 +30,7 @@ class PasswordResetTest extends TestCase
 
         $this->post('/forgot-password/otp', [
             'email' => fake()->safeEmail(),
+            'otp_channel' => 'email',
         ])->assertSessionHas('otp_sent');
     }
 
