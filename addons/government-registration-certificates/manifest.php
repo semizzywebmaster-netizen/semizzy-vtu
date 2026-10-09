@@ -3,6 +3,7 @@ return [
  'identifier'=>'government.registration-certificates',
  'name'=>'Government Registration & Certificates',
  'version'=>'0.1.0',
+ 'autoload_namespace' => 'Semizzy\\Addons\\Government',
  'description'=>'Admin-controlled government registration, application and certificate services with API and manual fulfillment.',
  'compatibility'=>'>=2.0.0',
  'dependencies'=>[],
