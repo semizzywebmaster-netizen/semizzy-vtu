@@ -46,7 +46,8 @@
       "Semizzy\\Addons\\MailerSmtp\\": "addons/mailer-smtp/src/",
       "Semizzy\\Addons\\TravelTickets\\": "addons/travel-tickets/src/",
       "Semizzy\\Addons\\CryptoPayments\\": "addons/crypto-payments.gateway/src/",
-      "Semizzy\\Addons\\Social\\": "addons/social.accounts-verification/src/"
+      "Semizzy\\Addons\\Social\\": "addons/social.accounts-verification/src/",
+      "Semizzy\\Addons\\SchoolAdmission\\": "addons/education/school-admission/src/"
     }
   },
   "autoload-dev": {
