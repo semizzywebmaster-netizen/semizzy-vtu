@@ -655,10 +655,22 @@ class ProviderEngineController extends Controller
         $row=DB::table('provider_product_mappings_v2')->where('id',$mapping)->where('api_provider_id',$provider->id)->first();
         if(!$row) return response()->json(['message'=>'Provider mapping not found.'],404);
         if($data['enabled']){
+            if (!$provider->enabled || $provider->paused || $provider->verification_status !== 'live_verified' || $provider->integration_status !== 'live_verified') {
+                return response()->json(['message'=>'Product mapping cannot be activated until the provider is enabled, unpaused and live-verified.'],422);
+            }
             $service=ProviderService::query()->find($row->provider_service_id);
             $import=ProviderServiceImport::where('api_provider_id',$provider->id)->where('provider_service_id',$row->provider_service_id)->first();
             if(!$service || $service->status==='removed' || !$import || !$import->approved || !$import->imported){
                 return response()->json(['message'=>'Mapping cannot be activated until the provider service is approved and imported.'],422);
+            }
+            $sourceMapping = ProviderServiceProduct::query()
+                ->where('api_provider_id', $provider->id)
+                ->where('provider_product_id', $service->external_service_id)
+                ->where('service_product_id', $row->catalogue_product_id)
+                ->where('enabled', true)
+                ->exists();
+            if (! $sourceMapping) {
+                return response()->json(['message'=>'A valid provider source-cost mapping to this draft product is required before activating the product-level mapping.'],422);
             }
             DB::table('provider_product_mappings_v2')->where('id',$mapping)->update(['enabled'=>true,'mapping_status'=>'active','updated_at'=>now()]);
         } else {
@@ -1042,7 +1054,7 @@ class ProviderEngineController extends Controller
                 'service_id' => $result['service_id'],
                 'provider_service_id' => $mapping->provider_service_id,
             ], $request);
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             report($exception);
         }
 
