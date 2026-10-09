@@ -744,6 +744,7 @@ class ProviderEngineController extends Controller
                     'id' => $platformMapping->id,
                     'service_id' => $platformMapping->service_id,
                     'service_key' => $platformMapping->service_key,
+                    'provider_service_id' => $platformMapping->provider_service_id,
                     'enabled' => (bool) $platformMapping->enabled,
                     'capabilities' => $platformMapping->capabilities ?? [],
                 ] : null,
