@@ -79,7 +79,7 @@ class ProviderCatalogueDraftMappingTest extends TestCase
 
         $response = $this->actingAs($admin)->postJson(
             '/admin/providers/' . $provider->id . '/provider-services/' . $providerService->id . '/map-to-platform',
-            ['service_id' => $service->id, 'provider_service_id' => 'data'],
+            ['service_id' => $service->id, 'provider_service_identifier' => 'data'],
         );
 
         $response->assertOk()
