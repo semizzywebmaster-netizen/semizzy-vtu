@@ -13,7 +13,7 @@ return [
  'navigation'=>[['id'=>'gift-cards','label'=>'Gift Cards','url'=>'/gift-cards','icon'=>'gift','permission'=>'giftcards.view','section'=>'services','order'=>190]],
  'admin_navigation'=>[['id'=>'admin-gift-cards','label'=>'Gift Cards','url'=>'/admin/gift-cards','icon'=>'gift','permission'=>'giftcards.view','section'=>'addons','order'=>200]],
  'settings'=>[['key'=>'enabled','type'=>'boolean','default'=>false],['key'=>'default_currency','type'=>'string','default'=>'NGN'],['key'=>'require_transaction_pin','type'=>'boolean','default'=>true],['key'=>'manual_fulfillment_enabled','type'=>'boolean','default'=>true]],
- 'migrations'=>['2026_10_07_040000_create_gift_cards_tables.php'],
+ 'migrations'=>['2026_10_07_040000_create_gift_cards_tables.php','2026_10_07_041000_harden_gift_card_provider_delivery.php','2026_10_07_042000_create_gift_card_denominations.php'],
  'web_route_files'=>['addons/gift-cards/routes/web.php','addons/gift-cards/routes/admin.php'],'api_route_files'=>['addons/gift-cards/routes/api.php'],
  'routes'=>['/gift-cards','/admin/gift-cards'],'api_routes'=>['/api/v1/gift-cards'],
  'provider_integrations'=>['Core Provider Engine','Core Wallet/Ledger','Core Notifications','Core Audit'],
