@@ -23,5 +23,5 @@ return [
  'api_route_files'=>['addons/marketplace.commerce/routes/api.php'],
  'routes'=>['/marketplace'],'api_routes'=>['/api/v1/marketplace/orders'],
  'provider_integrations'=>[],'provider_capabilities'=>[],'scheduled_tasks'=>[],
- 'events'=>['marketplace.order.created','marketplace.order.paid','marketplace.order.cancelled','marketplace.order.refunded'],
+ 'events'=>['marketplace.order.created','marketplace.order.paid','marketplace.order.cancelled','marketplace.order.refunded','marketplace.dispute.opened','marketplace.dispute.resolved','marketplace.shipment.updated'],
 ];
