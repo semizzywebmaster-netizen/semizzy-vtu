@@ -1,15 +1,15 @@
 <?php
 
-namespace Tests\Feature\Finance;
+namespace Tests\\Feature\\Finance;
 
-use App\Models\User;
-use App\Models\WalletAccount;
-use App\Models\WalletMovement;
-use App\Services\Finance\AdminWalletDebitService;
-use App\Services\Finance\WalletCreditService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\\Models\\User;
+use App\\Models\\WalletAccount;
+use App\\Models\\WalletMovement;
+use App\\Services\\Finance\\AdminWalletDebitService;
+use App\\Services\\Finance\\WalletCreditService;
+use Illuminate\\Foundation\\Testing\\RefreshDatabase;
 use RuntimeException;
-use Tests\TestCase;
+use Tests\\TestCase;
 
 class WalletFinancialRegressionTest extends TestCase
 {
@@ -55,9 +55,11 @@ class WalletFinancialRegressionTest extends TestCase
 
         $this->assertSame('7450', $wallet->fresh()->available_minor);
         $movement = WalletMovement::query()->where('wallet_account_id', $wallet->id)->firstOrFail();
-        $this->assertSame('2550', $movement->amount_minor);
-        $this->assertSame('10000', $movement->available_before_minor);
-        $this->assertSame('7450', $movement->available_after_minor);
+        // SQLite and MySQL may hydrate integer-affinity columns differently; compare
+        // numeric values while preserving the minor-unit assertions.
+        $this->assertEquals(2550, $movement->amount_minor);
+        $this->assertEquals(10000, $movement->available_before_minor);
+        $this->assertEquals(7450, $movement->available_after_minor);
         $this->assertSame('admin_debit', $movement->type);
         $this->assertSame('approved adjustment', $movement->metadata['note']);
     }
