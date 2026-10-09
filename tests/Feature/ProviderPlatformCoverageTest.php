@@ -271,4 +271,49 @@ class ProviderPlatformCoverageTest extends TestCase
         ]);
     }
 
+
+    public function test_provider_catalogue_review_page_shows_only_safe_source_fields_and_review_actions(): void
+    {
+        $admin = \\App\\Models\\User::factory()->create(['role' => 'ADMIN']);
+        $provider = ApiProvider::query()->create([
+            'identifier' => 'catalogue-page-provider',
+            'display_name' => 'Catalogue Page Provider',
+            'environment' => 'sandbox',
+            'verification_status' => 'unverified',
+            'integration_status' => 'draft',
+            'enabled' => false,
+            'paused' => true,
+            'capabilities' => [],
+            'service_categories' => [],
+        ]);
+        ProviderService::query()->create([
+            'api_provider_id' => $provider->id,
+            'external_service_id' => 'PAGE-DISC-001',
+            'external_service_code' => 'PAGE-001',
+            'name' => 'Page Catalogue Entry',
+            'provider_price' => '49.5000',
+            'currency' => 'NGN',
+            'status' => 'discovered',
+            'metadata' => ['source' => 'test-fixture'],
+            'raw_provider_data' => ['secret_like_field' => 'must-not-be-returned'],
+            'last_synced_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->withoutMiddleware()
+            ->get('/admin/provider-platform/catalogue/review?status=awaiting_approval')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/ProviderPlatformCatalogue')
+                ->where('meta.total', 0)
+                ->where('canManage', true)
+                ->where('filters.status', 'awaiting_approval')
+                ->has('providers', 1)
+            );
+
+        $this->withoutMiddleware()
+            ->getJson('/admin/provider-platform/catalogue?status=awaiting_approval')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 0);
+    }
+
 }
