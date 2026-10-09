@@ -59,6 +59,23 @@ class AddonManifestIntegrityTest extends TestCase
                 }
             }
 
+            $declaredMigrations = array_values(array_filter((array) ($manifest['migrations'] ?? []), 'is_string'));
+            foreach (glob(base_path("addons/{$source}/database/migrations/*.php")) ?: [] as $localMigrationPath) {
+                $localMigration = basename($localMigrationPath);
+                if (!in_array($localMigration, $declaredMigrations, true)) {
+                    $errors[] = "{$source}: addon-local migration [{$localMigration}] is not declared in the manifest";
+                }
+            }
+
+            $declaredPermissions = array_fill_keys(array_filter((array) ($manifest['permissions'] ?? []), 'is_string'), true);
+            foreach ((array) ($manifest['role_permissions'] ?? []) as $role => $rolePermissions) {
+                foreach ((array) $rolePermissions as $permission) {
+                    if (!is_string($permission) || !isset($declaredPermissions[$permission])) {
+                        $errors[] = "{$source}: role_permissions entry [{$role}] references undeclared permission [".(is_scalar($permission) ? (string) $permission : 'invalid')."]";
+                    }
+                }
+            }
+
             foreach (['web_route_files', 'api_route_files'] as $routeKey) {
                 foreach ((array) ($manifest[$routeKey] ?? []) as $routeFile) {
                     if (!is_string($routeFile) || $routeFile === '' || !is_file(base_path($routeFile))) {
