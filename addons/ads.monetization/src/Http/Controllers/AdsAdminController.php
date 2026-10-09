@@ -90,3 +90,37 @@ class AdsAdminController
   return response()->json(['success'=>true,'message'=>'Ad placement updated.']);
  }
 }
+
+
+ public function promotions(Request $request): Response
+ {
+  return Inertia::render('Admin/Ads/Promotions', [
+   'promotions'=>DB::table('ad_promotions as p')->leftJoin('users as u','u.id','=','p.advertiser_id')->leftJoin('ad_promotion_packages as ap','ap.id','=','p.package_id')->select('p.*','u.name as advertiser_name','ap.name as package_name')->orderByDesc('p.created_at')->limit(200)->get(),
+   'packages'=>DB::table('ad_promotion_packages')->orderBy('price_minor')->get(),
+  ]);
+ }
+
+ public function createPromotionPackage(Request $request)
+ {
+  $data=$request->validate([
+   'key'=>['required','alpha_dash','max:80','unique:ad_promotion_packages,key'],
+   'name'=>['required','string','max:140'],'description'=>['nullable','string','max:1000'],
+   'duration_days'=>['required','integer','min:1','max:365'],
+   'price_minor'=>['required','integer','min:1','max:1000000000'],
+   'currency'=>['required','in:NGN'],'priority_weight'=>['required','integer','min:1','max:100'],
+   'is_active'=>['required','boolean'],
+  ]);
+  DB::table('ad_promotion_packages')->insert($data+['created_at'=>now(),'updated_at'=>now()]);
+  return response()->json(['success'=>true,'message'=>'Promotion package created.']);
+ }
+
+ public function reviewPromotion(Request $request, int $promotion)
+ {
+  $data=$request->validate(['decision'=>['required',Rule::in(['approve','reject','pause'])],'admin_note'=>['required','string','min:5','max:2000']]);
+  $row=DB::table('ad_promotions')->where('id',$promotion)->first();
+  if(!$row) abort(404);
+  if($data['decision']==='approve' && $row->payment_status!=='paid') return response()->json(['success'=>false,'message'=>'Payment must be confirmed before a boost can be approved.'],422);
+  $status=$data['decision']==='approve'?'approved':($data['decision']==='reject'?'rejected':'paused');
+  DB::table('ad_promotions')->where('id',$promotion)->update(['status'=>$status,'admin_note'=>$data['admin_note'],'reviewed_by'=>$request->user()->id,'reviewed_at'=>now(),'updated_at'=>now()]);
+  return response()->json(['success'=>true,'message'=>'Promotion review saved.']);
+ }
