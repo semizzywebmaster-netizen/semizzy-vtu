@@ -52,13 +52,42 @@ class PaymentRefundSettlementServiceTest extends TestCase
         }
     }
 
-    private function paidFundingPayment(): array
+    public function test_confirmed_provider_refund_with_spent_wallet_requires_manual_reconciliation(): void
+    {
+        [$payment, $wallet] = $this->paidFundingPayment('100');
+
+        try {
+            app(PaymentRefundSettlementService::class)->settleVerified(
+                $payment,
+                'provider-refund-spent-wallet',
+                'success',
+                'Provider confirmed refund after wallet funds were spent'
+            );
+            $this->fail('A refund must not overdraw the wallet when credited funds were already spent.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame(
+                'Provider refund is confirmed, but wallet reversal could not be completed safely; manual reconciliation is required.',
+                $exception->getMessage()
+            );
+        }
+
+        $freshPayment = $payment->fresh();
+        $this->assertSame('paid', $freshPayment->status);
+        $this->assertNull($freshPayment->refunded_at);
+        $this->assertSame('manual_review_required', $freshPayment->metadata['refund_accounting_status']);
+        $this->assertTrue($freshPayment->metadata['refund_reconciliation_required']);
+        $this->assertSame('provider-refund-spent-wallet', $freshPayment->metadata['refund_provider_reference']);
+        $this->assertSame('100', (string) $wallet->fresh()->available_minor);
+        $this->assertDatabaseCount('wallet_movements', 1);
+    }
+
+    private function paidFundingPayment(string $currentAvailableMinor = '500'): array
     {
         $user = User::factory()->create();
         $wallet = WalletAccount::create([
             'user_id' => $user->id,
             'currency' => 'NGN',
-            'available_minor' => '500',
+            'available_minor' => $currentAvailableMinor,
             'held_minor' => '0',
             'status' => 'active',
         ]);
