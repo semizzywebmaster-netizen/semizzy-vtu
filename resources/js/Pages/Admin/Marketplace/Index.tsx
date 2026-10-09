@@ -7,12 +7,14 @@ type ReconciliationItem = { order_id:number; reference:string; status:string; cu
 type Reconciliation = { checked_orders:number; issue_count:number; items:ReconciliationItem[] };
 type Dispute = { id:number; order_id:number; reason:string; description:string; dispute_status:string; resolution?:string|null; resolution_note?:string|null; created_at:string; reference:string; currency:string; total_minor:string; buyer_name:string; seller_name:string };
 type Escrow = { id:number; order_id:number; reference:string; currency:string; gross_minor:string; seller_net_minor:string; platform_profit_minor:string; escrow_status:string; buyer_confirmed_at?:string|null; released_at?:string|null; admin_note?:string|null; buyer_name:string; seller_name:string };
-type Props = { products:{data:any[]}; orders:{data:any[]}; categories:Category[]; earnings:{data:Earning[]}; reconciliation:Reconciliation; escrows:Escrow[]; disputes:Dispute[] };
+type EscrowPolicy = {physical_dispatch_hours:number;service_delivery_hours:number;buyer_confirmation_hours:number;reminders_enabled:boolean;auto_release_enabled:boolean;auto_release_grace_hours:number;max_dispute_open_days:number};
+type Props = { products:{data:any[]}; orders:{data:any[]}; categories:Category[]; earnings:{data:Earning[]}; reconciliation:Reconciliation; escrows:Escrow[]; disputes:Dispute[]; escrowPolicies:EscrowPolicy|null };
 
-export default function Index({products,orders,categories,earnings,reconciliation,escrows,disputes}:Props){
+export default function Index({products,orders,categories,earnings,reconciliation,escrows,disputes,escrowPolicies}:Props){
  const [items,setItems]=useState(categories);
  const [saving,setSaving]=useState<number|null>(null);
  const [message,setMessage]=useState('');
+ const [policy,setPolicy]=useState<EscrowPolicy>(escrowPolicies||{physical_dispatch_hours:72,service_delivery_hours:168,buyer_confirmation_hours:72,reminders_enabled:true,auto_release_enabled:false,auto_release_grace_hours:48,max_dispute_open_days:14});
  const releaseEscrow=async(orderId:number)=>{
   if(!window.confirm('Release this order escrow to the seller? This action credits the seller wallet.')) return;
   setSaving(orderId);setMessage('');
@@ -36,6 +38,16 @@ export default function Index({products,orders,categories,earnings,reconciliatio
   }catch{setMessage('Unable to process dispute decision. Please retry.');}
   finally{setSaving(null);}
  };
+ const savePolicy=async()=>{
+  setMessage('');setSaving(-1);
+  const xs=document.cookie.split('; ').find(v=>v.startsWith('XSRF-TOKEN='));
+  const token=xs?decodeURIComponent(xs.split('=').slice(1).join('=')):'';
+  try{
+   const res=await fetch('/admin/marketplace/escrow-policies',{method:'PATCH',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json','X-XSRF-TOKEN':token},body:JSON.stringify(policy)});
+   const data=await res.json();setMessage(data.message||'Escrow policy saved');
+  }catch{setMessage('Unable to save escrow policy. Please retry.');}
+  finally{setSaving(null);}
+ };
  const update=(id:number,key:'percent'|'fixed',value:string)=>{
   setItems(items.map(c=>c.id===id?(key==='percent'?{...c,sale_profit_bps:Math.max(0,Math.min(10000,Number(value)*100))}:{...c,sale_profit_fixed_minor:value}):c));
  };
@@ -53,6 +65,18 @@ export default function Index({products,orders,categories,earnings,reconciliatio
   <div className="grid gap-4 md:grid-cols-3"><div className="rounded-xl border p-4">Products <b>{products.data.length}</b></div><div className="rounded-xl border p-4">Recent orders <b>{orders.data.length}</b></div><div className="rounded-xl border p-4">Categories <b>{categories.length}</b></div></div>
   <section className="rounded-xl border bg-white p-5"><h2 className="text-lg font-bold">Category sales profit</h2><p className="mt-1 text-sm text-slate-500">Admin controls the percentage and optional fixed amount deducted from each sale. Values are category-specific.</p>{message&&<div className="mt-3 rounded-lg bg-slate-100 p-3 text-sm">{message}</div>}
    <div className="mt-4 space-y-3">{items.map(c=><div key={c.id} className="grid gap-3 rounded-lg border p-4 md:grid-cols-[1fr_180px_220px_100px] md:items-end"><div><div className="font-semibold">{c.name}</div><div className="text-xs text-slate-500">{c.parent?.name||'Top-level category'}</div></div><label className="text-sm">Percentage<input type="number" min="0" max="100" step="0.01" value={(c.sale_profit_bps/100).toString()} onChange={e=>update(c.id,'percent',e.target.value)} className="mt-1 min-h-10 w-full rounded-lg border px-3"/></label><label className="text-sm">Fixed amount (minor)<input type="number" min="0" step="1" value={c.sale_profit_fixed_minor||'0'} onChange={e=>update(c.id,'fixed',e.target.value)} className="mt-1 min-h-10 w-full rounded-lg border px-3"/></label><button disabled={saving===c.id} onClick={()=>save(c)} className="min-h-10 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white disabled:opacity-50">{saving===c.id?'Saving':'Save'}</button></div>)}</div>
+  </section>
+  <section className="space-y-4 rounded-xl border p-5">
+   <div><h2 className="text-lg font-bold">Escrow policies & deadlines</h2><p className="mt-1 text-sm text-slate-500">Configure expected dispatch, service delivery, buyer confirmation and dispute windows. Automatic release is disabled by default; enabling the switch alone does not release funds until a dispute-aware scheduled processor is deployed.</p></div>
+   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <label className="text-sm">Physical dispatch deadline (hours)<input type="number" min="1" max="720" value={policy.physical_dispatch_hours} onChange={e=>setPolicy({...policy,physical_dispatch_hours:Number(e.target.value)})} className="mt-1 min-h-10 w-full rounded-lg border px-3"/></label>
+    <label className="text-sm">Service delivery deadline (hours)<input type="number" min="1" max="2160" value={policy.service_delivery_hours} onChange={e=>setPolicy({...policy,service_delivery_hours:Number(e.target.value)})} className="mt-1 min-h-10 w-full rounded-lg border px-3"/></label>
+    <label className="text-sm">Buyer confirmation window (hours)<input type="number" min="1" max="720" value={policy.buyer_confirmation_hours} onChange={e=>setPolicy({...policy,buyer_confirmation_hours:Number(e.target.value)})} className="mt-1 min-h-10 w-full rounded-lg border px-3"/></label>
+    <label className="text-sm">Auto-release grace period (hours)<input type="number" min="1" max="720" value={policy.auto_release_grace_hours} onChange={e=>setPolicy({...policy,auto_release_grace_hours:Number(e.target.value)})} className="mt-1 min-h-10 w-full rounded-lg border px-3"/></label>
+    <label className="text-sm">Dispute window (days)<input type="number" min="1" max="90" value={policy.max_dispute_open_days} onChange={e=>setPolicy({...policy,max_dispute_open_days:Number(e.target.value)})} className="mt-1 min-h-10 w-full rounded-lg border px-3"/></label>
+   </div>
+   <div className="flex flex-wrap gap-5"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={policy.reminders_enabled} onChange={e=>setPolicy({...policy,reminders_enabled:e.target.checked})}/>Enable deadline reminders</label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={policy.auto_release_enabled} onChange={e=>setPolicy({...policy,auto_release_enabled:e.target.checked})}/>Allow automatic release policy (processor required)</label></div>
+   <button disabled={saving===-1} onClick={savePolicy} className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving===-1?'Saving…':'Save escrow policies'}</button>
   </section>
   <section className="space-y-3 rounded-xl border p-5">
    <div><h2 className="text-lg font-bold">Escrow management</h2><p className="mt-1 text-sm text-slate-500">Seller funds remain held after payment. Buyer confirmation records receipt; only an authorised admin release credits the seller's available wallet. Review disputes before releasing.</p></div>
