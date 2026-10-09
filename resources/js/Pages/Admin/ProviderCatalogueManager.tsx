@@ -13,7 +13,7 @@ type Provider = {
   capabilities: string[];
 };
 
-type PlatformService = { id: number; key: string; name: string; category: string };
+type PlatformService = { id: number; key: string; name: string; category: string; products: { id: number; key: string; name: string; publication_status?: string }[] };
 
 type CatalogueRow = {
   id: number;
@@ -45,6 +45,8 @@ export default function ProviderCatalogueManager({ provider, platformServices }:
   const [selected, setSelected] = useState<number[]>([]);
   const [autoSync, setAutoSync] = useState(false);
   const [platformServiceId, setPlatformServiceId] = useState('');
+  const [rowTargetServices, setRowTargetServices] = useState<Record<number, string>>({});
+  const [rowTargetProducts, setRowTargetProducts] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -162,6 +164,35 @@ export default function ProviderCatalogueManager({ provider, platformServices }:
     }
   };
 
+  const mapRowToMyServices = async (row: CatalogueRow) => {
+    const serviceId = rowTargetServices[row.provider_service_id] || platformServiceId;
+    if (!serviceId) {
+      setError('Choose the platform service that this provider catalogue row belongs to.');
+      return;
+    }
+    if (!row.approved || !row.imported) {
+      setError('Approve and import this provider catalogue row before mapping it to My Services.');
+      return;
+    }
+
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const productId = rowTargetProducts[row.provider_service_id];
+      const result = await requestJson(\`/admin/providers/\${provider.id}/provider-services/\${row.provider_service_id}/map-to-platform\`, {
+        service_id: Number(serviceId),
+        ...(productId ? { service_product_id: Number(productId) } : {}),
+      });
+      setMessage(\`\${result.product?.name || row.service?.name || 'Provider product'} saved as a draft. Configure tier prices and verify routing before publishing.\`);
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Provider product could not be mapped.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
       <Head title={`${provider.display_name} — Services & Prices`} />
@@ -217,8 +248,8 @@ export default function ProviderCatalogueManager({ provider, platformServices }:
             </div>
 
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[920px] border-collapse text-left text-sm">
-                <thead><tr className="border-b border-slate-200 text-xs uppercase text-slate-500"><th className="p-3">Select</th><th className="p-3">Service / product</th><th className="p-3">Category</th><th className="p-3">Provider ID / code</th><th className="p-3">Source price</th><th className="p-3">Availability</th><th className="p-3">Import state</th><th className="p-3">Last synced</th></tr></thead>
+              <table className="w-full min-w-[1280px] border-collapse text-left text-sm">
+                <thead><tr className="border-b border-slate-200 text-xs uppercase text-slate-500"><th className="p-3">Select</th><th className="p-3">Service / product</th><th className="p-3">Category</th><th className="p-3">Provider ID / code</th><th className="p-3">Source price</th><th className="p-3">Availability</th><th className="p-3">Import state</th><th className="p-3">Last synced</th><th className="p-3">Map to My Services</th></tr></thead>
                 <tbody>
                   {filtered.map((row) => <tr key={row.provider_service_id} className="border-b border-slate-100 align-top hover:bg-slate-50">
                     <td className="p-3"><input aria-label={`Select ${row.service?.name || 'provider service'}`} type="checkbox" checked={selected.includes(row.provider_service_id)} onChange={() => setSelected((ids) => ids.includes(row.provider_service_id) ? ids.filter((id) => id !== row.provider_service_id) : [...ids, row.provider_service_id])} /></td>
@@ -229,8 +260,22 @@ export default function ProviderCatalogueManager({ provider, platformServices }:
                     <td className="p-3">{row.service?.status || 'Unknown'}</td>
                     <td className="p-3"><span className={row.imported ? 'text-emerald-700' : row.approved ? 'text-indigo-700' : 'text-amber-700'}>{row.imported ? 'Imported' : row.approved ? 'Approved, not imported' : 'Needs approval'}</span>{row.auto_sync_allowed ? <p className="mt-1 text-xs text-slate-500">Auto-sync allowed</p> : null}</td>
                     <td className="p-3 text-xs text-slate-500">{row.service?.last_synced_at ? new Date(row.service.last_synced_at).toLocaleString() : 'Not recorded'}</td>
+                    <td className="min-w-72 p-3">
+                      <div className="space-y-2">
+                        <select aria-label={\`Platform service for \${row.service?.name || 'provider product'}\`} value={rowTargetServices[row.provider_service_id] ?? platformServiceId} onChange={(event) => { setRowTargetServices((current) => ({ ...current, [row.provider_service_id]: event.target.value })); setRowTargetProducts((current) => ({ ...current, [row.provider_service_id]: '' })); }} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs">
+                          <option value="">Choose platform service</option>
+                          {platformServices.map((service) => <option key={service.id} value={service.id}>{service.category} — {service.name}</option>)}
+                        </select>
+                        <select aria-label={\`Draft product variant for \${row.service?.name || 'provider product'}\`} value={rowTargetProducts[row.provider_service_id] ?? ''} onChange={(event) => setRowTargetProducts((current) => ({ ...current, [row.provider_service_id]: event.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs" disabled={!(rowTargetServices[row.provider_service_id] || platformServiceId)}>
+                          <option value="">Create new draft variant</option>
+                          {(platformServices.find((service) => String(service.id) === (rowTargetServices[row.provider_service_id] || platformServiceId))?.products ?? []).map((product) => <option key={product.id} value={product.id}>{product.name} ({product.key})</option>)}
+                        </select>
+                        <button type="button" disabled={busy || !row.approved || !row.imported || !(rowTargetServices[row.provider_service_id] || platformServiceId)} onClick={() => void mapRowToMyServices(row)} className="w-full rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50">{row.approved && row.imported ? 'Map as Draft' : 'Approve & import first'}</button>
+                        <p className="text-[11px] leading-4 text-slate-500">Creates a disabled draft mapping only. It never publishes or enables routing.</p>
+                      </div>
+                    </td>
                   </tr>)}
-                  {filtered.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-slate-500">No discovered services in this category yet. Refresh the catalogue if this provider officially supports service discovery.</td></tr>}
+                  {filtered.length === 0 && <tr><td colSpan={9} className="p-8 text-center text-slate-500">No discovered services in this category yet. Refresh the catalogue if this provider officially supports service discovery.</td></tr>}
                 </tbody>
               </table>
             </div>
