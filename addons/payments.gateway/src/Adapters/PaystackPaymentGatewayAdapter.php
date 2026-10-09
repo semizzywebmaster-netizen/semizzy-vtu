@@ -87,6 +87,29 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
             throw new RuntimeException('This Paystack payout adapter currently permits NGN bank transfers only.');
         }
 
+        // Idempotency guard: if this reference already exists, return its provider state
+        // instead of creating another transfer. Only a clear not-found response allows creation.
+        $verifyUrl = rtrim($provider->base_url ?: 'https://api.paystack.co', '/') . '/transfer/verify/' . rawurlencode($reference);
+        $existingResponse = $this->request($provider)->get($verifyUrl);
+        $existingBody = $existingResponse->json();
+        if ($existingResponse->successful() && ($existingBody['status'] ?? false) && is_array($existingBody['data'] ?? null)) {
+            $existing = $existingBody['data'];
+            return [
+                'reference' => $existing['reference'] ?? $reference,
+                'transfer_code' => $existing['transfer_code'] ?? null,
+                'recipient_code' => null,
+                'status' => strtolower((string) ($existing['status'] ?? 'unknown')),
+                'amount_minor' => (int) ($existing['amount'] ?? $amount),
+                'currency' => strtoupper((string) ($existing['currency'] ?? 'NGN')),
+                'requires_otp' => strtolower((string) ($existing['status'] ?? '')) === 'otp',
+                'provider_response' => $existing,
+                'replayed' => true,
+            ];
+        }
+        if (!in_array($existingResponse->status(), [400, 404], true)) {
+            throw new RuntimeException('Paystack could not establish whether this transfer reference already exists; do not retry until status is checked.');
+        }
+
         $account = $this->nameEnquiry($provider, $bankCode, $accountNumber);
         $name = trim((string) ($payload['account_name'] ?? $account['account_name'] ?? ''));
         if ($name === '') {
