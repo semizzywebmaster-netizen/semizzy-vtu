@@ -195,6 +195,7 @@ final class ProviderPlatformAdminController extends Controller
                 'search' => $filters['search'] ?? '',
             ],
             'providers' => ApiProvider::query()->orderBy('display_name')->get(['id', 'display_name']),
+            'canManage' => $request->user()?->role === 'ADMIN',
             'safety_note' => 'Discovered catalogue data is not verified capability evidence. Selection does not import, publish, or enable routing.',
         ]);
     }
