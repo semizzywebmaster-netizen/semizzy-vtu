@@ -39,7 +39,7 @@ type CatalogueRow = {
   } | null;
 };
 
-export default function ProviderCatalogueManager({ provider, platformServices }: { provider: Provider; platformServices: PlatformService[] }) {
+export default function ProviderCatalogueManager({ provider, platformServices, canMapProducts = false }: { provider: Provider; platformServices: PlatformService[]; canMapProducts?: boolean }) {
   const [rows, setRows] = useState<CatalogueRow[]>([]);
   const [category, setCategory] = useState('all');
   const [selected, setSelected] = useState<number[]>([]);
@@ -270,7 +270,7 @@ export default function ProviderCatalogueManager({ provider, platformServices }:
                           <option value="">Create new draft variant</option>
                           {(platformServices.find((service) => String(service.id) === (rowTargetServices[row.provider_service_id] || platformServiceId))?.products ?? []).map((product) => <option key={product.id} value={product.id}>{product.name} ({product.key})</option>)}
                         </select>
-                        <button type="button" disabled={busy || !row.approved || !row.imported || !(rowTargetServices[row.provider_service_id] || platformServiceId)} onClick={() => void mapRowToMyServices(row)} className="w-full rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50">{row.approved && row.imported ? 'Map as Draft' : 'Approve & import first'}</button>
+                        <button type="button" disabled={!canMapProducts || busy || !row.approved || !row.imported || !(rowTargetServices[row.provider_service_id] || platformServiceId)} onClick={() => void mapRowToMyServices(row)} className="w-full rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50">{!canMapProducts ? 'Catalogue permission required' : row.approved && row.imported ? 'Map as Draft' : 'Approve & import first'}</button>
                         <p className="text-[11px] leading-4 text-slate-500">Creates a disabled draft mapping only. It never publishes or enables routing.</p>
                       </div>
                     </td>
