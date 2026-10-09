@@ -23,7 +23,7 @@ return [
   ['key'=>'fulfillment_mode','type'=>'string','default'=>'api_or_manual'],
   ['key'=>'require_document_review','type'=>'boolean','default'=>true],
  ],
- 'migrations'=>['2026_10_07_004000_create_government_services_tables.php'],
+ 'migrations'=>['2026_10_07_004000_create_government_services_tables.php','2026_10_07_005000_add_payment_fields_to_government_applications.php','2026_10_07_006000_seed_government_service_catalog.php','2026_10_07_007000_expand_government_catalog.php'],
  'web_route_files'=>['addons/government-registration-certificates/routes/web.php','addons/government-registration-certificates/routes/admin.php'],
  'api_route_files'=>['addons/government-registration-certificates/routes/api.php'],
  'routes'=>['/government-services','/admin/government-services'],
