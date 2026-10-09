@@ -42,6 +42,15 @@ class WalletCreditService
                 ->first();
 
             if ($existing) {
+                $existingMinor = ltrim((string) $existing->amount_minor, '0') ?: '0';
+                if (
+                    $existingMinor !== $minor
+                    || (string) $existing->reference !== $reference
+                    || (string) $existing->type !== $type
+                ) {
+                    throw new RuntimeException('This wallet operation key has already been used for a different credit.');
+                }
+
                 return $wallet->fresh();
             }
 
