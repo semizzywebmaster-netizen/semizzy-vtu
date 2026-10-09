@@ -26,7 +26,7 @@ final class EducationPastQuestionController extends Controller {
   return Inertia::render($page,['title'=>$title,'items'=>$items,'filters'=>$request->only(['q','institution','department','course_code','education_level','semester','academic_session','exam_body','exam_type','subject','exam_year'])]);
  }
  public function download(Request $request,EducationLibraryItem $item) {
-  abort_unless($item->status==='published' && $item->published_at,404);
+  abort_unless(($item->status==='published' && $item->published_at) || $item->status==='archived',404);
   $purchased=EducationLibraryPurchase::where('user_id',$request->user()->id)->where('item_id',$item->id)->where('status','successful')->exists();
   $owns=$item->is_free || $purchased;
   abort_unless($owns && ($item->status==='published' || ($item->status==='archived' && $purchased)),403,'Purchase this resource before downloading.');
