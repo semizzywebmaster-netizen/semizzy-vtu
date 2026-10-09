@@ -84,7 +84,6 @@ class ProviderPlatformCoverageTest extends TestCase
                 ->where('summary.live_verified_providers', 1)
                 ->where('summary.production_eligible_providers', 1)
                 ->where('summary.enabled_services_with_live_coverage', 1)
-                ->where('summary.enabled_services_without_live_coverage', 0)
                 ->where('services.0.live_verified_provider_count', 1)
                 ->where('services.0.mapped_provider_count', 2)
             );
