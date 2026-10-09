@@ -52,6 +52,10 @@ final class PaymentRefundSettlementService
         if (empty($currentMetadata['refund_requested_at']) || empty($currentMetadata['refund_provider'])) {
             throw new RuntimeException('A refund request must be recorded before refund settlement.');
         }
+        $requestedRefundReference = (string) ($currentMetadata['refund_provider_reference'] ?? '');
+        if ($requestedRefundReference === '' || !hash_equals($requestedRefundReference, $providerRefundReference)) {
+            throw new RuntimeException('Refund reference does not match the recorded provider refund request.');
+        }
         if (!$current->provider_id) {
             throw new RuntimeException('This payment has no assigned gateway provider for refund verification.');
         }
