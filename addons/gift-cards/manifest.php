@@ -1,6 +1,7 @@
 <?php
 return [
  'identifier'=>'gift.cards','name'=>'Gift Cards Marketplace','version'=>'1.0.0',
+ 'autoload_namespace' => 'Semizzy\\Addons\\GiftCards',
  'description'=>'Modular gift-card marketplace with provider fulfillment, inventory, wallet payment, secure delivery, requery and refund workflows.',
  'compatibility'=>'>=2.0.0','dependencies'=>[],
  'permissions'=>['giftcards.view','giftcards.buy','giftcards.manage','giftcards.products.manage','giftcards.providers.manage','giftcards.refunds.manage','giftcards.settings.manage','giftcards.audit'],
