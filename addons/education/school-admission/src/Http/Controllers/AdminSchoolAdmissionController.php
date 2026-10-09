@@ -1,17 +1,17 @@
 <?php
 
-namespace Semizzy\\Addons\\SchoolAdmission\\Http\\Controllers;
+namespace Semizzy\Addons\SchoolAdmission\Http\Controllers;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\ApiProvider;
-use Illuminate\\Http\\Request;
-use Illuminate\\Validation\\Rule;
-use Inertia\\Inertia;
-use Inertia\\Response;
-use Semizzy\\Addons\\SchoolAdmission\\Models\\SchoolAdmissionInstitution;
-use Semizzy\\Addons\\SchoolAdmission\\Models\\SchoolAdmissionProduct;
-use Semizzy\\Addons\\SchoolAdmission\\Models\\SchoolAdmissionProgramme;
-use Semizzy\\Addons\\SchoolAdmission\\Models\\SchoolAdmissionTransaction;
+use App\Http\Controllers\Controller;
+use App\Models\ApiProvider;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
+use Semizzy\Addons\SchoolAdmission\Models\SchoolAdmissionInstitution;
+use Semizzy\Addons\SchoolAdmission\Models\SchoolAdmissionProduct;
+use Semizzy\Addons\SchoolAdmission\Models\SchoolAdmissionProgramme;
+use Semizzy\Addons\SchoolAdmission\Models\SchoolAdmissionTransaction;
 
 final class AdminSchoolAdmissionController extends Controller
 {
