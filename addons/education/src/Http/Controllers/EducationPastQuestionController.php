@@ -27,8 +27,9 @@ final class EducationPastQuestionController extends Controller {
  }
  public function download(Request $request,EducationLibraryItem $item) {
   abort_unless($item->status==='published' && $item->published_at,404);
-  $owns=$item->is_free || EducationLibraryPurchase::where('user_id',$request->user()->id)->where('item_id',$item->id)->where('status','successful')->exists();
-  abort_unless($owns,403,'Purchase this resource before downloading.');
+  $purchased=EducationLibraryPurchase::where('user_id',$request->user()->id)->where('item_id',$item->id)->where('status','successful')->exists();
+  $owns=$item->is_free || $purchased;
+  abort_unless($owns && ($item->status==='published' || ($item->status==='archived' && $purchased)),403,'Purchase this resource before downloading.');
   abort_unless(Storage::disk('local')->exists($item->file_path),404,'The resource file is unavailable.');
   $item->increment('downloads_count');
   return Storage::disk('local')->download($item->file_path,$item->file_name,['Content-Type'=>$item->mime_type,'X-Content-Type-Options'=>'nosniff']);
