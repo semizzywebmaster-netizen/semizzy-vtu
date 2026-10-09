@@ -106,5 +106,34 @@ class ProviderCatalogueDraftMappingTest extends TestCase
             'enabled' => false,
             'mapping_status' => 'pending',
         ]);
+
+        $serviceMapping = ProviderServiceMapping::query()
+            ->where('api_provider_id', $provider->id)
+            ->where('service_id', $service->id)
+            ->firstOrFail();
+        $serviceRouteResponse = $this->actingAs($admin)->patchJson(
+            '/admin/providers/' . $provider->id . '/service-mappings/' . $serviceMapping->id,
+            ['enabled' => true],
+        );
+        $serviceRouteResponse->assertStatus(422);
+        $this->assertDatabaseHas('provider_service_mappings', [
+            'id' => $serviceMapping->id,
+            'enabled' => false,
+        ]);
+
+        $productMapping = DB::table('provider_product_mappings_v2')
+            ->where('api_provider_id', $provider->id)
+            ->where('provider_service_id', $providerService->id)
+            ->first();
+        $productRouteResponse = $this->actingAs($admin)->patchJson(
+            '/admin/providers/' . $provider->id . '/mappings/' . $productMapping->id,
+            ['enabled' => true],
+        );
+        $productRouteResponse->assertStatus(422);
+        $this->assertDatabaseHas('provider_product_mappings_v2', [
+            'id' => $productMapping->id,
+            'enabled' => false,
+            'mapping_status' => 'pending',
+        ]);
     }
 }
