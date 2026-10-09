@@ -80,7 +80,7 @@ class AuthenticatedSessionController extends Controller
             throw ValidationException::withMessages([$this->loginErrorKey($request) => 'Too many login attempts. Please try again later.']);
         }
 
-        if (! $user || ! Auth::validate(['email' => $user->email, 'password' => (string) $credentials['password'], 'status' => 'active']) || (! $admin && (! filled($credentials['pin'] ?? null) || ! filled($user->transaction_pin_hash) || ! Hash::check((string) $credentials['pin'], (string) $user->transaction_pin_hash)))) {
+        if (! $user || ! Auth::validate(['email' => $user->email, 'password' => (string) $credentials['password'], 'status' => 'active'])) {
             RateLimiter::hit($key, 60);
             $this->securityEvents->record('auth.login.failed', 'warning', ['admin' => $admin], $request);
             throw ValidationException::withMessages([$this->loginErrorKey($request) => 'The provided credentials are invalid.']);
