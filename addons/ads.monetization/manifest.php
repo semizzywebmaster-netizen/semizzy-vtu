@@ -19,6 +19,7 @@ return [
  'admin_navigation'=>[
   ['id'=>'admin-ads-monetization','label'=>'Ads & Monetization','url'=>'/admin/ads','icon'=>'megaphone','permission'=>'ads.view','section'=>'addons','order'=>170],
   ['id'=>'admin-ad-promotions','label'=>'Marketplace boosts','url'=>'/admin/ads/promotions','icon'=>'trending-up','permission'=>'ads.promotions.manage','section'=>'addons','order'=>171],
+  ['id'=>'admin-ad-types','label'=>'Ad Types & Formats','url'=>'/admin/ads/types','icon'=>'layers','permission'=>'ads.settings.manage','section'=>'addons','order'=>172],
  ],
  'settings'=>[
   ['key'=>'enabled','type'=>'boolean','default'=>true],
@@ -30,10 +31,10 @@ return [
   ['key'=>'minimum_campaign_budget_minor','type'=>'integer','default'=>100000],
   ['key'=>'default_daily_budget_minor','type'=>'integer','default'=>0],
  ],
- 'migrations'=>['2026_10_09_000500_create_ads_monetization.php','2026_10_09_000501_create_ad_promotions.php'],
+ 'migrations'=>['2026_10_09_000500_create_ads_monetization.php','2026_10_09_000501_create_ad_promotions.php','2026_10_09_000502_create_ad_types.php'],
  'web_route_files'=>['addons/ads.monetization/routes/admin.php'],
  'api_route_files'=>[],
- 'routes'=>['/admin/ads','/admin/ads/promotions','/ads/promotions'],
+ 'routes'=>['/admin/ads','/admin/ads/types','/admin/ads/promotions','/ads/promotions'],
  'api_routes'=>[],
  'provider_integrations'=>[],
  'provider_capabilities'=>[],
