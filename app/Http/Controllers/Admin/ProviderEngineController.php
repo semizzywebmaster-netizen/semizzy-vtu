@@ -885,7 +885,7 @@ class ProviderEngineController extends Controller
                             'metadata' => [
                                 'catalogue_source' => 'provider_discovery',
                                 'provider_identifier' => $provider->identifier,
-                                'provider_service_id' => $lockedService->id,
+                                'provider_service_id' => $externalId,
                             ],
                         ],
                     );
