@@ -183,6 +183,21 @@ final class MarketplaceController
         ]);
     }
 
+    public function myOrders(Request $request)
+    {
+        $orders = MarketplaceOrder::query()->with(['product','seller'])
+            ->where('buyer_id', (int) $request->user()->id)
+            ->latest()->paginate(20);
+        $escrows = DB::table('marketplace_escrows')->whereIn('order_id', $orders->getCollection()->pluck('id'))
+            ->get(['order_id','status as escrow_status','buyer_confirmed_at','released_at'])
+            ->keyBy('order_id');
+        $orders->getCollection()->transform(function ($order) use ($escrows) {
+            $order->escrow = $escrows->get($order->id);
+            return $order;
+        });
+        return Inertia::render('Marketplace/MyOrders', ['orders' => $orders]);
+    }
+
     public function store(Request $request, MarketplaceOrderService $orders)
     {
         $data = $request->validate([
