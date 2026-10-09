@@ -48,6 +48,26 @@ class WalletCreditIdempotencyTest extends TestCase
             );
         }
 
+        try {
+            $service->credit($user, '10.00', 'payment:intent:42', 'PAY-OTHER', 'payment_funding');
+            $this->fail('A reused operation key with a different reference must be rejected.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame(
+                'This wallet operation key has already been used for a different credit.',
+                $exception->getMessage()
+            );
+        }
+
+        try {
+            $service->credit($user, '10.00', 'payment:intent:42', 'PAY-42', 'manual_adjustment');
+            $this->fail('A reused operation key with a different type must be rejected.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame(
+                'This wallet operation key has already been used for a different credit.',
+                $exception->getMessage()
+            );
+        }
+
         $this->assertDatabaseHas('wallet_accounts', [
             'user_id' => $userId,
             'currency' => 'NGN',
