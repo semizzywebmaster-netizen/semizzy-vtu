@@ -125,4 +125,62 @@ class ProviderPlatformCoverageTest extends TestCase
                 ->where('services.0.mapped_provider_count', 2)
             );
     }
+
+    public function test_product_publishes_only_when_live_provider_route_and_all_tier_prices_are_ready(): void
+    {
+        $category = ServiceCategory::query()->create(['key' => 'ready-category', 'name' => 'Ready Category', 'enabled' => true]);
+        $service = Service::query()->create(['category_id' => $category->id, 'key' => 'ready-service', 'name' => 'Ready Service', 'enabled' => true, 'metadata' => []]);
+        $product = ServiceProduct::query()->create(['service_id' => $service->id, 'key' => 'ready-product', 'name' => 'Ready Product', 'currency' => 'NGN', 'enabled' => false, 'publication_status' => 'draft']);
+        $provider = ApiProvider::query()->create([
+            'identifier' => 'ready-provider',
+            'display_name' => 'Ready Provider',
+            'environment' => 'production',
+            'verification_status' => 'live_verified',
+            'integration_status' => 'live_verified',
+            'enabled' => true,
+            'paused' => false,
+            'capabilities' => ['transaction_initiation'],
+            'service_categories' => ['ready-service'],
+        ]);
+        ProviderServiceMapping::query()->create([
+            'api_provider_id' => $provider->id,
+            'service_id' => $service->id,
+            'service_key' => $service->key,
+            'provider_service_id' => 'READY-001',
+            'capabilities' => ['transaction_initiation'],
+            'enabled' => true,
+        ]);
+        $product->providerProducts()->create([
+            'api_provider_id' => $provider->id,
+            'provider_product_id' => 'READY-EXT-001',
+            'provider_cost' => '100.000000',
+            'currency' => 'NGN',
+            'raw_catalogue' => ['source' => 'test-fixture'],
+            'enabled' => true,
+            'last_synced_at' => now(),
+        ]);
+
+        foreach (['USER', 'AGENT', 'RESELLER', 'MERCHANT'] as $tier) {
+            \\App\\Models\\PriceRule::query()->create([
+                'scope_type' => 'GLOBAL',
+                'scope_id' => null,
+                'customer_tier' => $tier,
+                'rule_type' => 'fixed',
+                'fixed_fee' => '10.000000',
+                'percentage' => '0',
+                'enabled' => true,
+                'priority' => 1,
+            ]);
+        }
+
+        $result = app(ProductPublicationService::class)->publish($product, 123);
+
+        $this->assertTrue($result['published']);
+        $this->assertSame([], $result['blockers']);
+        $this->assertTrue($result['product']->enabled);
+        $this->assertSame('published', $result['product']->publication_status);
+        $this->assertSame(123, (int) $result['product']->published_by);
+        $this->assertNotNull($result['product']->published_at);
+        $this->assertDatabaseHas('audit_events', ['event' => 'provider_platform.product_published', 'auditable_id' => $product->id]);
+    }
 }
