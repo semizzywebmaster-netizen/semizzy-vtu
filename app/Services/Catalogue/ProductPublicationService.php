@@ -92,9 +92,9 @@ class ProductPublicationService
                     }
 
                     $quotes[$tier] = [
-                        'provider_cost' => (string) $cost->toScale(2),
-                        'selling_price' => (string) $selling->toScale(2),
-                        'gross_profit' => (string) $selling->minus($cost)->toScale(2),
+                        'provider_cost' => (string) $cost->toScale(2, RoundingMode::HALF_UP),
+                        'selling_price' => (string) $selling->toScale(2, RoundingMode::HALF_UP),
+                        'gross_profit' => (string) $selling->minus($cost)->toScale(2, RoundingMode::HALF_UP),
                         'currency' => $quote['currency'],
                         'provider_id' => (int) $quote['provider_id'],
                         'price_rule_id' => $quote['rule_id'],
