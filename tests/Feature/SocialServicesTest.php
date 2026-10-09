@@ -8,6 +8,15 @@ use Semizzy\Addons\Social\Services\SocialServicesService;
 use Tests\TestCase;
 class SocialServicesTest extends TestCase {
  use RefreshDatabase;
+
+ protected function setUp(): void
+ {
+  parent::setUp();
+
+  // Addon migrations are installed by the addon lifecycle, not Core RefreshDatabase.
+  $migration = require base_path('addons/social.accounts-verification/database/migrations/2026_10_07_003000_create_social_services_tables.php');
+  $migration->up();
+ }
  protected function setUp(): void { parent::setUp(); $this->artisan('migrate', ['--path'=>'addons/social.accounts-verification/database/migrations/2026_10_07_003000_create_social_services_tables.php']); }
  protected function setUp(): void {
   parent::setUp();
