@@ -73,7 +73,7 @@ class WalletReversalServiceTest extends TestCase
         $this->assertDatabaseCount('wallet_movements', 1);
     }
 
-    public function test_rejects_blank_reason_and_reversal_of_a_reversal(): void
+    public function test_rejects_blank_reason(): void
     {
         $user = User::factory()->create();
         $wallet = WalletAccount::create([
@@ -89,6 +89,25 @@ class WalletReversalServiceTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('A reason is required to reverse a wallet movement.');
         $service->reverse($original, '   ');
+    }
+
+    public function test_a_reversal_movement_cannot_be_reversed_again(): void
+    {
+        $user = User::factory()->create();
+        $wallet = WalletAccount::create([
+            'user_id' => $user->id,
+            'currency' => 'NGN',
+            'available_minor' => '900',
+            'held_minor' => '0',
+            'status' => 'active',
+        ]);
+        $original = $this->movement($wallet, 'original:debit', 'DEBIT-DOUBLE-REVERSAL', 'debit', '100', '1000', '900');
+        $service = app(WalletReversalService::class);
+        $reversal = $service->reverse($original, 'First approved reversal');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('A reversal movement cannot itself be reversed.');
+        $service->reverse($reversal, 'Attempt to reverse the reversal');
     }
 
     private function movement(WalletAccount $wallet, string $key, string $reference, string $type, string $amount, string $before, string $after): WalletMovement
