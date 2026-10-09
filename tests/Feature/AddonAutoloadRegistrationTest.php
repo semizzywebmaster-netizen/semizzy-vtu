@@ -10,5 +10,12 @@ class AddonAutoloadRegistrationTest extends TestCase
     {
         $this->assertTrue(class_exists(\Addons\WhatsAppBot\Observers\VtuTransactionObserver::class));
         $this->assertTrue(class_exists(\Addons\CommunicationWhatsapp\Services\CommunicationProviderGateway::class));
+        $this->assertTrue(class_exists(\Semizzy\Addons\Social\Models\SocialNumberInventory::class));
+        $this->assertTrue(class_exists(\Semizzy\Addons\Social\Models\SocialServiceOrder::class));
+        $this->assertTrue(class_exists(\Addons\BankingFinancialIntegrations\Models\AccountVerification::class));
+        $this->assertTrue(class_exists(\Semizzy\Addons\GiftCards\Http\Controllers\Admin\GiftCardsController::class));
+        $this->assertTrue(class_exists(\Semizzy\Addons\Government\Models\GovernmentApplication::class));
+        $this->assertTrue(class_exists(\Addons\InsuranceProtection\Http\Controllers\InsuranceAdminController::class));
+        $this->assertTrue(class_exists(\Semizzy\Addons\Smm\Models\SmmOrder::class));
     }
 }
