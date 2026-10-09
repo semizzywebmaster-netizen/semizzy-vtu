@@ -118,4 +118,77 @@ class AIChatbotAddonTest extends TestCase
         $this->assertSame('fallback-model', $answer['model']);
         Http::assertSentCount(2);
     }
+
+    public function test_anthropic_adapter_sends_secret_in_header_and_parses_text_response(): void
+    {
+        $apiKey = 'anthropic-unit-secret';
+        DB::table('ai_chatbot_providers')->insert([
+            'name' => 'Test Anthropic', 'driver' => 'anthropic',
+            'api_key_encrypted' => Crypt::encryptString($apiKey), 'model' => 'claude-test-model',
+            'enabled' => true, 'priority' => 1, 'timeout_seconds' => 5, 'max_output_tokens' => 64,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        Http::fake([
+            'api.anthropic.com/v1/messages' => Http::response([
+                'content' => [['type' => 'text', 'text' => 'Anthropic response']],
+                'usage' => ['input_tokens' => 8, 'output_tokens' => 2],
+            ], 200),
+        ]);
+
+        $answer = app(AIProviderService::class)->answer(
+            [['role' => 'user', 'content' => 'Hello']], 'Safe system prompt'
+        );
+
+        $this->assertSame('Anthropic response', $answer['content']);
+        $this->assertSame('anthropic', $answer['provider']);
+        Http::assertSent(fn ($request) => $request->url() === 'https://api.anthropic.com/v1/messages'
+            && $request->hasHeader('x-api-key', $apiKey));
+    }
+
+    public function test_gemini_adapter_uses_header_authentication_and_parses_response(): void
+    {
+        $apiKey = 'gemini-unit-secret';
+        DB::table('ai_chatbot_providers')->insert([
+            'name' => 'Test Gemini', 'driver' => 'gemini',
+            'api_key_encrypted' => Crypt::encryptString($apiKey), 'model' => 'gemini-test-model',
+            'enabled' => true, 'priority' => 1, 'timeout_seconds' => 5, 'max_output_tokens' => 64,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        Http::fake([
+            'generativelanguage.googleapis.com/v1beta/models/gemini-test-model:generateContent' => Http::response([
+                'candidates' => [['content' => ['parts' => [['text' => 'Gemini response']]]]],
+                'usageMetadata' => ['promptTokenCount' => 9, 'candidatesTokenCount' => 3],
+            ], 200),
+        ]);
+
+        $answer = app(AIProviderService::class)->answer(
+            [['role' => 'user', 'content' => 'Hello']], 'Safe system prompt'
+        );
+
+        $this->assertSame('Gemini response', $answer['content']);
+        $this->assertSame('gemini', $answer['provider']);
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'models/gemini-test-model:generateContent')
+            && $request->hasHeader('x-goog-api-key', $apiKey));
+    }
+
+    public function test_provider_authentication_failure_returns_a_safe_error_without_the_secret(): void
+    {
+        $apiKey = 'never-display-this-secret';
+        DB::table('ai_chatbot_providers')->insert([
+            'name' => 'Rejected OpenAI', 'driver' => 'openai',
+            'api_key_encrypted' => Crypt::encryptString($apiKey), 'model' => 'gpt-4o-mini',
+            'enabled' => true, 'priority' => 1, 'timeout_seconds' => 5, 'max_output_tokens' => 64,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        Http::fake(['api.openai.com/v1/chat/completions' => Http::response(['error' => ['message' => 'invalid api key']], 401)]);
+
+        try {
+            app(AIProviderService::class)->answer([['role' => 'user', 'content' => 'Hello']], 'Safe system prompt');
+            $this->fail('Expected the rejected provider to fail safely.');
+        } catch (\\RuntimeException $e) {
+            $this->assertStringContainsString('rejected its credentials', $e->getMessage());
+            $this->assertStringNotContainsString($apiKey, $e->getMessage());
+            $this->assertStringNotContainsString('invalid api key', $e->getMessage());
+        }
+    }
 }
