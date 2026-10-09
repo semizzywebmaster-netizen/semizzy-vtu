@@ -6,6 +6,7 @@ on:
       - 'addons/ai.chatbot/**'
       - 'resources/js/Components/AIChatbotWidget.tsx'
       - 'resources/js/Pages/Admin/AIChatbot.tsx'
+      - 'resources/js/Pages/Admin/AIChatbotConversations.tsx'
       - 'resources/js/app.tsx'
       - 'composer.json'
       - 'composer.lock'
