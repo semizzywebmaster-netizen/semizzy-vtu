@@ -64,7 +64,10 @@ class ProviderEngineController extends Controller
                 'capabilities' => $provider->capabilities ?? [],
             ],
             'platformServices' => Service::query()
-                ->with('category')
+                ->with([
+                    'category',
+                    'products' => fn ($query) => $query->where('enabled', false)->where('publication_status', '!=', 'published')->orderBy('name'),
+                ])
                 ->where('enabled', true)
                 ->orderBy('name')
                 ->get()
@@ -73,6 +76,12 @@ class ProviderEngineController extends Controller
                     'key' => $service->key,
                     'name' => $service->name,
                     'category' => $service->category?->name ?? 'Uncategorised',
+                    'products' => $service->products->map(fn (ServiceProduct $product) => [
+                        'id' => $product->id,
+                        'key' => $product->key,
+                        'name' => $product->name,
+                        'publication_status' => $product->publication_status,
+                    ])->values(),
                 ])
                 ->values(),
         ]);
