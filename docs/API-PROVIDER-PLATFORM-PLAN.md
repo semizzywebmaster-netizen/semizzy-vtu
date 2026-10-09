@@ -159,3 +159,29 @@ The platform must be easy for a non-developer administrator to operate. Keep one
 - Failed tests explain the likely issue without exposing tokens, private keys, customer data or full sensitive payloads.
 - Sync history shows what was added/updated/removed and requires safe handling of products no longer returned by a provider.
 - Service addon pages and the global provider centre display consistent state because both read/write the same Core records.
+
+
+## Provider-by-provider category catalogue and price import (required)
+
+Every provider's own management page must expose a clear **Services & Prices** workflow, not merely a generic global sync button. From that provider, an admin must be able to:
+
+1. **Fetch/refresh provider catalogue** using that provider's documented catalogue, products, services, plans, billers or pricing endpoint. Show when live discovery is unsupported and provide a validated documented manual/CSV import route where appropriate.
+2. **Filter by service category and subcategory** (for example Airtime, Data, Electricity, Cable TV, Exam PINs, SMS, OTP, Payment Collection, Bank Transfer, KYC, Flights, Gift Cards). Category options must come from reviewed capabilities and discovered records, not a hard-coded claim that every provider supports every category.
+3. **Preview before import/update** with provider name, category, external service/product ID, provider product name, currency, provider/source price, current stored price, proposed price, availability/status, source and last-sync timestamp. Clearly flag new, changed, unavailable, removed, duplicate and unmapped items.
+4. **Select one category or selected products** to import/update, with explicit counts and confirmation. Also support a deliberate all-supported-categories action where safe. Never silently publish imported products or enable routing just because they were discovered.
+5. **Update prices and services safely**: persist source prices separately from SEMIZZY ONE selling prices and profit rules; keep price-change history; show price increases/decreases; do not overwrite admin selling prices, product mappings, or customer-facing availability without the appropriate policy/approval.
+6. **Control auto-sync per provider/category/import scope**. Manual sync remains available. Auto-sync may update source catalogue and source cost only when explicitly approved; disable destructive removal on incomplete/paginated catalogues. Mark unavailable items and require evidence before treating an item as permanently removed.
+7. **Show a sync report**: discovered, new, changed, price-changed, unchanged, unavailable/removed, failed and pending-approval counts, with per-item errors and a timestamp. Record an audit event and sync history.
+8. **Keep provider and category context throughout the addon UI**. For example, VTU > Airtime Providers > [provider] > Services & Prices > Airtime; Electricity and Data have their own filtered views. Payments, messaging, KYC and other addons follow the same pattern. These are views over the shared Core provider/service catalogue, not duplicate registries.
+9. **Use the actual provider contract** for auth, endpoint paths, pagination, rate limits, response parsing and currency. Do not assume every API has a catalogue/price endpoint or that a connection test proves catalogue sync works. Never fabricate prices, IDs or provider results.
+10. **Protect production data** with authorization, CSRF/throttling, safe URL checks, timeouts, secret redaction, idempotent syncs and tests for pagination, duplicate records, partial failure, stale prices, provider errors and incomplete discovery.
+
+The existing Core engine already exposes provider discovery/sync and import-preview/approval/import routes. Before implementing a new UI or endpoint, audit and reuse those handlers; verify their category filtering, price-update semantics and product-history/audit behaviour. Do not duplicate existing sync/import logic without a confirmed gap.
+
+### Acceptance criteria for this workflow
+
+- An admin can open a provider from the relevant addon, choose a service category, preview the provider's current catalogue and source prices, select items, and import/update them.
+- A repeat sync updates source cost only and preserves the configured selling price/profit policy.
+- A partial or failed catalogue response never marks unrelated services as removed or silently disables live products.
+- Each result identifies the provider, category, external ID, currency, source price and sync time.
+- Unsupported catalogue APIs are shown honestly with the documented alternative, not a fake “sync successful” state.
