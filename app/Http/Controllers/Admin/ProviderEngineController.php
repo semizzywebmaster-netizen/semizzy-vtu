@@ -58,6 +58,18 @@ class ProviderEngineController extends Controller
                 'service_categories' => $provider->service_categories ?? [],
                 'capabilities' => $provider->capabilities ?? [],
             ],
+            'platformServices' => Service::query()
+                ->with('category')
+                ->where('enabled', true)
+                ->orderBy('name')
+                ->get()
+                ->map(fn (Service $service) => [
+                    'id' => $service->id,
+                    'key' => $service->key,
+                    'name' => $service->name,
+                    'category' => $service->category?->name ?? 'Uncategorised',
+                ])
+                ->values(),
         ]);
     }
 
