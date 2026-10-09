@@ -43,13 +43,13 @@ return new class extends Migration
             Schema::table('service_products', fn (Blueprint $table) => $table->dropColumn('publication_blockers'));
         }
         if (Schema::hasColumn('service_products', 'published_by')) {
-            Schema::table('service_products', fn (Blueprint $table) => $table->dropColumn('published_by'));
+            Schema::table('service_products', function (Blueprint $table): void { $table->dropIndex(['published_by']); $table->dropColumn('published_by'); });
         }
         if (Schema::hasColumn('service_products', 'published_at')) {
             Schema::table('service_products', fn (Blueprint $table) => $table->dropColumn('published_at'));
         }
         if (Schema::hasColumn('service_products', 'publication_status')) {
-            Schema::table('service_products', fn (Blueprint $table) => $table->dropColumn('publication_status'));
+            Schema::table('service_products', function (Blueprint $table): void { $table->dropIndex(['publication_status']); $table->dropColumn('publication_status'); });
         }
     }
 };
