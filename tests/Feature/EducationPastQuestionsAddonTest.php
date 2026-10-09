@@ -3,6 +3,9 @@ namespace Tests\Feature;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Semizzy\Addons\Education\Http\Controllers\EducationReferenceImportController;
 use Semizzy\Addons\Education\Models\EducationLibraryItem;
 use Tests\TestCase;
 class EducationPastQuestionsAddonTest extends TestCase {
