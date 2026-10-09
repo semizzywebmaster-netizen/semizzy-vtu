@@ -690,19 +690,48 @@ class ProviderEngineController extends Controller
 
     public function importPreview(ApiProvider $provider): JsonResponse
     {
-        $rows=ProviderServiceImport::query()
-            ->where('api_provider_id',$provider->id)
-            ->with(['service.category','service.subcategory'])
+        $rows = ProviderServiceImport::query()
+            ->where('api_provider_id', $provider->id)
+            ->with(['service.category', 'service.subcategory', 'service.platformMapping'])
             ->latest()
+            ->get();
+
+        $productMappings = DB::table('provider_product_mappings_v2')
+            ->where('api_provider_id', $provider->id)
+            ->whereIn('provider_service_id', $rows->pluck('provider_service_id'))
             ->get()
-            ->map(fn(ProviderServiceImport $i)=>[
-                'id'=>$i->id,'provider_service_id'=>$i->provider_service_id,
-                'imported'=>$i->imported,'approved'=>$i->approved,'auto_sync_allowed'=>$i->auto_sync_allowed,'state'=>$i->state,
-                'service'=>$i->service?->only(['id','external_service_id','external_service_code','name','description','service_type','network','provider_price','currency','status','last_synced_at']),
-                'category'=>$i->service?->category?->external_name,
-                'subcategory'=>$i->service?->subcategory?->external_name,
-            ]);
-        return response()->json(['data'=>$rows]);
+            ->keyBy('provider_service_id');
+
+        return response()->json(['data' => $rows->map(function (ProviderServiceImport $import) use ($productMappings): array {
+            $service = $import->service;
+            $platformMapping = $service?->platformMapping;
+            $productMapping = $productMappings->get($import->provider_service_id);
+
+            return [
+                'id' => $import->id,
+                'provider_service_id' => $import->provider_service_id,
+                'imported' => (bool) $import->imported,
+                'approved' => (bool) $import->approved,
+                'auto_sync_allowed' => (bool) $import->auto_sync_allowed,
+                'state' => $import->state,
+                'service' => $service?->only(['id', 'external_service_id', 'external_service_code', 'name', 'description', 'service_type', 'network', 'provider_price', 'currency', 'status', 'last_synced_at']),
+                'category' => $service?->category?->external_name,
+                'subcategory' => $service?->subcategory?->external_name,
+                'platform_mapping' => $platformMapping ? [
+                    'id' => $platformMapping->id,
+                    'service_id' => $platformMapping->service_id,
+                    'service_key' => $platformMapping->service_key,
+                    'enabled' => (bool) $platformMapping->enabled,
+                    'capabilities' => $platformMapping->capabilities ?? [],
+                ] : null,
+                'product_mapping' => $productMapping ? [
+                    'id' => $productMapping->id,
+                    'catalogue_product_id' => $productMapping->catalogue_product_id,
+                    'enabled' => (bool) $productMapping->enabled,
+                    'mapping_status' => $productMapping->mapping_status,
+                ] : null,
+            ];
+        })->values()]);
     }
 
     public function approveImport(Request $request, ApiProvider $provider): JsonResponse
