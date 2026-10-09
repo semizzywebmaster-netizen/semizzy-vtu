@@ -27,7 +27,7 @@ class VtuTransactionService{
  public function process(VtuTransaction $tx):VtuTransaction{
   if($tx->isTerminal())return $tx;
   $scheduledAt=data_get($tx->metadata,'scheduled_at');
-  if(is_string($scheduledAt) && $scheduledAt!=='' && now()->lt(\Illuminate\Support\Carbon::parse($scheduledAt)))return $tx;
+  if (is_string($scheduledAt) && $scheduledAt !== '' && now()->lt(\Illuminate\Support\Carbon::parse($scheduledAt))) return $tx;
   $tx->loadMissing('service');
   if($tx->service && !$tx->service->enabled){
    $tx->failure_code='SERVICE_DISABLED';
