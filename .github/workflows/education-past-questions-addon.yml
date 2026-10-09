@@ -3,6 +3,14 @@ on:
   push:
     branches: [main]
     paths:
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/migrations/**'
+      - 'routes/**'
+      - 'resources/**'
+      - 'tests/**'
+      - '.github/workflows/**'
       - 'addons/education/**'
       - 'resources/js/Pages/Education/**'
       - 'resources/js/Pages/Admin/Education/**'
@@ -15,6 +23,14 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/migrations/**'
+      - 'routes/**'
+      - 'resources/**'
+      - 'tests/**'
+      - '.github/workflows/**'
       - 'addons/education/**'
       - 'resources/js/Pages/Education/**'
       - 'resources/js/Pages/Admin/Education/**'
