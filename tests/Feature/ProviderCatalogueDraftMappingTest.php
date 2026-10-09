@@ -98,6 +98,7 @@ class ProviderCatalogueDraftMappingTest extends TestCase
         $this->assertDatabaseHas('provider_service_mappings', [
             'api_provider_id' => $provider->id,
             'service_id' => $service->id,
+            'provider_service_id' => 'EXT-DATA-1GB',
             'enabled' => false,
         ]);
         $this->assertDatabaseHas('provider_product_mappings_v2', [
