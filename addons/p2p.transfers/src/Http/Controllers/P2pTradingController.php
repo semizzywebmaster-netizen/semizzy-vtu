@@ -68,6 +68,8 @@ final class P2pTradingController extends Controller
 
     public function requery(Request $request, P2pTradingService $service, int $offer)
     {
-        return response()->json(['data' => $service->requeryOffer($offer)]);
+        return response()->json([
+            'data' => $service->requeryOffer($offer, (int) $request->user()->id),
+        ]);
     }
 }
