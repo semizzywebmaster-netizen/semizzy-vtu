@@ -15,6 +15,13 @@ class AIChatbotAddonTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Schema::dropIfExists('ai_chatbot_conversations');
+        Schema::create('ai_chatbot_conversations', function (Blueprint $table): void {
+            $table->id(); $table->uuid('uuid')->unique(); $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('visitor_hash', 64)->nullable(); $table->string('title')->default('New conversation');
+            $table->string('status')->default('open'); $table->unsignedBigInteger('support_ticket_id')->nullable();
+            $table->timestamp('last_message_at')->nullable(); $table->timestamps();
+        });
         Schema::dropIfExists('ai_chatbot_providers');
         Schema::create('ai_chatbot_providers', function (Blueprint $table): void {
             $table->id();
@@ -36,6 +43,7 @@ class AIChatbotAddonTest extends TestCase
     protected function tearDown(): void
     {
         Schema::dropIfExists('ai_chatbot_providers');
+        Schema::dropIfExists('ai_chatbot_conversations');
         parent::tearDown();
     }
 
@@ -189,6 +197,50 @@ class AIChatbotAddonTest extends TestCase
             $this->assertStringContainsString('rejected its credentials', $e->getMessage());
             $this->assertStringNotContainsString($apiKey, $e->getMessage());
             $this->assertStringNotContainsString('invalid api key', $e->getMessage());
+        }
+    }
+
+    public function test_visitor_can_only_access_a_conversation_bound_to_their_visitor_cookie(): void
+    {
+        $ownerToken = str_repeat('a', 64);
+        $uuid = (string) \Illuminate\Support\Str::uuid();
+        DB::table('ai_chatbot_conversations')->insert([
+            'uuid' => $uuid, 'user_id' => null, 'visitor_hash' => hash('sha256', $ownerToken),
+            'title' => 'Visitor conversation', 'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $controller = app(AIChatbotController::class);
+        $method = new \ReflectionMethod($controller, 'owned');
+        $owned = $method->invoke($controller, Request::create('/', 'GET', [], ['ai_chatbot_visitor' => $ownerToken]), $uuid);
+        $this->assertSame($uuid, $owned->uuid);
+
+        try {
+            $method->invoke($controller, Request::create('/', 'GET', [], ['ai_chatbot_visitor' => str_repeat('b', 64)]), $uuid);
+            $this->fail('A different visitor must not read another visitor conversation.');
+        } catch (\ReflectionException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->assertInstanceOf(HttpException::class, $e->getPrevious() ?? $e);
+        }
+    }
+
+    public function test_missing_visitor_cookie_cannot_access_anonymous_conversation(): void
+    {
+        $uuid = (string) \Illuminate\Support\Str::uuid();
+        DB::table('ai_chatbot_conversations')->insert([
+            'uuid' => $uuid, 'user_id' => null, 'visitor_hash' => hash('sha256', str_repeat('c', 64)),
+            'title' => 'Visitor conversation', 'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $controller = app(AIChatbotController::class);
+        $method = new \ReflectionMethod($controller, 'owned');
+        try {
+            $method->invoke($controller, Request::create('/', 'GET'), $uuid);
+            $this->fail('A visitor without the ownership cookie must be rejected.');
+        } catch (\ReflectionException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->assertInstanceOf(HttpException::class, $e->getPrevious() ?? $e);
         }
     }
 }
