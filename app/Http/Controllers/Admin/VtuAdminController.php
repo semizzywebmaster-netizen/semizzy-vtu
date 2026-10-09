@@ -120,7 +120,7 @@ class VtuAdminController extends Controller
  }
  public function enableProduct(ServiceProduct $product){if(!$product->service || !$product->service->category || $product->service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU products can be managed here.');if(!$product->service->enabled)return back()->with('error','Enable the VTU service before enabling its product.');try{$product->updateOrFail(['enabled'=>true]);return back()->with('success','Product enabled.');}catch(\Throwable $e){report($e);return back()->with('error','Product could not be enabled safely.');}}
  public function disableProduct(ServiceProduct $product){if(!$product->service || !$product->service->category || $product->service->category->key!=='vtu-digital-services')return back()->with('error','Only VTU products can be managed here.');try{$product->updateOrFail(['enabled'=>false]);return back()->with('success','Product disabled.');}catch(\Throwable $e){report($e);return back()->with('error','Product could not be disabled safely.');}}
- public function exportBulk(Request $r): \Symfony\\Component\\HttpFoundation\\StreamedResponse{
+ public function exportBulk(Request $r): \Symfony\Component\HttpFoundation\StreamedResponse{
   $q=VtuBulkOperation::query()->with(['user','items.transaction','items.product'])->latest('id');
   if($r->filled('status')){$status=(string)$r->input('status');if(in_array($status,['processing','pending','partial','successful','failed','cancelled'],true))$q->where('status',$status);}
   if($r->filled('reference'))$q->where('reference','like','%'.addcslashes((string)$r->input('reference'),'\\%_').'%');
@@ -138,7 +138,7 @@ class VtuAdminController extends Controller
   },$filename,['Content-Type'=>'text/csv; charset=UTF-8','Cache-Control'=>'no-store']);
  }
 
- public function exportSelectedBulk(Request $r): \Symfony\\Component\\HttpFoundation\\StreamedResponse{
+ public function exportSelectedBulk(Request $r): \Symfony\Component\HttpFoundation\StreamedResponse{
   $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id']]);
   $ids=array_map('intval',$data['bulk_ids']);
   $q=VtuBulkOperation::query()->with(['user','items.transaction','items.product'])->whereIn('id',$ids)->orderBy('id');
@@ -175,7 +175,7 @@ class VtuAdminController extends Controller
   ]]);
  }
 
- public function bulkReport(VtuBulkOperation $bulk): \Symfony\\Component\\HttpFoundation\\StreamedResponse{
+ public function bulkReport(VtuBulkOperation $bulk): \Symfony\Component\HttpFoundation\StreamedResponse{
   $bulk->load(['user','items.transaction','items.product']);
   $counts=['pending'=>0,'processing'=>0,'successful'=>0,'failed'=>0,'cancelled'=>0,'other'=>0];
   foreach($bulk->items as $item){$key=(string)$item->status;if(array_key_exists($key,$counts))$counts[$key]++;else$counts['other']++;}
