@@ -22,3 +22,11 @@ Route::middleware(['web','auth','ensure.addon:ads.monetization','permission:ads.
  Route::post('/admin/ads/promotions/packages',[AdsAdminController::class,'createPromotionPackage'])->name('admin.ads.promotions.packages.store');
  Route::post('/admin/ads/promotions/{promotion}/review',[AdsAdminController::class,'reviewPromotion'])->name('admin.ads.promotions.review');
 });
+
+Route::middleware(['web','auth','ensure.addon:ads.monetization','permission:ads.promotions.create'])->group(function () {
+ Route::get('/ads/promotions',[AdsAdminController::class,'sellerPromotions'])->name('ads.promotions.index');
+ Route::post('/ads/promotions',[AdsAdminController::class,'submitPromotion'])->name('ads.promotions.store');
+});
+Route::middleware(['web','auth','ensure.addon:ads.monetization','permission:ads.promotions.manage'])->group(function () {
+ Route::patch('/admin/ads/promotions/packages/{package}',[AdsAdminController::class,'updatePromotionPackage'])->name('admin.ads.promotions.packages.update');
+});
