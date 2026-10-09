@@ -8,17 +8,57 @@ class AddonRegistry
 {
     public function all(): array
     {
-        $root = base_path('addons');
-        if (!is_dir($root)) return [];
+        $root = realpath(base_path('addons'));
+        if ($root === false || !is_dir($root)) return [];
+
+        // Keep legacy flat addons working while allowing addons/<category>/<addon>/manifest.php.
+        $files = array_merge(
+            glob($root . '/*/manifest.php') ?: [],
+            glob($root . '/*/*/manifest.php') ?: [],
+        );
+        sort($files, SORT_STRING);
 
         $manifests = [];
-        foreach (glob($root . '/*/manifest.php') ?: [] as $file) {
+        $seen = [];
+
+        foreach ($files as $file) {
             try {
-                $manifest = require $file;
+                $realFile = realpath($file);
+                if ($realFile === false || !$this->isWithinRoot($realFile, $root)) {
+                    report(new \RuntimeException('Addon manifest resolves outside the addons directory.'));
+                    continue;
+                }
+
+                $manifest = require $realFile;
                 if (!is_array($manifest)) continue;
                 $this->validate($manifest);
-                $manifest['source'] = basename(dirname($file));
-                $manifests[$manifest['identifier']] = $manifest;
+
+                $identifier = strtolower(trim($manifest['identifier']));
+                if (isset($seen[$identifier])) {
+                    report(new \RuntimeException(
+                        "Duplicate addon identifier [{$identifier}] found at [{$realFile}]; keeping [{$seen[$identifier]}]."
+                    ));
+                    continue;
+                }
+
+                $directory = realpath(dirname($realFile));
+                if ($directory === false || !$this->isWithinRoot($directory, $root)) {
+                    report(new \RuntimeException('Addon source directory resolves outside the addons directory.'));
+                    continue;
+                }
+
+                $relativePath = str_replace('\\', '/', ltrim(substr($directory, strlen($root)), DIRECTORY_SEPARATOR));
+                if ($relativePath === '' || str_contains('/' . $relativePath . '/', '/../')) {
+                    report(new \RuntimeException('Addon source path is invalid.'));
+                    continue;
+                }
+
+                // "source" remains the legacy basename for callers that rely on it.
+                // New path-aware code must use source_path for nested addon directories.
+                $manifest['source'] = basename($directory);
+                $manifest['source_path'] = $relativePath;
+                $manifests[$identifier] = $manifest;
+                $seen[$identifier] = $realFile;
             } catch (\Throwable $e) {
                 report($e);
             }
@@ -32,11 +72,15 @@ class AddonRegistry
     {
         foreach ($this->all() as $manifest) {
             $prefix = trim((string) ($manifest['autoload_namespace'] ?? ''), '\\') . '\\';
-            $source = (string) ($manifest['source'] ?? '');
-            if ($prefix === '\\' || $source === '') continue;
+            $sourcePath = (string) ($manifest['source_path'] ?? $manifest['source'] ?? '');
+            if ($prefix === '\\' || $sourcePath === '') continue;
 
-            $base = base_path('addons/' . $source . '/src/');
-            if (!is_dir($base)) continue;
+            // The registry only supplies normalized relative paths from within addons/.
+            $base = base_path('addons/' . $sourcePath . '/src/');
+            $realBase = realpath($base);
+            $root = realpath(base_path('addons'));
+            if ($realBase === false || $root === false || !$this->isWithinRoot($realBase, $root)) continue;
+            $base = rtrim($realBase, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
             spl_autoload_register(static function (string $class) use ($prefix, $base): void {
                 if (!str_starts_with($class, $prefix)) return;
@@ -96,6 +140,13 @@ class AddonRegistry
             ]);
         }
         return $manifest;
+    }
+
+    private function isWithinRoot(string $path, string $root): bool
+    {
+        $root = rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        return str_starts_with($path . (is_dir($path) ? DIRECTORY_SEPARATOR : ''), $root)
+            || $path === rtrim($root, DIRECTORY_SEPARATOR);
     }
 
     private function validate(array $manifest): void
