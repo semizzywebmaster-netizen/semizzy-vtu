@@ -18,9 +18,9 @@ This document is the acceptance checklist for the professional admin-operations 
 
 ### 3. Product catalogue and tier pricing
 - [x] Existing catalogue import, provider-product mapping, PriceRule and PriceEngine foundations are present.
-- [ ] Provide the explicit **Save as Draft** and **Add to My Services** lifecycle.
-- [ ] Show source cost separately from selling prices and expected margin for USER, AGENT, RESELLER and MERCHANT.
-- [ ] Validate every eligible tier through the production PriceEngine before publication.
+- [x] Provide the explicit **Save as Draft** and **Add to My Services** lifecycle with server-side readiness checks.
+- [x] Show the selected provider source cost separately from PriceEngine selling prices and expected gross profit for USER, AGENT, RESELLER and MERCHANT in the publication readiness preview.
+- [x] Validate every required tier through the production PriceEngine before publication; fail closed if a tier cannot be priced or the result is below provider cost.
 - [ ] Bulk edits need preview, validation, confirmation and audit records.
 - [ ] Catalogue sync must never silently publish, enable routing or overwrite selling-price rules.
 
@@ -48,7 +48,7 @@ This document is the acceptance checklist for the professional admin-operations 
 
 ### Global search
 - [x] Add a responsive, permission-aware search entry in the admin top bar for users, API providers, services, products, support tickets and active addons.
-- [ ] Add transaction references, provider operation logs, audit request IDs and addon-specific records when the corresponding secure destination screens are available.
+- [x] Add VTU transaction references and audit request IDs to global search, linking transaction results to a filtered recovery screen. Provider operation logs and other addon-specific records remain future additions.
 - [ ] Keep queries bounded, escape SQL LIKE wildcards, return minimal fields and use no-store responses.
 - [ ] Never expose KYC documents, identity numbers, credentials, OTPs or full provider payloads in search results.
 
