@@ -61,6 +61,18 @@ class ProductPublicationService
         if (! $candidate) {
             $blockers[] = 'No enabled provider product is mapped to an enabled, unpaused, live-verified provider with transaction-initiation routing for this platform service.';
         } else {
+            $productMappingActive = DB::table('provider_product_mappings_v2 as m')
+                ->join('provider_services as ps', 'ps.id', '=', 'm.provider_service_id')
+                ->where('m.api_provider_id', $candidate->api_provider_id)
+                ->where('m.catalogue_product_id', $product->id)
+                ->where('m.enabled', true)
+                ->where('m.mapping_status', 'active')
+                ->where('ps.external_service_id', $candidate->provider_product_id)
+                ->exists();
+            if (! $productMappingActive) {
+                $blockers[] = 'The provider product-level mapping is not active. Activate the approved mapping after provider verification before publishing.';
+            }
+
             if (! $candidate->last_synced_at || $candidate->last_synced_at->lt(now()->subHours(24))) {
                 $blockers[] = 'The selected provider source cost is missing or older than 24 hours. Refresh the provider catalogue before publishing.';
             }
