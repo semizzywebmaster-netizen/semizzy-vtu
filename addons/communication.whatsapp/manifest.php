@@ -25,6 +25,7 @@ return [
   ['key'=>'web_push_enabled','type'=>'boolean','default'=>true],
   ['key'=>'provider_failover_enabled','type'=>'boolean','default'=>true]
  ],
+ 'web_route_files'=>['addons/communication.whatsapp/routes/web.php'],
  'migrations'=>[
   '2026_10_07_050000_create_communication_providers.php',
   '2026_10_07_050001_create_communication_templates.php',
