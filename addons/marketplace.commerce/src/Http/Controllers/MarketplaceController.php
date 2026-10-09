@@ -119,9 +119,11 @@ final class MarketplaceController
         }
         $movements = WalletMovement::query()->whereIn('operation_key', $movementKeys)->get()->keyBy('operation_key');
         $earnings = MarketplaceEarning::query()->whereIn('order_id', $reconciliationOrders->pluck('id'))->get()->keyBy('order_id');
+        $escrowRows = DB::table('marketplace_escrows')->whereIn('order_id', $reconciliationOrders->pluck('id'))->get()->keyBy('order_id');
         $reconciliation = [];
         foreach ($reconciliationOrders as $order) {
             $earning = $earnings->get($order->id);
+            $escrow = $escrowRows->get($order->id);
             $buyerKey = 'marketplace:'.$order->reference.':buyer';
             $sellerKey = 'marketplace:'.$order->reference.':seller';
             $refundBuyerKey = 'marketplace:'.$order->reference.':refund:buyer';
@@ -136,9 +138,13 @@ final class MarketplaceController
             }
             if ($order->status === 'paid') {
                 if (!$hasBuyerMovement) $issues[] = 'Buyer debit movement missing';
-                if (!$hasSellerMovement) $issues[] = 'Seller credit movement missing';
+                if (!$escrow) $issues[] = 'Escrow record missing';
+                elseif (in_array($escrow->status, ['held', 'buyer_confirmed'], true) && $hasSellerMovement) $issues[] = 'Seller appears paid while escrow is still held';
+                elseif ($escrow->status === 'released' && !$hasSellerMovement) $issues[] = 'Released escrow is missing seller payout movement';
+                elseif (!in_array($escrow->status, ['held', 'buyer_confirmed', 'released'], true)) $issues[] = 'Unexpected escrow state for paid order';
                 if (!$earning) $issues[] = 'Earning record missing';
-                elseif ($earning->status !== 'credited') $issues[] = 'Earning status does not match paid order';
+                elseif ($escrow && in_array($escrow->status, ['held', 'buyer_confirmed'], true) && $earning->status !== 'escrowed') $issues[] = 'Earning status should remain escrowed';
+                elseif ($escrow && $escrow->status === 'released' && $earning->status !== 'credited') $issues[] = 'Released escrow earning status mismatch';
                 if ($hasRefundBuyer || $hasRefundSeller) $issues[] = 'Refund movement exists while order is paid';
             }
             if ($order->status === 'refunded') {
