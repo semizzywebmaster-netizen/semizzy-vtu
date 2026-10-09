@@ -777,6 +777,7 @@ class ProviderEngineController extends Controller
     {
         $data = $request->validate([
             'service_id' => ['required', 'integer', 'exists:services,id'],
+            'provider_service_id' => ['required', 'string', 'max:120'],
             'service_product_id' => ['nullable', 'integer', 'exists:service_products,id'],
         ]);
 
@@ -796,6 +797,10 @@ class ProviderEngineController extends Controller
         }
 
         $platformService = Service::query()->findOrFail((int) $data['service_id']);
+        $providerServiceCode = trim((string) $data['provider_service_id']);
+        if ($providerServiceCode === '') {
+            return response()->json(['message' => 'Enter the provider service identifier documented for this platform service. The external product ID is stored separately.'], 422);
+        }
         $currency = strtoupper(trim((string) $providerService->currency));
         if (preg_match('/^[A-Z]{3}$/', $currency) !== 1) {
             return response()->json(['message' => 'The provider catalogue row has no valid three-letter currency. Correct the provider catalogue before mapping.'], 422);
@@ -860,7 +865,7 @@ class ProviderEngineController extends Controller
         try {
             $result = DB::transaction(function () use (
                 $request, $provider, $providerService, $platformService, $import, $externalId,
-                $currency, $cost, $validCost, $providerMappingEnabled, $productKey, $existingByKey
+                $currency, $cost, $validCost, $providerMappingEnabled, $productKey, $existingByKey, $providerServiceCode
             ): array {
                 $lockedService = ProviderService::query()->lockForUpdate()->findOrFail($providerService->id);
                 $lockedImport = ProviderServiceImport::query()
@@ -929,16 +934,33 @@ class ProviderEngineController extends Controller
                     ],
                 );
 
-                // Create missing service-level routing as disabled. A catalogue mapping never enables live routing.
-                ProviderServiceMapping::query()->firstOrCreate(
-                    ['api_provider_id' => $provider->id, 'service_id' => $platformService->id],
-                    [
+                // The provider service identifier is distinct from the product ID and comes from verified provider documentation.
+                $currentServiceMapping = ProviderServiceMapping::query()
+                    ->where('api_provider_id', $provider->id)
+                    ->where('service_id', $platformService->id)
+                    ->lockForUpdate()->first();
+
+                if ($currentServiceMapping) {
+                    if (trim((string) $currentServiceMapping->provider_service_id) !== ''
+                        && trim((string) $currentServiceMapping->provider_service_id) !== $providerServiceCode) {
+                        throw new \DomainException('An existing provider service mapping uses a different provider service identifier. Reconcile it explicitly before mapping another product variant.');
+                    }
+                    if (trim((string) $currentServiceMapping->provider_service_id) === '') {
+                        if ($currentServiceMapping->enabled) {
+                            throw new \DomainException('Disable the service route before adding its documented provider service identifier.');
+                        }
+                        $currentServiceMapping->update(['provider_service_id' => $providerServiceCode]);
+                    }
+                } else {
+                    ProviderServiceMapping::query()->create([
+                        'api_provider_id' => $provider->id,
+                        'service_id' => $platformService->id,
                         'service_key' => $platformService->key,
-                        'provider_service_id' => $lockedService->id,
+                        'provider_service_id' => $providerServiceCode,
                         'capabilities' => [],
                         'enabled' => false,
-                    ],
-                );
+                    ]);
+                }
 
                 if (! $currentV2Map) {
                     DB::table('provider_product_mappings_v2')->insert([
