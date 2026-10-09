@@ -18,24 +18,27 @@ final class AdminEducationPastQuestionController extends Controller {
  public function store(Request $request) {
   $data=$this->validateItem($request);
   $data['is_free']=(bool)$request->boolean('is_free');
-  $file=$data['file']; unset($data['file']);
+  $file=$data['file']; $previewFile=$data['preview_file']??null; unset($data['file'],$data['preview_file']);
   $data['slug']=$this->uniqueSlug($data['title']);
   $data['file_path']=$file->store('education/past-questions','local');
   $data['file_name']=mb_substr(basename($file->getClientOriginalName()),0,255); $data['mime_type']=$file->getMimeType()?:'application/octet-stream'; $data['file_size']=$file->getSize()?:0;
+  if($previewFile)$data['preview_path']=$previewFile->store('education/past-questions/previews','local');
   $data['uploaded_by']=$request->user()->id; $data['status']='draft'; $data['published_at']=null;
   if($data['is_free'])$data['price_minor']=0;
   EducationLibraryItem::create($data);
   return back()->with('success','Past-question resource uploaded as a draft. Review and publish it when ready.');
  }
  public function update(Request $request,EducationLibraryItem $item) {
-  $data=$request->validate(['category'=>['required',Rule::in(['school_past_question','exam_past_question'])],'title'=>'required|string|max:200','institution'=>'nullable|string|max:180','faculty'=>'nullable|string|max:180','department'=>'nullable|string|max:180','course_code'=>'nullable|string|max:80','course_title'=>'nullable|string|max:180','education_level'=>'nullable|string|max:80','semester'=>'nullable|string|max:80','academic_session'=>'nullable|string|max:40','exam_body'=>'nullable|string|max:100','exam_type'=>'nullable|string|max:100','subject'=>'nullable|string|max:140','exam_year'=>'nullable|integer|min:1900|max:2100','description'=>'nullable|string|max:5000','is_free'=>'required|boolean','price_minor'=>'required|integer|min:0','currency'=>'required|string|size:3','file'=>'nullable|file|mimes:pdf,doc,docx|max:20480']);
+  $data=$request->validate(['category'=>['required',Rule::in(['school_past_question','exam_past_question'])],'title'=>'required|string|max:200','institution'=>'nullable|string|max:180','faculty'=>'nullable|string|max:180','department'=>'nullable|string|max:180','course_code'=>'nullable|string|max:80','course_title'=>'nullable|string|max:180','education_level'=>'nullable|string|max:80','semester'=>'nullable|string|max:80','academic_session'=>'nullable|string|max:40','exam_body'=>'nullable|string|max:100','exam_type'=>'nullable|string|max:100','subject'=>'nullable|string|max:140','exam_year'=>'nullable|integer|min:1900|max:2100','description'=>'nullable|string|max:5000','is_free'=>'required|boolean','price_minor'=>'required|integer|min:0','currency'=>'required|string|size:3','file'=>'nullable|file|mimes:pdf,doc,docx|max:20480','preview_file'=>'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120']);
   $data['is_free']=(bool)$request->boolean('is_free');
   if($item->status==='published' && $item->category!==$data['category']) return back()->withErrors(['category'=>'Unpublish the resource before changing its section.']);
   if($data['is_free'])$data['price_minor']=0;
-  $oldPath=null;
+  $oldPath=null; $oldPreviewPath=null; $previewFile=$data['preview_file']??null; unset($data['preview_file']);
+  if($previewFile) { $oldPreviewPath=$item->preview_path; $data['preview_path']=$previewFile->store('education/past-questions/previews','local'); }
   if(isset($data['file'])) { $file=$data['file'];$oldPath=$item->file_path;$newPath=$file->store('education/past-questions','local');$data['file_path']=$newPath;$data['file_name']=mb_substr(basename($file->getClientOriginalName()),0,255);$data['mime_type']=$file->getMimeType()?:'application/octet-stream';$data['file_size']=$file->getSize()?:0;unset($data['file']); }
   $item->fill($data)->save();
   if($oldPath && Storage::disk('local')->exists($oldPath))Storage::disk('local')->delete($oldPath);
+  if($oldPreviewPath && Storage::disk('local')->exists($oldPreviewPath))Storage::disk('local')->delete($oldPreviewPath);
   return back()->with('success','Resource updated.');
  }
  public function publish(EducationLibraryItem $item) {
@@ -51,7 +54,7 @@ final class AdminEducationPastQuestionController extends Controller {
   $item->delete();return back()->with('success','Resource deleted.');
  }
  private function validateItem(Request $request):array {
-  return $request->validate(['category'=>['required',Rule::in(['school_past_question','exam_past_question'])],'title'=>'required|string|max:200','institution'=>'nullable|string|max:180','faculty'=>'nullable|string|max:180','department'=>'nullable|string|max:180','course_code'=>'nullable|string|max:80','course_title'=>'nullable|string|max:180','education_level'=>'nullable|string|max:80','semester'=>'nullable|string|max:80','academic_session'=>'nullable|string|max:40','exam_body'=>'nullable|string|max:100','exam_type'=>'nullable|string|max:100','subject'=>'nullable|string|max:140','exam_year'=>'nullable|integer|min:1900|max:2100','description'=>'nullable|string|max:5000','is_free'=>'required|boolean','price_minor'=>'required|integer|min:0','currency'=>'required|string|size:3','file'=>'required|file|mimes:pdf,doc,docx|max:20480']);
+  return $request->validate(['category'=>['required',Rule::in(['school_past_question','exam_past_question'])],'title'=>'required|string|max:200','institution'=>'nullable|string|max:180','faculty'=>'nullable|string|max:180','department'=>'nullable|string|max:180','course_code'=>'nullable|string|max:80','course_title'=>'nullable|string|max:180','education_level'=>'nullable|string|max:80','semester'=>'nullable|string|max:80','academic_session'=>'nullable|string|max:40','exam_body'=>'nullable|string|max:100','exam_type'=>'nullable|string|max:100','subject'=>'nullable|string|max:140','exam_year'=>'nullable|integer|min:1900|max:2100','description'=>'nullable|string|max:5000','is_free'=>'required|boolean','price_minor'=>'required|integer|min:0','currency'=>'required|string|size:3','file'=>'required|file|mimes:pdf,doc,docx|max:20480','preview_file'=>'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120']);
  }
  private function uniqueSlug(string $title):string {$base=Str::slug($title)?:'past-question';$slug=$base;$i=2;while(EducationLibraryItem::withTrashed()->where('slug',$slug)->exists())$slug=$base.'-'.$i++;return $slug;}
 }
