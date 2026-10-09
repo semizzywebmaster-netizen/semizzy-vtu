@@ -272,7 +272,7 @@ class AddonLifecycleService
                 throw ValidationException::withMessages(['migrations' => 'Each addon migration entry must be a non-empty string.']);
             }
 
-            $migration = basename(str_replace('\\\\', '/', trim($migration)));
+            $migration = basename(str_replace('\\', '/', trim($migration)));
             if (!str_ends_with(strtolower($migration), '.php')) {
                 $migration .= '.php';
             }
@@ -295,13 +295,13 @@ class AddonLifecycleService
             $safeMatches = array_values($safeMatches);
 
             if (count($safeMatches) > 1) {
-                throw new \\RuntimeException("Ambiguous addon migration filename: {$migration}");
+                throw new \RuntimeException("Ambiguous addon migration filename: {$migration}");
             }
 
             $rootPath = base_path('database/migrations/'.$migration);
             $path = $safeMatches[0] ?? (is_file($rootPath) ? realpath($rootPath) : false);
             if ($path === false || $path === null || !is_file($path)) {
-                throw new \\RuntimeException("Addon migration file not found: {$migration}");
+                throw new \RuntimeException("Addon migration file not found: {$migration}");
             }
 
             $arguments = ['--path' => $path, '--force' => true];
@@ -310,7 +310,7 @@ class AddonLifecycleService
             }
             $exit = Artisan::call('migrate', $arguments);
             if ($exit !== 0) {
-                throw new \\RuntimeException("Addon migration failed: {$migration}");
+                throw new \RuntimeException("Addon migration failed: {$migration}");
             }
 
             $this->recordStep($addon, 'migration_'.sha1($migration), "Migration applied: {$migration}");
