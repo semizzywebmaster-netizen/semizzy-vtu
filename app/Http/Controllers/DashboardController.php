@@ -43,11 +43,10 @@ class DashboardController extends Controller
                 ['label' => 'Active addons', 'value' => Addon::query()->where('status', 'active')->count(), 'description' => 'Currently active core extensions'],
                 ['label' => 'Enabled products', 'value' => ServiceProduct::query()->where('enabled', true)->count(), 'description' => 'Catalogue products enabled in core'],
                 ['label' => 'Open support tickets', 'value' => SupportTicket::query()->whereIn('status', ['open', 'pending'])->count(), 'description' => 'Tickets awaiting attention'],
-
-            ['label' => 'Providers needing verification', 'value' => ApiProvider::query()->where('enabled', true)->where(function ($query): void {
-                $query->where('verification_status', '!=', 'live_verified')
-                    ->orWhere('integration_status', '!=', 'live_verified');
-            })->count(), 'description' => 'Enabled providers not fully live-verified'],
+                ['label' => 'Providers needing verification', 'value' => ApiProvider::query()->where('enabled', true)->where(function ($query): void {
+                    $query->where('verification_status', '!=', 'live_verified')
+                        ->orWhere('integration_status', '!=', 'live_verified');
+                })->count(), 'description' => 'Enabled providers not fully live-verified'],
             ];
             if (Schema::hasTable('vtu_transactions')) {
                 $metrics[] = ['label' => 'Pending VTU transactions', 'value' => VtuTransaction::query()->whereNotIn('status', ['successful', 'failed', 'reversed', 'cancelled'])->count(), 'description' => 'Transactions needing status confirmation'];
@@ -55,19 +54,6 @@ class DashboardController extends Controller
             }
             if (Schema::hasTable('provider_syncs')) {
                 $metrics[] = ['label' => 'Failed provider syncs (24h)', 'value' => ProviderSync::query()->where('status', 'failed')->where('created_at', '>=', now()->subDay())->count(), 'description' => 'Catalogue sync failures to review'];
-            }
-            $vtuEnabled = filter_var(SystemSetting::query()->where('key', 'vtu_enabled')->value('value') ?? '1', FILTER_VALIDATE_BOOL);
-            $vtuActive = Addon::query()->where('identifier', 'vtu.digital-services')->where('status', 'active')->exists();
-            if ($vtuEnabled && $vtuActive) {
-                array_push($quickLinks,
-                    ['label' => 'VTU Control Center', 'url' => '/admin/vtu'],
-                    ['label' => 'VTU Services', 'url' => '/admin/vtu/services'],
-                    ['label' => 'VTU Products', 'url' => '/admin/vtu/products'],
-                    ['label' => 'VTU Providers', 'url' => '/admin/providers'],
-                    ['label' => 'VTU Mappings', 'url' => '/admin/vtu/mappings'],
-                    ['label' => 'VTU Transactions', 'url' => '/admin/vtu/transactions'],
-                    ['label' => 'VTU Bulk Operations', 'url' => '/admin/vtu/bulk'],
-                );
             }
         } elseif ($isStaff) {
             if ($can('providers.view')) {
@@ -77,7 +63,7 @@ class DashboardController extends Controller
                 $metrics[] = ['label' => 'Enabled services', 'value' => Service::query()->where('enabled', true)->count(), 'description' => 'Services currently enabled in catalogue'];
                 $metrics[] = ['label' => 'Enabled products', 'value' => ServiceProduct::query()->where('enabled', true)->count(), 'description' => 'Products currently enabled in catalogue'];
             }
-            if ($can('vtu.transactions.view')) {
+            if ($can('vtu.transactions.view') && Schema::hasTable('vtu_transactions')) {
                 $metrics[] = ['label' => 'VTU transactions', 'value' => VtuTransaction::query()->count(), 'description' => 'Transactions recorded by the VTU addon'];
             }
             $metrics[] = ['label' => 'Open support tickets', 'value' => SupportTicket::query()->where('status', 'open')->count(), 'description' => 'Customer requests awaiting first response'];
@@ -115,20 +101,26 @@ class DashboardController extends Controller
                 ['label' => 'Profile change requests', 'url' => '/admin/profile-change-requests'],
                 ['label' => 'Audit events', 'url' => '/admin/audit-events'],
                 ['label' => 'Security events', 'url' => '/admin/security-events'],
-
-
-
-
-
-
-
                 ['label' => 'Support desk', 'url' => '/support'],
             ];
+            $vtuEnabled = filter_var(SystemSetting::query()->where('key', 'vtu_enabled')->value('value') ?? '1', FILTER_VALIDATE_BOOL);
+            $vtuActive = Addon::query()->where('identifier', 'vtu.digital-services')->where('status', 'active')->exists();
+            if ($vtuEnabled && $vtuActive) {
+                array_push($quickLinks,
+                    ['label' => 'VTU Control Center', 'url' => '/admin/vtu'],
+                    ['label' => 'VTU Services', 'url' => '/admin/vtu/services'],
+                    ['label' => 'VTU Products', 'url' => '/admin/vtu/products'],
+                    ['label' => 'VTU Providers', 'url' => '/admin/providers'],
+                    ['label' => 'VTU Mappings', 'url' => '/admin/vtu/mappings'],
+                    ['label' => 'VTU Transactions', 'url' => '/admin/vtu/transactions'],
+                    ['label' => 'VTU Bulk Operations', 'url' => '/admin/vtu/bulk'],
+                );
+            }
         } elseif ($isStaff) {
             if ($can('users.view')) $quickLinks[] = ['label' => 'Users & staff', 'url' => '/admin/users'];
             if ($can('providers.view')) $quickLinks[] = ['label' => 'API providers', 'url' => '/admin/providers'];
             if ($can('catalogue.view')) $quickLinks[] = ['label' => 'Service catalogue', 'url' => '/admin/catalogue'];
-            if ($can('vtu.transactions.view')) $quickLinks[] = ['label' => 'VTU transactions', 'url' => '/admin/vtu/transactions'];
+            if ($can('vtu.transactions.view') && Schema::hasTable('vtu_transactions')) $quickLinks[] = ['label' => 'VTU transactions', 'url' => '/admin/vtu/transactions'];
             $quickLinks[] = ['label' => 'Support desk', 'url' => '/support'];
             $quickLinks[] = ['label' => 'Notifications', 'url' => '/notifications'];
             $quickLinks[] = ['label' => 'My profile', 'url' => '/profile'];
