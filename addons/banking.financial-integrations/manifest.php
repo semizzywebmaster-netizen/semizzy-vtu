@@ -31,6 +31,7 @@ return [
     ],
     'permissions' => [
         'banking.view',
+        'banking.manage',
         'banking.transfers.create',
         'banking.transfers.manage',
         'banking.accounts.view',
