@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\P2p;
+namespace Tests\Integration\P2p;
 
 use App\Models\User;
 use App\Models\WalletAccount;
