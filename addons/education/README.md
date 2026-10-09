@@ -9,6 +9,7 @@ This addon contains two separate catalogue sections:
 
 - Admin/staff can upload PDF, DOC and DOCX files (20 MB maximum), manage metadata, publish or archive resources, and set free or NGN-priced access.
 - Uploads are stored on Laravel's private local disk, not in the public web directory. Files are served only through an authenticated controller after access checks.
+- Admins may attach an optional PDF or image preview. Previews are stored privately and served inline only for published resources; the full file still requires free access or a successful purchase.
 - Free resources can be downloaded by authenticated users. Paid resources require a successful purchase record.
 - Paid purchases debit an active same-currency wallet inside a database transaction and write a wallet movement with a stable operation key. The purchase is idempotent per user/resource.
 - Resources with purchase history cannot be deleted; archive them to preserve customer access and audit history.
