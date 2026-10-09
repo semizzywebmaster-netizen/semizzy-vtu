@@ -94,8 +94,10 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
   return <><Head title="System settings"/><main className="min-h-screen bg-slate-50 p-4 md:p-8"><div className="mx-auto max-w-6xl">
     <header><p className="text-sm font-semibold text-indigo-700">{safeSettings.platform_name || 'SEMIZZY ONE'} · ADMIN</p><h1 className="mt-1 text-2xl font-extrabold text-slate-900">System settings</h1><p className="mt-2 max-w-3xl text-sm text-slate-600">Global identity, business information, media, theme and production email delivery.</p></header>
 
+    <nav aria-label="Settings sections" className="sticky top-16 z-20 mt-5 flex gap-2 overflow-x-auto rounded-xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur"><a href="#appearance" className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Branding & theme</a><a href="#pricing" className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">KYC charges</a><a href="#skin" className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Light / dark</a><a href="#business" className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Business details</a><a href="#assets" className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Brand assets</a><a href="#smtp" className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Email / SMTP</a><a href="#maintenance" className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Maintenance</a></nav>
+
     <form onSubmit={submit} className="mt-6 space-y-6">
-      <section className="rounded-2xl border bg-white p-5 shadow-sm">
+      <section id="appearance" className="scroll-mt-28 rounded-2xl border bg-white p-5 shadow-sm">
         <h2 className="text-lg font-extrabold">Global Theme · 6 options</h2><p className="mt-1 text-sm text-slate-500">Five professional themes plus one Custom theme. Applied platform-wide.</p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {THEMES.map(theme=><button type="button" key={theme.key} onClick={()=>choose(theme.key)} className={'rounded-2xl border-2 p-4 text-left '+(form.data.theme_key===theme.key?'border-indigo-600 bg-indigo-50':'border-slate-200')}><div className="flex gap-3"><span className="h-12 w-12 shrink-0 rounded-xl" style={{background:'linear-gradient(135deg,'+theme.light.primary+','+theme.light.accent+')'}}/><span><b className="block">{theme.name}</b><span className="text-xs text-slate-500">{theme.description}</span></span></div></button>)}
@@ -104,7 +106,7 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
         {form.data.theme_key==='custom'&&<><CustomBuilder skin="light" value={form.data.theme_custom_light} onChange={(k,v)=>updateCustom('light',k,v)}/><CustomBuilder skin="dark" value={form.data.theme_custom_dark} onChange={(k,v)=>updateCustom('dark',k,v)}/></>}
       </section>
 
-      <section className="rounded-2xl border bg-white p-5 shadow-sm">
+      <section id="pricing" className="scroll-mt-28 rounded-2xl border bg-white p-5 shadow-sm">
         <h2 className="text-lg font-extrabold">KYC Provider Charges</h2>
         <p className="mt-1 text-sm text-slate-500">Set the exact provider charge in NGN minor units. No markup is added to these lookup charges.</p>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -113,19 +115,19 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
         </div>
       </section>
 
-      <section className="rounded-2xl border bg-white p-5 shadow-sm"><h2 className="text-lg font-extrabold">Global Skin</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{(['light','dark'] as Skin[]).map(s=><button type="button" key={s} onClick={()=>form.setData('skin_default',s)} className={'rounded-2xl border-2 p-4 text-left '+(form.data.skin_default===s?'border-indigo-600 bg-indigo-50':'border-slate-200')}>{s==='light'?'☀':'☾'} <b className="ml-2">{s==='light'?'Light':'Dark'}</b></button>)}</div></section>
+      <section id="skin" className="scroll-mt-28 rounded-2xl border bg-white p-5 shadow-sm"><h2 className="text-lg font-extrabold">Global Skin</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{(['light','dark'] as Skin[]).map(s=><button type="button" key={s} onClick={()=>form.setData('skin_default',s)} className={'rounded-2xl border-2 p-4 text-left '+(form.data.skin_default===s?'border-indigo-600 bg-indigo-50':'border-slate-200')}>{s==='light'?'☀':'☾'} <b className="ml-2">{s==='light'?'Light':'Dark'}</b></button>)}</div></section>
 
-      <section className="space-y-5 rounded-2xl border bg-white p-5 shadow-sm">
+      <section id="business" className="scroll-mt-28 space-y-5 rounded-2xl border bg-white p-5 shadow-sm">
         <div><h2 className="text-lg font-extrabold">Business Information & Social Media</h2><p className="mt-1 text-sm text-slate-500">Optional details that can be displayed globally when configured.</p></div>
         <div className="grid gap-4 md:grid-cols-2">{([['phone','Phone'],['whatsapp','WhatsApp'],['email','Business email'],['website','Website'],['address','Business address']] as const).map(([key,label])=><label key={key} className="block"><span className="text-sm font-semibold">{label}</span><input type={key==='email'?'email':key==='website'?'url':'text'} className="mt-1 w-full rounded-xl border p-3" value={form.data.business[key]} onChange={e=>form.setData('business',{...form.data.business,[key]:e.target.value})}/></label>)}</div>
         <div><h3 className="font-bold">Social media</h3><div className="mt-3 grid gap-4 md:grid-cols-2">{(['facebook','instagram','x','youtube','tiktok','linkedin'] as const).map(k=><label key={k}><span className="text-sm font-semibold capitalize">{k}</span><input type="url" className="mt-1 w-full rounded-xl border p-3" placeholder="https://..." value={form.data.social[k]} onChange={e=>form.setData('social',{...form.data.social,[k]:e.target.value})}/></label>)}</div></div>
       </section>
 
-      <section className="rounded-2xl border bg-white p-5 shadow-sm"><h2 className="text-lg font-extrabold">Logo, Favicon & Media</h2><p className="mt-1 text-sm text-slate-500">Upload once and use the assets throughout the platform.</p>
+      <section id="assets" className="scroll-mt-28 rounded-2xl border bg-white p-5 shadow-sm"><h2 className="text-lg font-extrabold">Logo, Favicon & Media</h2><p className="mt-1 text-sm text-slate-500">Upload once and use the assets throughout the platform.</p>
         <div className="mt-5 grid gap-4 md:grid-cols-2">{(['logo','favicon','banner','hero'] as const).map(asset=><div key={asset} className="rounded-2xl border p-4"><b className="capitalize">{asset}</b>{safeSettings.assets?.[asset]&&<img src={safeSettings.assets[asset]} alt={asset} className={asset==='banner'||asset==='hero'?'mt-3 h-24 w-full rounded-xl object-cover':'mt-3 h-16 max-w-[180px] object-contain'}/>}<input type="file" accept={asset==='favicon'?'.ico,.png,.jpg,.jpeg,.webp':'image/png,image/jpeg,image/webp'} className="mt-3 w-full text-sm" onChange={e=>uploadAsset(asset,e.target.files?.[0]||null)}/></div>)}</div>
       </section>
 
-      <section id="smtp" className="space-y-6 rounded-2xl border bg-white p-5 shadow-sm">
+      <section id="smtp" className="scroll-mt-28 space-y-6 rounded-2xl border bg-white p-5 shadow-sm">
         <div><h2 className="text-lg font-extrabold">SMTP Delivery Pool</h2><p className="mt-1 text-sm text-slate-500">Add multiple SMTP accounts. Enable 2 or all 8 providers. The platform can automatically fail over or distribute emails across the enabled pool.</p></div>
         <div className="grid gap-4 md:grid-cols-3">
           <label className="flex items-center gap-3 rounded-xl border p-4 md:col-span-1"><input type="checkbox" checked={!!form.data.smtp.enabled} onChange={e=>form.setData('smtp',{...form.data.smtp,enabled:e.target.checked})}/><span><b>Enable SMTP pool</b><span className="block text-xs text-slate-500">Disabled = use .env/cPanel mail.</span></span></label>
@@ -165,7 +167,7 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
 
       <section className="space-y-4 rounded-2xl border bg-white p-5 shadow-sm"><label className="block"><b>Site identity</b><p className="mt-1 text-xs text-slate-500">Change once and publish globally across public, user, admin and PWA metadata.</p><input className="mt-2 w-full rounded-xl border p-3" value={form.data.platform_name} onChange={e=>form.setData('platform_name',e.target.value)} maxLength={80} required/></label><label className="block"><b>Support email</b><input type="email" className="mt-1 w-full rounded-xl border p-3" value={form.data.support_email} onChange={e=>form.setData('support_email',e.target.value)}/></label><label className="block"><b>Support notice</b><textarea className="mt-1 min-h-24 w-full rounded-xl border p-3" value={form.data.support_notice} onChange={e=>form.setData('support_notice',e.target.value)}/></label><label className="block"><b>Default timezone</b><input className="mt-1 w-full rounded-xl border p-3" value={form.data.default_timezone} onChange={e=>form.setData('default_timezone',e.target.value)} placeholder="Africa/Lagos"/></label></section>
 
-      <section id="maintenance" className="space-y-5 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+      <section id="maintenance" className="scroll-mt-28 space-y-5 rounded-2xl border border-amber-200 bg-amber-50 p-5">
         <div><h2 className="text-lg font-extrabold text-amber-950">System Maintenance</h2><p className="mt-1 text-sm text-amber-900">Production-safe maintenance tools. Backups contain the database and public uploaded files; secrets such as .env are never included.</p></div>
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl bg-white p-4 shadow-sm"><b className="block">Website Backup</b><p className="mt-1 text-xs text-slate-500">Create and download a portable SEMIZZY ONE backup.</p><a href="/admin/maintenance/backup" className="mt-4 inline-flex rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white">Create & Download Backup</a></div>
