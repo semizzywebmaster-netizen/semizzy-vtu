@@ -996,7 +996,7 @@ class ProviderEngineController extends Controller
     {
         $data = $request->validate([
             'capabilities' => ['present', 'array'],
-            'capabilities.*' => ['string', \\Illuminate\\Validation\\Rule::in(['catalogue_retrieval', 'transaction_initiation', 'transaction_status', 'refund', 'webhook'])],
+            'capabilities.*' => ['string', \Illuminate\Validation\Rule::in(['catalogue_retrieval', 'transaction_initiation', 'transaction_status', 'refund', 'webhook'])],
         ]);
 
         if ((int) $mapping->api_provider_id !== (int) $provider->id) {
@@ -1022,7 +1022,7 @@ class ProviderEngineController extends Controller
                 'service_id' => $mapping->service_id,
                 'capabilities' => $selected,
             ], $request);
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             report($exception);
         }
 
