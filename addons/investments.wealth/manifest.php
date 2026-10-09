@@ -2,7 +2,7 @@
 return [
  'identifier'=>'investments.wealth','name'=>'Investments & Wealth','version'=>'1.0.0',
  'description'=>'Configurable wallet-backed investment products with funding, maturity, profit and redemption.',
- 'core_compatibility'=>'>=2.0.0','dependencies'=>[],
+ 'compatibility'=>'>=2.0.0','dependencies'=>[],
  'permissions'=>['investments.view','investments.create','investments.manage','investments.redeem','investments.settings.manage'],
  'role_permissions'=>[
   'ADMIN'=>['investments.view','investments.create','investments.manage','investments.redeem','investments.settings.manage'],
