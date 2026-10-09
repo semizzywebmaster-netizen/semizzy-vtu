@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ApiProvider;
 use App\Models\ProviderServiceMapping;
 use App\Models\Service;
+use App\Models\ServiceCategory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -15,7 +16,16 @@ class ProviderPlatformCoverageTest extends TestCase
 
     public function test_coverage_dashboard_counts_only_live_verified_enabled_unpaused_mappings(): void
     {
+        $category = ServiceCategory::query()->create([
+            'key' => 'digital-services',
+            'name' => 'Digital Services',
+            'description' => 'Test category',
+            'enabled' => true,
+            'sort_order' => 1,
+        ]);
+
         $service = Service::query()->create([
+            'category_id' => $category->id,
             'key' => 'airtime',
             'name' => 'Airtime',
             'description' => 'Airtime top-up',
