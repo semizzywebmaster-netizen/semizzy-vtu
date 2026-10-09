@@ -127,12 +127,11 @@ final class MarketplaceOrderService
             }
 
             $buyerBefore = (string) $buyerWallet->available_minor;
-            $sellerBefore = (string) $sellerWallet->available_minor;
             $buyerAfter = self::subtract($buyerBefore, $amount);
-            $sellerAfter = self::add($sellerBefore, $sellerNet);
 
+            // Escrow-first: deduct from the buyer now, but never credit the
+            // seller's available wallet until buyer confirmation and admin release.
             $buyerWallet->forceFill(['available_minor' => $buyerAfter])->save();
-            $sellerWallet->forceFill(['available_minor' => $sellerAfter])->save();
 
             if ($product->isPhysical()) {
                 $product->forceFill([
@@ -158,20 +157,6 @@ final class MarketplaceOrderService
                 'held_before_minor' => (string) $buyerWallet->held_minor,
                 'held_after_minor' => (string) $buyerWallet->held_minor,
                 'metadata' => ['order_id' => $order->id, 'side' => 'buyer'],
-            ]);
-
-            WalletMovement::create([
-                'wallet_account_id' => $sellerWallet->id,
-                'operation_key' => 'marketplace:'.$order->reference.':seller',
-                'reference' => $order->reference,
-                'type' => 'marketplace_sale',
-                'amount_minor' => $sellerNet,
-                'currency' => $currency,
-                'available_before_minor' => $sellerBefore,
-                'available_after_minor' => $sellerAfter,
-                'held_before_minor' => (string) $sellerWallet->held_minor,
-                'held_after_minor' => (string) $sellerWallet->held_minor,
-                'metadata' => ['order_id' => $order->id, 'side' => 'seller'],
             ]);
 
             MarketplaceEarning::create([
@@ -205,8 +190,21 @@ final class MarketplaceOrderService
                     'unit_price_minor' => (string) $order->unit_price_minor,
                 ],
                 'currency' => $currency,
-                'status' => 'credited',
+                'status' => 'escrowed',
             ]);
+            DB::table('marketplace_escrows')->insert([
+                'order_id' => $order->id,
+                'reference' => $order->reference,
+                'currency' => $currency,
+                'gross_minor' => $amount,
+                'seller_net_minor' => $sellerNet,
+                'platform_profit_minor' => $fee,
+                'status' => 'held',
+                'metadata' => json_encode(['escrow_version' => 1, 'created_from' => 'marketplace_order_payment']),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
             $order->forceFill(array_merge(['status' => 'paid', 'paid_at' => now()], $fulfillment))->save();
 
             if ($product->isDigital()) {
@@ -245,64 +243,37 @@ final class MarketplaceOrderService
             if (!$isAdmin && (int) $order->buyer_id !== $actorId) {
                 throw new RuntimeException('You are not allowed to refund this order.');
             }
-            if ($order->status === 'refunded') {
-                return $order;
-            }
-            if ($order->status !== 'paid') {
-                throw new RuntimeException('Only paid orders can be refunded.');
-            }
+            if ($order->status === 'refunded') return $order;
+            if ($order->status !== 'paid') throw new RuntimeException('Only paid orders can be refunded.');
 
-            $refundKeys = [
-                'marketplace:'.$order->reference.':refund:buyer',
-                'marketplace:'.$order->reference.':refund:seller',
-            ];
+            $refundKeys = ['marketplace:'.$order->reference.':refund:buyer', 'marketplace:'.$order->reference.':refund:seller'];
             if (WalletMovement::query()->whereIn('operation_key', $refundKeys)->exists()) {
-                throw new RuntimeException('Refund wallet movements already exist while the order is still paid. Reconcile this order before retrying.');
+                throw new RuntimeException('Refund movements already exist while the order is paid. Reconcile this order before retrying.');
             }
 
+            $escrow = DB::table('marketplace_escrows')->where('order_id', $order->id)->lockForUpdate()->first();
+            if (!$escrow || !in_array($escrow->status, ['held', 'buyer_confirmed'], true)) {
+                throw new RuntimeException('Only funds still held in escrow can be refunded through this flow. Released payouts require an admin dispute/recovery process.');
+            }
             $earning = MarketplaceEarning::query()->where('order_id', $order->id)->lockForUpdate()->first();
-            if (!$earning) {
-                throw new RuntimeException('The marketplace earning record is missing; refund was stopped to prevent an unbalanced settlement.');
-            }
-            if ($earning->status === 'refunded') {
-                throw new RuntimeException('The earning is already marked refunded while the order is still paid. Reconcile this order before retrying.');
-            }
+            if (!$earning) throw new RuntimeException('The marketplace earning record is missing; refund was stopped.');
 
             $currency = strtoupper((string) $order->currency);
             $buyerId = (int) $order->buyer_id;
             $sellerId = (int) $order->seller_id;
-            $wallets = WalletAccount::query()
-                ->whereIn('user_id', [$buyerId, $sellerId])
-                ->where('currency', $currency)
-                ->orderBy('user_id')
-                ->lockForUpdate()
-                ->get()
-                ->keyBy('user_id');
+            $wallets = WalletAccount::query()->whereIn('user_id', [$buyerId, $sellerId])->where('currency', $currency)->orderBy('user_id')->lockForUpdate()->get()->keyBy('user_id');
             $buyer = $wallets->get($buyerId);
             $seller = $wallets->get($sellerId);
-            if (!$buyer || !$seller) {
-                throw new RuntimeException('Required refund wallet is unavailable.');
-            }
+            if (!$buyer || !$seller) throw new RuntimeException('Required refund wallet is unavailable.');
 
-            // Refund the buyer's gross payment, but reverse only the seller net
-            // actually credited at settlement. The platform fee is not taken
-            // from the seller a second time.
-            $buyerRefund = (string) $order->total_minor;
-            $sellerReversal = (string) ($earning->seller_net_minor ?? $earning->net_minor ?? '0');
-            if (self::compare($sellerReversal, '0') < 0) {
-                throw new RuntimeException('The recorded seller settlement is invalid; refund was stopped.');
-            }
-            if (self::compare((string) $seller->available_minor, $sellerReversal) < 0) {
-                throw new RuntimeException('Seller available balance is insufficient to reverse the original seller net payout. No refund was applied.');
-            }
-
+            // Seller has not been paid while escrow is held, so the refund must
+            // not debit seller funds. Refund the buyer gross and close the escrow.
+            $buyerRefund = (string) $escrow->gross_minor;
+            $sellerReversal = '0';
             $buyerBefore = (string) $buyer->available_minor;
-            $sellerBefore = (string) $seller->available_minor;
             $buyerAfter = self::add($buyerBefore, $buyerRefund);
-            $sellerAfter = self::subtract($sellerBefore, $sellerReversal);
-
+            $sellerBefore = (string) $seller->available_minor;
             $buyer->forceFill(['available_minor' => $buyerAfter])->save();
-            $seller->forceFill(['available_minor' => $sellerAfter])->save();
 
             WalletMovement::create([
                 'wallet_account_id' => $buyer->id,
@@ -315,56 +286,93 @@ final class MarketplaceOrderService
                 'available_after_minor' => $buyerAfter,
                 'held_before_minor' => (string) $buyer->held_minor,
                 'held_after_minor' => (string) $buyer->held_minor,
-                'metadata' => [
-                    'order_id' => $order->id,
-                    'side' => 'buyer',
-                    'refund_basis' => 'gross_paid_amount',
-                    'seller_reversal_minor' => $sellerReversal,
-                    'platform_profit_retained_minor' => (string) ($earning->platform_profit_minor ?? $earning->fee_minor ?? '0'),
-                ],
+                'metadata' => ['order_id' => $order->id, 'side' => 'buyer', 'refund_basis' => 'gross_escrow_amount'],
             ]);
             WalletMovement::create([
                 'wallet_account_id' => $seller->id,
                 'operation_key' => 'marketplace:'.$order->reference.':refund:seller',
                 'reference' => $order->reference,
                 'type' => 'marketplace_refund',
-                'amount_minor' => $sellerReversal,
+                'amount_minor' => '0',
                 'currency' => $currency,
                 'available_before_minor' => $sellerBefore,
-                'available_after_minor' => $sellerAfter,
+                'available_after_minor' => $sellerBefore,
                 'held_before_minor' => (string) $seller->held_minor,
                 'held_after_minor' => (string) $seller->held_minor,
-                'metadata' => [
-                    'order_id' => $order->id,
-                    'side' => 'seller',
-                    'refund_basis' => 'original_seller_net_payout',
-                    'gross_refunded_to_buyer_minor' => $buyerRefund,
-                    'platform_profit_minor' => (string) ($earning->platform_profit_minor ?? $earning->fee_minor ?? '0'),
-                ],
+                'metadata' => ['order_id' => $order->id, 'side' => 'seller', 'seller_was_paid' => false, 'seller_reversal_minor' => $sellerReversal],
             ]);
 
-            $product = MarketplaceProduct::query()->lockForUpdate()->find($order->product_id);
-            if ($product && $product->isPhysical()) {
-                $product->forceFill([
-                    'stock_quantity' => self::add((string) $product->stock_quantity, (string) $order->quantity),
-                ])->save();
-            }
-
+            DB::table('marketplace_escrows')->where('id', $escrow->id)->update([
+                'status' => 'refunded', 'refunded_at' => now(), 'refunded_by' => $actorId, 'updated_at' => now(),
+            ]);
             $earning->forceFill([
                 'status' => 'refunded',
                 'calculation_snapshot' => array_merge((array) $earning->calculation_snapshot, [
-                    'refund' => [
-                        'refunded_at' => now()->toIso8601String(),
-                        'gross_refunded_to_buyer_minor' => $buyerRefund,
-                        'seller_net_reversed_minor' => $sellerReversal,
-                        'platform_profit_minor' => (string) ($earning->platform_profit_minor ?? $earning->fee_minor ?? '0'),
-                        'actor_id' => $actorId,
-                        'admin_initiated' => $isAdmin,
-                    ],
+                    'refund' => ['refunded_at' => now()->toIso8601String(), 'gross_refunded_to_buyer_minor' => $buyerRefund, 'seller_net_reversed_minor' => '0', 'escrow_refund' => true, 'actor_id' => $actorId, 'admin_initiated' => $isAdmin],
                 ]),
             ])->save();
-
+            $product = MarketplaceProduct::query()->lockForUpdate()->find($order->product_id);
+            if ($product && $product->isPhysical()) $product->forceFill(['stock_quantity' => self::add((string) $product->stock_quantity, (string) $order->quantity)])->save();
             $order->forceFill(['status' => 'refunded', 'refunded_at' => now()])->save();
+            return $order->fresh(['product', 'buyer', 'seller']);
+        });
+    }
+
+    public function confirmReceipt(MarketplaceOrder $order, int $buyerId): MarketplaceOrder
+    {
+        return DB::transaction(function () use ($order, $buyerId): MarketplaceOrder {
+            $order = MarketplaceOrder::query()->lockForUpdate()->findOrFail($order->id);
+            if ((int) $order->buyer_id !== $buyerId) throw new RuntimeException('Only the buyer can confirm receipt.');
+            if ($order->status !== 'paid') throw new RuntimeException('Only paid orders can be confirmed.');
+            $escrow = DB::table('marketplace_escrows')->where('order_id', $order->id)->lockForUpdate()->first();
+            if (!$escrow) throw new RuntimeException('Escrow record is missing. Contact support; funds were not released.');
+            if ($escrow->status === 'buyer_confirmed' || $escrow->status === 'released') return $order;
+            if ($escrow->status !== 'held') throw new RuntimeException('This escrow is no longer awaiting buyer confirmation.');
+            DB::table('marketplace_escrows')->where('id', $escrow->id)->update([
+                'status' => 'buyer_confirmed', 'buyer_confirmed_at' => now(), 'buyer_confirmed_by' => $buyerId, 'updated_at' => now(),
+            ]);
+            $order->forceFill(['accepted_at' => now()])->save();
+            return $order->fresh(['product', 'buyer', 'seller']);
+        });
+    }
+
+    public function releaseEscrow(MarketplaceOrder $order, int $adminId, ?string $note = null): MarketplaceOrder
+    {
+        return DB::transaction(function () use ($order, $adminId, $note): MarketplaceOrder {
+            $order = MarketplaceOrder::query()->lockForUpdate()->findOrFail($order->id);
+            if ($order->status !== 'paid') throw new RuntimeException('Only paid orders can release escrow.');
+            $escrow = DB::table('marketplace_escrows')->where('order_id', $order->id)->lockForUpdate()->first();
+            if (!$escrow) throw new RuntimeException('Escrow record is missing; no funds were released.');
+            if ($escrow->status === 'released') return $order;
+            if (!in_array($escrow->status, ['buyer_confirmed', 'held'], true)) throw new RuntimeException('This escrow cannot be released in its current state.');
+            if ($escrow->status === 'held' && !(bool) config('addons.marketplace.commerce.settings.admin_can_release_without_buyer_confirmation', false)) {
+                throw new RuntimeException('Buyer confirmation is required before release under the current escrow settings.');
+            }
+
+            $seller = WalletAccount::query()->where('user_id', (int) $order->seller_id)->where('currency', strtoupper((string) $order->currency))->lockForUpdate()->first();
+            if (!$seller) throw new RuntimeException('Seller wallet is unavailable; escrow remains held.');
+            $amount = (string) $escrow->seller_net_minor;
+            $before = (string) $seller->available_minor;
+            $after = self::add($before, $amount);
+            $seller->forceFill(['available_minor' => $after])->save();
+            WalletMovement::create([
+                'wallet_account_id' => $seller->id,
+                'operation_key' => 'marketplace:'.$order->reference.':seller',
+                'reference' => $order->reference,
+                'type' => 'marketplace_sale_release',
+                'amount_minor' => $amount,
+                'currency' => strtoupper((string) $order->currency),
+                'available_before_minor' => $before,
+                'available_after_minor' => $after,
+                'held_before_minor' => (string) $seller->held_minor,
+                'held_after_minor' => (string) $seller->held_minor,
+                'metadata' => ['order_id' => $order->id, 'side' => 'seller', 'escrow_release' => true, 'admin_id' => $adminId],
+            ]);
+            DB::table('marketplace_escrows')->where('id', $escrow->id)->update([
+                'status' => 'released', 'released_at' => now(), 'released_by' => $adminId,
+                'admin_note' => $note, 'updated_at' => now(),
+            ]);
+            MarketplaceEarning::query()->where('order_id', $order->id)->update(['status' => 'credited']);
             return $order->fresh(['product', 'buyer', 'seller']);
         });
     }
