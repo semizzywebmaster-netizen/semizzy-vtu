@@ -21,7 +21,7 @@ final class AdminEducationPastQuestionController extends Controller {
   $file=$data['file']; unset($data['file']);
   $data['slug']=$this->uniqueSlug($data['title']);
   $data['file_path']=$file->store('education/past-questions','local');
-  $data['file_name']=$file->getClientOriginalName(); $data['mime_type']=$file->getMimeType()?:'application/octet-stream'; $data['file_size']=$file->getSize()?:0;
+  $data['file_name']=mb_substr(basename($file->getClientOriginalName()),0,255); $data['mime_type']=$file->getMimeType()?:'application/octet-stream'; $data['file_size']=$file->getSize()?:0;
   $data['uploaded_by']=$request->user()->id; $data['status']='draft'; $data['published_at']=null;
   if($data['is_free'])$data['price_minor']=0;
   EducationLibraryItem::create($data);
@@ -32,8 +32,11 @@ final class AdminEducationPastQuestionController extends Controller {
   $data['is_free']=(bool)$request->boolean('is_free');
   if($item->status==='published' && $item->category!==$data['category']) return back()->withErrors(['category'=>'Unpublish the resource before changing its section.']);
   if($data['is_free'])$data['price_minor']=0;
-  if(isset($data['file'])) { $file=$data['file'];$newPath=$file->store('education/past-questions','local');if(Storage::disk('local')->exists($item->file_path))Storage::disk('local')->delete($item->file_path);$data['file_path']=$newPath;$data['file_name']=$file->getClientOriginalName();$data['mime_type']=$file->getMimeType()?:'application/octet-stream';$data['file_size']=$file->getSize()?:0;unset($data['file']); }
-  $item->fill($data)->save(); return back()->with('success','Resource updated.');
+  $oldPath=null;
+  if(isset($data['file'])) { $file=$data['file'];$oldPath=$item->file_path;$newPath=$file->store('education/past-questions','local');$data['file_path']=$newPath;$data['file_name']=mb_substr(basename($file->getClientOriginalName()),0,255);$data['mime_type']=$file->getMimeType()?:'application/octet-stream';$data['file_size']=$file->getSize()?:0;unset($data['file']); }
+  $item->fill($data)->save();
+  if($oldPath && Storage::disk('local')->exists($oldPath))Storage::disk('local')->delete($oldPath);
+  return back()->with('success','Resource updated.');
  }
  public function publish(EducationLibraryItem $item) {
   if(!$item->is_free && $item->price_minor<1)return back()->withErrors(['price_minor'=>'Paid resources must have a price greater than zero.']);
