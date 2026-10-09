@@ -121,6 +121,52 @@ class AdsAdminController
   return response()->json(['success'=>true,'message'=>'Ad type updated.']);
  }
 
+
+ public function sellerPromotions(Request $request): Response
+ {
+  $userId=(int)$request->user()->id;
+  return Inertia::render('Ads/Promotions/Index',[
+   'products'=>DB::table('marketplace_products')->where('seller_id',$userId)->where('status','active')->orderBy('name')->get(['id','name','category','price_minor','currency']),
+   'packages'=>DB::table('ad_promotion_packages')->where('is_active',true)->orderBy('price_minor')->get(),
+   'requests'=>DB::table('ad_promotions')->where('advertiser_id',$userId)->orderByDesc('created_at')->limit(100)->get(),
+  ]);
+ }
+
+ public function submitPromotion(Request $request)
+ {
+  $data=$request->validate([
+   'product_id'=>['required','integer','min:1','exists:marketplace_products,id'],
+   'package_id'=>['required','integer','min:1','exists:ad_promotion_packages,id'],
+   'advertiser_note'=>['nullable','string','max:2000'],
+  ]);
+  $product=DB::table('marketplace_products')->where('id',$data['product_id'])->where('seller_id',$request->user()->id)->where('status','active')->first();
+  if(!$product) return response()->json(['success'=>false,'message'=>'You can only request a boost for your own active Marketplace listing.'],403);
+  $package=DB::table('ad_promotion_packages')->where('id',$data['package_id'])->where('is_active',true)->first();
+  if(!$package) return response()->json(['success'=>false,'message'=>'That promotion package is not available.'],422);
+  $duplicate=DB::table('ad_promotions')->where('advertiser_id',$request->user()->id)->where('target_type','marketplace_product')->where('target_id',$product->id)->whereIn('status',['pending_review','approved','active','paused'])->exists();
+  if($duplicate) return response()->json(['success'=>false,'message'=>'This listing already has a pending or non-expired promotion.'],422);
+  DB::table('ad_promotions')->insert([
+   'advertiser_id'=>$request->user()->id,'package_id'=>$package->id,'target_type'=>'marketplace_product','target_id'=>$product->id,
+   'target_label'=>$product->name,'price_minor'=>$package->price_minor,'currency'=>$package->currency,
+   'status'=>'pending_review','payment_status'=>'unpaid','advertiser_note'=>$data['advertiser_note']??null,
+   'created_at'=>now(),'updated_at'=>now(),
+  ]);
+  return response()->json(['success'=>true,'message'=>'Boost request submitted for review. Payment is not collected by this request, and the boost will not run until payment settlement and approval are implemented.']);
+ }
+
+ public function updatePromotionPackage(Request $request, int $package)
+ {
+  $row=DB::table('ad_promotion_packages')->where('id',$package)->first();
+  if(!$row) abort(404);
+  $data=$request->validate([
+   'name'=>['required','string','max:140'],'description'=>['nullable','string','max:1000'],
+   'duration_days'=>['required','integer','min:1','max:365'],'price_minor'=>['required','integer','min:1','max:1000000000'],
+   'priority_weight'=>['required','integer','min:1','max:100'],'is_active'=>['required','boolean'],
+  ]);
+  DB::table('ad_promotion_packages')->where('id',$package)->update($data+['updated_at'=>now()]);
+  return response()->json(['success'=>true,'message'=>'Promotion package updated.']);
+ }
+
  public function promotions(): Response
  {
   return Inertia::render('Admin/Ads/Promotions',[
