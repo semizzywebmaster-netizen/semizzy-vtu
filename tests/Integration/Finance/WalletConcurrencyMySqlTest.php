@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Finance;
+namespace Tests\Integration\Finance;
 
 use App\Models\User;
 use App\Models\WalletAccount;
