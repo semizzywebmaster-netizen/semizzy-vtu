@@ -5,7 +5,8 @@ type MenuItem = {
   id: string; label: string; url: string; icon?: string; section: string;
   addon?: string; addonName?: string;
 };
-type SearchResult = { type: string; title: string; description: string; url: string };\ntype PageProps = {
+type SearchResult = { type: string; title: string; description: string; url: string };
+type PageProps = {
   auth?: { user?: { name?: string; role?: string } | null };
   navigation?: { admin?: { items?: MenuItem[] } };
   platform?: { platform_name?: string };
