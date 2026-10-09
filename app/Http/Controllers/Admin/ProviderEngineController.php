@@ -13,6 +13,7 @@ use App\Models\ProviderHealthCheck;
 use App\Models\ProviderOperationLog;
 use App\Models\ProviderCategory;
 use App\Models\ProviderSubcategory;
+use App\Models\Service;
 use App\Services\Providers\ProviderUrlGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
