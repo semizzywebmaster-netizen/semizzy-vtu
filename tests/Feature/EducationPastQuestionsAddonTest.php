@@ -15,15 +15,19 @@ class EducationPastQuestionsAddonTest extends TestCase {
   }
   Schema::dropIfExists('education_library_purchases');
   Schema::dropIfExists('education_library_items');
+  Schema::dropIfExists('education_reference_categories');
   Schema::dropIfExists('education_reference_catalogue');
   $referenceMigration=require base_path('addons/education/database/migrations/2026_10_09_110100_create_and_import_education_reference_catalogue.php');
   $referenceMigration->up();
+  $adminReferenceMigration=require base_path('addons/education/database/migrations/2026_10_09_110200_add_admin_managed_education_reference_fields.php');
+  $adminReferenceMigration->up();
   $migration=require base_path('addons/education/database/migrations/2026_10_09_110000_create_education_past_question_library.php');
   $migration->up();
  }
  protected function tearDown():void {
   Schema::dropIfExists('education_library_purchases');
   Schema::dropIfExists('education_library_items');
+  Schema::dropIfExists('education_reference_categories');
   Schema::dropIfExists('education_reference_catalogue');
   if($this->createdUsersTable)Schema::dropIfExists('users');
   parent::tearDown();
@@ -34,18 +38,36 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertContains('education.view',$manifest['permissions']);
   $this->assertContains('education.purchase',$manifest['permissions']);
   $this->assertContains('addons/education/routes/web.php',$manifest['web_route_files']);
+  $this->assertContains('2026_10_09_110200_add_admin_managed_education_reference_fields.php',$manifest['migrations']);
+  $this->assertSame('/admin/education/references',$manifest['admin_navigation'][1]['url']);
   $labels=array_column($manifest['navigation'],'label');
   $this->assertContains('School Past Questions',$labels);
   $this->assertContains('Exam Past Questions',$labels);
  }
  public function test_reference_catalogue_imports_exam_bodies_exam_types_and_categorised_schools():void {
   $this->assertTrue(Schema::hasTable('education_reference_catalogue'));
+  $this->assertTrue(Schema::hasTable('education_reference_categories'));
+  $this->assertTrue(Schema::hasColumn('education_reference_catalogue','created_by'));
   $this->assertGreaterThanOrEqual(20,DB::table('education_reference_catalogue')->where('kind','exam_body')->count());
   $this->assertGreaterThanOrEqual(20,DB::table('education_reference_catalogue')->where('kind','exam_type')->count());
   $this->assertGreaterThanOrEqual(50,DB::table('education_reference_catalogue')->where('kind','school')->count());
   $this->assertGreaterThanOrEqual(3,DB::table('education_reference_catalogue')->where('kind','school')->distinct()->count('category'));
   $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'exam_body','short_name'=>'WAEC']);
   $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'University of Lagos','category'=>'federal_university']);
+ }
+ public function test_reference_catalogue_has_room_for_admin_added_schools_and_exam_bodies():void {
+  DB::table('education_reference_catalogue')->insert([
+   'kind'=>'school','category'=>'private_university','name'=>'Admin Added University','catalogue_key'=>hash('sha256','school|private_university|Admin Added University'),
+   'short_name'=>null,'state'=>'Lagos','country'=>'Nigeria','official_url'=>null,'source_url'=>null,'metadata'=>json_encode(['catalogue_source'=>'admin_added']),
+   'is_active'=>true,'created_at'=>now(),'updated_at'=>now()
+  ]);
+  DB::table('education_reference_catalogue')->insert([
+   'kind'=>'exam_body','category'=>'national_or_international','name'=>'New Exam Board','catalogue_key'=>hash('sha256','exam_body|national_or_international|New Exam Board'),
+   'short_name'=>'NEB','state'=>null,'country'=>'Nigeria','official_url'=>null,'source_url'=>null,'metadata'=>json_encode(['catalogue_source'=>'admin_added']),
+   'is_active'=>true,'created_at'=>now(),'updated_at'=>now()
+  ]);
+  $this->assertDatabaseHas('education_reference_catalogue',['name'=>'Admin Added University','kind'=>'school']);
+  $this->assertDatabaseHas('education_reference_catalogue',['name'=>'New Exam Board','kind'=>'exam_body']);
  }
  public function test_library_schema_supports_both_catalogue_categories_and_private_file_metadata():void {
   $this->assertTrue(Schema::hasTable('education_library_items'));
