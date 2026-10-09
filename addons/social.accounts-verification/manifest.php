@@ -3,6 +3,7 @@ return [
  'identifier'=>'social.accounts-verification',
  'name'=>'Social Media Accounts & Foreign Verification Numbers',
  'version'=>'0.1.0',
+ 'autoload_namespace'=>'Semizzy\\Addons\\Social',
  'description'=>'Admin-supplied social media account services and foreign verification numbers with API and manual fulfillment, including purchased-number SMS inboxes.',
  'compatibility'=>'>=2.0.0',
  'dependencies'=>[],
