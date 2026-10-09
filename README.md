@@ -110,6 +110,7 @@ Status is intentionally separated into **BUILT**, **IN PROGRESS / HARDENING**, a
 7. Rewards, Referrals & Promotions — approval/reward hardening
 8. Spin to Win / Rewards Game — production hardening after CI and database validation
 9. Mailer SMTP / SMTP Mailer — production health/failover hardening after CI and cPanel SMTP verification
+10. Education & Past Questions — School Past Questions and Exam Past Questions catalogue, private uploads/previews, publishing, and wallet-backed paid downloads (implementation and CI verification in progress)
 
 ### NOT BUILT
 1. Travel & Tickets Booking
