@@ -11,6 +11,7 @@ Route::middleware(['auth','verified','role:ADMIN,STAFF,SUPPORT','ensure.addon:ai
  Route::post('/providers',[AIChatbotAdminController::class,'storeProvider'])->middleware('permission:ai_chatbot.providers.manage')->name('admin.ai-chatbot.providers.store');
  Route::put('/providers/{provider}',[AIChatbotAdminController::class,'updateProvider'])->whereNumber('provider')->middleware('permission:ai_chatbot.providers.manage')->name('admin.ai-chatbot.providers.update');
  Route::post('/providers/{provider}/test',[AIChatbotAdminController::class,'testProvider'])->whereNumber('provider')->middleware('permission:ai_chatbot.providers.manage')->name('admin.ai-chatbot.providers.test');
+ Route::post('/providers/{provider}/primary',[AIChatbotAdminController::class,'setPrimaryProvider'])->whereNumber('provider')->middleware('permission:ai_chatbot.providers.manage')->name('admin.ai-chatbot.providers.primary');
  Route::delete('/providers/{provider}',[AIChatbotAdminController::class,'deleteProvider'])->whereNumber('provider')->middleware('permission:ai_chatbot.providers.manage')->name('admin.ai-chatbot.providers.delete');
  Route::put('/settings',[AIChatbotAdminController::class,'saveSettings'])->middleware('permission:ai_chatbot.settings.manage')->name('admin.ai-chatbot.settings');
  Route::post('/knowledge',[AIChatbotAdminController::class,'storeKnowledge'])->middleware('permission:ai_chatbot.knowledge.manage')->name('admin.ai-chatbot.knowledge.store');
