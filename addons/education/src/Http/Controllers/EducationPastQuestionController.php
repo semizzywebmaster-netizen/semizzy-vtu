@@ -11,7 +11,8 @@ final class EducationPastQuestionController extends Controller {
  public function school(Request $request) { return $this->catalogue($request,'school_past_question','Education/SchoolPastQuestions','School Past Questions'); }
  public function exams(Request $request) { return $this->catalogue($request,'exam_past_question','Education/ExamPastQuestions','Exam Past Questions'); }
  private function catalogue(Request $request,string $category,string $page,string $title) {
-  $q=EducationLibraryItem::query()->published()->category($category);
+  $base=EducationLibraryItem::query()->published()->category($category);
+  $q=clone $base;
   $search=trim((string)$request->query('q',''));
   if($search!=='') $q->where(function($sub)use($search){$sub->where('title','like','%'.$search.'%')->orWhere('description','like','%'.$search.'%')->orWhere('institution','like','%'.$search.'%')->orWhere('course_title','like','%'.$search.'%')->orWhere('subject','like','%'.$search.'%')->orWhere('exam_body','like','%'.$search.'%');});
   foreach(['institution','department','course_code','education_level','semester','academic_session','exam_body','exam_type','subject','exam_year'] as $field) if($request->filled($field)) $q->where($field,$request->query($field));
@@ -23,7 +24,9 @@ final class EducationPastQuestionController extends Controller {
    'is_free'=>$item->is_free,'price_minor'=>$item->price_minor,'currency'=>$item->currency,'file_size'=>$item->file_size,
    'has_preview'=>(bool)$item->preview_path,'owned'=>$item->is_free || EducationLibraryPurchase::where('user_id',$request->user()->id)->where('item_id',$item->id)->where('status','successful')->exists(),
   ]);
-  return Inertia::render($page,['title'=>$title,'items'=>$items,'filters'=>$request->only(['q','institution','department','course_code','education_level','semester','academic_session','exam_body','exam_type','subject','exam_year'])]);
+  $optionFields=$category==='school_past_question'?['institution','department','course_code','education_level','semester','academic_session']:['exam_body','exam_type','subject','exam_year'];
+  $options=[]; foreach($optionFields as $field)$options[$field]=(clone $base)->whereNotNull($field)->distinct()->orderBy($field)->pluck($field)->values();
+  return Inertia::render($page,['title'=>$title,'items'=>$items,'options'=>$options,'filters'=>$request->only(['q','institution','department','course_code','education_level','semester','academic_session','exam_body','exam_type','subject','exam_year'])]);
  }
  public function preview(EducationLibraryItem $item) {
   abort_unless($item->status==='published' && $item->published_at && $item->preview_path,404);
