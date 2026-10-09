@@ -30,14 +30,14 @@ public function test_provider_sms_identifier_cannot_cross_orders(): void {
  $second=SocialServiceOrder::create(['reference'=>'SOC-SMS-B','user_id'=>$b->id,'order_type'=>'number','status'=>'fulfilled','amount'=>'100','currency'=>'NGN']);
  $s=app(SocialServicesService::class);
  $s->ingestSms($first,'Code 111111','Service','shared-provider-id');
- $this->expectException(\\RuntimeException::class);
+ $this->expectException(\RuntimeException::class);
  $s->ingestSms($second,'Code 222222','Service','shared-provider-id');
 }
 
 public function test_expired_number_cannot_receive_sms(): void {
  $u=User::factory()->create();
  $o=SocialServiceOrder::create(['reference'=>'SOC-SMS-EXP','user_id'=>$u->id,'order_type'=>'number','status'=>'fulfilled','amount'=>'100','currency'=>'NGN','expires_at'=>now()->subMinute()]);
- $this->expectException(\\RuntimeException::class);
+ $this->expectException(\RuntimeException::class);
  app(SocialServicesService::class)->ingestSms($o,'Expired code','Service','expired-msg');
 }
 
@@ -45,7 +45,7 @@ public function test_expired_number_cannot_receive_sms(): void {
 public function test_expired_number_cannot_be_purchased(): void {
  $u=User::factory()->create();
  $n=SocialNumberInventory::create(['country_code'=>'+1','country_name'=>'United States','service_key'=>'test','phone_number'=>'+15550000001','phone_hash'=>hash('sha256','15550000001'),'fulfillment_mode'=>'manual','price'=>'10.00','currency'=>'NGN','status'=>'available','expires_at'=>now()->subMinute()]);
- $this->expectException(\\RuntimeException::class);
+ $this->expectException(\RuntimeException::class);
  app(SocialServicesService::class)->createNumberOrder($u->id,$n->id);
  $this->assertDatabaseHas('social_number_inventory',['id'=>$n->id,'status'=>'disabled']);
 }
