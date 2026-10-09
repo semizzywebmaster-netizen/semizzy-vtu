@@ -124,7 +124,7 @@ The repository contains 32 addon directories. This inventory identifies each add
 | Addon manifest identifier | Provider-relevant service / operations to inventory | Existing shared system / integration boundary | Evidence state and next check |
 |---|---|---|---|
 | `ai.chatbot` | AI model requests, embeddings/knowledge where enabled, usage/balance and provider failover | AI-specific provider configuration; avoid a duplicate outbound provider registry | Audit adapter classes, supported model APIs, auth schema, redaction and failover tests |
-| `api.provider-platform` | Cross-service provider directory, capabilities, catalogue import, service/product mapping, price sync and verification | Must reuse Core `ApiProvider`, mappings, credentials, routing, sync and audit | Admin coverage view, publication guard, paginated catalogue read, and safe select-for-review endpoint are implemented on development branch; admin catalogue UI, provider-specific sync adapters, and full operation matrix remain incomplete |
+| `api.provider-platform` | Cross-service provider directory, capabilities, catalogue import, service/product mapping, price sync and verification | Must reuse Core `ApiProvider`, mappings, credentials, routing, sync and audit | Admin coverage view, publication guard, paginated catalogue API and admin review UI, explicit approval, and disabled local-product mapping are implemented on development branch; provider-specific discovery/sync adapters and full operation matrix remain incomplete |
 | `banking.financial-integrations` | Account/virtual-account operations, transfers/payouts, account resolution, reconciliation and status | Reconcile with Payments addon and Core provider engine; do not merge distinct capabilities | Inspect banking-specific adapters and official provider permissions per operation |
 | `bulk-sms.communication` | SMS send, sender IDs, delivery reports, bulk campaigns, status reconciliation | Shared SMS providers with Communication and SIM Hosting views | Verify provider adapters, DND/sender-ID behaviour, per-message pricing and delivery status |
 | `business.agent-merchant-reseller` | No inherent external provider operation; business tiers, limits and commercial pricing | Core users, tiers, price engine and audit | Normally internal; inventory only explicit provider-facing business services |
@@ -210,4 +210,17 @@ Audit status is intentionally split into code-path evidence versus provider-cont
 - `unknown` means code or docs are insufficient to confirm exact operation semantics, identifiers, auth, refund behavior or live result.
 - For Reloadly and VTU.ng, refund/reversal is still `unknown`; no generic refund capability should be inferred from purchase/status.
 - For every provider, the next evidence artifacts are: official endpoint/schema link, redacted request/response fixture, test result, sandbox verification record, and a reviewer/date. No credentials or live secrets belong in this register.
+
+### Catalogue workflow safety gates — implementation checkpoint
+
+The current development branch now separates the workflow into explicit states/actions:
+
+1. **Select for review** creates `awaiting_approval` with `approved=false`, `imported=false`, and `auto_sync_allowed=false`.
+2. **Approve for mapping** sets the review record to `approved`; it does not import a product or enable auto-sync.
+3. **Map to a local ServiceProduct** writes `provider_product_mappings_v2` with `mapping_status=mapped` and `enabled=false`. Existing mapping enablement is not changed by a repeat request.
+4. **Import, sync and routing enablement** remain separate operations and must not be inferred from approval or mapping.
+
+The new admin screen displays provider verification/integration state, provider service IDs/codes, source price/currency and last source sync timestamp. It deliberately does not expose raw provider payloads. Admin actions are permission-gated and approval/mapping changes are audit logged.
+
+Feature tests have been added for pending selection, approval-before-mapping, disabled mapping, audit records and the review page. These are not yet marked verified until the relevant development-branch CI run completes successfully.
 
