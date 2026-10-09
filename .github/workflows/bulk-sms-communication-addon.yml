@@ -6,12 +6,28 @@ on:
       - 'addons/bulk-sms.communication/**'
       - 'composer.json'
       - 'composer.lock'
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/migrations/**'
+      - 'routes/**'
+      - 'resources/**'
+      - 'tests/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [main]
     paths:
       - 'addons/bulk-sms.communication/**'
       - 'composer.json'
       - 'composer.lock'
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/migrations/**'
+      - 'routes/**'
+      - 'resources/**'
+      - 'tests/**'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 jobs:
