@@ -21,7 +21,7 @@ return new class extends Migration {
    'metadata'=>json_encode(['catalogue_source'=>'curated_official_references']), 'is_active'=>true,'created_at'=>$now,'updated_at'=>$now,
   ];
   foreach (($catalogue['exam_types'] ?? []) as $entry) $rows[] = [
-   'kind'=>'exam_type','category'=>null,'name'=>$entry['name'],'short_name'=>null,'state'=>null,'country'=>null,
+   'kind'=>'exam_type','category'=>$entry['body'] ?? 'general','name'=>$entry['name'],'short_name'=>null,'state'=>null,'country'=>null,
    'official_url'=>null,'source_url'=>null,'metadata'=>json_encode(['exam_body'=>$entry['body'] ?? null,'catalogue_source'=>'curated_official_references']),
    'is_active'=>true,'created_at'=>$now,'updated_at'=>$now,
   ];
