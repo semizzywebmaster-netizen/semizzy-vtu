@@ -112,6 +112,32 @@ final class FlutterwavePaymentGatewayAdapter implements PaymentGatewayAdapter
         ));
     }
 
+    public function verifyRefund(PaymentGatewayProvider $provider, string $refundReference, array $context = []): array
+    {
+        $refundReference = trim($refundReference);
+        if ($refundReference === '') {
+            throw new RuntimeException('Flutterwave refund reference is required for status verification.');
+        }
+
+        $data = $this->result($this->request($provider)->get(
+            $this->base($provider).'/refunds',
+            array_filter([
+                'flw_ref' => $refundReference,
+                'from' => $context['from'] ?? null,
+                'to' => $context['to'] ?? null,
+            ], static fn ($value) => $value !== null && $value !== '')
+        ));
+
+        $rows = array_is_list($data) ? $data : [$data];
+        foreach ($rows as $row) {
+            if (is_array($row) && hash_equals($refundReference, (string) ($row['flw_ref'] ?? ''))) {
+                return $row;
+            }
+        }
+
+        throw new RuntimeException('Flutterwave did not return a refund matching the requested refund reference.');
+    }
+
     public function healthCheck(PaymentGatewayProvider $provider): bool
     {
         $this->result($this->request($provider)->get($this->base($provider).'/banks'));
