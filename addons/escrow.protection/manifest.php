@@ -2,7 +2,7 @@
 return [
  'identifier'=>'escrow.protection','name'=>'Escrow','version'=>'1.0.0',
  'description'=>'Protected buyer-seller transactions with wallet holds, controlled release, cancellation, disputes and refunds.',
- 'compatibility'=>'>=2.0.0','dependencies'=>['p2p.transfers'],
+ 'compatibility'=>'>=2.0.0','dependencies'=>[],
  'permissions'=>['escrow.view','escrow.create','escrow.manage','escrow.release','escrow.dispute','escrow.refund','escrow.settings.manage'],
  'role_permissions'=>[
   'ADMIN'=>['escrow.view','escrow.create','escrow.manage','escrow.release','escrow.dispute','escrow.refund','escrow.settings.manage'],
