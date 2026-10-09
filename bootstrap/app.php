@@ -38,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'ensure.active.api' => EnsureActiveApiAccount::class,
             'security.throttle' => SecurityThrottle::class,
             'ensure.addon' => \App\Http\Middleware\EnsureAddonActive::class,
+            'feature.rollout' => EnsureFeatureRollout::class,
             'transaction.pin' => EnsureTransactionPin::class,
             'ensure.api.user' => EnsureApiUser::class,
             'device.session' => EnsureDeviceSession::class,
