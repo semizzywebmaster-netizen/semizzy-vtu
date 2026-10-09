@@ -29,7 +29,7 @@ return [
     'migrations' => [],
     'web_route_files' => ['addons/api.provider-platform/routes/admin.php'],
     'api_route_files' => [],
-    'routes' => ['/admin/provider-platform', '/admin/provider-platform/catalogue/review', '/admin/provider-platform/catalogue', '/admin/provider-platform/catalogue/{providerService}/select', '/admin/provider-platform/catalogue/{providerService}/approve', '/admin/provider-platform/catalogue/{providerService}/map', '/admin/provider-platform/products/{product}/publish', '/admin/provider-platform/products/{product}/unpublish'],
+    'routes' => ['/admin/provider-platform', '/admin/provider-platform/products/{product}/publish', '/admin/provider-platform/products/{product}/unpublish'],
     'api_routes' => [],
     'provider_integrations' => [
         'Core ApiProvider registry',
@@ -45,9 +45,6 @@ return [
         'provider_gap_reporting',
         'guarded_product_publication',
         'audited_product_publish_unpublish',
-        'provider_catalogue_review',
-        'explicit_provider_catalogue_approval',
-        'disabled_provider_product_mapping',
         'live_provider_and_tier_price_readiness_checks',
     ],
 ];
