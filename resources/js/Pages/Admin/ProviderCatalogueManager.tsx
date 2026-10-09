@@ -22,6 +22,8 @@ type CatalogueRow = {
   approved: boolean;
   auto_sync_allowed: boolean;
   state: string;
+  platform_mapping?: { id: number; service_id: number; service_key: string; enabled: boolean; capabilities: string[] } | null;
+  product_mapping?: { id: number; catalogue_product_id: number; enabled: boolean; mapping_status: string } | null;
   category: string | null;
   subcategory: string | null;
   service: {
