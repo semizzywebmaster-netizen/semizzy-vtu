@@ -367,13 +367,13 @@ final class ProviderPlatformAdminController extends Controller
         }
 
         if ($request->header('X-Inertia')) {
-            return back()->with('status', 'Catalogue entry approved for mapping review; it has not been imported or enabled.');
+            return back()->with('status', 'Catalogue approval state saved. Import and routing remain separate actions.');
         }
 
         return response()->json([
             'status' => 'approved',
             'imported' => (bool) $selection->imported,
-            'auto_sync_allowed' => false,
+            'auto_sync_allowed' => (bool) $selection->auto_sync_allowed,
             'message' => 'Approved for mapping review only. No product was imported or enabled.',
         ]);
     }
