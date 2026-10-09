@@ -48,7 +48,10 @@ export default function ProviderPlatformCoverage({ summary, providers, services 
               Phase A — outbound providers used by SEMIZZY ONE. Counts come from saved Core provider and mapping records; a preset or candidate is not a verified integration.
             </p>
           </div>
-          <Link href="/admin/providers" className="inline-flex w-fit items-center rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800">Manage Core providers</Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/admin/provider-platform/catalogue/review" className="inline-flex w-fit items-center rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800">Review provider catalogue</Link>
+            <Link href="/admin/providers" className="inline-flex w-fit items-center rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800">Manage Core providers</Link>
+          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
