@@ -14,12 +14,16 @@ class EducationPastQuestionsAddonTest extends TestCase {
   }
   Schema::dropIfExists('education_library_purchases');
   Schema::dropIfExists('education_library_items');
+  Schema::dropIfExists('education_reference_catalogue');
+  $referenceMigration=require base_path('addons/education/database/migrations/2026_10_09_110100_create_and_import_education_reference_catalogue.php');
+  $referenceMigration->up();
   $migration=require base_path('addons/education/database/migrations/2026_10_09_110000_create_education_past_question_library.php');
   $migration->up();
  }
  protected function tearDown():void {
   Schema::dropIfExists('education_library_purchases');
   Schema::dropIfExists('education_library_items');
+  Schema::dropIfExists('education_reference_catalogue');
   if($this->createdUsersTable)Schema::dropIfExists('users');
   parent::tearDown();
  }
@@ -32,6 +36,15 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $labels=array_column($manifest['navigation'],'label');
   $this->assertContains('School Past Questions',$labels);
   $this->assertContains('Exam Past Questions',$labels);
+ }
+ public function test_reference_catalogue_imports_exam_bodies_exam_types_and_categorised_schools():void {
+  $this->assertTrue(Schema::hasTable('education_reference_catalogue'));
+  $this->assertGreaterThanOrEqual(20,\\Illuminate\\Support\\Facades\\DB::table('education_reference_catalogue')->where('kind','exam_body')->count());
+  $this->assertGreaterThanOrEqual(20,\\Illuminate\\Support\\Facades\\DB::table('education_reference_catalogue')->where('kind','exam_type')->count());
+  $this->assertGreaterThanOrEqual(50,\\Illuminate\\Support\\Facades\\DB::table('education_reference_catalogue')->where('kind','school')->count());
+  $this->assertGreaterThanOrEqual(3,\\Illuminate\\Support\\Facades\\DB::table('education_reference_catalogue')->where('kind','school')->distinct()->count('category'));
+  $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'exam_body','short_name'=>'WAEC']);
+  $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'University of Lagos','category'=>'federal_university']);
  }
  public function test_library_schema_supports_both_catalogue_categories_and_private_file_metadata():void {
   $this->assertTrue(Schema::hasTable('education_library_items'));
