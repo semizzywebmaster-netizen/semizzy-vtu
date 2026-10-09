@@ -75,7 +75,7 @@ final class PaymentWebhookService
             throw new RuntimeException('Gateway verification did not confirm a successful payment.');
         }
 
-        DB::transaction(function () use ($event, $provider, $payload, $reference, $verifiedAmountMinor, $verifiedCurrency): void {
+        DB::transaction(function () use ($event, $provider, $payload, $reference, $verifiedAmountMinor, $verifiedCurrency, $verified): void {
             $event->update(['processing_status' => 'processing', 'payload' => $payload]);
 
             $payment = PaymentIntent::query()->where('reference', $reference)->lockForUpdate()->first();
@@ -102,11 +102,24 @@ final class PaymentWebhookService
                 throw new RuntimeException('Payment currency does not match the payment intent.');
             }
 
+            $paymentMetadata = (array) $payment->metadata;
+            $providerTransactionId = match ($provider->driver) {
+                'flutterwave', 'paystack' => data_get($verified, 'id'),
+                'monnify' => data_get($verified, 'transactionReference'),
+                'opay', 'kora' => data_get($verified, 'reference'),
+                'squad' => data_get($verified, 'transaction_id'),
+                default => null,
+            };
+            if (is_scalar($providerTransactionId) && (string) $providerTransactionId !== '') {
+                $paymentMetadata['provider_transaction_id'] = (string) $providerTransactionId;
+            }
+
             $payment->forceFill([
                 'status' => 'paid',
                 'paid_at' => now(),
                 'provider_id' => $provider->id,
                 'provider_reference' => $this->providerReference($provider, $payload) ?: $payment->provider_reference,
+                'metadata' => $paymentMetadata,
             ])->saveOrFail();
 
             app(\App\Services\Finance\WalletCreditService::class)->credit(
