@@ -45,7 +45,8 @@
       "Semizzy\\Addons\\SpinToWin\\": "addons/spin-to-win/src/",
       "Semizzy\\Addons\\MailerSmtp\\": "addons/mailer-smtp/src/",
       "Semizzy\\Addons\\TravelTickets\\": "addons/travel-tickets/src/",
-      "Semizzy\\Addons\\CryptoPayments\\": "addons/crypto-payments.gateway/src/"
+      "Semizzy\\Addons\\CryptoPayments\\": "addons/crypto-payments.gateway/src/",
+      "Semizzy\\Addons\\Social\\": "addons/social.accounts-verification/src/"
     }
   },
   "autoload-dev": {
