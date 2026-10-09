@@ -13,6 +13,14 @@ on:
       - 'composer.lock'
       - 'package.json'
       - 'package-lock.json'
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/migrations/**'
+      - 'routes/**'
+      - 'resources/**'
+      - 'tests/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [main]
     paths:
@@ -26,6 +34,14 @@ on:
       - 'composer.lock'
       - 'package.json'
       - 'package-lock.json'
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/migrations/**'
+      - 'routes/**'
+      - 'resources/**'
+      - 'tests/**'
+      - '.github/workflows/**'
   workflow_dispatch:
 jobs:
   addon:
