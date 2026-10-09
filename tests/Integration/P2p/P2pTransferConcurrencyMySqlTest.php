@@ -88,7 +88,10 @@ class P2pTransferConcurrencyMySqlTest extends TestCase
         $this->assertSame(1, DB::table('p2p_transfers')->where('sender_id', $sender->id)->count());
         $this->assertSame(2, WalletMovement::query()->whereIn('wallet_account_id', WalletAccount::query()->whereIn('user_id', [$sender->id, $recipientA->id, $recipientB->id])->pluck('id'))->count());
         $recipientBalances = WalletAccount::query()->whereIn('user_id', [$recipientA->id, $recipientB->id])->pluck('available_minor')->map(fn ($value) => (string) $value)->sort()->values()->all();
-        $this->assertSame(['5000', '77000'], $recipientBalances);
+        $this->assertTrue(
+            in_array($recipientBalances, [['5000', '77000'], ['7000', '75000']], true),
+            'Exactly one recipient should receive the transfer while the other keeps its original balance.'
+        );
     }
 
     private function transferResult(int $senderId, int $recipientId, string $amountMinor, string $key): string
