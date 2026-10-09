@@ -45,6 +45,9 @@ return [
         'provider_gap_reporting',
         'guarded_product_publication',
         'audited_product_publish_unpublish',
+        'provider_catalogue_review',
+        'explicit_provider_catalogue_approval',
+        'disabled_provider_product_mapping',
         'live_provider_and_tier_price_readiness_checks',
     ],
 ];
