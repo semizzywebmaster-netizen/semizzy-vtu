@@ -12,16 +12,7 @@ class SocialServicesTest extends TestCase {
  protected function setUp(): void
  {
   parent::setUp();
-
-  // Addon migrations are installed by the addon lifecycle, not Core RefreshDatabase.
-  $migration = require base_path('addons/social.accounts-verification/database/migrations/2026_10_07_003000_create_social_services_tables.php');
-  $migration->up();
- }
- protected function setUp(): void { parent::setUp(); $this->artisan('migrate', ['--path'=>'addons/social.accounts-verification/database/migrations/2026_10_07_003000_create_social_services_tables.php']); }
- protected function setUp(): void {
-  parent::setUp();
-  // Addon migrations are intentionally separate from Core migrations; load this
-  // addon's schema for feature tests without coupling it to every Core install.
+  // Core RefreshDatabase intentionally excludes optional addon migrations.
   $migration = require base_path('addons/social.accounts-verification/database/migrations/2026_10_07_003000_create_social_services_tables.php');
   $migration->up();
  }
