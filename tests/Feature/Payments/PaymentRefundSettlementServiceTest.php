@@ -6,7 +6,7 @@ use App\Models\User;
 use App\Models\WalletAccount;
 use App\Models\WalletMovement;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
@@ -17,7 +17,7 @@ use Tests\TestCase;
 
 class PaymentRefundSettlementServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     private bool $createdProviderTable = false;
 
