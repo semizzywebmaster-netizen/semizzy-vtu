@@ -69,6 +69,7 @@ class P2pTransferConcurrencyMySqlTest extends TestCase
 
     public function test_concurrent_transfers_cannot_both_spend_the_same_sender_balance(): void
     {
+        $this->requireMySqlAndPcntl();
         $sender = User::factory()->create();
         $recipientA = User::factory()->create();
         $recipientB = User::factory()->create();
