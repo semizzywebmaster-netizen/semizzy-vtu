@@ -82,20 +82,26 @@ final class P2pTradingService
     {
         if (!Addon::query()->where('identifier','escrow.protection')->where('status','active')->exists()) throw new RuntimeException('Escrow Protection must be active before accepting a P2P trade offer.');
         return DB::transaction(function () use ($sellerId,$offerId) {
-            $offer=P2pTradeOffer::with('listing')->lockForUpdate()->findOrFail($offerId);
+            $offer=P2pTradeOffer::lockForUpdate()->findOrFail($offerId);
             if ($offer->seller_id !== $sellerId) throw new RuntimeException('Only the listing owner can accept this offer.');
             if ($offer->status !== 'pending') throw new RuntimeException('This offer is not pending.');
             if ($offer->expires_at && $offer->expires_at->isPast()) throw new RuntimeException('This offer has expired.');
-            if (!$offer->listing || $offer->listing->status !== 'open') throw new RuntimeException('This listing is no longer open.');
-            if ($offer->listing->side !== 'sell') throw new RuntimeException('Buy-side P2P listings are not yet enabled for escrow settlement.');
+
+            // Lock the shared listing row as well as the offer row. Locking only
+            // an individual offer permits two different offers on the same listing
+            // to be accepted concurrently before either transaction marks it matched.
+            $listing=P2pTradeListing::lockForUpdate()->findOrFail($offer->listing_id);
+            $offer->setRelation('listing', $listing);
+            if ($listing->status !== 'open') throw new RuntimeException('This listing is no longer open.');
+            if ($listing->side !== 'sell') throw new RuntimeException('Buy-side P2P listings are not yet enabled for escrow settlement.');
             $this->positive((string)$offer->amount_minor); $this->positive((string)$offer->price_minor);
-            if ((int)$offer->amount_minor > (int)$offer->listing->amount_minor) throw new RuntimeException('Offer amount exceeds the listing amount.');
-            if (strtoupper((string)$offer->currency) !== strtoupper((string)$offer->listing->currency)) throw new RuntimeException('Offer currency does not match the listing currency.');
+            if ((int)$offer->amount_minor > (int)$listing->amount_minor) throw new RuntimeException('Offer amount exceeds the listing amount.');
+            if (strtoupper((string)$offer->currency) !== strtoupper((string)$listing->currency)) throw new RuntimeException('Offer currency does not match the listing currency.');
             $seller=$offer->seller;
             if (!$seller) throw new RuntimeException('Seller account could not be resolved.');
-            $escrow=app(EscrowService::class)->create($offer->buyer_id,(string)($seller->username ?: $seller->id),(string)$offer->price_minor,$offer->listing->asset_key,$offer->listing->description,'p2p-offer:'.$offer->id);
+            $escrow=app(EscrowService::class)->create($offer->buyer_id,(string)($seller->username ?: $seller->id),(string)$offer->price_minor,$listing->asset_key,$listing->description,'p2p-offer:'.$offer->id);
             $offer->status='accepted'; $offer->escrow_transaction_id=$escrow->id; $offer->accepted_at=now(); $offer->save();
-            $offer->listing->update(['status'=>'matched']);
+            $listing->update(['status'=>'matched']);
             return $offer->fresh();
         });
     }
