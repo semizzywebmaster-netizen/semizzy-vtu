@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 
 type ProviderOption = { id: number; display_name: string };
 type CatalogueEntry = {
