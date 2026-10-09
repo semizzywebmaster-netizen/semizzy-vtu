@@ -16,12 +16,12 @@ return new class extends Migration {
   $now = now();
   $rows = [];
   foreach (($catalogue['exam_bodies'] ?? []) as $entry) $rows[] = [
-   'kind'=>'exam_body','category'=>'national_or_international','name'=>$entry['name'],'short_name'=>$entry['short_name'] ?? null,
+   'kind'=>'exam_body','category'=>'national_or_international','name'=>$entry['name'],'short_name'=>$entry['short_name'] ?? null,'state'=>null,
    'country'=>$entry['country'] ?? null,'official_url'=>$entry['official_url'] ?? null,'source_url'=>$entry['source_url'] ?? null,
    'metadata'=>json_encode(['catalogue_source'=>'curated_official_references']), 'is_active'=>true,'created_at'=>$now,'updated_at'=>$now,
   ];
   foreach (($catalogue['exam_types'] ?? []) as $entry) $rows[] = [
-   'kind'=>'exam_type','category'=>null,'name'=>$entry['name'],'short_name'=>null,
+   'kind'=>'exam_type','category'=>null,'name'=>$entry['name'],'short_name'=>null,'state'=>null,'country'=>null,
    'official_url'=>null,'source_url'=>null,'metadata'=>json_encode(['exam_body'=>$entry['body'] ?? null,'catalogue_source'=>'curated_official_references']),
    'is_active'=>true,'created_at'=>$now,'updated_at'=>$now,
   ];
