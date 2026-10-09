@@ -24,6 +24,8 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $referenceMigration->up();
   $adminReferenceMigration=require base_path('addons/education/database/migrations/2026_10_09_110200_add_admin_managed_education_reference_fields.php');
   $adminReferenceMigration->up();
+  $directoryExpansionMigration=require base_path('addons/education/database/migrations/2026_10_09_110300_expand_official_school_reference_catalogue.php');
+  $directoryExpansionMigration->up();
   $migration=require base_path('addons/education/database/migrations/2026_10_09_110000_create_education_past_question_library.php');
   $migration->up();
  }
@@ -42,6 +44,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertContains('education.purchase',$manifest['permissions']);
   $this->assertContains('addons/education/routes/web.php',$manifest['web_route_files']);
   $this->assertContains('2026_10_09_110200_add_admin_managed_education_reference_fields.php',$manifest['migrations']);
+  $this->assertContains('2026_10_09_110300_expand_official_school_reference_catalogue.php',$manifest['migrations']);
   $this->assertSame('/admin/education/references',$manifest['admin_navigation'][1]['url']);
   $labels=array_column($manifest['navigation'],'label');
   $this->assertContains('School Past Questions',$labels);
@@ -53,10 +56,12 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertTrue(Schema::hasColumn('education_reference_catalogue','created_by'));
   $this->assertGreaterThanOrEqual(20,DB::table('education_reference_catalogue')->where('kind','exam_body')->count());
   $this->assertGreaterThanOrEqual(20,DB::table('education_reference_catalogue')->where('kind','exam_type')->count());
-  $this->assertGreaterThanOrEqual(50,DB::table('education_reference_catalogue')->where('kind','school')->count());
+  $this->assertGreaterThanOrEqual(100,DB::table('education_reference_catalogue')->where('kind','school')->count());
   $this->assertGreaterThanOrEqual(3,DB::table('education_reference_catalogue')->where('kind','school')->distinct()->count('category'));
   $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'exam_body','short_name'=>'WAEC']);
-  $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'University of Lagos','category'=>'federal_university']);
+  $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'University of Lagos','category'=>'federal_university','source_url'=>'https://enuc.nuc.edu.ng/nus']);
+  $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'A.D. Rufa’i College of Education, Legal and General Studies','source_url'=>'https://ncce.gov.ng/AccreditedColleges']);
+  $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'Miva Open University','category'=>'private_university']);
  }
  public function test_reference_catalogue_has_room_for_admin_added_schools_and_exam_bodies():void {
   DB::table('education_reference_catalogue')->insert([
