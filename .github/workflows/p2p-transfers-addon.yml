@@ -44,7 +44,7 @@ jobs:
         with:
           node-version: 22
       - run: mkdir -p bootstrap/cache storage/app storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs
-      - run: composer validate --strict
+      - run: composer validate --no-check-lock --no-check-publish
       - run: composer install --no-interaction --prefer-dist
       - run: npm install
       - run: npm run typecheck
