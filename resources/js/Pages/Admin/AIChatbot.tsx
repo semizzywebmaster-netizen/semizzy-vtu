@@ -1,4 +1,3 @@
-import React from 'react';
 import {Head,router,useForm} from '@inertiajs/react';
 type Provider={id:number;name:string;driver:string;model:string;enabled:boolean;priority:number;hasKey:boolean;lastTestStatus:string|null;lastTestMessage:string|null};
 type Knowledge={id:number;title:string;category:string;content:string;source_url:string|null;published:boolean};
