@@ -18,5 +18,8 @@ interface PaymentGatewayAdapter
 
     public function refund(PaymentGatewayProvider $provider, array $payload): array;
 
+    /** Return a provider-verified refund record, never a refund-request acknowledgement. */
+    public function verifyRefund(PaymentGatewayProvider $provider, string $refundReference, array $context = []): array;
+
     public function healthCheck(PaymentGatewayProvider $provider): bool;
 }
