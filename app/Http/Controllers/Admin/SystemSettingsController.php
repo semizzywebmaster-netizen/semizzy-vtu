@@ -84,18 +84,18 @@ class SystemSettingsController extends Controller
     public function update(Request $request, AuditLogger $audit): RedirectResponse
     {
         $data = $request->validate([
-            'platform_name'=>['required','string','min:2','max:80'],
+            'platform_name'=>['sometimes','required','string','min:2','max:80'],
             'support_email'=>['nullable','email','max:254'],
             'support_notice'=>['nullable','string','max:500'],
-            'kyc_bvn_lookup_charge_minor'=>['required','integer','min:0','max:9223372036854775807'],
-            'kyc_nin_lookup_charge_minor'=>['required','integer','min:0','max:9223372036854775807'],
-            'default_timezone'=>['required','timezone'],
-            'theme_key'=>['required','in:opay-inspired,palmpay-inspired,modern-corporate,clean-saas,luxury-executive,sky-enterprise,forest-growth,crimson-modern,sunset-commerce,slate-professional,custom'],
-            'theme_primary'=>['required','regex:/^#[0-9A-Fa-f]{6}$/'],
-            'skin_default'=>['required','in:light,dark'],
+            'kyc_bvn_lookup_charge_minor'=>['sometimes','required','integer','min:0','max:9223372036854775807'],
+            'kyc_nin_lookup_charge_minor'=>['sometimes','required','integer','min:0','max:9223372036854775807'],
+            'default_timezone'=>['sometimes','required','timezone'],
+            'theme_key'=>['sometimes','required','in:opay-inspired,palmpay-inspired,modern-corporate,clean-saas,luxury-executive,sky-enterprise,forest-growth,crimson-modern,sunset-commerce,slate-professional,custom'],
+            'theme_primary'=>['sometimes','required','regex:/^#[0-9A-Fa-f]{6}$/'],
+            'skin_default'=>['sometimes','required','in:light,dark'],
             'theme_custom_light'=>['nullable','array'],
             'theme_custom_dark'=>['nullable','array'],
-            'footer_menu'=>['required','array','size:5'],
+            'footer_menu'=>['sometimes','required','array','size:5'],
             'footer_menu.*.key'=>['required','string','max:40','distinct'],
             'footer_menu.*.label'=>['required','string','max:30'],
             'footer_menu.*.href'=>['required','string','max:255'],
@@ -129,6 +129,9 @@ class SystemSettingsController extends Controller
 
         $paletteKeys=['primary','secondary','accent','background','surface','text','muted','border','success','warning','danger'];
         foreach(['theme_custom_light','theme_custom_dark'] as $field){
+            if (!array_key_exists($field, $data)) {
+                continue;
+            }
             $palette=$data[$field]??[];
             foreach($paletteKeys as $key){
                 if(isset($palette[$key]) && !preg_match('/^#[0-9A-Fa-f]{6}$/',(string)$palette[$key])){
@@ -138,22 +141,29 @@ class SystemSettingsController extends Controller
             $data[$field]=array_intersect_key($palette,array_flip($paletteKeys));
         }
 
-        $data['business']=$data['business']??[];
-        $data['social']=$data['social']??[];
-        $data['smtp']=$this->prepareSmtp($data['smtp']??[]);
+        if (array_key_exists('smtp', $data)) {
+            $data['smtp']=$this->prepareSmtp($data['smtp']??[]);
+        }
 
         try {
             foreach(['platform_name','support_email','support_notice','default_timezone','theme_key','theme_primary','skin_default','kyc_bvn_lookup_charge_minor','kyc_nin_lookup_charge_minor'] as $key){
+                if (!array_key_exists($key, $data)) {
+                    continue;
+                }
                 SystemSetting::query()->updateOrCreate(['key'=>$key],['value'=>$data[$key]??'','type'=>'string','is_secret'=>false]);
             }
             foreach(['theme_custom_light','theme_custom_dark','business','social','footer_menu','smtp'] as $key){
+                if (!array_key_exists($key, $data)) {
+                    continue;
+                }
                 SystemSetting::query()->updateOrCreate(['key'=>$key],[
                     'value'=>json_encode($data[$key]??[],JSON_UNESCAPED_SLASHES),
                     'type'=>'json',
                     'is_secret'=>$key==='smtp',
                 ]);
             }
-            $audit->record('admin.system_settings.updated',null,['setting_keys'=>self::KEYS,'smtp_strategy'=>$data['smtp']['strategy']??'failover'], $request);
+            $changedKeys = array_values(array_intersect(self::KEYS, array_keys($data)));
+            $audit->record('admin.system_settings.updated',null,['setting_keys'=>$changedKeys,'smtp_strategy'=>$data['smtp']['strategy']??null], $request);
             return back()->with('success','System settings saved and published globally.');
         }catch(\Throwable $e){
             report($e);
