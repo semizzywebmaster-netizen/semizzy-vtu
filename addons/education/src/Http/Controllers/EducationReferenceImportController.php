@@ -26,7 +26,12 @@ final class EducationReferenceImportController extends Controller
             return back()->withErrors(['file' => 'The CSV is empty.']);
         }
 
+        $headers[0] = preg_replace('/^\\xEF\\xBB\\xBF/', '', (string) $headers[0]);
         $headers = array_map(static fn ($header) => Str::of((string) $header)->trim()->lower()->replace(' ', '_')->toString(), $headers);
+        if (count($headers) !== count(array_unique($headers))) {
+            fclose($stream);
+            return back()->withErrors(['file' => 'CSV column names must be unique.']);
+        }
         $required = ['kind', 'name', 'category'];
         if (array_diff($required, $headers)) {
             fclose($stream);
