@@ -42,3 +42,19 @@ Schedule::call(function (): void {
 
 Schedule::command('communication:campaigns')->everyMinute()->withoutOverlapping(2)->onOneServer();
 Artisan::command('communication:campaigns',function(\Addons\CommunicationWhatsapp\Services\CommunicationCampaignService $service){$count=0; \App\Models\Communication\Campaign::query()->whereIn('status',['draft','scheduled','running'])->where(fn($q)=>$q->whereNull('scheduled_at')->orWhere('scheduled_at','<=',now()))->orderBy('id')->limit(50)->get()->each(function($campaign)use($service,&$count){$service->process($campaign,500);$count++;}); $this->info("Processed {$count} communication campaigns.");});
+
+
+Schedule::call(function (): void {
+    if (!\Illuminate\Support\Facades\Schema::hasTable('ai_chatbot_settings')
+        || !\Illuminate\Support\Facades\Schema::hasTable('ai_chatbot_conversations')
+        || !\App\Models\Addon::query()->where('identifier', 'ai.chatbot')->where('status', 'active')->exists()) {
+        return;
+    }
+
+    $raw = \Illuminate\Support\Facades\DB::table('ai_chatbot_settings')->where('key', 'retention_days')->value('value');
+    $days = max(1, min(3650, (int) (json_decode((string) $raw, true) ?? 90)));
+
+    \Illuminate\Support\Facades\DB::table('ai_chatbot_conversations')
+        ->where('updated_at', '<', now()->subDays($days))
+        ->delete();
+})->daily()->name('ai-chatbot-conversation-retention')->withoutOverlapping()->onOneServer();
