@@ -48,3 +48,29 @@ Artisan::command('forex:refresh-quotes', function (\Semizzy\Addons\ForexDigitalA
     $result = $service->refresh();
     $this->info(sprintf('Forex quote refresh: %d providers, %d quotes updated, %d providers failed.', $result['providers'], $result['updated'], $result['failed']));
 });
+
+Schedule::command('ads:expire-promotions',['--limit'=>200])->hourly()->withoutOverlapping(2)->onOneServer();
+Artisan::command('ads:expire-promotions {--limit=200}', function (): void {
+    if (!\\App\\Models\\Addon::query()->where('identifier', 'ads.monetization')->where('status', 'active')->exists()) {
+        $this->info('Ads & Monetization addon is not active; skipped promotion expiry.');
+        return;
+    }
+
+    $limit = max(1, min(1000, (int) $this->option('limit')));
+    $ids = \\Illuminate\\Support\\Facades\\DB::table('ad_promotions')
+        ->whereIn('status', ['approved', 'active', 'paused'])
+        ->whereNotNull('ends_at')
+        ->where('ends_at', '<=', now())
+        ->orderBy('ends_at')
+        ->limit($limit)
+        ->pluck('id');
+
+    if ($ids->isNotEmpty()) {
+        \\Illuminate\\Support\\Facades\\DB::table('ad_promotions')
+            ->whereIn('id', $ids)
+            ->whereIn('status', ['approved', 'active', 'paused'])
+            ->update(['status' => 'expired', 'updated_at' => now()]);
+    }
+
+    $this->info('Expired ' . $ids->count() . ' marketplace ad promotions.');
+});
