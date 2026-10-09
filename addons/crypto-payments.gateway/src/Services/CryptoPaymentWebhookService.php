@@ -49,16 +49,33 @@ class CryptoPaymentWebhookService
                     ->first();
 
                 if ($tx) {
-                    $status = strtolower((string) ($payload['payment_status'] ?? $tx->status));
-                    $tx->forceFill([
-                        'status' => $status,
-                        'crypto_received' => $payload['actually_paid'] ?? $tx->crypto_received,
-                        'tx_hash' => $payload['outcome']['txHash'] ?? $payload['tx_hash'] ?? $tx->tx_hash,
-                        'confirmations' => (int) ($payload['confirmations'] ?? $tx->confirmations),
-                        'provider_payload' => $payload,
-                        'paid_at' => in_array($status, ['paid', 'finished', 'confirmed'], true) ? ($tx->paid_at ?? now()) : $tx->paid_at,
-                        'confirmed_at' => in_array($status, ['finished', 'confirmed'], true) ? ($tx->confirmed_at ?? now()) : $tx->confirmed_at,
-                    ])->save();
+                    $status = strtolower(trim((string) ($payload['payment_status'] ?? $tx->status)));
+                    $terminalStatuses = ['finished', 'confirmed', 'failed', 'expired', 'refunded', 'cancelled'];
+                    $knownStatuses = [
+                        'waiting', 'pending', 'confirming', 'confirmed', 'finished',
+                        'failed', 'expired', 'refunded', 'cancelled', 'underpaid',
+                        'partially_paid', 'sending', 'paid',
+                    ];
+
+                    // Webhooks can arrive late or out of order. Once a transaction
+                    // reaches a terminal state, do not let an older callback
+                    // downgrade it (for example, finished -> failed/waiting).
+                    // Unknown provider statuses are recorded as events but never
+                    // written into the transaction state machine.
+                    if (
+                        !in_array(strtolower((string) $tx->status), $terminalStatuses, true)
+                        && in_array($status, $knownStatuses, true)
+                    ) {
+                        $tx->forceFill([
+                            'status' => $status,
+                            'crypto_received' => $payload['actually_paid'] ?? $tx->crypto_received,
+                            'tx_hash' => $payload['outcome']['txHash'] ?? $payload['tx_hash'] ?? $tx->tx_hash,
+                            'confirmations' => (int) ($payload['confirmations'] ?? $tx->confirmations),
+                            'provider_payload' => $payload,
+                            'paid_at' => in_array($status, ['paid', 'finished', 'confirmed'], true) ? ($tx->paid_at ?? now()) : $tx->paid_at,
+                            'confirmed_at' => in_array($status, ['finished', 'confirmed'], true) ? ($tx->confirmed_at ?? now()) : $tx->confirmed_at,
+                        ])->save();
+                    }
                 }
             }
 
