@@ -62,6 +62,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'University of Lagos','category'=>'federal_university','source_url'=>'https://enuc.nuc.edu.ng/nus']);
   $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'A.D. Rufa’i College of Education, Legal and General Studies','source_url'=>'https://ncce.gov.ng/AccreditedColleges']);
   $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'Miva Open University','category'=>'private_university']);
+  $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'National University of Science and Technology, Abuja','category'=>'federal_university']);
  }
  public function test_official_directory_expansion_is_safe_to_rerun_without_duplicates():void {
   $before=DB::table('education_reference_catalogue')->where('kind','school')->count();
