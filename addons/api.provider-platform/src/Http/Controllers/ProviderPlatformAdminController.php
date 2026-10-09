@@ -6,6 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\ApiProvider;
 use App\Models\ProviderServiceMapping;
 use App\Models\Service;
+use App\Models\ServiceProduct;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Semizzy\Addons\ApiProviderPlatform\Services\ProductPublicationService;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -110,6 +114,50 @@ final class ProviderPlatformAdminController extends Controller
             ],
             'providers' => $providers,
             'services' => $serviceRows,
+        ]);
+    }
+
+    public function publishProduct(Request $request, ServiceProduct $product, ProductPublicationService $publication): JsonResponse
+    {
+        $result = $publication->publish($product, $request->user()?->id);
+
+        if (!$result['published']) {
+            return response()->json([
+                'status' => 'blocked',
+                'message' => 'This product is not ready to be added to My Services.',
+                'blockers' => $result['blockers'],
+                'product' => [
+                    'id' => $result['product']->id,
+                    'publication_status' => $result['product']->publication_status,
+                    'enabled' => (bool) $result['product']->enabled,
+                ],
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => 'published',
+            'message' => 'Product added to My Services.',
+            'product' => [
+                'id' => $result['product']->id,
+                'publication_status' => $result['product']->publication_status,
+                'enabled' => (bool) $result['product']->enabled,
+                'published_at' => $result['product']->published_at?->toISOString(),
+            ],
+        ]);
+    }
+
+    public function unpublishProduct(Request $request, ServiceProduct $product, ProductPublicationService $publication): JsonResponse
+    {
+        $updated = $publication->unpublish($product, $request->user()?->id);
+
+        return response()->json([
+            'status' => 'unpublished',
+            'message' => 'Product unpublished. Existing transactions and provider mappings were preserved.',
+            'product' => [
+                'id' => $updated->id,
+                'publication_status' => $updated->publication_status,
+                'enabled' => (bool) $updated->enabled,
+            ],
         ]);
     }
 
