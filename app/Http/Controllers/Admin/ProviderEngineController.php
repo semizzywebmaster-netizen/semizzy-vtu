@@ -935,10 +935,7 @@ class ProviderEngineController extends Controller
                     [
                         'service_key' => $platformService->key,
                         'provider_service_id' => $lockedService->id,
-                        'capabilities' => array_values(array_intersect(
-                            (array) ($provider->capabilities ?? []),
-                            ['catalogue_retrieval', 'transaction_initiation', 'status_requery', 'refund', 'webhook'],
-                        )),
+                        'capabilities' => [],
                         'enabled' => false,
                     ],
                 );
@@ -993,6 +990,43 @@ class ProviderEngineController extends Controller
             'route_enabled' => false,
             'message' => 'Mapped to a draft platform product. Configure tier prices and explicitly verify/enable routing, then use Add to My Services when readiness checks pass.',
         ]);
+    }
+
+    public function updatePlatformServiceMappingCapabilities(Request $request, ApiProvider $provider, ProviderServiceMapping $mapping, AuditLogger $audit): JsonResponse
+    {
+        $data = $request->validate([
+            'capabilities' => ['present', 'array'],
+            'capabilities.*' => ['string', \\Illuminate\\Validation\\Rule::in(['catalogue_retrieval', 'transaction_initiation', 'transaction_status', 'refund', 'webhook'])],
+        ]);
+
+        if ((int) $mapping->api_provider_id !== (int) $provider->id) {
+            return response()->json(['message' => 'Provider service mapping not found.'], 404);
+        }
+        if ($mapping->enabled) {
+            return response()->json(['message' => 'Disable the service route before changing its capabilities.'], 409);
+        }
+
+        $selected = array_values(array_unique($data['capabilities']));
+        $providerCapabilities = (array) ($provider->capabilities ?? []);
+        $unsupported = array_values(array_diff($selected, $providerCapabilities));
+        if ($unsupported !== []) {
+            return response()->json([
+                'message' => 'These operations are not declared for this provider: ' . implode(', ', $unsupported) . '. Update the provider capability declaration only after verifying its official documentation.',
+            ], 422);
+        }
+
+        $mapping->update(['capabilities' => $selected]);
+        try {
+            $audit->record('catalogue.mapping.capabilities_updated', $mapping->fresh(), [
+                'provider_id' => $provider->id,
+                'service_id' => $mapping->service_id,
+                'capabilities' => $selected,
+            ], $request);
+        } catch (\\Throwable $exception) {
+            report($exception);
+        }
+
+        return response()->json(['status' => 'updated', 'capabilities' => $selected, 'message' => 'Service mapping capabilities saved. Enable the route separately after the product-level mapping is active.']);
     }
 
     public function togglePlatformServiceMapping(Request $request, ApiProvider $provider, ProviderServiceMapping $mapping, AuditLogger $audit): JsonResponse
