@@ -18,7 +18,7 @@ return [
   ['key'=>'assistant_name','type'=>'string','default'=>'SEMIZZY ONE Assistant'],
   ['key'=>'welcome_message','type'=>'string','default'=>'Hello! How can I help you today?'],
   ['key'=>'allowed_paths','type'=>'array','default'=>['/','/services','/pricing','/help','/dashboard']],
-  ['key'=>'excluded_paths','type'=>'array','default'=>['/login','/register','/wallet','/payments','/admin']],
+  ['key'=>'excluded_paths','type'=>'array','default'=>['/login','/register','/wallet','/wallet/*','/payments','/payments/*','/admin','/admin/*']],
   ['key'=>'retention_days','type'=>'integer','default'=>90],
   ['key'=>'max_message_chars','type'=>'integer','default'=>4000],
   ['key'=>'max_context_messages','type'=>'integer','default'=>12]
