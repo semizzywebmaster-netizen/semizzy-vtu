@@ -72,7 +72,16 @@ final class P2pTradingService
         } catch (QueryException $e) {
             if (str_contains(strtolower($e->getMessage()), 'unique') || str_contains(strtolower($e->getMessage()), 'duplicate')) {
                 $existing=P2pTradeOffer::where('buyer_id',$buyerId)->where('idempotency_key',$idempotencyKey)->first();
-                if ($existing) return $existing;
+                if ($existing) {
+                    if (
+                        (int)$existing->listing_id !== $listingId
+                        || (string)$existing->amount_minor !== $amountMinor
+                        || (string)$existing->price_minor !== $priceMinor
+                    ) {
+                        throw new RuntimeException('This idempotency key has already been used for a different offer.');
+                    }
+                    return $existing;
+                }
             }
             throw $e;
         }
