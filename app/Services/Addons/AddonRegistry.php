@@ -16,6 +16,7 @@ class AddonRegistry
             try {
                 $manifest = require $file;
                 if (!is_array($manifest)) continue;
+                $manifest['compatibility'] ??= $manifest['core_compatibility'] ?? null;
                 $this->validate($manifest);
                 $manifest['source'] = basename(dirname($file));
                 $manifests[$manifest['identifier']] = $manifest;
