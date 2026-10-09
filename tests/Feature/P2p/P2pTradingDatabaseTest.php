@@ -96,7 +96,7 @@ class P2pTradingDatabaseTest extends TestCase
             $service->cancelOffer($otherUser->id, $offer->id);
             $this->fail('A non-buyer must not cancel an offer.');
         } catch (RuntimeException $exception) {
-            $this->assertSame('Only the offer buyer can cancel it.', $exception->getMessage());
+            $this->assertSame('Only the offer creator can cancel it.', $exception->getMessage());
         }
 
         $this->assertSame('pending', $offer->fresh()->status);
