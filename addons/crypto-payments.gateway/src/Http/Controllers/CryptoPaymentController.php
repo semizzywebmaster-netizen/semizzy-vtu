@@ -95,8 +95,20 @@ class CryptoPaymentController
         $create = function (CryptoPaymentProvider $provider) use (
             $transaction, $registry, $data, $fiatCurrency, $asset, $network, $fxSnapshot, $usdAmount, $customerFundingAmount, $walletAmount, $fundingFee, $funding
         ) {
-            if (!$provider->supports('crypto_payment', $asset, $network)) {
-                throw new RuntimeException('Provider does not support the requested crypto asset/network.');
+            if (!$provider->isAvailable()) {
+                throw new RuntimeException('The selected crypto provider is disabled, paused, in maintenance, or cooling down.');
+            }
+
+            if (!$provider->supports('crypto_payment')) {
+                throw new RuntimeException('Provider does not support crypto payments.');
+            }
+
+            if (!in_array($asset, $provider->supported_assets ?? [], true)) {
+                throw new RuntimeException('Provider does not support the requested crypto asset.');
+            }
+
+            if ($network !== null && !in_array($network, $provider->supported_networks ?? [], true)) {
+                throw new RuntimeException('Provider does not support the requested crypto network.');
             }
 
             $transaction->forceFill(['crypto_payment_provider_id' => $provider->id])->save();
@@ -137,7 +149,15 @@ class CryptoPaymentController
 
         try {
             $result = $data['provider_code']
-                ? $create(CryptoPaymentProvider::where('code', $data['provider_code'])->firstOrFail())
+                ? $create(CryptoPaymentProvider::query()
+                    ->where('code', $data['provider_code'])
+                    ->where('enabled', true)
+                    ->where('paused', false)
+                    ->where('maintenance', false)
+                    ->where(function ($query): void {
+                        $query->whereNull('cooldown_until')->orWhere('cooldown_until', '<=', now());
+                    })
+                    ->firstOrFail())
                 : $manager->execute('crypto_payment', $create, $asset, $network);
         } catch (\Throwable $e) {
             $transaction->forceFill([
