@@ -913,7 +913,7 @@ class ProviderEngineController extends Controller
                         'service_key' => $platformService->key,
                         'provider_service_id' => $lockedService->id,
                         'capabilities' => array_values(array_intersect(
-                            (array) data_get($lockedService->metadata, 'capabilities', []),
+                            (array) ($provider->capabilities ?? []),
                             ['catalogue_retrieval', 'transaction_initiation', 'status_requery', 'refund', 'webhook'],
                         )),
                         'enabled' => false,
@@ -969,6 +969,87 @@ class ProviderEngineController extends Controller
             'provider_mapping_enabled' => (bool) $result['provider_product']->enabled,
             'route_enabled' => false,
             'message' => 'Mapped to a draft platform product. Configure tier prices and explicitly verify/enable routing, then use Add to My Services when readiness checks pass.',
+        ]);
+    }
+
+    public function togglePlatformServiceMapping(Request $request, ApiProvider $provider, ProviderServiceMapping $mapping, AuditLogger $audit): JsonResponse
+    {
+        $data = $request->validate(['enabled' => ['required', 'boolean']]);
+        if ((int) $mapping->api_provider_id !== (int) $provider->id) {
+            return response()->json(['message' => 'Provider service mapping not found.'], 404);
+        }
+
+        $result = DB::transaction(function () use ($provider, $mapping, $data): array {
+            $lockedProvider = ApiProvider::query()->lockForUpdate()->findOrFail($provider->id);
+            $lockedMapping = ProviderServiceMapping::query()->lockForUpdate()->findOrFail($mapping->id);
+
+            if ($data['enabled']) {
+                if (! $lockedProvider->enabled || $lockedProvider->paused
+                    || $lockedProvider->verification_status !== 'live_verified'
+                    || $lockedProvider->integration_status !== 'live_verified') {
+                    return ['ok' => false, 'status' => 422, 'message' => 'A service route can only be enabled for an enabled, unpaused, live-verified provider.'];
+                }
+                if (! in_array('transaction_initiation', (array) $lockedMapping->capabilities, true)) {
+                    return ['ok' => false, 'status' => 422, 'message' => 'Transaction-initiation capability is not verified/configured for this provider service mapping. Configure the provider capability first.'];
+                }
+                if (! $lockedMapping->provider_service_id) {
+                    return ['ok' => false, 'status' => 422, 'message' => 'This service mapping is not tied to a specific approved provider catalogue row. Map an approved row first.'];
+                }
+
+                $import = ProviderServiceImport::query()
+                    ->where('api_provider_id', $lockedProvider->id)
+                    ->where('provider_service_id', $lockedMapping->provider_service_id)
+                    ->first();
+                if (! $import || ! $import->approved || ! $import->imported) {
+                    return ['ok' => false, 'status' => 422, 'message' => 'Approve and import the provider catalogue row before enabling its service route.'];
+                }
+
+                $hasSourceCost = ProviderServiceProduct::query()
+                    ->where('api_provider_id', $lockedProvider->id)
+                    ->where('enabled', true)
+                    ->whereHas('product', fn ($query) => $query->where('service_id', $lockedMapping->service_id))
+                    ->exists();
+                $hasActiveProductMapping = DB::table('provider_product_mappings_v2 as m')
+                    ->join('service_products as p', 'p.id', '=', 'm.catalogue_product_id')
+                    ->where('m.api_provider_id', $lockedProvider->id)
+                    ->where('m.provider_service_id', $lockedMapping->provider_service_id)
+                    ->where('m.enabled', true)
+                    ->where('m.mapping_status', 'active')
+                    ->where('p.service_id', $lockedMapping->service_id)
+                    ->exists();
+
+                if (! $hasSourceCost || ! $hasActiveProductMapping) {
+                    return ['ok' => false, 'status' => 422, 'message' => 'Enable a valid source-cost mapping and activate the approved product-level mapping before enabling this service route.'];
+                }
+            }
+
+            $lockedMapping->update(['enabled' => (bool) $data['enabled']]);
+            return [
+                'ok' => true,
+                'enabled' => (bool) $data['enabled'],
+                'mapping_id' => $lockedMapping->id,
+                'service_id' => $lockedMapping->service_id,
+            ];
+        }, 3);
+
+        if (! $result['ok']) {
+            return response()->json(['message' => $result['message']], $result['status']);
+        }
+
+        try {
+            $audit->record($result['enabled'] ? 'catalogue.mapping.enabled' : 'catalogue.mapping.disabled', $mapping->fresh(), [
+                'provider_id' => $provider->id,
+                'service_id' => $result['service_id'],
+                'provider_service_id' => $mapping->provider_service_id,
+            ], $request);
+        } catch (\\Throwable $exception) {
+            report($exception);
+        }
+
+        return response()->json([
+            'status' => 'updated',
+            'enabled' => $result['enabled'],
+            'message' => $result['enabled'] ? 'Service route enabled after readiness checks.' : 'Service route disabled.',
         ]);
     }
 
