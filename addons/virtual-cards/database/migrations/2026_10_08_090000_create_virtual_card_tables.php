@@ -26,6 +26,6 @@ return new class extends Migration {
    $t->json('metadata')->nullable(); $t->timestamps();
    $t->index(['virtual_card_id','status']); $t->index('provider_transaction_id');
   });
- };
+ }
  public function down(): void { Schema::dropIfExists('virtual_card_transactions'); Schema::dropIfExists('virtual_cards'); }
 };
