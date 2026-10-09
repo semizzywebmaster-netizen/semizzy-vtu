@@ -5,7 +5,8 @@ type Props={items:{data:Item[];links?:{url:string|null;label:string;active:boole
 export default function PastQuestions({items,filters={}}:Props){
  const [form,setForm]=useState({category:'school_past_question',title:'',institution:'',faculty:'',department:'',course_code:'',course_title:'',education_level:'',semester:'',academic_session:'',exam_body:'',exam_type:'',subject:'',exam_year:'',description:'',is_free:true,price_minor:'0',currency:'NGN',file:null as File|null,preview_file:null as File|null});
  const [q,setQ]=useState(filters.q||'');
- const updateFile=(e:ChangeEvent<HTMLInputElement>)=>setForm({...form,file:e.target.files?.[0]||null});\n const updatePreview=(e:ChangeEvent<HTMLInputElement>)=>setForm({...form,preview_file:e.target.files?.[0]||null});
+ const updateFile=(e:ChangeEvent<HTMLInputElement>)=>setForm({...form,file:e.target.files?.[0]||null});
+ const updatePreview=(e:ChangeEvent<HTMLInputElement>)=>setForm({...form,preview_file:e.target.files?.[0]||null});
  const submit=(e:FormEvent)=>{e.preventDefault();const data=new FormData();Object.entries(form).forEach(([key,value])=>{if(value!==null)data.append(key,typeof value==='boolean'?(value?'1':'0'):value instanceof File?value:String(value));});router.post('/admin/education/past-questions',data,{forceFormData:true,onSuccess:()=>setForm({...form,title:'',description:'',file:null,preview_file:null})});};
  return <><Head title="Admin · Education Library"/><main className="space-y-6 p-5 md:p-8"><header><h1 className="text-3xl font-bold">Education Library</h1><p className="mt-2 opacity-70">Upload and publish school and examination past questions. New uploads stay private until published.</p></header>
  <section className="rounded-2xl border p-5"><h2 className="mb-4 text-xl font-semibold">Upload a resource</h2><form onSubmit={submit} className="grid gap-3 md:grid-cols-3">
