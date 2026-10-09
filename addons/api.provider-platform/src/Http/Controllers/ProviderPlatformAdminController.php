@@ -196,7 +196,7 @@ final class ProviderPlatformAdminController extends Controller
             'selection_scope' => ['sometimes', 'string', 'in:product,service,category'],
         ]);
 
-        $selection = ProviderServiceImport::query()->updateOrCreate(
+        $selection = ProviderServiceImport::query()->firstOrCreate(
             [
                 'api_provider_id' => $providerService->api_provider_id,
                 'provider_service_id' => $providerService->id,
@@ -211,18 +211,22 @@ final class ProviderPlatformAdminController extends Controller
             ],
         );
 
-        $auditLogger->record('provider_platform.catalogue_service_selected', $providerService, [
-            'provider_service_id' => $providerService->id,
-            'api_provider_id' => $providerService->api_provider_id,
-            'selection_scope' => $selection->selection_scope,
-            'state' => $selection->state,
-            'approved' => false,
-            'auto_sync_allowed' => false,
-        ]);
+        if ($selection->wasRecentlyCreated) {
+            $auditLogger->record('provider_platform.catalogue_service_selected', $providerService, [
+                'provider_service_id' => $providerService->id,
+                'api_provider_id' => $providerService->api_provider_id,
+                'selection_scope' => $selection->selection_scope,
+                'state' => $selection->state,
+                'approved' => false,
+                'auto_sync_allowed' => false,
+            ]);
+        }
 
         return response()->json([
-            'status' => 'awaiting_approval',
-            'message' => 'Provider catalogue entry selected for review. It has not been imported, published, or enabled for routing.',
+            'status' => $selection->state,
+            'message' => $selection->wasRecentlyCreated
+                ? 'Provider catalogue entry selected for review. It has not been imported, published, or enabled for routing.'
+                : 'This catalogue entry already has a review record. Its approval, import, and sync settings were left unchanged.',
             'selection' => [
                 'id' => $selection->id,
                 'provider_service_id' => $selection->provider_service_id,
@@ -232,7 +236,7 @@ final class ProviderPlatformAdminController extends Controller
                 'imported' => (bool) $selection->imported,
                 'auto_sync_allowed' => (bool) $selection->auto_sync_allowed,
             ],
-        ], 202);
+        ], $selection->wasRecentlyCreated ? 202 : 200);
     }
 
     public function publishProduct(Request $request, ServiceProduct $product, ProductPublicationService $publication): JsonResponse
