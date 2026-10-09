@@ -671,7 +671,7 @@ class ProviderEngineController extends Controller
             ->map(fn(ProviderServiceImport $i)=>[
                 'id'=>$i->id,'provider_service_id'=>$i->provider_service_id,
                 'imported'=>$i->imported,'approved'=>$i->approved,'auto_sync_allowed'=>$i->auto_sync_allowed,'state'=>$i->state,
-                'service'=>$i->service?->only(['id','external_service_id','external_service_code','name','description','service_type','network','provider_price','currency','status']),
+                'service'=>$i->service?->only(['id','external_service_id','external_service_code','name','description','service_type','network','provider_price','currency','status','last_synced_at']),
                 'category'=>$i->service?->category?->external_name,
                 'subcategory'=>$i->service?->subcategory?->external_name,
             ]);
