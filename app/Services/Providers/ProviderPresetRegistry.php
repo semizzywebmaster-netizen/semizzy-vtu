@@ -347,7 +347,7 @@ final class ProviderPresetRegistry
                 'official_website'=>'https://vtuagent.com/',
                 'auth_type'=>'bearer',
                 'service_categories'=>['airtime','data','cable-tv','electricity'],
-                'capabilities'=>['balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status','webhook'],
+                'capabilities'=>['catalogue_retrieval','transaction_initiation','transaction_status'],
                 'endpoints'=>[],'api_version'=>'v1',
                 'mappings'=>[
                     ['service_key'=>'airtime','provider_service_id'=>'airtime','capabilities'=>['transaction_initiation','transaction_status']],

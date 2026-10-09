@@ -24,6 +24,9 @@ class RestJsonProviderAdapter implements ProviderAdapter
         if ($provider->identifier === 'interswitch' && $operation === 'account_verification') {
             return $this->executeInterswitchAccountVerification($provider, $payload);
         }
+        if ($provider->identifier === 'vtuagent' && in_array($operation, ['transaction_initiation', 'transaction_status', 'catalogue_retrieval'], true)) {
+            return $this->executeVtuAgent($provider, $operation, $payload, $idempotencyKey);
+        }
 
         if (!$this->supports($operation)) {
             throw new RuntimeException("Unsupported REST operation: {$operation}");
@@ -200,6 +203,75 @@ class RestJsonProviderAdapter implements ProviderAdapter
             return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'Interswitch could not verify the supplied bank account.', retryable: false, providerId: $provider->id);
         } catch (\\Throwable) {
             return new ProviderResult(false, 'UNKNOWN', message: 'Interswitch verification request failed; check provider status before retrying.', retryable: false, providerId: $provider->id);
+        }
+    }
+
+    /** VTUAgent documented v1 airtime/data, plan catalogue and status contract. */
+    private function executeVtuAgent(ApiProvider $provider, string $operation, array $payload, ?string $idempotencyKey): ProviderResult
+    {
+        $credentials = (array) ($provider->credentials ?? []);
+        $apiKey = (string) ($credentials['api_key'] ?? $credentials['token'] ?? $credentials['secret_key'] ?? '');
+        if ($apiKey === '') return new ProviderResult(false, 'FAILED', message: 'VTUAgent API key is required.', providerId: $provider->id);
+
+        $base = rtrim((string) $provider->base_url, '/');
+        $method = 'POST';
+        $path = '';
+        $body = [];
+        if ($operation === 'catalogue_retrieval') {
+            $method = 'GET';
+            $path = '/data/plans';
+        } elseif ($operation === 'transaction_status') {
+            $reference = (string) ($payload['request_ref'] ?? $payload['provider_reference'] ?? $payload['reference'] ?? $idempotencyKey ?? '');
+            if ($reference === '') return new ProviderResult(false, 'FAILED', message: 'VTUAgent request reference is required for status lookup.', providerId: $provider->id);
+            $path = '/transaction/status';
+            $body = ['request_ref' => $reference];
+        } else {
+            $reference = (string) ($payload['request_ref'] ?? $idempotencyKey ?? '');
+            if ($reference === '' || mb_strlen($reference) > 50) {
+                return new ProviderResult(false, 'FAILED', message: 'A unique VTUAgent request_ref of at most 50 characters is required.', providerId: $provider->id);
+            }
+            if (filled($payload['plan_id'] ?? null)) {
+                $path = '/data/purchase';
+                $body = ['plan_id' => (string) $payload['plan_id'], 'phone' => (string) ($payload['phone'] ?? ''), 'request_ref' => $reference];
+            } else {
+                $network = strtolower((string) ($payload['network'] ?? ''));
+                $phone = (string) ($payload['phone'] ?? '');
+                $amount = $payload['amount'] ?? null;
+                if (!in_array($network, ['mtn', 'glo', 'airtel', 'etisalat'], true) || $phone === '' || !is_numeric($amount) || (float) $amount <= 0) {
+                    return new ProviderResult(false, 'FAILED', message: 'VTUAgent airtime requires a supported network, phone and positive naira amount.', providerId: $provider->id);
+                }
+                $path = '/airtime/purchase';
+                $body = ['network' => $network, 'phone' => $phone, 'amount' => $amount, 'request_ref' => $reference];
+            }
+            if (empty($body['phone'])) return new ProviderResult(false, 'FAILED', message: 'A recipient phone number is required.', providerId: $provider->id);
+        }
+
+        $url = $base . $path;
+        try {
+            $this->guard->validate($url);
+            $request = Http::acceptJson()->withToken($apiKey)->asJson()
+                ->withOptions(['allow_redirects' => false])
+                ->timeout(max(1, (int) ($provider->timeout_seconds ?: 15)));
+            $response = $method === 'GET' ? $request->get($url, $payload) : $request->post($url, $body);
+            $responseBody = $response->json();
+            if ($response->successful()) {
+                $status = $this->normalizeStatus($responseBody, $operation);
+                if ($operation === 'catalogue_retrieval' && $status === 'UNKNOWN' && is_array($responseBody)) $status = 'ACCEPTED';
+                return new ProviderResult(
+                    $status === 'ACCEPTED', $status, $this->providerReference($responseBody), $responseBody,
+                    $status === 'ACCEPTED' ? 'VTUAgent request accepted.' : 'VTUAgent returned a non-final transaction state.',
+                    retryable: false,
+                    duplicateRisk: $operation === 'transaction_initiation' && $status === 'UNKNOWN',
+                    providerId: $provider->id,
+                );
+            }
+            $statusCode = $response->status();
+            $message = strtolower((string) data_get($responseBody, 'message', ''));
+            $duplicate = $operation === 'transaction_initiation' && str_contains($message, 'duplicate');
+            $uncertain = $statusCode === 408 || $statusCode === 429 || $statusCode >= 500 || $duplicate;
+            return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'VTUAgent request failed; inspect provider status before retry when the outcome is uncertain.', retryable: false, duplicateRisk: $operation === 'transaction_initiation' && $uncertain, providerId: $provider->id);
+        } catch (\\Throwable) {
+            return new ProviderResult(false, 'UNKNOWN', message: 'VTUAgent request failed; requery the request_ref before retrying.', retryable: false, duplicateRisk: $operation === 'transaction_initiation', providerId: $provider->id);
         }
     }
 
