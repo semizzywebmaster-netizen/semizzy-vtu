@@ -11,6 +11,7 @@ use App\Models\ProviderProductMappingV2;
 use App\Models\Service;
 use App\Models\ServiceProduct;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Semizzy\Addons\ApiProviderPlatform\Services\ProductPublicationService;
 use App\Services\Audit\AuditLogger;
@@ -327,7 +328,7 @@ final class ProviderPlatformAdminController extends Controller
         ], $selection->wasRecentlyCreated ? 202 : 200);
     }
 
-    public function approveCatalogueService(Request $request, ProviderService $providerService, AuditLogger $auditLogger): JsonResponse|\\Inertia\\Response|\\Illuminate\\Http\\RedirectResponse
+    public function approveCatalogueService(Request $request, ProviderService $providerService, AuditLogger $auditLogger): JsonResponse|RedirectResponse
     {
         $selection = ProviderServiceImport::query()
             ->where('api_provider_id', $providerService->api_provider_id)
@@ -372,7 +373,7 @@ final class ProviderPlatformAdminController extends Controller
         ]);
     }
 
-    public function mapCatalogueService(Request $request, ProviderService $providerService, AuditLogger $auditLogger): JsonResponse|\\Inertia\\Response|\\Illuminate\\Http\\RedirectResponse
+    public function mapCatalogueService(Request $request, ProviderService $providerService, AuditLogger $auditLogger): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'catalogue_product_id' => ['required', 'integer', 'exists:service_products,id'],
