@@ -1,13 +1,13 @@
 <?php
 
-namespace Semizzy\\Addons\\SchoolAdmission\\Http\\Controllers;
+namespace Semizzy\Addons\SchoolAdmission\Http\Controllers;
 
-use App\\Http\\Controllers\\Controller;
-use Illuminate\\Http\\Request;
-use Inertia\\Inertia;
-use Inertia\\Response;
-use Semizzy\\Addons\\SchoolAdmission\\Models\\SchoolAdmissionProduct;
-use Semizzy\\Addons\\SchoolAdmission\\Models\\SchoolAdmissionTransaction;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+use Semizzy\Addons\SchoolAdmission\Models\SchoolAdmissionProduct;
+use Semizzy\Addons\SchoolAdmission\Models\SchoolAdmissionTransaction;
 
 final class SchoolAdmissionController extends Controller
 {
