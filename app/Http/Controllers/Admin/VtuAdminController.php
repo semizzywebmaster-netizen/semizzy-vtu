@@ -138,7 +138,7 @@ class VtuAdminController extends Controller
   },$filename,['Content-Type'=>'text/csv; charset=UTF-8','Cache-Control'=>'no-store']);
  }
 
- public function exportSelectedBulk(Request $r): \Symfony\\Component\\HttpFoundation\\StreamedResponse{
+ public function exportSelectedBulk(Request $r): \Symfony\Component\HttpFoundation\StreamedResponse{
   $data=$r->validate(['bulk_ids'=>['required','array','min:1','max:50'],'bulk_ids.*'=>['integer','distinct','exists:vtu_bulk_operations,id']]);
   $ids=array_map('intval',$data['bulk_ids']);
   $q=VtuBulkOperation::query()->with(['user','items.transaction','items.product'])->whereIn('id',$ids)->orderBy('id');
@@ -175,7 +175,7 @@ class VtuAdminController extends Controller
   ]]);
  }
 
- public function bulkReport(VtuBulkOperation $bulk): \Symfony\\Component\\HttpFoundation\\StreamedResponse{
+ public function bulkReport(VtuBulkOperation $bulk): \Symfony\Component\HttpFoundation\StreamedResponse{
   $bulk->load(['user','items.transaction','items.product']);
   $counts=['pending'=>0,'processing'=>0,'successful'=>0,'failed'=>0,'cancelled'=>0,'other'=>0];
   foreach($bulk->items as $item){$key=(string)$item->status;if(array_key_exists($key,$counts))$counts[$key]++;else$counts['other']++;}
