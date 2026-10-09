@@ -137,6 +137,9 @@ final class ProviderPlatformAdminController extends Controller
         if (!empty($filters['provider_id'])) {
             $query->where('api_provider_id', $filters['provider_id']);
         }
+        if (!empty($filters['status'])) {
+            $query->whereHas('imports', fn ($builder) => $builder->where('state', $filters['status']));
+        }
         if (!empty($filters['search'])) {
             $search = trim($filters['search']);
             $query->where(function ($builder) use ($search): void {
