@@ -233,7 +233,7 @@ class BusinessAdminController
    'settlement_ids.*'=>['integer','distinct','exists:business_commission_settlements,id'],
   ]);
   $actor=$r->user(); $settled=0; $skipped=0; $errors=[];
-  $service=app(\\Addons\\BusinessAgentMerchantReseller\\Services\\BusinessCommissionService::class);
+  $service=app(\Addons\BusinessAgentMerchantReseller\Services\BusinessCommissionService::class);
   foreach(BusinessCommissionSettlement::query()->whereIn('id',array_map('intval',$d['settlement_ids']))->get() as $row){
    if($row->status!=='pending'){$skipped++;continue;}
    try{
