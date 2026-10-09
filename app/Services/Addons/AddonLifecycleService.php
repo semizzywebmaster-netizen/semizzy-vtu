@@ -119,7 +119,10 @@ class AddonLifecycleService
         $addonId = $addon->id;
 
         try {
-            return DB::transaction(function () use ($addonId, $manifest, $actorId): Addon {
+            // Persist the update lock/state first, then run Artisan migrations
+            // outside a DB transaction. MySQL DDL can implicitly commit and
+            // otherwise invalidate Laravel's surrounding transaction.
+            $state = DB::transaction(function () use ($addonId, $manifest, $actorId): array {
                 $addon = Addon::query()->lockForUpdate()->findOrFail($addonId);
                 if (!in_array($addon->status, ['installed', 'active', 'inactive'], true)) {
                     throw ValidationException::withMessages(['addon' => 'Only installed, active, or inactive addons can be updated.']);
@@ -133,13 +136,24 @@ class AddonLifecycleService
                 $this->assertDependencies($manifest['dependencies'] ?? [], $manifest['identifier']);
                 $this->transition($addon, 'updating', 'update_started', 'Addon update started.', $actorId);
                 $this->recordStep($addon, 'register', 'Update manifest validated.');
-                $this->runMigrations($addon, $manifest);
-                $this->recordStep($addon, 'initialize', 'Addon update initialization completed.');
-                $this->recordStep($addon, 'health', 'Addon update health contract validated.');
+
+                return ['was_active' => $wasActive];
+            });
+
+            $addon = Addon::query()->findOrFail($addonId);
+            $this->runMigrations($addon, $manifest);
+            $this->recordStep($addon, 'initialize', 'Addon update initialization completed.');
+            $this->recordStep($addon, 'health', 'Addon update health contract validated.');
+
+            return DB::transaction(function () use ($addonId, $manifest, $actorId, $state): Addon {
+                $addon = Addon::query()->lockForUpdate()->findOrFail($addonId);
+                if ($addon->status !== 'updating') {
+                    throw ValidationException::withMessages(['addon' => 'Addon update state changed unexpectedly while migrations were running.']);
+                }
 
                 $from = 'updating';
                 $addon->fill($this->manifestAttributes($manifest));
-                $addon->status = $wasActive ? 'active' : 'installed';
+                $addon->status = $state['was_active'] ? 'active' : 'installed';
                 $addon->last_error = null;
                 $addon->save();
 
