@@ -85,7 +85,7 @@ export default function Catalogue({categories=[],search=''}:{categories:Category
       }
       setPublicationMessage(data.message || (action === 'publish' ? 'Product added to My Services.' : 'Product unpublished.'));
       setPublicationProduct(null);
-      router.reload({ only: ['categories'], preserveScroll: true });
+      router.reload({ only: ['categories'] });
     } catch (error) {
       setPublicationError(error instanceof Error ? error.message : 'Publication action was not completed.');
     } finally {
