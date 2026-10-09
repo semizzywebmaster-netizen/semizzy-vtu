@@ -26,7 +26,7 @@ class VtuBulkService
     }
     private function editUntil(\Carbon\CarbonInterface $scheduledAt): \Carbon\CarbonInterface
     {
-        $delay=max(300,$scheduledAt->diffInSeconds(now(),false));
+        $delay=max(300,now()->diffInSeconds($scheduledAt,false));
         $lock=min($this->scheduleEditMinutes()*60,max(300,(int)floor($delay/2)));
         return $scheduledAt->copy()->subSeconds($lock);
     }
@@ -48,7 +48,9 @@ class VtuBulkService
                 $this->validator->validate($product->service,$payload);
                 $key=(string)($item['idempotency_key']??($bulk->reference.':'.($i+1)));
                 $tx=$this->transactions->create($uid,$product,$payload,$tier,$key);
-                $bulk->items()->create(['sequence'=>$i+1,'idempotency_key'=>$key,'vtu_transaction_id'=>$tx->id,'recipient'=>$payload['recipient']??$payload['phone']??null,'product_id'=>$product->id,'amount_minor'=>$tx->total_minor,'status'=>'scheduled','metadata'=>['scheduled'=>true]]);
+                $tx->metadata=array_merge((array)$tx->metadata,['scheduled_bulk_operation_id'=>$bulk->id,'scheduled_at'=>$scheduledAt->toIso8601String()]);
+                $tx->save();
+                $bulk->items()->create(['sequence'=>$i+1,'idempotency_key'=>$key,'vtu_transaction_id'=>$tx->id,'recipient'=>$payload['recipient']??$payload['phone']??null,'product_id'=>$product->id,'amount_minor'=>$tx->total_minor,'status'=>'scheduled','metadata'=>['scheduled'=>true,'scheduled_at'=>$scheduledAt->toIso8601String()]]);
             }
             return $bulk;
         });
