@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ApiProvider;
 use App\Models\ProviderService;
 use App\Models\ProviderServiceImport;
+use App\Models\ProviderServiceMapping;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
