@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import type { ComponentType } from 'react';
 import AdminLayout from './Layouts/AdminLayout';
 import GlobalFooterNav from './Components/GlobalFooterNav';
+import AIChatbotWidget from './Components/AIChatbotWidget';
 import { ThemeBridge } from './Utils/ThemeSystem';
 
 type PageModule = { default: ComponentType<Record<string, unknown>> };
@@ -26,7 +27,7 @@ createInertiaApp({
       const platform = pageProps.platform as Platform | undefined;
       const auth = pageProps.auth as { user?: { role?: string } } | undefined;
       const isAuthenticated = !!auth?.user;
-      return <ThemeBridge platform={platform}>{isAuthenticated ? <GlobalFooterNav /> : null}{isAdminPage ? <AdminLayout><ResolvedPage {...pageProps} /></AdminLayout> : <ResolvedPage {...pageProps} />}</ThemeBridge>;
+      return <ThemeBridge platform={platform}>{isAuthenticated ? <GlobalFooterNav /> : null}<AIChatbotWidget />{isAdminPage ? <AdminLayout><ResolvedPage {...pageProps} /></AdminLayout> : <ResolvedPage {...pageProps} />}</ThemeBridge>;
     };
   },
   setup({ el, App, props }) { createRoot(el).render(<App {...props} />); },
