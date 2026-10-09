@@ -5,6 +5,12 @@ This addon contains two separate catalogue sections:
 - **School Past Questions** (school_past_question): institution, faculty, department, course code/title, level, semester and academic session.
 - **Exam Past Questions** (exam_past_question): examination body, exam type, subject and year.
 
+## Imported reference catalogues
+
+The reference-data migration imports a starting directory of **28+ examination organisations/programmes** and **70+ Nigerian tertiary/specialised institutions**, grouped by institution type (federal/state/private universities, polytechnics, colleges of education, health/nursing colleges and specialised institutions). It includes exam-body aliases and exam types such as WAEC/WASSCE, NECO/SSCE, JAMB/UTME, NABTEB, NBAIS, NCEE, JUPEB, IJMB, state BECE/placement examinations, Cambridge, Edexcel, SAT, TOEFL, GRE, GMAT, IELTS and selected professional qualifying examinations.
+
+The catalogue is reference metadata, not a claim that every listed school has downloadable past-question files already. It supplies filter options and admin autocomplete; actual papers must be uploaded/licensed separately. Schools and exam bodies can be extended from the same reference data file. Regulator/source directories used include [NUC](https://www.nuc.edu.ng/approved-affiliations/), [NBTE](https://web.nbte.gov.ng/tvet%20institutions), [NCCE](https://www.ncce.gov.ng/AccreditedColleges), [Federal Ministry of Education](https://education.gov.ng/government-polytechnics/), [JUPEB](https://jupeb.edu.ng/) and [Lagos State Examinations Board](https://examsboard.lagosstate.gov.ng/).
+
 ## Capabilities
 
 - Admin/staff can upload PDF, DOC and DOCX files (20 MB maximum), manage metadata, publish or archive resources, and set free or NGN-priced access.
