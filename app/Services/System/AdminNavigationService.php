@@ -15,7 +15,33 @@ class AdminNavigationService
             return [];
         }
 
-        $permissions = config('semizzy.role_permissions.' . $user->role, []);
+        $allAddons = Addon::query()->get(['identifier', 'name', 'navigation', 'permissions', 'manifest', 'status']);
+        $activeAddons = $allAddons->where('status', 'active');
+        $knownAddonPermissions = $allAddons->flatMap(fn (Addon $addon) => is_array($addon->permissions) ? $addon->permissions : [])->unique()->values()->all();
+        $activeAddonPermissions = $activeAddons->flatMap(function (Addon $addon) use ($user): array {
+            $rolePermissions = data_get($addon->manifest, 'role_permissions.' . $user->role, []);
+            return is_array($rolePermissions) ? $rolePermissions : [];
+        })->unique()->values()->all();
+
+        $permissions = array_values(array_unique(array_merge(
+            array_filter(
+                config('semizzy.role_permissions.' . $user->role, []),
+                fn (string $permission): bool => ! in_array($permission, $knownAddonPermissions, true)
+                    || in_array($permission, $activeAddonPermissions, true),
+            ),
+            $activeAddonPermissions,
+        )));
+        foreach ($user->permissionOverrides()->get(['permission', 'allowed']) as $override) {
+            if (in_array($override->permission, $knownAddonPermissions, true)
+                && ! in_array($override->permission, $activeAddonPermissions, true)) {
+                continue;
+            }
+            $permissions = array_values(array_diff($permissions, [$override->permission]));
+            if ((bool) $override->allowed) {
+                $permissions[] = $override->permission;
+            }
+        }
+
         $featureSettings = SystemSetting::query()
             ->whereIn('key', ['vtu_enabled', 'api_enabled'])
             ->pluck('value', 'key')
@@ -48,10 +74,7 @@ class AdminNavigationService
 
         $items = array_values(array_filter($core, fn (array $item) => $this->visible($item, $user, $permissions, $featureSettings)));
 
-        $addons = Addon::query()
-            ->where('status', 'active')
-            ->orderBy('name')
-            ->get(['identifier', 'name', 'navigation']);
+        $addons = $activeAddons->sortBy('name');
 
         foreach ($addons as $addon) {
             foreach ($this->normalizeAddonNavigation($addon->navigation) as $index => $item) {
@@ -95,7 +118,7 @@ class AdminNavigationService
             return false;
         }
 
-        if (! empty($item['permission']) && ! $user->hasPermission((string) $item['permission'])) {
+        if (! empty($item['permission']) && ! in_array((string) $item['permission'], $permissions, true)) {
             return false;
         }
 
