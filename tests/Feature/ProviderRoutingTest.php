@@ -36,6 +36,23 @@ class ProviderRoutingTest extends TestCase
         $this->assertSame([$fast->id, $slow->id], $manager->eligible('airtime')->pluck('id')->all());
     }
 
+    public function test_unverified_provider_never_enters_live_transaction_routing(): void
+    {
+        [$service] = $this->makeService('unverified-airtime');
+        $provider = $this->makeProvider('unverified-provider', 1);
+        $provider->forceFill(['verification_status' => 'unverified', 'integration_status' => 'unverified'])->save();
+        ProviderServiceMapping::create([
+            'api_provider_id' => $provider->id,
+            'service_id' => $service->id,
+            'service_key' => $service->key,
+            'provider_service_id' => $service->key,
+            'capabilities' => ['transaction_initiation', 'transaction_status'],
+            'enabled' => true,
+        ]);
+
+        $this->assertCount(0, app(ProviderManager::class)->eligible($service->key, 'transaction_initiation'));
+    }
+
     public function test_mapping_capabilities_can_restrict_an_operation(): void
     {
         [$service] = $this->makeService('data');
