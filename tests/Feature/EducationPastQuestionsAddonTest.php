@@ -184,7 +184,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
   try {
    $service->complete($run);
    $this->fail('A run with a next-page cursor must not complete.');
-  } catch (\\DomainException $exception) {
+  } catch (\DomainException $exception) {
    $this->assertStringContainsString('next-page cursor',$exception->getMessage());
   }
   $run=$service->recordPage($run,['created'=>0,'updated'=>0,'skipped'=>1,'rejected'=>0],null,3);
@@ -214,7 +214,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertStringNotContainsString('supersecret',$failed->error_summary);
   $this->assertStringContainsString('[redacted-url]',$failed->error_summary);
   $this->assertStringContainsString('[redacted-credential]',$failed->error_summary);
-  $this->expectException(\\DomainException::class);
+  $this->expectException(\DomainException::class);
   $service->complete($failed);
  }
 
@@ -222,7 +222,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $service=app(EducationInstitutionSyncRunService::class);
   $service->start('history-guard-feed');
   $migration=require base_path('addons/education/database/migrations/2026_10_10_140000_create_education_institution_sync_runs.php');
-  $this->expectException(\\RuntimeException::class);
+  $this->expectException(\RuntimeException::class);
   $migration->down();
  }
 
