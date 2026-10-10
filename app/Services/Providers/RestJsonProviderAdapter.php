@@ -173,6 +173,9 @@ class RestJsonProviderAdapter implements ProviderAdapter
         if ($clientId === '' || $secretKey === '' || $terminalId === '' || $bankCode === '' || $accountNumber === '') {
             return new ProviderResult(false, 'FAILED', message: 'Interswitch account verification configuration or input is incomplete.', providerId: $provider->id);
         }
+        if (!preg_match('/^\\d{3,10}$/', $bankCode) || !preg_match('/^\\d{6,20}$/', $accountNumber)) {
+            return new ProviderResult(false, 'FAILED', message: 'Interswitch requires a numeric bank code and account number.', providerId: $provider->id);
+        }
 
         $url = rtrim((string) $provider->base_url, '/') . '/nameenquiry/banks/accounts/names';
 
