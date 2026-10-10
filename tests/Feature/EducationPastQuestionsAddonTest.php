@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Semizzy\Addons\Education\Http\Controllers\EducationReferenceImportController;
 use Semizzy\Addons\Education\Models\EducationLibraryItem;
+use Semizzy\Addons\Education\Services\EducationInstitutionImportService;
 use Tests\TestCase;
 class EducationPastQuestionsAddonTest extends TestCase {
  private bool $createdUsersTable=false;
@@ -16,6 +17,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
    Schema::create('users',function(Blueprint $t){$t->id();$t->string('name')->nullable();$t->string('email')->nullable();$t->string('password')->nullable();$t->timestamps();});
    $this->createdUsersTable=true;
   }
+  Schema::dropIfExists('education_institutions');
   Schema::dropIfExists('education_library_purchases');
   Schema::dropIfExists('education_library_items');
   Schema::dropIfExists('education_reference_categories');
@@ -26,10 +28,13 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $adminReferenceMigration->up();
   $directoryExpansionMigration=require base_path('addons/education/database/migrations/2026_10_09_110300_expand_official_school_reference_catalogue.php');
   $directoryExpansionMigration->up();
+  $institutionMigration=require base_path('addons/education/database/migrations/2026_10_10_130000_create_canonical_education_institutions.php');
+  $institutionMigration->up();
   $migration=require base_path('addons/education/database/migrations/2026_10_09_110000_create_education_past_question_library.php');
   $migration->up();
  }
  protected function tearDown():void {
+  Schema::dropIfExists('education_institutions');
   Schema::dropIfExists('education_library_purchases');
   Schema::dropIfExists('education_library_items');
   Schema::dropIfExists('education_reference_categories');
@@ -45,6 +50,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertContains('addons/education/routes/web.php',$manifest['web_route_files']);
   $this->assertContains('2026_10_09_110200_add_admin_managed_education_reference_fields.php',$manifest['migrations']);
   $this->assertContains('2026_10_09_110300_expand_official_school_reference_catalogue.php',$manifest['migrations']);
+  $this->assertContains('2026_10_10_130000_create_canonical_education_institutions.php',$manifest['migrations']);
   $this->assertSame('/admin/education/references',$manifest['admin_navigation'][1]['url']);
   $labels=array_column($manifest['navigation'],'label');
   $this->assertContains('School Past Questions',$labels);
@@ -109,4 +115,59 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertSame(1,EducationLibraryItem::published()->category('exam_past_question')->count());
   $this->assertSame('school_past_question',$school->fresh()->category);
  }
+ public function test_canonical_institution_migration_backfills_legacy_school_catalogue_without_deleting_it():void {
+  $this->assertTrue(Schema::hasTable('education_institutions'));
+  $legacy=DB::table('education_reference_catalogue')->where('kind','school')->where('name','University of Lagos')->first();
+  $this->assertNotNull($legacy);
+  $this->assertDatabaseHas('education_institutions',['source_key'=>'catalogue:'.$legacy->catalogue_key,'name'=>'University of Lagos','review_status'=>'approved','active'=>true]);
+  $this->assertDatabaseHas('education_reference_catalogue',['id'=>$legacy->id,'name'=>'University of Lagos']);
+  $this->assertSame(DB::table('education_reference_catalogue')->where('kind','school')->count(),DB::table('education_institutions')->where('import_source','education_reference_catalogue')->count());
+ }
+ public function test_institution_sync_is_idempotent_and_new_records_require_review():void {
+  $service=app(EducationInstitutionImportService::class);
+  $record=['name'=>'Example State University','category'=>'state_university','state'=>'Lagos','ownership'=>'state','external_id'=>'test:example-state-university','source_url'=>'https://source.example.test/list'];
+  $first=$service->import([$record],'test-feed');
+  $this->assertSame(1,$first['created']);
+  $this->assertSame(1,$first['review_required']);
+  $this->assertDatabaseHas('education_institutions',['external_id'=>'test:example-state-university','name'=>'Example State University','review_status'=>'pending','active'=>false]);
+  $second=$service->import([$record],'test-feed');
+  $this->assertSame(0,$second['created']);
+  $this->assertSame(1,$second['updated']);
+  $this->assertSame(1,DB::table('education_institutions')->where('external_id','test:example-state-university')->count());
+ }
+ public function test_sync_does_not_overwrite_an_approved_institution_or_reactivate_a_rejected_one():void {
+  $service=app(EducationInstitutionImportService::class);
+  $record=['name'=>'Manually Verified University','category'=>'university','state'=>'Oyo','external_id'=>'test:verified-university'];
+  $service->import([$record],'test-feed');
+  DB::table('education_institutions')->where('external_id','test:verified-university')->update(['name'=>'Admin Corrected University','review_status'=>'approved','reviewed_by'=>1,'reviewed_at'=>now(),'active'=>true]);
+  $result=$service->import([array_merge($record,['name'=>'Feed Changed University'])],'test-feed');
+  $this->assertSame(1,$result['skipped']);
+  $this->assertDatabaseHas('education_institutions',['external_id'=>'test:verified-university','name'=>'Admin Corrected University','review_status'=>'approved','active'=>true]);
+  DB::table('education_institutions')->where('external_id','test:verified-university')->update(['review_status'=>'rejected','active'=>false]);
+  $rejected=$service->import([$record],'test-feed');
+  $this->assertSame(1,$rejected['rejected']);
+  $this->assertDatabaseHas('education_institutions',['external_id'=>'test:verified-university','review_status'=>'rejected','active'=>false]);
+ }
+
+ public function test_external_ids_are_namespaced_by_source_and_do_not_merge_unrelated_records():void {
+  $service=app(EducationInstitutionImportService::class);
+  $service->import([['name'=>'North University','category'=>'university','state'=>'Lagos','external_id'=>'42']],'feed-a');
+  $service->import([['name'=>'South College','category'=>'college','state'=>'Oyo','external_id'=>'42']],'feed-b');
+  $this->assertSame(2,DB::table('education_institutions')->where('external_id','42')->count());
+  $this->assertDatabaseHas('education_institutions',['external_id'=>'42','import_source'=>'feed-a','name'=>'North University']);
+  $this->assertDatabaseHas('education_institutions',['external_id'=>'42','import_source'=>'feed-b','name'=>'South College']);
+ }
+ public function test_migration_rollback_refuses_to_drop_non_legacy_registry_records():void {
+  app(EducationInstitutionImportService::class)->import([['name'=>'Imported University','category'=>'university','external_id'=>'rollback-guard-test']],'rollback-test-feed');
+  $migration=require base_path('addons/education/database/migrations/2026_10_10_130000_create_canonical_education_institutions.php');
+  try {
+   $migration->down();
+   $this->fail('Rollback should refuse to drop canonical feed records.');
+  } catch (\RuntimeException $exception) {
+   $this->assertStringContainsString('Cannot roll back the canonical institution registry',$exception->getMessage());
+  }
+  $this->assertTrue(Schema::hasTable('education_institutions'));
+  $this->assertDatabaseHas('education_institutions',['external_id'=>'rollback-guard-test','review_status'=>'pending','active'=>false]);
+ }
+
 }
