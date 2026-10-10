@@ -66,7 +66,7 @@ class PaystackPayoutAdapterTest extends TestCase
                 ['amount_minor' => 1000, 'recipient_code' => 'RCP_a', 'reference' => 'semizzy_bulk_000001'],
             ]]);
             $this->fail('An uncertain reference must block bulk payout submission.');
-        } catch (\\Semizzy\\Addons\\Payments\\Exceptions\\AmbiguousPaymentGatewayException $exception) {
+        } catch (\Semizzy\\Addons\\Payments\\Exceptions\\AmbiguousPaymentGatewayException $exception) {
             $this->assertStringContainsString('uncertain state', $exception->getMessage());
         }
         Http::assertSentCount(1);
@@ -77,7 +77,7 @@ class PaystackPayoutAdapterTest extends TestCase
     public function test_bulk_payout_does_not_treat_an_unrelated_404_as_unused_reference(): void
     {
         Http::fake(['https://paystack.test/transfer/verify/semizzy_bulk_000002' => Http::response(['message' => 'Route not found'], 404)]);
-        $this->expectException(\\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         (new PaystackPaymentGatewayAdapter())->bulkPayout($this->provider(), ['transfers' => [
             ['amount_minor' => 1000, 'recipient_code' => 'RCP_a', 'reference' => 'semizzy_bulk_000002'],
         ]]);
