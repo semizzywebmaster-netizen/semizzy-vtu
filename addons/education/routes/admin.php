@@ -16,6 +16,7 @@ Route::middleware(['web','auth','role:ADMIN','ensure.addon:education','permissio
  Route::get('/',[EducationReferenceCatalogueController::class,'index'])->name('admin.education.references');
  Route::post('/',[EducationReferenceCatalogueController::class,'store'])->name('admin.education.references.store');
  Route::put('/{id}',[EducationReferenceCatalogueController::class,'update'])->whereNumber('id')->name('admin.education.references.update');
+ Route::post('/{id}/review',[EducationReferenceCatalogueController::class,'review'])->whereNumber('id')->name('admin.education.references.review');
  Route::delete('/{id}',[EducationReferenceCatalogueController::class,'destroy'])->whereNumber('id')->name('admin.education.references.destroy');
  Route::post('/categories',[EducationReferenceCatalogueController::class,'storeCategory'])->name('admin.education.references.categories.store');
  Route::put('/categories/{id}',[EducationReferenceCatalogueController::class,'updateCategory'])->whereNumber('id')->name('admin.education.references.categories.update');
