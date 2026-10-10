@@ -100,20 +100,41 @@ class AuthenticatedSessionController extends Controller
         $rawDeviceKey = (string) $request->cookie('semizzy_device_key', '');
         $deviceKey = $rawDeviceKey !== '' ? hash('sha256', $rawDeviceKey) : hash('sha256', Str::uuid()->toString());
         $activeDevice = $user->devices()->whereNull('revoked_at')->latest('id')->first();
+
         if ($activeDevice && $activeDevice->device_key !== $deviceKey) {
-            if (!$request->session()->get('device_login_pending') || (int) $request->session()->get('device_login_user_id') !== (int) $user->id || (bool) $request->session()->get('device_login_admin', false) !== $admin) {
-                $this->otp->sendToUser($user, 'new_device_login', 'new device login');
-                $request->session()->put(['device_login_pending' => true, 'device_login_user_id' => $user->id, 'device_login_admin' => $admin]);
-                throw ValidationException::withMessages(['login' => 'A verification code was sent to your email. Enter it to approve this new device.']);
+            if ($admin) {
+                // Admin sign-in intentionally does not use an OTP challenge.
+                // Keep the single-active-device policy by revoking the previous device session.
+                $user->devices()->whereNull('revoked_at')->update(['revoked_at' => now()]);
+                $activeDevice = null;
+                $request->session()->forget(['device_login_pending', 'device_login_user_id', 'device_login_admin']);
+            } else {
+                if (
+                    ! $request->session()->get('device_login_pending')
+                    || (int) $request->session()->get('device_login_user_id') !== (int) $user->id
+                    || (bool) $request->session()->get('device_login_admin', false) !== $admin
+                ) {
+                    $this->otp->sendToUser($user, 'new_device_login', 'new device login');
+                    $request->session()->put([
+                        'device_login_pending' => true,
+                        'device_login_user_id' => $user->id,
+                        'device_login_admin' => false,
+                    ]);
+                    throw ValidationException::withMessages([
+                        'login' => 'A verification code was sent to your email. Enter it to approve this new device.',
+                    ]);
+                }
+
+                if (! filled($credentials['otp_code'] ?? null)) {
+                    throw ValidationException::withMessages(['otp_code' => 'Enter the verification code sent to your email.']);
+                }
+
+                $this->otp->verifyForUser($user, 'new_device_login', (string) $credentials['otp_code']);
+                $request->session()->regenerate();
+                $user->devices()->whereNull('revoked_at')->update(['revoked_at' => now()]);
+                $activeDevice = null;
+                $request->session()->forget(['device_login_pending', 'device_login_user_id', 'device_login_admin']);
             }
-            if (!filled($credentials['otp_code'] ?? null)) {
-                throw ValidationException::withMessages(['otp_code' => 'Enter the verification code sent to your email.']);
-            }
-            $this->otp->verifyForUser($user, 'new_device_login', (string)$credentials['otp_code']);
-            $request->session()->regenerate();
-            $user->devices()->whereNull('revoked_at')->update(['revoked_at'=>now()]);
-            $activeDevice = null;
-            $request->session()->forget(['device_login_pending','device_login_user_id','device_login_admin']);
         }
         Auth::login($user, (bool) ($credentials['remember'] ?? false));
         $sessionToken = Str::random(64);
