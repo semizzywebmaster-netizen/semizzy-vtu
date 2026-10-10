@@ -30,7 +30,7 @@ final class EducationInstitutionImportService
             $state = trim((string) ($record['state'] ?? ''));
             $identity = $externalId !== '' ? 'external:' . $externalId : 'name:' . Str::lower($name) . '|' . Str::lower($state) . '|' . $category;
             $sourceKey = substr($source . ':' . hash('sha256', $identity), 0, 180);
-            $code = $this->makeCode($record['code'] ?? $name, $state, $category, $identity);
+            // Feed-supplied codes are not trusted as identity: two unrelated sources can reuse one.\n            // Generate a deterministic code from the institution's actual identity instead.\n            $code = $this->makeCode($name, $state, $category, $identity);
             $now = now();
 
             DB::transaction(function () use ($record, $name, $externalId, $category, $state, $source, $sourceKey, $code, $now, &$counts): void {
