@@ -1,8 +1,9 @@
 <?php
 
-use Illuminate\\Database\\Migrations\\Migration;
-use Illuminate\\Database\\Schema\\Blueprint;
-use Illuminate\\Support\\Facades\\Schema;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void
@@ -30,11 +31,9 @@ return new class extends Migration {
 
     public function down(): void
     {
-        if (Schema::hasTable('education_institution_sync_runs')) {
-            $unfinished = Schema::table('education_institution_sync_runs', function (Blueprint $table): void {});
-            if (\\Illuminate\\Support\\Facades\\DB::table('education_institution_sync_runs')->whereIn('status', ['running', 'incomplete'])->exists()) {
-                throw new RuntimeException('Cannot remove institution sync history while runs are running or incomplete.');
-            }
+        if (Schema::hasTable('education_institution_sync_runs')
+            && DB::table('education_institution_sync_runs')->exists()) {
+            throw new RuntimeException('Cannot remove institution sync history while run records exist; export or reconcile them first.');
         }
 
         Schema::dropIfExists('education_institution_sync_runs');
