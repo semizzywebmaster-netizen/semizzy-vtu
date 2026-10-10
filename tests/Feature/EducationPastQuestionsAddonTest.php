@@ -180,7 +180,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
  public function test_sync_run_requires_all_pages_and_exact_expected_total_before_completion():void {
   $service=app(EducationInstitutionSyncRunService::class);
   $run=$service->start('verified-test-feed',1);
-  $run=$service->recordPage($run,['created'=>2,'updated'=>0,'skipped'=>0,'rejected'=>0],'page-2',3);
+  $run=$service->recordPage($run,['created'=>2,'updated'=>0,'skipped'=>0,'rejected'=>0,'review_required'=>2],'page-2',3);
   try {
    $service->complete($run);
    $this->fail('A run with a next-page cursor must not complete.');
