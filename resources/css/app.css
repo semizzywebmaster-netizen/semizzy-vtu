@@ -59,7 +59,8 @@ a { color:inherit; text-decoration:none; }
 .bg-blue-50,.bg-sky-50 { background-color:color-mix(in srgb,var(--so-primary) 10%,var(--so-surface))!important; }
 .text-blue-600,.text-blue-700,.text-sky-600,.text-sky-700 { color:var(--so-primary)!important; }
 .bg-gray-50,.bg-gray-100 { background-color:color-mix(in srgb,var(--so-surface) 90%,var(--so-text))!important; }
-.text-gray-500,.text-gray-600,.text-gray-700,.text-gray-800,.text-gray-900 { color:var(--so-muted)!important; }
+.text-gray-900,.text-gray-800 { color:var(--so-text)!important; }
+.text-gray-500,.text-gray-600,.text-gray-700 { color:var(--so-muted)!important; }
 .border-gray-100,.border-gray-200,.border-gray-300 { border-color:var(--so-border)!important; }
 
 input,textarea,select { background-color:var(--so-surface); color:var(--so-text); border-color:var(--so-border); }
