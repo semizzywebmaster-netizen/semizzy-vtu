@@ -11,7 +11,8 @@ final class NcceAccreditedCollegesAdapter
 {
     public const SOURCE = 'ncce-accredited-colleges';
     public const URL = 'https://ncce.gov.ng/AccreditedColleges/Index';
-    private const MINIMUM_EXPECTED_RECORDS = 200;
+    // Current official directory snapshot lists serials 1 through 264; fail closed if truncated.
+    private const MINIMUM_EXPECTED_RECORDS = 264;
 
     public function __construct(
         private readonly EducationInstitutionImportService $importer,
