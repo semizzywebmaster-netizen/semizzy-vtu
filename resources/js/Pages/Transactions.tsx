@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 
 type Transaction = {
   id: number;
@@ -12,7 +12,6 @@ type Transaction = {
 };
 
 type Props = { transactions: Transaction[]; unreadCount?: number };
-type SharedProps = { navigation?: { unreadNotifications?: number } };
 
 const money = (minor: string, currency = 'NGN') => {
   try {
@@ -26,8 +25,6 @@ const money = (minor: string, currency = 'NGN') => {
 const label = (type: string) => type.replace(/[_:-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
 export default function Transactions({ transactions, unreadCount }: Props) {
-  const shared = usePage<SharedProps>().props;
-  const badge = unreadCount ?? shared.navigation?.unreadNotifications ?? 0;
 
   return <main className="min-h-screen bg-slate-50 pb-24 text-slate-900">
     <Head title="Transactions" />
