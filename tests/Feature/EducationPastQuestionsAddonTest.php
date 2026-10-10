@@ -163,7 +163,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
   try {
    $migration->down();
    $this->fail('Rollback should refuse to drop canonical feed records.');
-  } catch (\\RuntimeException $exception) {
+  } catch (\RuntimeException $exception) {
    $this->assertStringContainsString('Cannot roll back the canonical institution registry',$exception->getMessage());
   }
   $this->assertTrue(Schema::hasTable('education_institutions'));
