@@ -15,7 +15,7 @@ final class EducationReferenceCatalogueController extends Controller {
   if($request->filled('review_status')) $q->where('review_status',$request->query('review_status'));
   return Inertia::render('Admin/Education/ReferenceCatalogue',[
    'entries'=>$q->orderBy('kind')->orderBy('name')->paginate(40)->withQueryString(),
-   'filters'=>$request->only(['kind','category','q']),
+   'filters'=>$request->only(['kind','category','q','review_status']),
    'flash'=>['success'=>session('success'),'error'=>session('error')],
    'validationErrors'=>$request->session()->get('errors') ? $request->session()->get('errors')->getBag('default')->all() : [],
    'categories'=>DB::table('education_reference_categories')->orderBy('sort_order')->orderBy('name')->get(),
