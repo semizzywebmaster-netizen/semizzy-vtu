@@ -97,7 +97,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
       )}
 
       <div className="lg:pl-72">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-[color:var(--so-surface)]/95 px-4 py-3 backdrop-blur lg:hidden">
           <button aria-label="Open admin menu" className="rounded-xl border border-slate-200 px-3 py-2 text-lg" onClick={() => setOpen(true)}>☰</button>
           <div className="min-w-0"><p className="truncate text-sm font-extrabold">{siteName} Admin</p><p className="text-[11px] text-slate-500">{user?.role ?? ''}</p></div>
         </header>
