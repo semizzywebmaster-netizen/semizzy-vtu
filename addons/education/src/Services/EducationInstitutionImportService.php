@@ -33,7 +33,7 @@ final class EducationInstitutionImportService
             $code = $this->makeCode($record['code'] ?? $name, $state, $category, $identity);
             $now = now();
 
-            DB::transaction(function () use ($record, $name, $externalId, $category, $state, $source, $sourceKey, $code, $now, $externalId, &$counts): void {
+            DB::transaction(function () use ($record, $name, $externalId, $category, $state, $source, $sourceKey, $code, $now, &$counts): void {
                 $institution = null;
                 if ($externalId !== '') {
                     $institution = EducationInstitution::withTrashed()->where('external_id', $externalId)->first();
