@@ -114,8 +114,10 @@ final class PaymentRefundSettlementService
             throw new RuntimeException('Provider refund is not confirmed finally successful; wallet accounting was not changed.');
         }
 
+        $blockedAccountingReason = null;
+
         try {
-            return DB::transaction(function () use ($current, $providerRefundReference, $status, $reason, $actor): PaymentIntent {
+            $settled = DB::transaction(function () use ($current, $providerRefundReference, $status, $reason, $actor, &$blockedAccountingReason): ?PaymentIntent {
                 $locked = PaymentIntent::query()->whereKey($current->id)->lockForUpdate()->firstOrFail();
                 $metadata = (array) $locked->metadata;
 
@@ -139,7 +141,8 @@ final class PaymentRefundSettlementService
                     ->first();
 
                 if ($movement === null) {
-                    throw new RuntimeException('The original wallet funding movement was not found; refund settlement is blocked.');
+                    $blockedAccountingReason = 'The original wallet funding movement was not found; refund settlement is blocked.';
+                    return null;
                 }
 
                 // Preflight a debit reversal while the payment row is locked.
@@ -152,7 +155,8 @@ final class PaymentRefundSettlementService
                     ->firstOrFail();
 
                 if ($wallet->status !== 'active') {
-                    throw new RuntimeException('The wallet must be active before a movement can be reversed.');
+                    $blockedAccountingReason = 'The wallet must be active before a movement can be reversed.';
+                    return null;
                 }
 
                 $movementBefore = (string) $movement->available_before_minor;
@@ -160,7 +164,8 @@ final class PaymentRefundSettlementService
                 if ($this->compareMinor($movementAfter, $movementBefore) > 0) {
                     $reversalAmount = (string) $movement->amount_minor;
                     if ($this->compareMinor((string) $wallet->available_minor, $reversalAmount) < 0) {
-                        throw new RuntimeException('Insufficient available wallet balance to reverse the original credit.');
+                        $blockedAccountingReason = 'Insufficient available wallet balance to reverse the original credit.';
+                        return null;
                     }
                 }
 
@@ -185,6 +190,31 @@ final class PaymentRefundSettlementService
 
                 return $locked->fresh();
             });
+
+            if ($settled === null && $blockedAccountingReason !== null) {
+                $fresh = PaymentIntent::query()->find($current->id);
+                if ($fresh !== null && $fresh->status === 'paid' && $fresh->refunded_at === null) {
+                    $metadata = (array) $fresh->metadata;
+                    $metadata['refund_accounting_status'] = 'manual_review_required';
+                    $metadata['refund_provider_reference'] = $providerRefundReference;
+                    $metadata['refund_verified_status'] = $status;
+                    $metadata['refund_reconciliation_required'] = true;
+                    $metadata['refund_settlement_error'] = $blockedAccountingReason;
+                    $metadata['refund_settlement_failed_at'] = now()->toISOString();
+                    $metadata['refund_reason'] = $reason;
+                    $fresh->forceFill(['metadata' => $metadata])->saveOrFail();
+                }
+
+                throw new RuntimeException(
+                    'Provider refund is confirmed, but wallet reversal could not be completed safely; manual reconciliation is required.'
+                );
+            }
+
+            if ($settled === null) {
+                throw new RuntimeException('Refund settlement returned no result.');
+            }
+
+            return $settled;
         } catch (\Throwable $exception) {
             $blockedAccounting = in_array($exception->getMessage(), [
                 'Insufficient available wallet balance to reverse the original credit.',
