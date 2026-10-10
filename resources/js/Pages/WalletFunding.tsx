@@ -13,7 +13,7 @@ const money = (minor: string, currency = 'NGN') => {
   } catch { return '—'; }
 };
 
-export default function WalletFunding({ wallet, methods, unreadCount }: Props) {
+export default function WalletFunding({ wallet, methods }: Props) {
 
   return <main className="min-h-screen bg-slate-50 pb-24 text-slate-900">
     <Head title="Add Money" />
