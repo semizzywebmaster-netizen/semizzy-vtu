@@ -15,6 +15,7 @@ use Illuminate\Support\ServiceProvider;
 use Semizzy\Addons\Payments\Services\PaymentGatewayAdapterRegistry;
 use Semizzy\Addons\Payments\Adapters\MonnifyPaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Adapters\PaystackPaymentGatewayAdapter;
+use Semizzy\Addons\Payments\Adapters\InterswitchPaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Adapters\FlutterwavePaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Adapters\OpayPaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Adapters\KoraPaymentGatewayAdapter;
@@ -27,7 +28,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(CommercialServiceRegistry::class, fn () => new CommercialServiceRegistry());
         $this->app->singleton(PaymentGatewayAdapterRegistry::class, function () {
             $registry = new PaymentGatewayAdapterRegistry();
-            $registry->register('paystack', fn () => new PaystackPaymentGatewayAdapter());\n            $registry->register('interswitch', fn () => new InterswitchPaymentGatewayAdapter());
+            $registry->register('paystack', fn () => new PaystackPaymentGatewayAdapter());
+            $registry->register('interswitch', fn () => new InterswitchPaymentGatewayAdapter());
             $registry->register('monnify', fn () => new MonnifyPaymentGatewayAdapter());
             $registry->register('flutterwave', fn () => new FlutterwavePaymentGatewayAdapter());
             $registry->register('opay', fn () => new OpayPaymentGatewayAdapter());
