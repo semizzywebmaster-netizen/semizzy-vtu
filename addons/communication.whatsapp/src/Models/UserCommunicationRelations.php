@@ -1,7 +1,7 @@
 <?php
 namespace Addons\CommunicationWhatsapp\Models;
 
-use App\Models\Communication\Consent;
+use Addons\CommunicationWhatsapp\Models\Consent;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 trait UserCommunicationRelations
