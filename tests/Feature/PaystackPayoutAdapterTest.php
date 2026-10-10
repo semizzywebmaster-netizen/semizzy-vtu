@@ -73,6 +73,16 @@ class PaystackPayoutAdapterTest extends TestCase
         Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/transfer/bulk'));
     }
 
+
+    public function test_bulk_payout_does_not_treat_an_unrelated_404_as_unused_reference(): void
+    {
+        Http::fake(['https://paystack.test/transfer/verify/semizzy_bulk_000002' => Http::response(['message' => 'Route not found'], 404)]);
+        $this->expectException(\\RuntimeException::class);
+        (new PaystackPaymentGatewayAdapter())->bulkPayout($this->provider(), ['transfers' => [
+            ['amount_minor' => 1000, 'recipient_code' => 'RCP_a', 'reference' => 'semizzy_bulk_000002'],
+        ]]);
+    }
+
     public function test_verify_payout_uses_reference_verification_endpoint(): void
     {
         Http::fake(['https://paystack.test/transfer/verify/semizzy_payout_000001' => Http::response(['status' => true, 'data' => ['reference' => 'semizzy_payout_000001', 'status' => 'success']], 200)]);

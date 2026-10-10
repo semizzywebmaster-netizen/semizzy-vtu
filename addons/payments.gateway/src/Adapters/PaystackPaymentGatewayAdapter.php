@@ -115,9 +115,8 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
         if ($existingResponse->status() === 408 || $existingResponse->status() === 429 || $existingResponse->status() >= 500 || $existingResponse->successful()) {
             throw new AmbiguousPaymentGatewayException('Paystack could not establish whether this transfer reference already exists; failover is suppressed.');
         }
-        // Only a documented not-found response proves that this reference has not
-        // been used. Other 4xx responses may indicate auth/configuration problems.
-        if ($existingResponse->status() !== 404) {
+        // Only Paystack's explicit "transfer not found" response proves the reference is unused.
+        if (!$this->isTransferNotFound($existingResponse)) {
             throw new RuntimeException('Paystack transfer-reference verification failed before payout initiation.');
         }
 
@@ -215,7 +214,7 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
             } catch (Throwable $exception) {
                 throw new AmbiguousPaymentGatewayException('Paystack could not verify every bulk reference; no batch was submitted.', 0, $exception);
             }
-            if ($existingResponse->status() !== 404) {
+            if (!$this->isTransferNotFound($existingResponse)) {
                 if ($existingResponse->successful() || $existingResponse->status() === 408 || $existingResponse->status() === 429 || $existingResponse->status() >= 500) {
                     throw new AmbiguousPaymentGatewayException('At least one Paystack bulk reference already exists or has an uncertain state; no batch was submitted.');
                 }
@@ -235,6 +234,17 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
             throw new AmbiguousPaymentGatewayException('Paystack bulk transfer outcome is unknown; automatic failover is suppressed.');
         }
         return $this->result($response);
+    }
+
+    private function isTransferNotFound($response): bool
+    {
+        if ($response->status() !== 404) {
+            return false;
+        }
+
+        $body = $response->json();
+        $message = strtolower((string) ($body['message'] ?? $body['meta']['message'] ?? ''));
+        return str_contains($message, 'transfer') && str_contains($message, 'not found');
     }
 
     /** Query Paystack by the caller's persisted reference before retrying an ambiguous payout. */
