@@ -82,20 +82,20 @@ class SavingsController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($account->status !== 'active') {
-                throw new RuntimeException('Savings account is not active.');
-            }
-            $plan = $account->plan;
             $amountInt = (int) $data['amount_minor'];
-            if ($amountInt < (int) $plan->minimum_amount_minor || ($plan->maximum_amount_minor !== null && $amountInt > (int) $plan->maximum_amount_minor)) {
-                throw new RuntimeException('Contribution amount is outside the selected plan limits.');
-            }
-
             $operationKey = 'savings:contribution:'.$reference.':'.$idempotency;
             $existing = SavingsMovement::where('operation_key', $operationKey)->first();
             if ($existing) {
                 $this->assertIdempotentReplay($existing, $account, $request->user()->id, 'contribution', (string) $amountInt);
                 return response()->json(['account' => $account->fresh(), 'movement' => $existing, 'idempotent' => true]);
+            }
+
+            if ($account->status !== 'active') {
+                throw new RuntimeException('Savings account is not active.');
+            }
+            $plan = $account->plan;
+            if ($amountInt < (int) $plan->minimum_amount_minor || ($plan->maximum_amount_minor !== null && $amountInt > (int) $plan->maximum_amount_minor)) {
+                throw new RuntimeException('Contribution amount is outside the selected plan limits.');
             }
 
             $wallet = WalletAccount::where('user_id', $request->user()->id)
@@ -163,11 +163,18 @@ class SavingsController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            $amount = (string) $data['amount_minor'];
+            $operationKey = 'savings:withdrawal:'.$reference.':'.$idempotency;
+            $existing = SavingsMovement::where('operation_key', $operationKey)->first();
+            if ($existing) {
+                $this->assertIdempotentReplay($existing, $account, $request->user()->id, 'withdrawal', $amount);
+                return response()->json(['account' => $account->fresh(), 'movement' => $existing, 'idempotent' => true]);
+            }
+
             if ($account->status !== 'active') {
                 throw new RuntimeException('Savings account is not active.');
             }
 
-            $amount = (string) $data['amount_minor'];
             if ($this->compare((string) $account->balance_minor, $amount) < 0) {
                 throw new RuntimeException('Insufficient savings balance.');
             }
@@ -179,13 +186,6 @@ class SavingsController extends Controller
             $penalty = '0';
             if ($account->matures_at && now()->lt($account->matures_at) && $account->plan->allow_early_withdrawal && (float) $account->plan->early_withdrawal_penalty > 0) {
                 $penalty = $this->percentage($amount, (string) $account->plan->early_withdrawal_penalty);
-            }
-
-            $operationKey = 'savings:withdrawal:'.$reference.':'.$idempotency;
-            $existing = SavingsMovement::where('operation_key', $operationKey)->first();
-            if ($existing) {
-                $this->assertIdempotentReplay($existing, $account, $request->user()->id, 'withdrawal', $amount);
-                return response()->json(['account' => $account->fresh(), 'movement' => $existing, 'idempotent' => true]);
             }
 
             $wallet = WalletAccount::where('user_id', $request->user()->id)
