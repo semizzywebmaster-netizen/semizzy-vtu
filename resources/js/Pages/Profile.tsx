@@ -1,7 +1,6 @@
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
-type SharedProps = { navigation?: { unreadNotifications?: number } };
 type Props = {
   tier: number;
   tiers: { id:number; name:string; requirements:string[]; upgradeLabel:string|null; current:boolean }[];
@@ -16,7 +15,6 @@ type Props = {
 const kycLabel=(v:string)=>v==='pending'?'Pending review':v==='verified'?'Verified':v==='rejected'?'Rejected':'Not started';
 
 export default function Profile({user,tier,tiers}:Props){
-  const unreadCount=usePage<SharedProps>().props.navigation?.unreadNotifications??0;
   const [passwordOtpSent, setPasswordOtpSent] = useState(false);
   const [passwordOtpSending, setPasswordOtpSending] = useState(false);
   const passwordForm=useForm({current_password:'',password:'',password_confirmation:'',otp_code:''});
