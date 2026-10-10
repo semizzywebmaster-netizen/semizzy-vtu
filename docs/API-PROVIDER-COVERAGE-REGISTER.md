@@ -4,6 +4,12 @@ Audit date: 2026-10-09
 Branch: main
 Status: initial static inventory of Core presets only. Counts below are **preset mappings**, not working integrations or verified market coverage.
 
+## Selected replacement shortlist (2026-10-10)
+
+The proposed six-provider research shortlist has been narrowed to **VTU.ng and VTpass only**. Paybeta, VTUGATE, OTOBILL and VTUAgent remain research-only and must not be added as replacement presets under this decision.
+
+Both selected providers already have Core preset records; do not create duplicate provider identities. Their presence in the registry is not proof of a completed integration. Keep both disabled/unverified until credentials, exact service-specific request/response mapping, transaction-status requery, timeout recovery, pricing/catalogue sync and sandbox/live checks pass. VTU.ng's preset requery path is corrected to the documented `POST /api/v2/requery`; its adapter contract still needs tests against the provider's documented request and response schema. VTpass documents `POST /api/requery` with `request_id` and supports transaction-update webhooks, but the existing generic preset must still be checked against VTpass's authentication and service-specific API contract.
+
 ## Existing Core provider presets
 
 The Core `ProviderPresetRegistry` currently defines 13 provider records:
