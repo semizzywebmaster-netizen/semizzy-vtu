@@ -209,7 +209,7 @@ final class ProviderPresetRegistry
                 'auth_type'=>'bearer',
                 'service_categories'=>['airtime','data','electricity','cable-tv','betting','education'],
                 'capabilities'=>['balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status','webhook'],
-                'endpoints'=>['catalogue_retrieval'=>'/api/v2/variations/data','transaction_status'=>'/api/v2/orders'],
+                'endpoints'=>['catalogue_retrieval'=>'/api/v2/variations/data','transaction_status'=>'/api/v2/requery'],
                 'api_version'=>'v2',
                 'mappings'=>[
                     ['service_key'=>'airtime','provider_service_id'=>'airtime','capabilities'=>['transaction_initiation','transaction_status']],
