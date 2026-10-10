@@ -81,7 +81,7 @@ class WhatsAppWebhookService
    return $value;
   }
   if(is_string($value)){
-   return preg_replace('/(\\bPIN\\s+)\\d{4}\\b/i','$1[REDACTED]',$value) ?? $value;
+   return preg_replace('/(\bPIN\s+)\d{4}\b/i','$1[REDACTED]',$value) ?? $value;
   }
   return $value;
  }
