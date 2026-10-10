@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\AuditEvent;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
-use Illuminate\Foundation\Testing\RefreshDatabase;\nuse Illuminate\Database\QueryException;\nuse Illuminate\Support\Facades\DB;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Tests\TestCase;
 
