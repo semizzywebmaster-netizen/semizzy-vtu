@@ -1,10 +1,10 @@
 <?php
 
-namespace Semizzy\\Addons\\Education\\Services;
+namespace Semizzy\Addons\Education\Services;
 
 use DomainException;
-use Illuminate\\Support\\Facades\\Http;
-use Semizzy\\Addons\\Education\\Models\\EducationInstitutionSyncRun;
+use Illuminate\Support\Facades\Http;
+use Semizzy\Addons\Education\Models\EducationInstitutionSyncRun;
 use Throwable;
 
 final class NucUniversityDirectoryAdapter
@@ -65,12 +65,12 @@ final class NucUniversityDirectoryAdapter
      */
     public function parse(string $html): array
     {
-        if (trim($html) === '' || !class_exists(\\DOMDocument::class)) {
+        if (trim($html) === '' || !class_exists(\DOMDocument::class)) {
             throw new DomainException('NUC directory response is empty or the DOM extension is unavailable.');
         }
 
         $previous = libxml_use_internal_errors(true);
-        $document = new \\DOMDocument();
+        $document = new \DOMDocument();
         try {
             $loaded = $document->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
         } finally {
@@ -81,7 +81,7 @@ final class NucUniversityDirectoryAdapter
             throw new DomainException('NUC directory HTML could not be parsed.');
         }
 
-        $xpath = new \\DOMXPath($document);
+        $xpath = new \DOMXPath($document);
         $targetTable = null;
         foreach ($xpath->query('//table') ?: [] as $table) {
             $headers = [];
@@ -112,8 +112,8 @@ final class NucUniversityDirectoryAdapter
                 continue;
             }
 
-            $serialText = preg_replace('/[.\\s]+$/u', '', $this->normalizeText($cells->item(0)->textContent)) ?? '';
-            if (!preg_match('/^\\d+$/', $serialText)) {
+            $serialText = preg_replace('/[.\s]+$/u', '', $this->normalizeText($cells->item(0)->textContent)) ?? '';
+            if (!preg_match('/^\d+$/', $serialText)) {
                 continue;
             }
 
@@ -132,7 +132,7 @@ final class NucUniversityDirectoryAdapter
             if ($serial < 1 || $name === '' || $ownership === null || $state === '') {
                 throw new DomainException('NUC directory contains an invalid serial, name, ownership or state; refusing import.');
             }
-            if (!preg_match('/^\\d{4}$/', $yearText)) {
+            if (!preg_match('/^\d{4}$/', $yearText)) {
                 throw new DomainException('NUC directory contains an invalid establishment year; refusing import.');
             }
 
@@ -173,9 +173,9 @@ final class NucUniversityDirectoryAdapter
 
         $pageText = $this->normalizeText($document->textContent);
         $publishedCounts = [
-            'federal' => $this->summaryCount($pageText, '/\\b(\\d+)\\s+Federal Universities\\b/i'),
-            'state' => $this->summaryCount($pageText, '/\\b(\\d+)\\s+State Universities\\b/i'),
-            'private' => $this->summaryCount($pageText, '/\\b(\\d+)\\s+Private Universities\\b/i'),
+            'federal' => $this->summaryCount($pageText, '/\b(\d+)\s+Federal Universities\b/i'),
+            'state' => $this->summaryCount($pageText, '/\b(\d+)\s+State Universities\b/i'),
+            'private' => $this->summaryCount($pageText, '/\b(\d+)\s+Private Universities\b/i'),
         ];
         if (in_array(null, $publishedCounts, true) || $publishedCounts !== $ownershipCounts) {
             throw new DomainException('NUC directory summary counts do not match parsed ownership totals; refusing an incomplete or changed source.');
@@ -191,6 +191,6 @@ final class NucUniversityDirectoryAdapter
 
     private function normalizeText(string $value): string
     {
-        return trim(preg_replace('/\\s+/u', ' ', html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?? '');
+        return trim(preg_replace('/\s+/u', ' ', html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?? '');
     }
 }
