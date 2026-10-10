@@ -137,4 +137,39 @@ class WhatsAppBotProviderExecutionTest extends TestCase
         $this->assertSame('unknown', DeliveryAttempt::query()->where('message_id', $message->id)->value('status'));
     }
 
+    public function test_webhook_redacts_transaction_pin_from_persisted_message_and_metadata(): void
+    {
+        $provider = Provider::query()->create([
+            'channel' => 'whatsapp',
+            'name' => 'WhatsApp Redaction Test Provider',
+            'driver' => 'generic_http',
+            'credentials' => ['webhook_secret' => 'redaction-secret'],
+            'enabled' => true,
+            'paused' => false,
+            'priority' => 1,
+        ]);
+        $body = json_encode([
+            'entry' => [[
+                'changes' => [[
+                    'value' => [
+                        'messages' => [[
+                            'id' => 'wamid.pin-redaction-001',
+                            'from' => '2348011112222',
+                            'type' => 'text',
+                            'text' => ['body' => 'BUY 12 08098765432 500 PIN 9876'],
+                        ]],
+                    ],
+                ]],
+            ]],
+        ], JSON_THROW_ON_ERROR);
+        $signature = 'sha256=' . hash_hmac('sha256', $body, 'redaction-secret');
+
+        app(WhatsAppWebhookService::class)->handle($provider, $body, $signature);
+
+        $message = Message::query()->where('idempotency_key', 'whatsapp:wamid.pin-redaction-001')->firstOrFail();
+        $this->assertStringNotContainsString('PIN 9876', (string) $message->body);
+        $this->assertStringNotContainsString('9876', json_encode($message->metadata, JSON_THROW_ON_ERROR));
+        $this->assertStringContainsString('[REDACTED]', (string) $message->body);
+    }
+
 }
