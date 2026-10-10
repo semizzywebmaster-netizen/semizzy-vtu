@@ -28,7 +28,7 @@ return new class extends Migration {
             $table->text('last_error')->nullable();
             $table->json('settings')->nullable();
             $table->timestamps();
-            $table->index(['enabled', 'paused', 'maintenance', 'priority']);
+            $table->index(['enabled', 'paused', 'maintenance', 'priority'], 'provider_enabled_state_priority_idx');
         });
     }
 
