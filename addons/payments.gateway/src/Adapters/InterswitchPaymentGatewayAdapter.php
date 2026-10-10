@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
+use Semizzy\Addons\Payments\Contracts\BankAccountVerificationAdapter;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
 
 /**
