@@ -1,5 +1,5 @@
 <?php
-namespace App\Models\Communication;
+namespace Addons\CommunicationWhatsapp\Models;
 use Illuminate\Database\Eloquent\Model;
 class Conversation extends Model {
  protected $table='communication_conversations'; protected $guarded=[];
