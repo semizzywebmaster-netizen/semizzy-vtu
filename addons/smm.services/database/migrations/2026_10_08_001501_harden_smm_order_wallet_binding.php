@@ -29,9 +29,6 @@ return new class extends Migration {
 
         // The wallet binding is used to reconcile each order to the exact wallet
         // that was reserved, rather than resolving a potentially different wallet later.
-        Schema::table('smm_orders', function (Blueprint $table): void {
-            $table->index(['wallet_account_id', 'status'], 'smm_order_wallet_status_idx');
-        });
     }
 
     public function down(): void
