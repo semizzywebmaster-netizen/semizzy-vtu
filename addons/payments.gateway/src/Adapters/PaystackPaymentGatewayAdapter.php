@@ -7,7 +7,7 @@ use RuntimeException;
 use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
 
-final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
+final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter, PayoutReconciliationAdapter
 {
     private function base(PaymentGatewayProvider $provider): string
     {
