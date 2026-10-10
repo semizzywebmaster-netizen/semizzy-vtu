@@ -1,8 +1,8 @@
 <?php
 
-namespace Semizzy\\Addons\\Education\\Models;
+namespace Semizzy\Addons\Education\Models;
 
-use Illuminate\\Database\\Eloquent\\Model;
+use Illuminate\Database\Eloquent\Model;
 
 final class EducationInstitutionSyncRun extends Model
 {
