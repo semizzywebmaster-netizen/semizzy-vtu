@@ -96,7 +96,7 @@ export default function SettingsPage({settings,smtp_env,smtp_providers}:Props){
 
     <form onSubmit={submit} className="mt-6 space-y-6">
       <section className="rounded-2xl border bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-extrabold">Global Theme · 6 options</h2><p className="mt-1 text-sm text-slate-500">Five professional themes plus one Custom theme. Applied platform-wide.</p>
+        <h2 className="text-lg font-extrabold">Global Theme · 10 professional themes + Custom</h2><p className="mt-1 text-sm text-slate-500">Choose from ten coordinated palettes or configure a custom palette. Light and Dark skins are available across customer and admin pages.</p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {THEMES.map(theme=><button type="button" key={theme.key} onClick={()=>choose(theme.key)} className={'rounded-2xl border-2 p-4 text-left '+(form.data.theme_key===theme.key?'border-indigo-600 bg-indigo-50':'border-slate-200')}><div className="flex gap-3"><span className="h-12 w-12 shrink-0 rounded-xl" style={{background:'linear-gradient(135deg,'+theme.light.primary+','+theme.light.accent+')'}}/><span><b className="block">{theme.name}</b><span className="text-xs text-slate-500">{theme.description}</span></span></div></button>)}
           <button type="button" onClick={()=>choose('custom')} className={'rounded-2xl border-2 p-4 text-left '+(form.data.theme_key==='custom'?'border-indigo-600 bg-indigo-50':'border-slate-200')}><b>🎨 Custom Theme</b><span className="mt-1 block text-xs text-slate-500">Admin-defined Light and Dark palettes.</span></button>
