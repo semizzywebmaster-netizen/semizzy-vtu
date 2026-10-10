@@ -1,5 +1,5 @@
 <?php
-namespace App\Models;
+namespace Addons\CommunicationWhatsapp\Models;
 
 use App\Models\Communication\Consent;
 use Illuminate\Database\Eloquent\Relations\HasMany;
