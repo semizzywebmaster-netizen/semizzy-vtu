@@ -24,6 +24,7 @@ class ProviderCapabilityRegistry
         'inventory_sync',
         'sms_send',
         'sms_status',
+        'whatsapp_status',
         'network_lookup',
         'social_account_purchase',
         'foreign_number_purchase',
@@ -112,7 +113,8 @@ class ProviderCapabilityRegistry
     ];
 
     public const IDEMPOTENT_MUTATIONS = [
-        'transaction_initiation', 'refund', 'reversal',
+        'transaction_initiation', 'refund', 'reversal', 'sms_send', 'whatsapp_send',
+        'social_account_purchase', 'foreign_number_purchase',
         'investment_subscribe', 'investment_redemption',
         'stock_order_create', 'stock_order_cancel',
         'fx_conversion_execute', 'fx_trade_create',
@@ -132,6 +134,11 @@ class ProviderCapabilityRegistry
      * capability, or the generic transaction_status operation with a typed payload.
      */
     private const STATUS_REQUIREMENTS = [
+        'sms_send' => 'sms_status',
+        'whatsapp_send' => 'whatsapp_status',
+        'social_account_purchase' => 'transaction_status',
+        'foreign_number_purchase' => 'foreign_number_status',
+        'identity_document_verify' => 'identity_status',
         'investment_subscribe' => 'investment_status',
         'investment_redemption' => 'investment_status',
         'stock_order_create' => 'stock_order_status',
