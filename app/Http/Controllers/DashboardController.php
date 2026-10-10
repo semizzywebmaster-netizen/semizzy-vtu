@@ -68,6 +68,26 @@ class DashboardController extends Controller
             ];
         }
 
+        $providerBalances = [];
+        if ($isAdmin) {
+            $providerBalances = ApiProvider::query()
+                ->orderBy('priority')
+                ->orderBy('display_name')
+                ->get(['id', 'identifier', 'display_name', 'balance_amount', 'balance_currency', 'balance_status', 'balance_message', 'balance_checked_at', 'enabled', 'paused'])
+                ->map(fn (ApiProvider $provider): array => [
+                    'id' => $provider->id,
+                    'identifier' => $provider->identifier,
+                    'name' => $provider->display_name,
+                    'balance' => $provider->balance_amount,
+                    'currency' => $provider->balance_currency ?: 'NGN',
+                    'status' => $provider->balance_status ?: 'not_checked',
+                    'message' => $provider->balance_message,
+                    'checkedAt' => $provider->balance_checked_at?->toISOString(),
+                    'enabled' => (bool) $provider->enabled,
+                    'paused' => (bool) $provider->paused,
+                ])->values()->all();
+        }
+
         $quickLinks = [];
         if ($isAdmin) {
             $quickLinks = [
@@ -247,6 +267,7 @@ class DashboardController extends Controller
             'requiredActions' => $requiredActions,
             'unreadNotifications' => $unreadNotifications,
             'metrics' => $metrics,
+            'providerBalances' => $providerBalances,
             'quickLinks' => $quickLinks,
             'serviceCategories' => $serviceCategories,
             'wallet' => $wallet ? [
