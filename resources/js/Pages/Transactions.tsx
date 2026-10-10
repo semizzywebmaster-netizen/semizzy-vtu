@@ -1,5 +1,4 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import CoreMobileNav from '../Components/CoreMobileNav';
 
 type Transaction = {
   id: number;
@@ -49,6 +48,6 @@ export default function Transactions({ transactions, unreadCount }: Props) {
           })}</div>}
       </section>
     </div>
-    <CoreMobileNav active="transactions" unreadCount={badge} />
+
   </main>;
 }
