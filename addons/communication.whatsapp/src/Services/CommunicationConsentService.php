@@ -1,7 +1,7 @@
 <?php
 namespace Addons\CommunicationWhatsapp\Services;
 
-use App\Models\Communication\Consent;
+use Addons\CommunicationWhatsapp\Models\Consent;
 use RuntimeException;
 
 class CommunicationConsentService
