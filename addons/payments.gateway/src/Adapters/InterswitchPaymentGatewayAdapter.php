@@ -15,7 +15,7 @@ use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
  * Collection and refunds remain explicitly unsupported until their
  * exact product contracts are configured and verified.
  */
-final class InterswitchPaymentGatewayAdapter implements PaymentGatewayAdapter
+final class InterswitchPaymentGatewayAdapter implements PaymentGatewayAdapter, BankAccountVerificationAdapter
 {
     private function base(PaymentGatewayProvider $provider): string
     {
