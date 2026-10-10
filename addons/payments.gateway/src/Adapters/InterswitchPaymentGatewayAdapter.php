@@ -141,7 +141,45 @@ final class InterswitchPaymentGatewayAdapter implements PaymentGatewayAdapter
 
     public function bulkPayout(PaymentGatewayProvider $provider, array $payload): array
     {
-        throw new RuntimeException('Interswitch bulk payout is not enabled in this adapter; the documented Payouts API bulk contract must be verified before use.');
+        [$credentials] = $this->credentials($provider);
+        $transactions = $payload['transactions'] ?? null;
+        $walletId = (string) ($payload['wallet_id'] ?? $credentials['wallet_id'] ?? '');
+        $pin = (string) ($payload['wallet_pin'] ?? $credentials['wallet_pin'] ?? '');
+        if (!is_array($transactions) || count($transactions) < 2 || $walletId === '' || $pin === '') {
+            throw new RuntimeException('Interswitch batch payout requires at least two recipients, wallet ID, and wallet PIN.');
+        }
+
+        $recipients = [];
+        $total = 0.0;
+        foreach ($transactions as $item) {
+            if (!is_array($item)) throw new RuntimeException('Each Interswitch batch recipient must be an object.');
+            $amount = $item['amount'] ?? null;
+            $account = (string) ($item['account_number'] ?? '');
+            $bank = (string) ($item['bank_code'] ?? '');
+            $reference = trim((string) ($item['reference'] ?? ''));
+            if (!is_numeric($amount) || (float) $amount <= 0 || !preg_match('/^\\d{10}$/', $account) || $bank === '' || $reference === '') {
+                throw new RuntimeException('Each Interswitch batch recipient requires a positive amount, 10-digit account number, bank code, and unique reference.');
+            }
+            $amount = round((float) $amount, 2);
+            $total += $amount;
+            $recipients[] = [
+                'transactionReference' => $reference,
+                'recipientName' => (string) ($item['account_name'] ?? ''),
+                'recipientAccount' => $account,
+                'recipientBank' => $bank,
+                'amount' => $amount,
+                'currencyCode' => strtoupper($item['currency'] ?? $payload['currency'] ?? 'NGN'),
+            ];
+        }
+
+        return $this->successful($this->request($provider)->post($this->base($provider).'/batch', [
+            'payoutChannel' => 'BANK_TRANSFER',
+            'narration' => mb_substr((string) ($payload['narration'] ?? 'SEMIZZY ONE bulk payout'), 0, 200),
+            'currencyCode' => strtoupper($payload['currency'] ?? 'NGN'),
+            'amount' => round($total, 2),
+            'walletDetails' => ['pin' => $pin, 'walletId' => $walletId],
+            'recipients' => $recipients,
+        ]));
     }
 
     public function refund(PaymentGatewayProvider $provider, array $payload): array
