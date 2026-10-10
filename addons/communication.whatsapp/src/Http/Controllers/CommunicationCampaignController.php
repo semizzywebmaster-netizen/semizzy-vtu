@@ -2,7 +2,7 @@
 namespace Addons\CommunicationWhatsapp\Http\Controllers;
 
 use Addons\CommunicationWhatsapp\Services\CommunicationCampaignService;
-use App\Models\Communication\Campaign;
+use Addons\CommunicationWhatsapp\Models\Campaign;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 

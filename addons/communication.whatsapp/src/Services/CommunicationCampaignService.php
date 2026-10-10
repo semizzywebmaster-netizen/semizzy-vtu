@@ -1,8 +1,8 @@
 <?php
 namespace Addons\CommunicationWhatsapp\Services;
 
-use App\Models\Communication\Campaign;
-use App\Models\Communication\Consent;
+use Addons\CommunicationWhatsapp\Models\Campaign;
+use Addons\CommunicationWhatsapp\Models\Consent;
 use App\Models\Communication\Message;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;

@@ -1,7 +1,7 @@
 <?php
 namespace Addons\CommunicationWhatsapp\Services;
 
-use App\Models\Communication\Template;
+use Addons\CommunicationWhatsapp\Models\Template;
 use RuntimeException;
 
 class CommunicationTemplateService
