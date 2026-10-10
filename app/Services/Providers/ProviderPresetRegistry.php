@@ -321,22 +321,16 @@ final class ProviderPresetRegistry
             [
                 'identifier'=>'husmodataapi',
                 'display_name'=>'Husmodataapi',
+                // Website is known; API base URL, authentication, endpoints and product IDs are not verified.
                 'base_url'=>'https://husmodataapi.com',
                 'documentation_url'=>'https://husmodataapi.com/',
                 'official_website'=>'https://husmodataapi.com/',
-                'auth_type'=>'bearer',
-                'service_categories'=>['airtime','data','cable-tv','electricity','messaging','education'],
-                'capabilities'=>['balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status'],
+                'auth_type'=>'custom',
+                'service_categories'=>[],
+                'capabilities'=>[],
                 'endpoints'=>[],
-                'api_version'=>'v1',
-                'mappings'=>[
-                    ['service_key'=>'airtime','provider_service_id'=>'airtime','capabilities'=>['transaction_initiation','transaction_status']],
-                    ['service_key'=>'data','provider_service_id'=>'data','capabilities'=>['transaction_initiation','transaction_status','catalogue_retrieval']],
-                    ['service_key'=>'electricity','provider_service_id'=>'electricity','capabilities'=>['transaction_initiation','transaction_status']],
-                    ['service_key'=>'cable-tv','provider_service_id'=>'cable','capabilities'=>['transaction_initiation','transaction_status']],
-                    ['service_key'=>'education','provider_service_id'=>'education','capabilities'=>['transaction_initiation']],
-                    ['service_key'=>'sms','provider_service_id'=>'sms','capabilities'=>['transaction_initiation']],
-                ],
+                'api_version'=>null,
+                'mappings'=>[],
                 'priority'=>22,
             ],
             [
