@@ -3,12 +3,14 @@ namespace Tests\Feature;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Semizzy\Addons\Education\Http\Controllers\EducationReferenceImportController;
 use Semizzy\Addons\Education\Models\EducationLibraryItem;
 use Semizzy\Addons\Education\Services\EducationInstitutionImportService;
 use Semizzy\Addons\Education\Services\EducationInstitutionSyncRunService;
+use Semizzy\Addons\Education\Services\NcceAccreditedCollegesAdapter;
 use Tests\TestCase;
 class EducationPastQuestionsAddonTest extends TestCase {
  private bool $createdUsersTable=false;
@@ -230,6 +232,32 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $migration=require base_path('addons/education/database/migrations/2026_10_10_140000_create_education_institution_sync_runs.php');
   $this->expectException(\RuntimeException::class);
   $migration->down();
+ }
+
+
+ public function test_ncce_official_directory_adapter_validates_complete_feed_and_imports_pending_records():void {
+  $rows='';
+  for($i=1;$i<=200;$i++) {
+   $rows.='<tr><td>'.$i.'</td><td>Test College '.$i.' <a href="/details/'.$i.'">OPEN</a></td><td>Provost</td><td>Private College of Education</td><td>Lagos</td><td><a href="https://college'.$i.'.example.edu">Website</a></td></tr>';
+  }
+  $html='<html><body><table><thead><tr><th>S/N</th><th>Name</th><th>Provost</th><th>College Ownership</th><th>State</th><th>Website</th></tr></thead><tbody>'.$rows.'</tbody></table></body></html>';
+  Http::fake([NcceAccreditedCollegesAdapter::URL=>Http::response($html,200,['Content-Type'=>'text/html; charset=UTF-8'])]);
+
+  $run=app(NcceAccreditedCollegesAdapter::class)->sync();
+
+  $this->assertSame('completed',$run->status);
+  $this->assertSame(200,$run->expected_total);
+  $this->assertSame(200,$run->records_seen);
+  $this->assertSame(200,DB::table('education_institutions')->where('import_source',NcceAccreditedCollegesAdapter::SOURCE)->count());
+  $this->assertSame(200,DB::table('education_institutions')->where('import_source',NcceAccreditedCollegesAdapter::SOURCE)->where('review_status','pending')->where('active',false)->count());
+  $this->assertDatabaseHas('education_institutions',['name'=>'Test College 1','category'=>'college_of_education','ownership'=>'private','state'=>'Lagos','review_status'=>'pending','active'=>false]);
+  Http::assertSent(fn($request)=>$request->url()===NcceAccreditedCollegesAdapter::URL);
+ }
+
+ public function test_ncce_official_directory_adapter_rejects_incomplete_or_changed_source_layout():void {
+  $adapter=app(NcceAccreditedCollegesAdapter::class);
+  $this->expectException(\\DomainException::class);
+  $adapter->parse('<html><body><table><tr><th>Name</th><th>Data</th></tr><tr><td>Only a partial table</td><td>missing contract</td></tr></table></body></html>');
  }
 
 }
