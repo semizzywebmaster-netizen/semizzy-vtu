@@ -135,7 +135,7 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
               <p className="mt-1 text-sm text-slate-500">Available services will appear here automatically when enabled in the catalogue.</p>
             </div>
           ) : (
-            <div className="mt-5 grid grid-cols-2 gap-2 min-[480px]:grid-cols-4 md:grid-cols-6">
+            <div data-testid="dashboard-service-grid" className="mt-5 grid grid-cols-4 gap-2 min-[480px]:grid-cols-2 lg:grid-cols-6">
               {featuredServices.map((service, index) => (
                 <Link
                   key={service.key}
