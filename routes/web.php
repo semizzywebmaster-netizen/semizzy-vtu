@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ProviderEngineController;
 use App\Http\Controllers\Admin\PricingRoutingController;
 use App\Http\Controllers\Admin\SystemHealthController;
 use App\Http\Controllers\Admin\OperationalRunbooksController;
+use App\Http\Controllers\Admin\GlobalSearchController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\UserController;
@@ -181,6 +182,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/users/{user}/wallet-status', [UserController::class, 'walletStatus'])->whereNumber('user')->middleware('permission:users.fund')->name('admin.users.wallet-status');
         Route::get('/health', SystemHealthController::class)->middleware('permission:system.view')->name('admin.health');
         Route::get('/runbooks', OperationalRunbooksController::class)->middleware('permission:system.view')->name('admin.runbooks');
+        Route::get('/global-search', GlobalSearchController::class)->middleware('throttle:60,1')->name('admin.global-search');
         Route::get('/platform-controls', [PlatformControlController::class, 'index'])->middleware(['role:ADMIN','permission:system.manage'])->name('admin.platform-controls.index');
         Route::patch('/platform-controls/services/{service}', [PlatformControlController::class, 'toggleService'])->whereNumber('service')->middleware(['role:ADMIN','permission:system.manage','throttle:30,1'])->name('admin.platform-controls.service-toggle');
         Route::patch('/platform-controls/addons/{addon}', [PlatformControlController::class, 'toggleAddon'])->whereNumber('addon')->middleware(['role:ADMIN','permission:system.manage','throttle:30,1'])->name('admin.platform-controls.addon-toggle');
