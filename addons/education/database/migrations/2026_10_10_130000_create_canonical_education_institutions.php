@@ -99,6 +99,16 @@ return new class extends Migration {
 
     public function down(): void
     {
+        // The legacy catalogue remains available, but it cannot represent new canonical imports.
+        // Refuse rollback rather than silently deleting imported/reviewed registry records.
+        if (Schema::hasTable('education_institutions') && DB::table('education_institutions')
+            ->where(function ($query): void {
+                $query->whereNull('import_source')
+                    ->orWhere('import_source', '!=', 'education_reference_catalogue');
+            })->exists()) {
+            throw new RuntimeException('Cannot roll back the canonical institution registry while non-legacy records exist. Export or reconcile those records before retrying.');
+        }
+
         Schema::dropIfExists('education_institutions');
     }
 };
