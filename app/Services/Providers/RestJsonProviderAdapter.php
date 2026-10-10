@@ -450,11 +450,18 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
             $normalized = strtolower(trim((string) $value));
 
-            if (in_array($normalized, ['success','successful','completed','complete','accepted','approved','ok','done'], true)) {
+            if (in_array($normalized, ['success','successful','succeeded','completed','complete','ok','done'], true)) {
                 return 'ACCEPTED';
             }
 
-            if (in_array($normalized, ['pending','processing','queued','in_progress','in-progress','initiated','submitted'], true)) {
+            if (in_array($normalized, ['verified'], true)
+                && in_array($operation, ['kyc_verification','identity_document_verify','identity_status'], true)) {
+                return 'ACCEPTED';
+            }
+
+            // An accepted/approved order or transaction may still be processing.
+            // Keep it pending until a status/requery response confirms completion.
+            if (in_array($normalized, ['accepted','approved','pending','processing','queued','in_progress','in-progress','initiated','submitted'], true)) {
                 return 'PENDING';
             }
 
