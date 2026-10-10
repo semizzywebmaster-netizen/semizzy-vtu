@@ -53,19 +53,23 @@ final class ProviderPresetRegistry
 
                     // Presets may update non-secret configuration, but never overwrite
                     // credentials already entered by the administrator.
-                    $provider->fill([
-                        'display_name' => $definition['display_name'],
-                        'official_website' => $definition['official_website'],
-                        'documentation_url' => $definition['documentation_url'],
-                        'service_categories' => $definition['service_categories'],
-                        'capabilities' => $definition['capabilities'],
-                        'endpoints' => $definition['endpoints'],
-                        'api_version' => $definition['api_version'] ?? null,
-                        'auth_type' => $definition['auth_type'],
-                        'environment' => $provider->environment ?: 'sandbox',
-                        'base_url' => $definition['base_url'],
-                        'priority' => $definition['priority'] ?? 100,
-                    ])->save();
+                    // Refresh discovery metadata without overwriting administrator-managed
+                    // connection settings. A preset reinstall must never silently change a
+                    // configured production base URL, auth mode, endpoint map or capabilities.
+                    $updates = [
+                        'official_website' => $definition['official_website'] ?? $provider->official_website,
+                        'documentation_url' => $definition['documentation_url'] ?? $provider->documentation_url,
+                    ];
+
+                    foreach (['display_name', 'service_categories', 'capabilities', 'endpoints', 'api_version', 'auth_type', 'base_url'] as $field) {
+                        $current = $provider->getAttribute($field);
+                        $empty = $current === null || $current === '' || $current === [];
+                        if ($empty && array_key_exists($field, $definition)) {
+                            $updates[$field] = $definition[$field];
+                        }
+                    }
+
+                    $provider->fill($updates)->save();
                 } else {
                     $providerData = $definition;
                     unset($providerData['mappings']);
