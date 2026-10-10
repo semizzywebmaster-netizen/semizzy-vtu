@@ -74,6 +74,18 @@ class WhatsAppWebhookService
   return str_starts_with($p,'+')?$p:null;
  }
 
+ private function redactSensitiveValue(mixed $value): mixed
+ {
+  if(is_array($value)){
+   foreach($value as $key=>$item) $value[$key]=$this->redactSensitiveValue($item);
+   return $value;
+  }
+  if(is_string($value)){
+   return preg_replace('/(\\bPIN\\s+)\\d{4}\\b/i','$1[REDACTED]',$value) ?? $value;
+  }
+  return $value;
+ }
+
  private function extract(array $payload): array
  {
   $events=[];
@@ -83,12 +95,14 @@ class WhatsAppWebhookService
     foreach(($value['messages'] ?? []) as $message){
      $type=$message['type'] ?? 'unknown';
      $body=$message['text']['body'] ?? $message['button']['text'] ?? $message['interactive']['button_reply']['title'] ?? $message['interactive']['list_reply']['title'] ?? '['.$type.']';
+     $safeMessage=$this->redactSensitiveValue($message);
+     $body=$this->redactSensitiveValue((string)$body);
      $events[]=[
       'external_id'=>$message['id'] ?? null,
       'from'=>$this->canonicalPhone($message['from'] ?? null),
       'thread_id'=>$value['metadata']['phone_number_id'] ?? null,
       'body'=>$body,
-      'metadata'=>['type'=>$type,'raw'=>$message]
+      'metadata'=>['type'=>$type,'raw'=>$safeMessage]
      ];
     }
    }
@@ -98,8 +112,8 @@ class WhatsAppWebhookService
     'external_id'=>$payload['id'] ?? $payload['message_id'] ?? null,
     'from'=>$this->canonicalPhone($payload['from'] ?? $payload['sender'] ?? null),
     'thread_id'=>$payload['thread_id'] ?? null,
-    'body'=>(string)$payload['message'],
-    'metadata'=>['raw'=>$payload]
+    'body'=>$this->redactSensitiveValue((string)$payload['message']),
+    'metadata'=>['raw'=>$this->redactSensitiveValue($payload)]
    ];
   }
   return $events;
