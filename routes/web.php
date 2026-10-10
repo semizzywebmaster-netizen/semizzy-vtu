@@ -208,6 +208,7 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/providers', [ProviderController::class, 'store'])->middleware('permission:providers.manage')->name('admin.providers.store');
         Route::patch('/providers/{provider}', [ProviderController::class, 'update'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:30,1'])->name('admin.providers.update');
         Route::post('/providers/{provider}/test', [ProviderController::class, 'test'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:5,1'])->name('admin.providers.test');
+        Route::post('/providers/{provider}/balance', [ProviderController::class, 'checkBalance'])->whereNumber('provider')->middleware(['role:ADMIN','permission:providers.manage','throttle:5,1'])->name('admin.providers.balance');
         Route::post('/providers/{provider}/toggle', [ProviderController::class, 'toggle'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.providers.toggle');
         Route::delete('/providers/{provider}', [ProviderController::class, 'destroy'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:10,1'])->name('admin.providers.destroy');
         // Self-service provider engine
