@@ -94,6 +94,7 @@ class SavingsController extends Controller
             $operationKey = 'savings:contribution:'.$reference.':'.$idempotency;
             $existing = SavingsMovement::where('operation_key', $operationKey)->first();
             if ($existing) {
+                $this->assertIdempotentReplay($existing, $account, $request->user()->id, 'contribution', $amount);
                 return response()->json(['account' => $account->fresh(), 'movement' => $existing, 'idempotent' => true]);
             }
 
@@ -183,6 +184,7 @@ class SavingsController extends Controller
             $operationKey = 'savings:withdrawal:'.$reference.':'.$idempotency;
             $existing = SavingsMovement::where('operation_key', $operationKey)->first();
             if ($existing) {
+                $this->assertIdempotentReplay($existing, $account, $request->user()->id, 'withdrawal', $amount);
                 return response()->json(['account' => $account->fresh(), 'movement' => $existing, 'idempotent' => true]);
             }
 
@@ -228,6 +230,19 @@ class SavingsController extends Controller
 
             return response()->json(['account' => $account->fresh(), 'movement' => $movement]);
         });
+    }
+
+    private function assertIdempotentReplay(SavingsMovement $existing, SavingsAccount $account, int $userId, string $type, string $amount): void
+    {
+        if (
+            (int) $existing->savings_account_id !== (int) $account->id
+            || (int) $existing->user_id !== $userId
+            || (string) $existing->type !== $type
+            || (string) $existing->currency !== (string) $account->currency
+            || $this->compare((string) $existing->amount_minor, $amount) !== 0
+        ) {
+            throw new RuntimeException('This idempotency key has already been used for a different savings operation.');
+        }
     }
 
     private function add(string $a, string $b): string
