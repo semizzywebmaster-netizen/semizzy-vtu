@@ -18,6 +18,41 @@ use Illuminate\Support\Facades\Hash;
 
 class WhatsAppBotWebhookController
 {
+    public function verify(Request $request, WhatsAppWebhookService $webhook): Response
+    {
+        if (! Addon::query()->where('identifier', 'whatsapp.bot')->where('status', 'active')->exists()) {
+            return response('WhatsApp bot is currently disabled', 503);
+        }
+
+        $mode = $request->query('hub.mode');
+        $token = $request->query('hub.verify_token');
+        $challenge = $request->query('hub.challenge');
+
+        if ($mode !== 'subscribe' || ! is_string($token) || $token === '' || ! is_string($challenge) || $challenge === '') {
+            return response('Webhook verification failed', 403);
+        }
+
+        $providers = Provider::query()
+            ->where('channel', 'whatsapp')
+            ->where('enabled', true)
+            ->where('paused', false)
+            ->orderBy('priority')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($providers as $provider) {
+            try {
+                $verifiedChallenge = $webhook->verify($provider, $mode, $token, $challenge);
+
+                return response($verifiedChallenge, 200)->header('Content-Type', 'text/plain');
+            } catch (\\Throwable $e) {
+                // Try the next configured provider token; do not expose credential details.
+            }
+        }
+
+        return response('Webhook verification failed', 403);
+    }
+
     public function receive(
         Request $request,
         WhatsAppWebhookService $webhook,
