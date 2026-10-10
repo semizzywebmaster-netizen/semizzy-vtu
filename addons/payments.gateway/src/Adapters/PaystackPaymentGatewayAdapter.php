@@ -5,6 +5,7 @@ namespace Semizzy\Addons\Payments\Adapters;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
+use Semizzy\Addons\Payments\Contracts\PayoutReconciliationAdapter;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
 
 final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter, PayoutReconciliationAdapter
