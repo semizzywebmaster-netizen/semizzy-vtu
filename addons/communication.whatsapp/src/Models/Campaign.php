@@ -1,5 +1,5 @@
 <?php
-namespace App\Models\Communication;
+namespace Addons\CommunicationWhatsapp\Models;
 use Illuminate\Database\Eloquent\Model;
 class Campaign extends Model {
  protected $table='communication_campaigns'; protected $guarded=[];
