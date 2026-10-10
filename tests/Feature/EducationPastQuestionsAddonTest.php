@@ -237,7 +237,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
 
  public function test_ncce_official_directory_adapter_validates_complete_feed_and_imports_pending_records():void {
   $rows='';
-  for($i=1;$i<=200;$i++) {
+  for($i=1;$i<=264;$i++) {
    $rows.='<tr><td>'.$i.'</td><td>Test College '.$i.' <a href="/details/'.$i.'">OPEN</a></td><td>Provost</td><td>Private College of Education</td><td>Lagos</td><td><a href="https://college'.$i.'.example.edu">Website</a></td></tr>';
   }
   $html='<html><body><table><thead><tr><th>S/N</th><th>Name</th><th>Provost</th><th>College Ownership</th><th>State</th><th>Website</th></tr></thead><tbody>'.$rows.'</tbody></table></body></html>';
@@ -246,10 +246,10 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $run=app(NcceAccreditedCollegesAdapter::class)->sync();
 
   $this->assertSame('completed',$run->status);
-  $this->assertSame(200,$run->expected_total);
-  $this->assertSame(200,$run->records_seen);
+  $this->assertSame(264,$run->expected_total);
+  $this->assertSame(264,$run->records_seen);
   $this->assertSame(200,DB::table('education_institutions')->where('import_source',NcceAccreditedCollegesAdapter::SOURCE)->count());
-  $this->assertSame(200,DB::table('education_institutions')->where('import_source',NcceAccreditedCollegesAdapter::SOURCE)->where('review_status','pending')->where('active',false)->count());
+  $this->assertSame(264,DB::table('education_institutions')->where('import_source',NcceAccreditedCollegesAdapter::SOURCE)->where('review_status','pending')->where('active',false)->count());
   $this->assertDatabaseHas('education_institutions',['name'=>'Test College 1','category'=>'college_of_education','ownership'=>'private','state'=>'Lagos','review_status'=>'pending','active'=>false]);
   Http::assertSent(fn($request)=>$request->url()===NcceAccreditedCollegesAdapter::URL);
  }
