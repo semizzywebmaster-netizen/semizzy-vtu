@@ -98,7 +98,7 @@ class ProviderAdapterIntegrationTest extends TestCase
     {
         $provider = $this->provider('paystack');
         Http::fake([
-            'https://api.paystack.co/refund' => Http::sequence()
+            'https://api.paystack.co/refund*' => Http::sequence()
                 ->push(['status' => true, 'data' => ['id' => 910, 'status' => 'processing']], 200)
                 ->push(['status' => true, 'data' => ['id' => 910, 'status' => 'processed', 'amount' => 500]], 200),
         ]);
