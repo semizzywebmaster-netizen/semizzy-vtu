@@ -31,6 +31,15 @@ jobs:
         run: npm install
       - name: Build production assets
         run: npm run build
+      - name: Package complete public folder
+        run: zip -r public-folder.zip public
+      - name: Upload public folder ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: semizzy-one-public-folder
+          path: public-folder.zip
+          if-no-files-found: error
+          retention-days: 7
       - name: Commit refreshed public/build assets
         run: |
           git add -f public/build
