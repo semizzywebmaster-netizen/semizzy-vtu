@@ -13,13 +13,17 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   resolve:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'maintenance/dependency-lockfiles-2026-10-10'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
@@ -53,3 +57,30 @@ jobs:
             npm-audit.json
           if-no-files-found: error
           retention-days: 7
+
+      - name: Require clean dependency security audits
+        run: |
+          node -e "const a=require('./npm-audit.json'); const v=a.metadata?.vulnerabilities; if (!v || v.total !== 0) { console.error('npm audit is not clean:', v); process.exit(1); }"
+          php -r '$a=json_decode(file_get_contents("composer-audit.json"), true); if (!is_array($a) || !empty($a["advisories"]) || !empty($a["abandoned"])) { fwrite(STDERR, "Composer audit is not clean\n"); exit(1); }'
+      - name: Commit lockfiles and switch all CI workflows to reproducible installs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          helper = Path('.github/workflows/resolve-dependency-lockfiles.yml')
+          for path in Path('.github/workflows').glob('*.yml'):
+              if path == helper:
+                  continue
+              original = path.read_text()
+              updated = original.replace('npm install', 'npm ci')
+              if updated != original:
+                  path.write_text(updated)
+          PY
+          rm .github/workflows/resolve-dependency-lockfiles.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add composer.lock package-lock.json .github/workflows
+          git commit -m "build: lock dependencies and use reproducible CI installs"
+          git push origin "HEAD:${TARGET_BRANCH}"
