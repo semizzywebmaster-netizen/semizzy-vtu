@@ -8,6 +8,7 @@ use Illuminate\Http\UploadedFile;
 use Semizzy\Addons\Education\Http\Controllers\EducationReferenceImportController;
 use Semizzy\Addons\Education\Models\EducationLibraryItem;
 use Semizzy\Addons\Education\Services\EducationInstitutionImportService;
+use Semizzy\Addons\Education\Services\EducationInstitutionSyncRunService;
 use Tests\TestCase;
 class EducationPastQuestionsAddonTest extends TestCase {
  private bool $createdUsersTable=false;
@@ -17,6 +18,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
    Schema::create('users',function(Blueprint $t){$t->id();$t->string('name')->nullable();$t->string('email')->nullable();$t->string('password')->nullable();$t->timestamps();});
    $this->createdUsersTable=true;
   }
+  Schema::dropIfExists('education_institution_sync_runs');
   Schema::dropIfExists('education_institutions');
   Schema::dropIfExists('education_library_purchases');
   Schema::dropIfExists('education_library_items');
@@ -30,10 +32,13 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $directoryExpansionMigration->up();
   $institutionMigration=require base_path('addons/education/database/migrations/2026_10_10_130000_create_canonical_education_institutions.php');
   $institutionMigration->up();
+  $syncRunMigration=require base_path('addons/education/database/migrations/2026_10_10_140000_create_education_institution_sync_runs.php');
+  $syncRunMigration->up();
   $migration=require base_path('addons/education/database/migrations/2026_10_09_110000_create_education_past_question_library.php');
   $migration->up();
  }
  protected function tearDown():void {
+  Schema::dropIfExists('education_institution_sync_runs');
   Schema::dropIfExists('education_institutions');
   Schema::dropIfExists('education_library_purchases');
   Schema::dropIfExists('education_library_items');
@@ -51,6 +56,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertContains('2026_10_09_110200_add_admin_managed_education_reference_fields.php',$manifest['migrations']);
   $this->assertContains('2026_10_09_110300_expand_official_school_reference_catalogue.php',$manifest['migrations']);
   $this->assertContains('2026_10_10_130000_create_canonical_education_institutions.php',$manifest['migrations']);
+  $this->assertContains('2026_10_10_140000_create_education_institution_sync_runs.php',$manifest['migrations']);
   $this->assertSame('/admin/education/references',$manifest['admin_navigation'][1]['url']);
   $labels=array_column($manifest['navigation'],'label');
   $this->assertContains('School Past Questions',$labels);
@@ -168,6 +174,56 @@ class EducationPastQuestionsAddonTest extends TestCase {
   }
   $this->assertTrue(Schema::hasTable('education_institutions'));
   $this->assertDatabaseHas('education_institutions',['external_id'=>'rollback-guard-test','review_status'=>'pending','active'=>false]);
+ }
+
+
+ public function test_sync_run_requires_all_pages_and_exact_expected_total_before_completion():void {
+  $service=app(EducationInstitutionSyncRunService::class);
+  $run=$service->start('verified-test-feed',1);
+  $run=$service->recordPage($run,['created'=>2,'updated'=>0,'skipped'=>0,'rejected'=>0],'page-2',3);
+  try {
+   $service->complete($run);
+   $this->fail('A run with a next-page cursor must not complete.');
+  } catch (\\DomainException $exception) {
+   $this->assertStringContainsString('next-page cursor',$exception->getMessage());
+  }
+  $run=$service->recordPage($run,['created'=>0,'updated'=>0,'skipped'=>1,'rejected'=>0],null,3);
+  $completed=$service->complete($run);
+  $this->assertSame('completed',$completed->status);
+  $this->assertSame(2,$completed->pages_processed);
+  $this->assertSame(3,$completed->records_seen);
+  $this->assertNotNull($completed->finished_at);
+ }
+
+ public function test_sync_run_marks_low_result_or_partial_pagination_incomplete():void {
+  $service=app(EducationInstitutionSyncRunService::class);
+  $run=$service->start('sparse-test-feed',2);
+  $run=$service->recordPage($run,['created'=>1,'updated'=>0,'skipped'=>0,'rejected'=>0],null,1);
+  $completed=$service->complete($run);
+  $this->assertSame('incomplete',$completed->status);
+  $this->assertStringContainsString('below the configured minimum',$completed->error_summary);
+  $this->assertNotNull($completed->finished_at);
+ }
+
+ public function test_failed_sync_run_redacts_credentials_and_cannot_be_reopened():void {
+  $service=app(EducationInstitutionSyncRunService::class);
+  $run=$service->start('error-test-feed');
+  $failed=$service->fail($run,'API request failed at https://private.example.test/path password=supersecret');
+  $this->assertSame('failed',$failed->status);
+  $this->assertStringNotContainsString('private.example.test',$failed->error_summary);
+  $this->assertStringNotContainsString('supersecret',$failed->error_summary);
+  $this->assertStringContainsString('[redacted-url]',$failed->error_summary);
+  $this->assertStringContainsString('[redacted-credential]',$failed->error_summary);
+  $this->expectException(\\DomainException::class);
+  $service->complete($failed);
+ }
+
+ public function test_sync_run_history_migration_refuses_to_drop_recorded_history():void {
+  $service=app(EducationInstitutionSyncRunService::class);
+  $service->start('history-guard-feed');
+  $migration=require base_path('addons/education/database/migrations/2026_10_10_140000_create_education_institution_sync_runs.php');
+  $this->expectException(\\RuntimeException::class);
+  $migration->down();
  }
 
 }
