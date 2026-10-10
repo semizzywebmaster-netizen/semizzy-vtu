@@ -197,12 +197,18 @@ class EducationPastQuestionsAddonTest extends TestCase {
 
  public function test_sync_run_marks_low_result_or_partial_pagination_incomplete():void {
   $service=app(EducationInstitutionSyncRunService::class);
-  $run=$service->start('sparse-test-feed',2);
-  $run=$service->recordPage($run,['created'=>1,'updated'=>0,'skipped'=>0,'rejected'=>0],null,1);
-  $completed=$service->complete($run);
-  $this->assertSame('incomplete',$completed->status);
-  $this->assertStringContainsString('below the configured minimum',$completed->error_summary);
-  $this->assertNotNull($completed->finished_at);
+  $lowRun=$service->start('sparse-test-feed',2);
+  $lowRun=$service->recordPage($lowRun,['created'=>1,'updated'=>0,'skipped'=>0,'rejected'=>0],null,1);
+  $lowResult=$service->complete($lowRun);
+  $this->assertSame('incomplete',$lowResult->status);
+  $this->assertStringContainsString('below the configured minimum',$lowResult->error_summary);
+  $this->assertNotNull($lowResult->finished_at);
+
+  $partialRun=$service->start('partial-test-feed',1);
+  $partialRun=$service->recordPage($partialRun,['created'=>1,'updated'=>0,'skipped'=>0,'rejected'=>0],null,2);
+  $partialResult=$service->complete($partialRun);
+  $this->assertSame('incomplete',$partialResult->status);
+  $this->assertStringContainsString('did not match the source-reported total',$partialResult->error_summary);
  }
 
  public function test_failed_sync_run_redacts_credentials_and_cannot_be_reopened():void {
