@@ -6,10 +6,10 @@
 :root {
   color-scheme: light;
   font-family: 'DM Sans', sans-serif;
-  --so-primary:#2563EB; --so-secondary:#1D4ED8; --so-accent:#38BDF8;
-  --so-background:#F7F9FC; --so-surface:#FFFFFF; --so-text:#142235; --so-muted:#64748B;
-  --so-border:#E2E8F0; --so-success:#16A34A; --so-warning:#D97706; --so-danger:#DC2626;
-  --so-primary-soft:#EFF6FF; --so-primary-medium:#DBEAFE; --so-primary-dark:#1D4ED8;
+  --so-primary:#2563EB; --so-secondary:#101B3D; --so-accent:#14B8A6;
+  --so-background:#F4F7FC; --so-surface:#FFFFFF; --so-text:#101B3D; --so-muted:#64748B;
+  --so-border:#DFE7F2; --so-success:#16A34A; --so-warning:#D97706; --so-danger:#DC2626;
+  --so-primary-soft:#EAF1FF; --so-primary-medium:#D6E4FF; --so-primary-dark:#1D4ED8;
 }
 * { box-sizing:border-box; }
 html, body { margin:0; min-width:320px; background:var(--so-background); color:var(--so-text); transition:background-color .2s ease,color .2s ease; }
