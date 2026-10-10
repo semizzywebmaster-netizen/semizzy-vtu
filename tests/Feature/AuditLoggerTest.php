@@ -40,4 +40,31 @@ class AuditLoggerTest extends TestCase
         $this->assertStringNotContainsString('never-store-this', json_encode($event->context));
         $this->assertDatabaseHas('audit_events', ['id' => $event->id, 'event' => 'test.audit']);
     }
+
+    public function test_audit_events_are_append_only_through_eloquent(): void
+    {
+        $event = AuditEvent::create([
+            'event' => 'immutable.audit.test',
+            'context' => ['safe' => 'original'],
+        ]);
+
+        try {
+            $event->update(['event' => 'tampered.audit.test']);
+            $this->fail('Audit event updates must be rejected.');
+        } catch (\\LogicException $exception) {
+            $this->assertSame('Audit events are append-only and cannot be modified.', $exception->getMessage());
+        }
+
+        try {
+            $event->delete();
+            $this->fail('Audit event deletion must be rejected.');
+        } catch (\\LogicException $exception) {
+            $this->assertSame('Audit events are append-only and cannot be deleted.', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('audit_events', [
+            'id' => $event->id,
+            'event' => 'immutable.audit.test',
+        ]);
+    }
 }
