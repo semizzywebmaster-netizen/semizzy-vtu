@@ -99,7 +99,7 @@ class ProviderIdempotencyTest extends TestCase
         [$service, $provider] = $this->providerFor('idempotent-in-progress');
 
         $idempotency = app(ProviderIdempotencyService::class);
-        $idempotency->reserve($provider, 'idem-in-progress', ['recipient' => '08000000000'], 60);
+        $idempotency->reserve($provider, 'transaction_initiation:idem-in-progress', ['recipient' => '08000000000'], 60);
 
         $adapter = $this->mock(RestJsonProviderAdapter::class);
         $adapter->shouldReceive('execute')->never();
