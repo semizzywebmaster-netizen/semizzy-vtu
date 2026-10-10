@@ -12,6 +12,16 @@ use RuntimeException;
 
 class RestJsonProviderAdapter implements ProviderAdapter
 {
+    private const DATA_OPERATIONS_WITHOUT_STATUS = [
+        'health_check', 'health', 'status', 'balance_inquiry', 'catalogue_retrieval',
+        'catalogue', 'services', 'products', 'categories', 'stock_market_data',
+        'stock_quote', 'portfolio_inquiry', 'portfolio_valuation', 'fx_rate_quote',
+        'fx_conversion_quote', 'loan_offer_quote', 'crypto_market_data',
+        'crypto_balance_inquiry', 'gift_card_catalogue', 'education_catalogue',
+        'travel_search', 'insurance_quote', 'card_transaction_list', 'cac_name_search',
+        'shipping_quote', 'marketplace_catalogue',
+    ];
+
     private const READ_ONLY_OPERATIONS = [
         'health_check', 'health', 'status', 'balance_inquiry', 'catalogue_retrieval',
         'catalogue', 'services', 'products', 'categories', 'transaction_status',
@@ -455,7 +465,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
         foreach ([$body['success'] ?? null, $body['data']['success'] ?? null] as $success) {
             if ($success === true || $success === 1 || $success === '1' || $success === 'true') {
-                return in_array($operation, self::READ_ONLY_OPERATIONS, true)
+                return (in_array($operation, self::DATA_OPERATIONS_WITHOUT_STATUS, true) || $operation === 'transaction_initiation')
                     ? 'ACCEPTED'
                     : 'UNKNOWN';
             }
@@ -466,7 +476,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
         // Read-only/catalogue endpoints commonly return data without a status.
         // A transaction initiation must never be inferred as accepted from HTTP 2xx alone.
-        return in_array($operation, self::READ_ONLY_OPERATIONS, true)
+        return in_array($operation, self::DATA_OPERATIONS_WITHOUT_STATUS, true)
             ? 'ACCEPTED'
             : 'UNKNOWN';
     }
