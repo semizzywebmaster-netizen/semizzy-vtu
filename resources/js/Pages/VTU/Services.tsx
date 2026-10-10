@@ -1,4 +1,3 @@
-import CoreMobileNav from '../../Components/CoreMobileNav';
 import ServiceIcon, { iconForService } from '../../Components/ServiceIcon';
 import { Head, Link } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
@@ -360,5 +359,5 @@ export default function Services({ services = [] }: { services: Service[] }) {
       </div></div>}
     </section>
   </div>}
-  <CoreMobileNav /></main>;
+
 }
