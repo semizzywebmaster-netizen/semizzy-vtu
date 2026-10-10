@@ -171,7 +171,14 @@ final class NucUniversityDirectoryAdapter
             throw new DomainException('NUC directory contains duplicate institution names; refusing to mark the source complete.');
         }
 
-        $pageText = $this->normalizeText($document->textContent);
+        $summaryNodes = $xpath->query('//body//*[not(*)]');
+        $summaryParts = [];
+        foreach ($summaryNodes ?: [] as $summaryNode) {
+            $summaryParts[] = $summaryNode->textContent;
+        }
+        // DOMDocument::textContent concatenates adjacent block elements without separators.
+        // Keep leaf-node boundaries so independently rendered summary labels remain parseable.
+        $pageText = $this->normalizeText(implode(' ', $summaryParts));
         $publishedCounts = [
             'federal' => $this->summaryCount($pageText, '/\b(\d+)\s+Federal Universities\b/i'),
             'state' => $this->summaryCount($pageText, '/\b(\d+)\s+State Universities\b/i'),
