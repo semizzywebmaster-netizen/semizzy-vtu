@@ -4,6 +4,12 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/resolve-dependency-lockfiles.yml'
+      - 'composer.json'
+      - 'package.json'
+      - 'resources/css/app.css'
+      - 'vite.config.ts'
+      - 'tailwind.config.js'
+      - 'postcss.config.js'
   workflow_dispatch:
 
 permissions:
@@ -34,6 +40,8 @@ jobs:
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           npm audit --json > npm-audit.json || true
+          npm run typecheck
+          npm run build
       - name: Upload lockfiles and audit reports for review
         uses: actions/upload-artifact@v4
         with:
