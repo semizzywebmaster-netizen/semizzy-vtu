@@ -43,6 +43,7 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
 }) {
   const siteName = platform?.platform_name || 'SEMIZZY ONE';
   const isUser = !['ADMIN', 'STAFF', 'SUPPORT'].includes(role);
+  const [refreshingProviderId, setRefreshingProviderId] = useState<number | null>(null);
 
   if (isUser) {
     const [showBalance, setShowBalance] = useState(true);
@@ -187,7 +188,19 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
               <p className="mt-1 text-slate-500">{provider.healthCheckedAt ? 'Last health check: ' + new Date(provider.healthCheckedAt).toLocaleString() : provider.healthMessage || 'Waiting for the first configured health check.'}</p>
               {provider.lastSuccessfulRequestAt && <p className="mt-1 text-slate-500">Last successful API request: {new Date(provider.lastSuccessfulRequestAt).toLocaleString()}</p>}
             </div>
-            <button type="button" onClick={() => router.post('/admin/providers/' + provider.id + '/balance')} className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold hover:bg-slate-50">Refresh balance</button>
+            <button
+              type="button"
+              disabled={refreshingProviderId !== null}
+              onClick={() => router.post('/admin/providers/' + provider.id + '/balance', {}, {
+                preserveScroll: true,
+                onStart: () => setRefreshingProviderId(provider.id),
+                onFinish: () => setRefreshingProviderId(null),
+              })}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              aria-live="polite"
+            >
+              {refreshingProviderId === provider.id ? <><span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" /> Checking balance…</> : 'Refresh balance'}
+            </button>
           </article>;
         })}
         {!providerBalances.length && <p className="text-sm text-slate-500">No API provider presets have been installed yet.</p>}
