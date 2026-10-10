@@ -28,7 +28,8 @@ final class EducationInstitutionImportService
             $externalId = trim((string) ($record['external_id'] ?? ''));
             $category = $this->normalizeCategory($record['category'] ?? $record['type'] ?? null);
             $state = trim((string) ($record['state'] ?? ''));
-            $identity = $externalId !== '' ? 'external:' . $externalId : 'name:' . Str::lower($name) . '|' . Str::lower($state) . '|' . $category;
+            // External identifiers are commonly scoped to a source; never merge across feeds on ID alone.
+            $identity = $externalId !== '' ? 'external:' . Str::lower($source) . ':' . $externalId : 'name:' . Str::lower($name) . '|' . Str::lower($state) . '|' . $category;
             $sourceKey = substr($source . ':' . hash('sha256', $identity), 0, 180);
             // Feed-supplied codes are not trusted as identity: two unrelated sources can reuse one.
             // Generate a deterministic code from the institution's actual identity instead.\n            $code = $this->makeCode($name, $state, $category, $identity);
@@ -37,7 +38,7 @@ final class EducationInstitutionImportService
             DB::transaction(function () use ($record, $name, $externalId, $category, $state, $source, $sourceKey, $code, $now, &$counts): void {
                 $institution = null;
                 if ($externalId !== '') {
-                    $institution = EducationInstitution::withTrashed()->where('external_id', $externalId)->first();
+                    $institution = EducationInstitution::withTrashed()->where('external_id', $externalId)->where('import_source', $source)->first();
                 }
                 if (!$institution) {
                     $institution = EducationInstitution::withTrashed()->where('source_key', $sourceKey)->first();
