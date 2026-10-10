@@ -1,0 +1,42 @@
+name: Refresh committed frontend build
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'public/build/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-public-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out latest source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install frontend dependencies
+        run: npm install
+      - name: Build production assets
+        run: npm run build
+      - name: Commit refreshed public/build assets
+        run: |
+          git add public/build
+          if git diff --cached --quiet; then
+            echo "public/build is already up to date."
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Build and refresh public frontend assets"
+          git push origin HEAD:main
