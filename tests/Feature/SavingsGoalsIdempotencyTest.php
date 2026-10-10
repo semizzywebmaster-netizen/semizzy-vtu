@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Artisan;\nuse Illuminate\Database\QueryException;
 use RuntimeException;
 use Semizzy\Addons\Savings\Http\Controllers\SavingsController;
 use Semizzy\Addons\Savings\Models\SavingsAccount;
@@ -92,6 +92,27 @@ class SavingsGoalsIdempotencyTest extends TestCase
 
         $this->assertTrue($response->getData(true)['idempotent']);
         $this->assertSame('SVM-WITHDRAWAL-REPLAY-1', $response->getData(true)['movement']['reference']);
+    }
+
+    public function test_savings_movement_operation_key_is_unique_at_database_level(): void
+    {
+        [$user, $account] = $this->fixture();
+
+        $attributes = [
+            'savings_account_id' => $account->id,
+            'user_id' => $user->id,
+            'operation_key' => 'savings:contribution:'.$account->reference.':unique-key',
+            'type' => 'contribution',
+            'amount_minor' => 1000,
+            'currency' => 'NGN',
+            'balance_after_minor' => 1000,
+            'status' => 'completed',
+            'reference' => 'SVM-UNIQUE-1',
+        ];
+        SavingsMovement::create($attributes);
+
+        $this->expectException(QueryException::class);
+        SavingsMovement::create(array_merge($attributes, ['reference' => 'SVM-UNIQUE-2']));
     }
 
     private function fixture(int $balance = 0): array
