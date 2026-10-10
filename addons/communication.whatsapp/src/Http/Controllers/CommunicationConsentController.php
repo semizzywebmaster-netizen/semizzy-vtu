@@ -4,7 +4,7 @@ namespace Addons\CommunicationWhatsapp\Http\Controllers;
 use Addons\CommunicationWhatsapp\Services\CommunicationConsentService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use App\Models\Communication\Consent;
+use Addons\CommunicationWhatsapp\Models\Consent;
 
 class CommunicationConsentController
 {
