@@ -1,16 +1,16 @@
 <?php
 
-namespace Tests\\Feature\\Payments;
+namespace Tests\Feature\Payments;
 
-use Illuminate\\Database\\Schema\\Blueprint;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\Cache;
-use Illuminate\\Support\\Facades\\Http;
-use Illuminate\\Support\\Facades\\Schema;
-use Semizzy\\Addons\\Payments\\Adapters\\InterswitchPaymentGatewayAdapter;
-use Semizzy\\Addons\\Payments\\Adapters\\PaystackPaymentGatewayAdapter;
-use Semizzy\\Addons\\Payments\\Models\\PaymentGatewayProvider;
-use Tests\\TestCase;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
+use Semizzy\Addons\Payments\Adapters\InterswitchPaymentGatewayAdapter;
+use Semizzy\Addons\Payments\Adapters\PaystackPaymentGatewayAdapter;
+use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
+use Tests\TestCase;
 
 class ProviderAdapterIntegrationTest extends TestCase
 {
