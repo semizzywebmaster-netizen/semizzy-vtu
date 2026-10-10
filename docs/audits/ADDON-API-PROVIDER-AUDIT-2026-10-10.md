@@ -84,7 +84,7 @@ A provider table, seed record, manifest capability, or generic endpoint configur
 | virtual-cards | Issuer adapter not confirmed |
 | vtu-website-builder | No external provider adapter confirmed |
 | vtu.digital-services | Core ProviderManager consumer |
-| whatsapp-bot | Webhook/bot workflow; should reuse communication transport |
+| whatsapp-bot | Manifest declares Communication addon + Core ProviderManager integrations and `whatsapp_receive`/`whatsapp_send`; runtime path/tests still need verification |
 
 ## E. Automated test inventory located
 
@@ -127,3 +127,8 @@ For every provider × capability, record evidence for all applicable items:
 ## Limitations
 
 This is a source-level audit, not certification of live connectivity. No external credentials were used and no real payments, payouts, identity checks, bookings, messages or crypto transfers were submitted. At audit completion, the new CI run for the audit commit was still in progress; prior Core CI runs failed the MySQL financial job while frontend and PHP jobs passed. The latest inspected financial failure is a SAVEPOINT trans2 does not exist error in PaymentRefundSettlementServiceTest; a separate earlier run failed a P2P MySQL concurrency test. Turn findings into regression tests and fix confirmed gaps one by one.
+
+
+## Follow-up architecture scope
+
+The broader cross-addon coverage requirements, including Investments, Loans, Stocks/Securities, Forex/FX and Crypto Exchange/Trading as distinct business-service capabilities, are tracked in [`docs/architecture/CORE-API-PROVIDER-COVERAGE-ROADMAP.md`](../architecture/CORE-API-PROVIDER-COVERAGE-ROADMAP.md). This roadmap does not claim those integrations are already implemented or live-verified.
