@@ -172,4 +172,30 @@ class WhatsAppBotProviderExecutionTest extends TestCase
         $this->assertStringContainsString('[REDACTED]', (string) $message->body);
     }
 
+    public function test_webhook_verification_handshake_requires_the_configured_verify_token(): void
+    {
+        $provider = Provider::query()->create([
+            'channel' => 'whatsapp',
+            'name' => 'WhatsApp Verification Provider',
+            'driver' => 'generic_http',
+            'credentials' => [
+                'webhook_secret' => 'webhook-secret',
+                'verify_token' => 'configured-verify-token',
+            ],
+            'enabled' => true,
+            'paused' => false,
+            'priority' => 1,
+        ]);
+
+        $service = app(WhatsAppWebhookService::class);
+        $this->assertSame('challenge-123', $service->verify($provider, 'subscribe', 'configured-verify-token', 'challenge-123'));
+
+        try {
+            $service->verify($provider, 'subscribe', 'wrong-token', 'challenge-123');
+            $this->fail('An incorrect verification token must be rejected.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Webhook verification failed.', $exception->getMessage());
+        }
+    }
+
 }
