@@ -1,0 +1,1140 @@
+{
+  "_CoreMobileNav-CoVSDd6I.js": {
+    "file": "assets/CoreMobileNav-CoVSDd6I.js",
+    "name": "CoreMobileNav",
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "_ServiceIcon-OUp9cCJ9.js": {
+    "file": "assets/ServiceIcon-OUp9cCJ9.js",
+    "name": "ServiceIcon",
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-DHJBzhXj.css",
+    "name": "app",
+    "names": [
+      "app.css"
+    ],
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/Pages/Account/PhoneChangeRequest.tsx": {
+    "file": "assets/PhoneChangeRequest-Chg48JgO.js",
+    "name": "PhoneChangeRequest",
+    "src": "resources/js/Pages/Account/PhoneChangeRequest.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/AIChatbot.tsx": {
+    "file": "assets/AIChatbot-CdW3hSFA.js",
+    "name": "AIChatbot",
+    "src": "resources/js/Pages/Admin/AIChatbot.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/AIChatbotConversation.tsx": {
+    "file": "assets/AIChatbotConversation-CCYcPhDc.js",
+    "name": "AIChatbotConversation",
+    "src": "resources/js/Pages/Admin/AIChatbotConversation.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/AIChatbotConversations.tsx": {
+    "file": "assets/AIChatbotConversations-bsWry-6s.js",
+    "name": "AIChatbotConversations",
+    "src": "resources/js/Pages/Admin/AIChatbotConversations.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Addons.tsx": {
+    "file": "assets/Addons-7O1oJS54.js",
+    "name": "Addons",
+    "src": "resources/js/Pages/Admin/Addons.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/AuditEvents.tsx": {
+    "file": "assets/AuditEvents-D47SO9vO.js",
+    "name": "AuditEvents",
+    "src": "resources/js/Pages/Admin/AuditEvents.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/BulkSms.tsx": {
+    "file": "assets/BulkSms-DQih8xt8.js",
+    "name": "BulkSms",
+    "src": "resources/js/Pages/Admin/BulkSms.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Cac/Order.tsx": {
+    "file": "assets/Order-DrqYE2yH.js",
+    "name": "Order",
+    "src": "resources/js/Pages/Admin/Cac/Order.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Cac/Orders.tsx": {
+    "file": "assets/Orders-B4xbA46v.js",
+    "name": "Orders",
+    "src": "resources/js/Pages/Admin/Cac/Orders.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Cac/Products.tsx": {
+    "file": "assets/Products-CrclTB50.js",
+    "name": "Products",
+    "src": "resources/js/Pages/Admin/Cac/Products.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Catalogue.tsx": {
+    "file": "assets/Catalogue-Dw3huwr0.js",
+    "name": "Catalogue",
+    "src": "resources/js/Pages/Admin/Catalogue.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_ServiceIcon-OUp9cCJ9.js"
+    ]
+  },
+  "resources/js/Pages/Admin/CommunicationCenter.tsx": {
+    "file": "assets/CommunicationCenter-BuT23Jon.js",
+    "name": "CommunicationCenter",
+    "src": "resources/js/Pages/Admin/CommunicationCenter.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Education/PastQuestions.tsx": {
+    "file": "assets/PastQuestions-Di6JyjDx.js",
+    "name": "PastQuestions",
+    "src": "resources/js/Pages/Admin/Education/PastQuestions.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Education/ReferenceCatalogue.tsx": {
+    "file": "assets/ReferenceCatalogue-q_z7KLYf.js",
+    "name": "ReferenceCatalogue",
+    "src": "resources/js/Pages/Admin/Education/ReferenceCatalogue.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Escrow/Index.tsx": {
+    "file": "assets/Index-DZlgsUw6.js",
+    "name": "Index",
+    "src": "resources/js/Pages/Admin/Escrow/Index.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Exams/Results.tsx": {
+    "file": "assets/Results-UfAAjPWc.js",
+    "name": "Results",
+    "src": "resources/js/Pages/Admin/Exams/Results.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/FxProviders.tsx": {
+    "file": "assets/FxProviders-BVZqMT2B.js",
+    "name": "FxProviders",
+    "src": "resources/js/Pages/Admin/FxProviders.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/GovernmentServices.tsx": {
+    "file": "assets/GovernmentServices-CnXvmZoW.js",
+    "name": "GovernmentServices",
+    "src": "resources/js/Pages/Admin/GovernmentServices.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Investments.tsx": {
+    "file": "assets/Investments-DXyOQdc6.js",
+    "name": "Investments",
+    "src": "resources/js/Pages/Admin/Investments.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Kyc.tsx": {
+    "file": "assets/Kyc-i-FNYjAn.js",
+    "name": "Kyc",
+    "src": "resources/js/Pages/Admin/Kyc.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Loans.tsx": {
+    "file": "assets/Loans-CzWdK5ef.js",
+    "name": "Loans",
+    "src": "resources/js/Pages/Admin/Loans.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/MailerSmtp.tsx": {
+    "file": "assets/MailerSmtp-BZN1bJaQ.js",
+    "name": "MailerSmtp",
+    "src": "resources/js/Pages/Admin/MailerSmtp.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Marketplace/Index.tsx": {
+    "file": "assets/Index-_FkkklDW.js",
+    "name": "Index",
+    "src": "resources/js/Pages/Admin/Marketplace/Index.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/P2p/Transfers.tsx": {
+    "file": "assets/Transfers-BGtrnqjA.js",
+    "name": "Transfers",
+    "src": "resources/js/Pages/Admin/P2p/Transfers.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Payments.tsx": {
+    "file": "assets/Payments-Br1KVNjO.js",
+    "name": "Payments",
+    "src": "resources/js/Pages/Admin/Payments.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/PhoneChangeRequests.tsx": {
+    "file": "assets/PhoneChangeRequests-oEjsS-_9.js",
+    "name": "PhoneChangeRequests",
+    "src": "resources/js/Pages/Admin/PhoneChangeRequests.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/PlatformControls.tsx": {
+    "file": "assets/PlatformControls-BbxeCBAV.js",
+    "name": "PlatformControls",
+    "src": "resources/js/Pages/Admin/PlatformControls.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/ProfileChangeRequests.tsx": {
+    "file": "assets/ProfileChangeRequests-4hxoWxHY.js",
+    "name": "ProfileChangeRequests",
+    "src": "resources/js/Pages/Admin/ProfileChangeRequests.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/ProviderCatalogueManager.tsx": {
+    "file": "assets/ProviderCatalogueManager-Ds9tpksO.js",
+    "name": "ProviderCatalogueManager",
+    "src": "resources/js/Pages/Admin/ProviderCatalogueManager.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/ProviderWizard.tsx": {
+    "file": "assets/ProviderWizard-CApxuIfE.js",
+    "name": "ProviderWizard",
+    "src": "resources/js/Pages/Admin/ProviderWizard.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Providers.tsx": {
+    "file": "assets/Providers-DCnsqe-i.js",
+    "name": "Providers",
+    "src": "resources/js/Pages/Admin/Providers.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/SMM.tsx": {
+    "file": "assets/SMM-DNxtd-wz.js",
+    "name": "SMM",
+    "src": "resources/js/Pages/Admin/SMM.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Savings.tsx": {
+    "file": "assets/Savings-DIQCZpEa.js",
+    "name": "Savings",
+    "src": "resources/js/Pages/Admin/Savings.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/SecurityEvents.tsx": {
+    "file": "assets/SecurityEvents-CoHBoEn2.js",
+    "name": "SecurityEvents",
+    "src": "resources/js/Pages/Admin/SecurityEvents.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Settings.tsx": {
+    "file": "assets/Settings-DbJoQvM5.js",
+    "name": "Settings",
+    "src": "resources/js/Pages/Admin/Settings.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/SimHosting.tsx": {
+    "file": "assets/SimHosting-B61eMruu.js",
+    "name": "SimHosting",
+    "src": "resources/js/Pages/Admin/SimHosting.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/SocialServices.tsx": {
+    "file": "assets/SocialServices-D7qByUvk.js",
+    "name": "SocialServices",
+    "src": "resources/js/Pages/Admin/SocialServices.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/SpinToWin.tsx": {
+    "file": "assets/SpinToWin-DBFeaVQX.js",
+    "name": "SpinToWin",
+    "src": "resources/js/Pages/Admin/SpinToWin.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/SpinToWinPlays.tsx": {
+    "file": "assets/SpinToWinPlays-B_XcDHT-.js",
+    "name": "SpinToWinPlays",
+    "src": "resources/js/Pages/Admin/SpinToWinPlays.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/SystemHealth.tsx": {
+    "file": "assets/SystemHealth-CijJT5tC.js",
+    "name": "SystemHealth",
+    "src": "resources/js/Pages/Admin/SystemHealth.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/TravelTickets.tsx": {
+    "file": "assets/TravelTickets-B9bcIMr3.js",
+    "name": "TravelTickets",
+    "src": "resources/js/Pages/Admin/TravelTickets.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/Users.tsx": {
+    "file": "assets/Users-gnT9GLpk.js",
+    "name": "Users",
+    "src": "resources/js/Pages/Admin/Users.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/VTU/BulkOperations.tsx": {
+    "file": "assets/BulkOperations-CYLSevxX.js",
+    "name": "BulkOperations",
+    "src": "resources/js/Pages/Admin/VTU/BulkOperations.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/VTU/BulkStatement.tsx": {
+    "file": "assets/BulkStatement-CfuFMIBl.js",
+    "name": "BulkStatement",
+    "src": "resources/js/Pages/Admin/VTU/BulkStatement.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/VTU/Conversions.tsx": {
+    "file": "assets/Conversions-C-DDY96D.js",
+    "name": "Conversions",
+    "src": "resources/js/Pages/Admin/VTU/Conversions.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/VTU/Dashboard.tsx": {
+    "file": "assets/Dashboard-zmEZTl7L.js",
+    "name": "Dashboard",
+    "src": "resources/js/Pages/Admin/VTU/Dashboard.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/VTU/Mappings.tsx": {
+    "file": "assets/Mappings-DMbp9ro8.js",
+    "name": "Mappings",
+    "src": "resources/js/Pages/Admin/VTU/Mappings.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/VTU/Products.tsx": {
+    "file": "assets/Products-CekKRDjS.js",
+    "name": "Products",
+    "src": "resources/js/Pages/Admin/VTU/Products.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/VTU/SchedulePolicy.tsx": {
+    "file": "assets/SchedulePolicy-C7Mp4TEr.js",
+    "name": "SchedulePolicy",
+    "src": "resources/js/Pages/Admin/VTU/SchedulePolicy.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/VTU/Services.tsx": {
+    "file": "assets/Services-CJFwszqA.js",
+    "name": "Services",
+    "src": "resources/js/Pages/Admin/VTU/Services.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Admin/VTU/Transactions.tsx": {
+    "file": "assets/Transactions-0rEf7lte.js",
+    "name": "Transactions",
+    "src": "resources/js/Pages/Admin/VTU/Transactions.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Analytics/Financial.tsx": {
+    "file": "assets/Financial-CtYsEwwp.js",
+    "name": "Financial",
+    "src": "resources/js/Pages/Analytics/Financial.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_CoreMobileNav-CoVSDd6I.js"
+    ]
+  },
+  "resources/js/Pages/ApiAccess.tsx": {
+    "file": "assets/ApiAccess-CPvxOQQ1.js",
+    "name": "ApiAccess",
+    "src": "resources/js/Pages/ApiAccess.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Auth/AdminLogin.tsx": {
+    "file": "assets/AdminLogin-5Jr_zJfW.js",
+    "name": "AdminLogin",
+    "src": "resources/js/Pages/Auth/AdminLogin.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Auth/ForgotPassword.tsx": {
+    "file": "assets/ForgotPassword-BG-JhRPk.js",
+    "name": "ForgotPassword",
+    "src": "resources/js/Pages/Auth/ForgotPassword.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Auth/ForgotPin.tsx": {
+    "file": "assets/ForgotPin-DIBri3UZ.js",
+    "name": "ForgotPin",
+    "src": "resources/js/Pages/Auth/ForgotPin.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Auth/Login.tsx": {
+    "file": "assets/Login-COPuaHwx.js",
+    "name": "Login",
+    "src": "resources/js/Pages/Auth/Login.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Auth/Register.tsx": {
+    "file": "assets/Register-JTqW5tf6.js",
+    "name": "Register",
+    "src": "resources/js/Pages/Auth/Register.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Auth/ResetPassword.tsx": {
+    "file": "assets/ResetPassword-Bg0n68FA.js",
+    "name": "ResetPassword",
+    "src": "resources/js/Pages/Auth/ResetPassword.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Auth/VerifyEmail.tsx": {
+    "file": "assets/VerifyEmail-HFs6AycR.js",
+    "name": "VerifyEmail",
+    "src": "resources/js/Pages/Auth/VerifyEmail.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Auth/VerifyRegistration.tsx": {
+    "file": "assets/VerifyRegistration-B_S04oaa.js",
+    "name": "VerifyRegistration",
+    "src": "resources/js/Pages/Auth/VerifyRegistration.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/BulkSms.tsx": {
+    "file": "assets/BulkSms-DaIP0bw1.js",
+    "name": "BulkSms",
+    "src": "resources/js/Pages/BulkSms.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/BusinessAdmin.tsx": {
+    "file": "assets/BusinessAdmin-CC6QIPql.js",
+    "name": "BusinessAdmin",
+    "src": "resources/js/Pages/BusinessAdmin.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/BusinessPartner.tsx": {
+    "file": "assets/BusinessPartner-CMGj9tPF.js",
+    "name": "BusinessPartner",
+    "src": "resources/js/Pages/BusinessPartner.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Cac/Index.tsx": {
+    "file": "assets/Index-m8FapaD9.js",
+    "name": "Index",
+    "src": "resources/js/Pages/Cac/Index.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Cac/Order.tsx": {
+    "file": "assets/Order-C3F0p2OP.js",
+    "name": "Order",
+    "src": "resources/js/Pages/Cac/Order.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Cac/Orders.tsx": {
+    "file": "assets/Orders-B-7pghfR.js",
+    "name": "Orders",
+    "src": "resources/js/Pages/Cac/Orders.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Communication.tsx": {
+    "file": "assets/Communication-CHXK4-XD.js",
+    "name": "Communication",
+    "src": "resources/js/Pages/Communication.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/CommunicationAdmin.tsx": {
+    "file": "assets/CommunicationAdmin-Bb7jc77Q.js",
+    "name": "CommunicationAdmin",
+    "src": "resources/js/Pages/CommunicationAdmin.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Dashboard.tsx": {
+    "file": "assets/Dashboard-tsQBo8yD.js",
+    "name": "Dashboard",
+    "src": "resources/js/Pages/Dashboard.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Education/ExamPastQuestions.tsx": {
+    "file": "assets/ExamPastQuestions-D2WcQKx_.js",
+    "name": "ExamPastQuestions",
+    "src": "resources/js/Pages/Education/ExamPastQuestions.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Education/SchoolPastQuestions.tsx": {
+    "file": "assets/SchoolPastQuestions-RawFSrBo.js",
+    "name": "SchoolPastQuestions",
+    "src": "resources/js/Pages/Education/SchoolPastQuestions.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Escrow/Index.tsx": {
+    "file": "assets/Index-Dy89klT2.js",
+    "name": "Index",
+    "src": "resources/js/Pages/Escrow/Index.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Exams/Results.tsx": {
+    "file": "assets/Results-R2_WvR01.js",
+    "name": "Results",
+    "src": "resources/js/Pages/Exams/Results.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/GovernmentServices.tsx": {
+    "file": "assets/GovernmentServices-CdyByFNT.js",
+    "name": "GovernmentServices",
+    "src": "resources/js/Pages/GovernmentServices.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/HelpArticle.tsx": {
+    "file": "assets/HelpArticle-DIJjvwVX.js",
+    "name": "HelpArticle",
+    "src": "resources/js/Pages/HelpArticle.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/HelpCenter.tsx": {
+    "file": "assets/HelpCenter-C13ydmSy.js",
+    "name": "HelpCenter",
+    "src": "resources/js/Pages/HelpCenter.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Insurance.tsx": {
+    "file": "assets/Insurance-Dq6Fr04W.js",
+    "name": "Insurance",
+    "src": "resources/js/Pages/Insurance.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/InsuranceAdmin.tsx": {
+    "file": "assets/InsuranceAdmin-CsBvY-qk.js",
+    "name": "InsuranceAdmin",
+    "src": "resources/js/Pages/InsuranceAdmin.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Investments.tsx": {
+    "file": "assets/Investments-B9NZjpDO.js",
+    "name": "Investments",
+    "src": "resources/js/Pages/Investments.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Kyc.tsx": {
+    "file": "assets/Kyc-QZCALXvC.js",
+    "name": "Kyc",
+    "src": "resources/js/Pages/Kyc.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Loans.tsx": {
+    "file": "assets/Loans-B1SWEjg_.js",
+    "name": "Loans",
+    "src": "resources/js/Pages/Loans.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Marketplace/Index.tsx": {
+    "file": "assets/Index--uqxCYUS.js",
+    "name": "Index",
+    "src": "resources/js/Pages/Marketplace/Index.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Notifications.tsx": {
+    "file": "assets/Notifications-DYdNSdKo.js",
+    "name": "Notifications",
+    "src": "resources/js/Pages/Notifications.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/P2p/Transfers.tsx": {
+    "file": "assets/Transfers-CEQFcCjP.js",
+    "name": "Transfers",
+    "src": "resources/js/Pages/P2p/Transfers.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Profile.tsx": {
+    "file": "assets/Profile-BUIaaHW5.js",
+    "name": "Profile",
+    "src": "resources/js/Pages/Profile.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/ProfileChangeRequests.tsx": {
+    "file": "assets/ProfileChangeRequests-rWeKUNuN.js",
+    "name": "ProfileChangeRequests",
+    "src": "resources/js/Pages/ProfileChangeRequests.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Savings.tsx": {
+    "file": "assets/Savings-rD9I8hm2.js",
+    "name": "Savings",
+    "src": "resources/js/Pages/Savings.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/SendMoney.tsx": {
+    "file": "assets/SendMoney-DT8hc2sH.js",
+    "name": "SendMoney",
+    "src": "resources/js/Pages/SendMoney.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Setup/Index.tsx": {
+    "file": "assets/Index-BJrKbMqL.js",
+    "name": "Index",
+    "src": "resources/js/Pages/Setup/Index.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/SimHosting.tsx": {
+    "file": "assets/SimHosting-BVPOm2OE.js",
+    "name": "SimHosting",
+    "src": "resources/js/Pages/SimHosting.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/SocialServices/Index.tsx": {
+    "file": "assets/Index-qiOJIaTI.js",
+    "name": "Index",
+    "src": "resources/js/Pages/SocialServices/Index.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/SocialServices/SmsInbox.tsx": {
+    "file": "assets/SmsInbox-8hM9wu6l.js",
+    "name": "SmsInbox",
+    "src": "resources/js/Pages/SocialServices/SmsInbox.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/SpinToWin/Index.tsx": {
+    "file": "assets/Index-q95GfQD3.js",
+    "name": "Index",
+    "src": "resources/js/Pages/SpinToWin/Index.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Support.tsx": {
+    "file": "assets/Support-BUPDMGkp.js",
+    "name": "Support",
+    "src": "resources/js/Pages/Support.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/SupportTicket.tsx": {
+    "file": "assets/SupportTicket-Cn4iB9iq.js",
+    "name": "SupportTicket",
+    "src": "resources/js/Pages/SupportTicket.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_CoreMobileNav-CoVSDd6I.js"
+    ]
+  },
+  "resources/js/Pages/TransactionPin.tsx": {
+    "file": "assets/TransactionPin-DX5633JF.js",
+    "name": "TransactionPin",
+    "src": "resources/js/Pages/TransactionPin.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/TransactionReceipt.tsx": {
+    "file": "assets/TransactionReceipt-kcQGkAAy.js",
+    "name": "TransactionReceipt",
+    "src": "resources/js/Pages/TransactionReceipt.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Transactions.tsx": {
+    "file": "assets/Transactions-mKBGy_IH.js",
+    "name": "Transactions",
+    "src": "resources/js/Pages/Transactions.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/TravelTickets/Bookings.tsx": {
+    "file": "assets/Bookings-Bk885KS0.js",
+    "name": "Bookings",
+    "src": "resources/js/Pages/TravelTickets/Bookings.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/TravelTickets/Index.tsx": {
+    "file": "assets/Index-DPTUE4U1.js",
+    "name": "Index",
+    "src": "resources/js/Pages/TravelTickets/Index.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/VTU/Conversions.tsx": {
+    "file": "assets/Conversions-BAbHvW4r.js",
+    "name": "Conversions",
+    "src": "resources/js/Pages/VTU/Conversions.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/VTU/Services.tsx": {
+    "file": "assets/Services-DwD-xgVU.js",
+    "name": "Services",
+    "src": "resources/js/Pages/VTU/Services.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_ServiceIcon-OUp9cCJ9.js"
+    ]
+  },
+  "resources/js/Pages/WalletFunding.tsx": {
+    "file": "assets/WalletFunding-Ci6vKsIl.js",
+    "name": "WalletFunding",
+    "src": "resources/js/Pages/WalletFunding.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/WebsiteBuilder.tsx": {
+    "file": "assets/WebsiteBuilder-CCQRuGpP.js",
+    "name": "WebsiteBuilder",
+    "src": "resources/js/Pages/WebsiteBuilder.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/WebsitePageEditor.tsx": {
+    "file": "assets/WebsitePageEditor-BEYQbPu2.js",
+    "name": "WebsitePageEditor",
+    "src": "resources/js/Pages/WebsitePageEditor.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/WebsitePublic.tsx": {
+    "file": "assets/WebsitePublic-BBiPNmFk.js",
+    "name": "WebsitePublic",
+    "src": "resources/js/Pages/WebsitePublic.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Welcome.tsx": {
+    "file": "assets/Welcome-D13D-FKm.js",
+    "name": "Welcome",
+    "src": "resources/js/Pages/Welcome.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/WhatsAppBot/Verify.tsx": {
+    "file": "assets/Verify-DaeS6kbL.js",
+    "name": "Verify",
+    "src": "resources/js/Pages/WhatsAppBot/Verify.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/Pages/Withdraw.tsx": {
+    "file": "assets/Withdraw-BB3b10Sc.js",
+    "name": "Withdraw",
+    "src": "resources/js/Pages/Withdraw.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx"
+    ]
+  },
+  "resources/js/app.tsx": {
+    "file": "assets/app-BGaXtkiW.js",
+    "name": "app",
+    "src": "resources/js/app.tsx",
+    "isEntry": true,
+    "dynamicImports": [
+      "resources/js/Pages/Account/PhoneChangeRequest.tsx",
+      "resources/js/Pages/Admin/AIChatbot.tsx",
+      "resources/js/Pages/Admin/AIChatbotConversation.tsx",
+      "resources/js/Pages/Admin/AIChatbotConversations.tsx",
+      "resources/js/Pages/Admin/Addons.tsx",
+      "resources/js/Pages/Admin/AuditEvents.tsx",
+      "resources/js/Pages/Admin/BulkSms.tsx",
+      "resources/js/Pages/Admin/Cac/Order.tsx",
+      "resources/js/Pages/Admin/Cac/Orders.tsx",
+      "resources/js/Pages/Admin/Cac/Products.tsx",
+      "resources/js/Pages/Admin/Catalogue.tsx",
+      "resources/js/Pages/Admin/CommunicationCenter.tsx",
+      "resources/js/Pages/Admin/Education/PastQuestions.tsx",
+      "resources/js/Pages/Admin/Education/ReferenceCatalogue.tsx",
+      "resources/js/Pages/Admin/Escrow/Index.tsx",
+      "resources/js/Pages/Admin/Exams/Results.tsx",
+      "resources/js/Pages/Admin/FxProviders.tsx",
+      "resources/js/Pages/Admin/GovernmentServices.tsx",
+      "resources/js/Pages/Admin/Investments.tsx",
+      "resources/js/Pages/Admin/Kyc.tsx",
+      "resources/js/Pages/Admin/Loans.tsx",
+      "resources/js/Pages/Admin/MailerSmtp.tsx",
+      "resources/js/Pages/Admin/Marketplace/Index.tsx",
+      "resources/js/Pages/Admin/P2p/Transfers.tsx",
+      "resources/js/Pages/Admin/Payments.tsx",
+      "resources/js/Pages/Admin/PhoneChangeRequests.tsx",
+      "resources/js/Pages/Admin/PlatformControls.tsx",
+      "resources/js/Pages/Admin/ProfileChangeRequests.tsx",
+      "resources/js/Pages/Admin/ProviderCatalogueManager.tsx",
+      "resources/js/Pages/Admin/ProviderWizard.tsx",
+      "resources/js/Pages/Admin/Providers.tsx",
+      "resources/js/Pages/Admin/SMM.tsx",
+      "resources/js/Pages/Admin/Savings.tsx",
+      "resources/js/Pages/Admin/SecurityEvents.tsx",
+      "resources/js/Pages/Admin/Settings.tsx",
+      "resources/js/Pages/Admin/SimHosting.tsx",
+      "resources/js/Pages/Admin/SocialServices.tsx",
+      "resources/js/Pages/Admin/SpinToWin.tsx",
+      "resources/js/Pages/Admin/SpinToWinPlays.tsx",
+      "resources/js/Pages/Admin/SystemHealth.tsx",
+      "resources/js/Pages/Admin/TravelTickets.tsx",
+      "resources/js/Pages/Admin/Users.tsx",
+      "resources/js/Pages/Admin/VTU/BulkOperations.tsx",
+      "resources/js/Pages/Admin/VTU/BulkStatement.tsx",
+      "resources/js/Pages/Admin/VTU/Conversions.tsx",
+      "resources/js/Pages/Admin/VTU/Dashboard.tsx",
+      "resources/js/Pages/Admin/VTU/Mappings.tsx",
+      "resources/js/Pages/Admin/VTU/Products.tsx",
+      "resources/js/Pages/Admin/VTU/SchedulePolicy.tsx",
+      "resources/js/Pages/Admin/VTU/Services.tsx",
+      "resources/js/Pages/Admin/VTU/Transactions.tsx",
+      "resources/js/Pages/Analytics/Financial.tsx",
+      "resources/js/Pages/ApiAccess.tsx",
+      "resources/js/Pages/Auth/AdminLogin.tsx",
+      "resources/js/Pages/Auth/ForgotPassword.tsx",
+      "resources/js/Pages/Auth/ForgotPin.tsx",
+      "resources/js/Pages/Auth/Login.tsx",
+      "resources/js/Pages/Auth/Register.tsx",
+      "resources/js/Pages/Auth/ResetPassword.tsx",
+      "resources/js/Pages/Auth/VerifyEmail.tsx",
+      "resources/js/Pages/Auth/VerifyRegistration.tsx",
+      "resources/js/Pages/BulkSms.tsx",
+      "resources/js/Pages/BusinessAdmin.tsx",
+      "resources/js/Pages/BusinessPartner.tsx",
+      "resources/js/Pages/Cac/Index.tsx",
+      "resources/js/Pages/Cac/Order.tsx",
+      "resources/js/Pages/Cac/Orders.tsx",
+      "resources/js/Pages/Communication.tsx",
+      "resources/js/Pages/CommunicationAdmin.tsx",
+      "resources/js/Pages/Dashboard.tsx",
+      "resources/js/Pages/Education/ExamPastQuestions.tsx",
+      "resources/js/Pages/Education/SchoolPastQuestions.tsx",
+      "resources/js/Pages/Escrow/Index.tsx",
+      "resources/js/Pages/Exams/Results.tsx",
+      "resources/js/Pages/GovernmentServices.tsx",
+      "resources/js/Pages/HelpArticle.tsx",
+      "resources/js/Pages/HelpCenter.tsx",
+      "resources/js/Pages/Insurance.tsx",
+      "resources/js/Pages/InsuranceAdmin.tsx",
+      "resources/js/Pages/Investments.tsx",
+      "resources/js/Pages/Kyc.tsx",
+      "resources/js/Pages/Loans.tsx",
+      "resources/js/Pages/Marketplace/Index.tsx",
+      "resources/js/Pages/Notifications.tsx",
+      "resources/js/Pages/P2p/Transfers.tsx",
+      "resources/js/Pages/Profile.tsx",
+      "resources/js/Pages/ProfileChangeRequests.tsx",
+      "resources/js/Pages/Savings.tsx",
+      "resources/js/Pages/SendMoney.tsx",
+      "resources/js/Pages/Setup/Index.tsx",
+      "resources/js/Pages/SimHosting.tsx",
+      "resources/js/Pages/SocialServices/Index.tsx",
+      "resources/js/Pages/SocialServices/SmsInbox.tsx",
+      "resources/js/Pages/SpinToWin/Index.tsx",
+      "resources/js/Pages/Support.tsx",
+      "resources/js/Pages/SupportTicket.tsx",
+      "resources/js/Pages/TransactionPin.tsx",
+      "resources/js/Pages/TransactionReceipt.tsx",
+      "resources/js/Pages/Transactions.tsx",
+      "resources/js/Pages/TravelTickets/Bookings.tsx",
+      "resources/js/Pages/TravelTickets/Index.tsx",
+      "resources/js/Pages/VTU/Conversions.tsx",
+      "resources/js/Pages/VTU/Services.tsx",
+      "resources/js/Pages/WalletFunding.tsx",
+      "resources/js/Pages/WebsiteBuilder.tsx",
+      "resources/js/Pages/WebsitePageEditor.tsx",
+      "resources/js/Pages/WebsitePublic.tsx",
+      "resources/js/Pages/Welcome.tsx",
+      "resources/js/Pages/WhatsAppBot/Verify.tsx",
+      "resources/js/Pages/Withdraw.tsx"
+    ],
+    "css": [
+      "assets/app-DHJBzhXj.css"
+    ]
+  }
+}
