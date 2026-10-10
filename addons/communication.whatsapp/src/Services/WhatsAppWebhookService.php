@@ -17,15 +17,20 @@ class WhatsAppWebhookService
   return (string)$challenge;
  }
 
- public function handle(Provider $provider,string $rawBody,?string $signature): int
+ public function matchesSignature(Provider $provider,string $rawBody,?string $signature): bool
  {
   $credentials=$provider->credentials ?: [];
   $secret=$credentials['webhook_secret'] ?? null;
-  if(!is_string($secret) || trim($secret)===''){
-   throw new RuntimeException('WhatsApp webhook secret is not configured.');
-  }
+  if(!is_string($secret) || trim($secret)==='' || !$signature) return false;
   $expected='sha256='.hash_hmac('sha256',$rawBody,$secret);
-  if(!$signature || !hash_equals($expected,$signature)) throw new RuntimeException('Invalid webhook signature.');
+  return hash_equals($expected,$signature);
+ }
+
+ public function handle(Provider $provider,string $rawBody,?string $signature): int
+ {
+  if(!$this->matchesSignature($provider,$rawBody,$signature)) {
+   throw new RuntimeException('Invalid WhatsApp webhook signature.');
+  }
   $payload=json_decode($rawBody,true);
   if(!is_array($payload)) throw new RuntimeException('Malformed webhook payload.');
 
