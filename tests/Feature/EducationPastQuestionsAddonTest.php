@@ -11,6 +11,7 @@ use Semizzy\Addons\Education\Models\EducationLibraryItem;
 use Semizzy\Addons\Education\Services\EducationInstitutionImportService;
 use Semizzy\Addons\Education\Services\EducationInstitutionSyncRunService;
 use Semizzy\Addons\Education\Services\NcceAccreditedCollegesAdapter;
+use Semizzy\Addons\Education\Services\NucUniversityDirectoryAdapter;
 use Tests\TestCase;
 class EducationPastQuestionsAddonTest extends TestCase {
  private bool $createdUsersTable=false;
@@ -258,6 +259,46 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $adapter=app(NcceAccreditedCollegesAdapter::class);
   $this->expectException(\DomainException::class);
   $adapter->parse('<html><body><table><tr><th>Name</th><th>Data</th></tr><tr><td>Only a partial table</td><td>missing contract</td></tr></table></body></html>');
+ }
+
+
+ public function test_nuc_official_university_directory_imports_complete_html_feed_and_records_sync_counts():void {
+  $rows='';
+  for($i=1;$i<=328;$i++) {
+   $ownership=$i<=77?'Federal':($i<=146?'State':'Private');
+   $rows.='<tr><td>'.$i.'</td><td>NUC Test University '.$i.'</td><td>'.(1980+($i%45)).'</td><td>'.$ownership.'</td><td>Lagos</td><td><a href="/university/'.$i.'">Explore</a></td></tr>';
+  }
+  $html='<html><body><section><div>77 Federal Universities</div><div>69 State Universities</div><div>182 Private Universities</div></section><table><thead><tr><th>#</th><th>University Name</th><th>Year Established</th><th>Ownership</th><th>State</th><th>Action</th></tr></thead><tbody>'.$rows.'</tbody></table></body></html>';
+  Http::fake([NucUniversityDirectoryAdapter::URL=>Http::response($html,200,['Content-Type'=>'text/html; charset=UTF-8'])]);
+
+  $run=app(NucUniversityDirectoryAdapter::class)->sync();
+
+  $this->assertSame('completed',$run->status);
+  $this->assertSame(328,$run->expected_total);
+  $this->assertSame(328,$run->records_seen);
+  $this->assertSame(328,DB::table('education_institutions')->where('import_source',NucUniversityDirectoryAdapter::SOURCE)->count());
+  $this->assertSame(328,DB::table('education_institutions')->where('import_source',NucUniversityDirectoryAdapter::SOURCE)->where('review_status','pending')->where('active',false)->count());
+  $this->assertDatabaseHas('education_institutions',['name'=>'NUC Test University 1','category'=>'university','ownership'=>'federal','state'=>'Lagos','review_status'=>'pending','active'=>false]);
+  $this->assertDatabaseHas('education_institutions',['name'=>'NUC Test University 78','category'=>'university','ownership'=>'state']);
+  $this->assertDatabaseHas('education_institutions',['name'=>'NUC Test University 147','category'=>'university','ownership'=>'private']);
+  Http::assertSent(fn($request)=>$request->url()===NucUniversityDirectoryAdapter::URL);
+ }
+
+ public function test_nuc_official_university_directory_rejects_changed_layout_or_incomplete_feed():void {
+  $adapter=app(NucUniversityDirectoryAdapter::class);
+  $this->expectException(\\DomainException::class);
+  $adapter->parse('<html><body><table><tr><th>University</th><th>Data</th></tr><tr><td>Only a partial table</td><td>missing contract</td></tr></table></body></html>');
+ }
+
+ public function test_nuc_official_university_directory_rejects_ownership_summary_mismatch():void {
+  $rows='';
+  for($i=1;$i<=328;$i++) {
+   $ownership=$i<=77?'Federal':($i<=146?'State':'Private');
+   $rows.='<tr><td>'.$i.'</td><td>Mismatch Test University '.$i.'</td><td>2000</td><td>'.$ownership.'</td><td>Lagos</td><td>Explore</td></tr>';
+  }
+  $html='<html><body><div>76 Federal Universities</div><div>69 State Universities</div><div>182 Private Universities</div><table><thead><tr><th>#</th><th>University Name</th><th>Year Established</th><th>Ownership</th><th>State</th><th>Action</th></tr></thead><tbody>'.$rows.'</tbody></table></body></html>';
+  $this->expectException(\\DomainException::class);
+  app(NucUniversityDirectoryAdapter::class)->parse($html);
  }
 
 }
