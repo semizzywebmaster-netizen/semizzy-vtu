@@ -13,7 +13,7 @@ return new class extends Migration {
             ['name' => 'Kora', 'code' => 'kora', 'driver' => 'kora'],
             ['name' => 'Squad', 'code' => 'squad', 'driver' => 'squad'],
             ['name' => 'Flutterwave', 'code' => 'flutterwave', 'driver' => 'flutterwave'],
-            ['name' => 'Payaza', 'code' => 'payaza', 'driver' => 'payaza'],
+            ['name' => 'Payaza', 'code' => 'payaza', 'driver' => 'payaza'],\n            ['name' => 'Interswitch Payouts', 'code' => 'interswitch', 'driver' => 'interswitch', 'capabilities' => ['account_name_enquiry', 'single_payout']],
         ];
 
         $capabilities = [
@@ -28,7 +28,7 @@ return new class extends Migration {
                 [
                     'name' => $provider['name'],
                     'driver' => $provider['driver'],
-                    'capabilities' => json_encode($capabilities),
+                    'capabilities' => json_encode($provider['capabilities'] ?? $capabilities),
                     'priority' => ($index + 1) * 10,
                     'weight' => 100,
                     'enabled' => false,
@@ -45,7 +45,7 @@ return new class extends Migration {
     public function down(): void
     {
         DB::table('payment_gateway_providers')
-            ->whereIn('code', ['paystack', 'opay', 'monnify', 'kora', 'squad', 'flutterwave', 'payaza'])
+            ->whereIn('code', ['paystack', 'opay', 'monnify', 'kora', 'squad', 'flutterwave', 'payaza', 'interswitch'])
             ->delete();
     }
 };
