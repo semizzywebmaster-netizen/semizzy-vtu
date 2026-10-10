@@ -454,7 +454,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 return 'ACCEPTED';
             }
 
-            if (in_array($normalized, ['verified'], true)
+            if (in_array($normalized, ['verified','approved'], true)
                 && in_array($operation, ['kyc_verification','identity_document_verify','identity_status'], true)) {
                 return 'ACCEPTED';
             }
