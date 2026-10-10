@@ -215,7 +215,7 @@ class ProviderAdapterIntegrationTest extends TestCase
         });
     }
 
-    public function test_interswitch_account_verification_fails_closed_when_no_account_name_is_returned(): void
+    public function test_interswitch_account_verification_fails_closed_without_explicit_success_code(): void
     {
         $provider = $this->provider('interswitch');
         $credentials = $provider->credentials;
@@ -223,7 +223,7 @@ class ProviderAdapterIntegrationTest extends TestCase
         $credentials['terminal_id'] = 'SEMIZZY-TEST-001';
         $provider->credentials = $credentials;
         $provider->save();
-        Http::fake(['https://sandbox.interswitchng.com/api/v1/nameenquiry/banks/accounts/names*' => Http::response(['responseCode' => '00'], 200)]);
+        Http::fake(['https://sandbox.interswitchng.com/api/v1/nameenquiry/banks/accounts/names*' => Http::response(['accountName' => 'TEST CUSTOMER'], 200)]);
 
         $this->expectException(\\RuntimeException::class);
         app(InterswitchPaymentGatewayAdapter::class)->verifyAccount($provider, '044', '0123456789');
