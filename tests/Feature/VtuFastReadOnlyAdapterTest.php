@@ -40,4 +40,13 @@ class VtuFastReadOnlyAdapterTest extends TestCase
         $this->assertSame('UNSUPPORTED', $result->status);
         Http::assertNothingSent();
     }
+
+    public function test_status_requery_is_not_guessed_from_the_website_transaction_history(): void
+    {
+        Http::fake();
+        $result = (new RestJsonProviderAdapter(new ProviderUrlGuard()))->execute($this->provider(), 'transaction_status', ['reference' => 'AIR-AB12CD34EF56']);
+        $this->assertFalse($result->accepted);
+        $this->assertSame('UNSUPPORTED', $result->status);
+        Http::assertNothingSent();
+    }
 }
