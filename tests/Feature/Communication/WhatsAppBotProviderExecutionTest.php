@@ -1,12 +1,19 @@
 <?php
 
-namespace Tests\\Feature\\Communication;
+namespace Tests\Feature\Communication;
 
-use Addons\\CommunicationWhatsapp\\Services\\WhatsAppWebhookService;
-use App\\Models\\Communication\\Message;
-use App\\Models\\Communication\\Provider;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Tests\\TestCase;
+use Addons\CommunicationWhatsapp\Services\WhatsAppWebhookService;
+use Addons\CommunicationWhatsapp\Services\CommunicationProviderGateway;
+use App\Models\Communication\Conversation;
+use App\Models\Communication\DeliveryAttempt;
+use App\Models\Communication\Message;
+use App\Models\Communication\Provider;
+use Illuminate\Database\QueryException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
+use RuntimeException;
+use Tests\TestCase;
 
 class WhatsAppBotProviderExecutionTest extends TestCase
 {
@@ -79,4 +86,55 @@ class WhatsAppBotProviderExecutionTest extends TestCase
         $this->assertSame(1, Message::query()->where('channel', 'whatsapp')->where('direction', 'inbound')->count());
         $this->assertSame('whatsapp:wamid.test-message-001', Message::query()->where('direction', 'inbound')->value('idempotency_key'));
     }
+    public function test_ambiguous_send_timeout_does_not_fail_over_to_another_whatsapp_provider(): void
+    {
+        foreach (['Primary', 'Secondary'] as $index => $name) {
+            Provider::query()->create([
+                'channel' => 'whatsapp',
+                'name' => 'WhatsApp ' . $name,
+                'driver' => 'generic_http',
+                'credentials' => ['url' => 'https://provider-' . strtolower($name) . '.example/messages'],
+                'enabled' => true,
+                'paused' => false,
+                'priority' => $index + 1,
+            ]);
+        }
+
+        $conversation = Conversation::query()->create([
+            'channel' => 'whatsapp',
+            'external_contact' => '+2348012345678',
+            'status' => 'open',
+        ]);
+        $message = Message::query()->create([
+            'conversation_id' => $conversation->id,
+            'channel' => 'whatsapp',
+            'direction' => 'outbound',
+            'recipient' => '+2348012345678',
+            'body' => 'Test delivery',
+            'status' => 'queued',
+            'idempotency_key' => 'wa-test-ambiguous-send',
+        ]);
+
+        $calls = 0;
+        Http::fake(function ($request, $options) use (&$calls) {
+            $calls++;
+            throw new ConnectionException('Connection timed out after dispatch.');
+        });
+
+        try {
+            app(CommunicationProviderGateway::class)->send($message);
+            $this->fail('An ambiguous send must stop failover and require status reconciliation.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame(
+                'Communication provider outcome is unknown; verify delivery status before retrying.',
+                $exception->getMessage()
+            );
+        }
+
+        $this->assertSame(1, $calls, 'The secondary provider must not receive a possibly duplicate send.');
+        $this->assertSame('pending', $message->fresh()->status);
+        $this->assertSame(1, DeliveryAttempt::query()->where('message_id', $message->id)->count());
+        $this->assertSame('unknown', DeliveryAttempt::query()->where('message_id', $message->id)->value('status'));
+    }
+
 }
