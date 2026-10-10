@@ -1,15 +1,15 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\ApiProvider;
-use App\\Models\\ProviderServiceMapping;
-use App\\Models\\Service;
-use App\\Models\\ServiceCategory;
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Inertia\\Testing\\AssertableInertia as Assert;
-use Tests\\TestCase;
+use App\Models\ApiProvider;
+use App\Models\ProviderServiceMapping;
+use App\Models\Service;
+use App\Models\ServiceCategory;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
+use Tests\TestCase;
 
 class ProviderPlatformCoverageTest extends TestCase
 {
