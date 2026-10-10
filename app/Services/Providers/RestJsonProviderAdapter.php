@@ -147,7 +147,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 // Timeouts/rate limits/server failures may occur after a provider
                 // accepted the request, so transaction initiation must never fail
                 // over automatically from these responses.
-                duplicateRisk: $operation === 'transaction_initiation' && $uncertainHttp
+                duplicateRisk: in_array($operation, ProviderCapabilityRegistry::IDEMPOTENT_MUTATIONS, true) && $uncertainHttp
             );
         } catch (\Throwable $e) {
             return new ProviderResult(
@@ -155,7 +155,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 'UNKNOWN',
                 message: 'Provider request failed; provider state must be rechecked before retry.',
                 retryable: false,
-                duplicateRisk: $operation === 'transaction_initiation'
+                duplicateRisk: in_array($operation, ProviderCapabilityRegistry::IDEMPOTENT_MUTATIONS, true)
             );
         }
     }
@@ -210,7 +210,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
                     $mappedResponse,
                     $accepted ? 'Provider request accepted.' : 'Provider returned a non-success status.',
                     retryable: false,
-                    duplicateRisk: $operation === 'transaction_initiation' && $status === 'UNKNOWN',
+                    duplicateRisk: in_array($operation, ProviderCapabilityRegistry::IDEMPOTENT_MUTATIONS, true) && $status === 'UNKNOWN',
                     providerId: $provider->id,
                 );
             }
@@ -224,7 +224,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 message: $this->safeProviderMessage($mappedError),
                 data: $mappedError !== [] ? $mappedError : null,
                 retryable: false,
-                duplicateRisk: $operation === 'transaction_initiation' && $uncertain,
+                duplicateRisk: in_array($operation, ProviderCapabilityRegistry::IDEMPOTENT_MUTATIONS, true) && $uncertain,
                 providerId: $provider->id,
             );
         } catch (\Throwable $e) {
@@ -233,7 +233,7 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 'UNKNOWN',
                 message: 'Provider request failed; provider state must be rechecked before retry.',
                 retryable: false,
-                duplicateRisk: $operation === 'transaction_initiation',
+                duplicateRisk: in_array($operation, ProviderCapabilityRegistry::IDEMPOTENT_MUTATIONS, true),
                 providerId: $provider->id,
             );
         }
