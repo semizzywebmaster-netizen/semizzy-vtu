@@ -1,7 +1,7 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Middleware\EnsureAddonActive;
 use Semizzy\Addons\CryptoPayments\Http\Controllers\CryptoPaymentController;
 use Semizzy\Addons\CryptoPayments\Http\Controllers\CryptoPaymentWebhookController;
 
@@ -13,7 +13,11 @@ Route::middleware(['auth:sanctum', 'ensure.addon:crypto-payments.gateway'])
             ->middleware('permission:crypto.view');
     });
 
-Route::post('/api/v1/crypto-payments/webhooks/{provider}', CryptoPaymentWebhookController::class)
+// Keep addon autoload failures from preventing Laravel from registering every route.
+// The controller is resolved when this webhook endpoint is actually invoked.
+Route::post('/api/v1/crypto-payments/webhooks/{provider}', function (Request $request, string $provider) {
+    return app(CryptoPaymentWebhookController::class)($request, $provider);
+})
     ->middleware('ensure.addon:crypto-payments.gateway')
     ->where('provider', '[A-Za-z0-9._-]+')
     ->name('crypto-payments.webhook');
