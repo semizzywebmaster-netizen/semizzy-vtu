@@ -111,6 +111,22 @@ class ProviderCapabilityRegistry
         'fulfillment_status',
     ];
 
+    public const IDEMPOTENT_MUTATIONS = [
+        'transaction_initiation', 'refund', 'reversal',
+        'investment_subscribe', 'investment_redemption',
+        'stock_order_create', 'stock_order_cancel',
+        'fx_conversion_execute', 'fx_trade_create',
+        'loan_application_submit',
+        'crypto_order_create', 'crypto_order_cancel', 'crypto_withdrawal_create',
+        'gift_card_purchase', 'education_purchase', 'exam_pin_purchase',
+        'travel_booking_create', 'travel_cancel',
+        'insurance_policy_issue', 'insurance_claim_submit',
+        'card_issue', 'card_fund', 'card_freeze', 'card_unfreeze',
+        'government_application_submit', 'cac_filing_submit',
+        'domain_register', 'dns_manage', 'hosting_provision',
+        'marketplace_order_create',
+    ];
+
     /**
      * Irreversible or money-moving operations require a matching status/requery
      * capability, or the generic transaction_status operation with a typed payload.
@@ -138,6 +154,16 @@ class ProviderCapabilityRegistry
         'hosting_provision' => 'hosting_status',
         'marketplace_order_create' => 'marketplace_order_status',
     ];
+
+    public function requiresIdempotency(string $operation): bool
+    {
+        return in_array($operation, self::IDEMPOTENT_MUTATIONS, true);
+    }
+
+    public function requiresLiveVerification(string $operation): bool
+    {
+        return $this->requiresIdempotency($operation);
+    }
 
     public function validate(ApiProvider $provider): void
     {
