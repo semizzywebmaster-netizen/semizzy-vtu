@@ -1,10 +1,10 @@
 <?php
 
-namespace Semizzy\\Addons\\Education\\Services;
+namespace Semizzy\Addons\Education\Services;
 
 use DomainException;
-use Illuminate\\Support\\Facades\\Http;
-use Semizzy\\Addons\\Education\\Models\\EducationInstitutionSyncRun;
+use Illuminate\Support\Facades\Http;
+use Semizzy\Addons\Education\Models\EducationInstitutionSyncRun;
 use Throwable;
 
 final class NcceAccreditedCollegesAdapter
@@ -63,12 +63,12 @@ final class NcceAccreditedCollegesAdapter
      */
     public function parse(string $html): array
     {
-        if (trim($html) === '' || !class_exists(\\DOMDocument::class)) {
+        if (trim($html) === '' || !class_exists(\DOMDocument::class)) {
             throw new DomainException('NCCE directory response is empty or the DOM extension is unavailable.');
         }
 
         $previous = libxml_use_internal_errors(true);
-        $document = new \\DOMDocument();
+        $document = new \DOMDocument();
         try {
             $loaded = $document->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
         } finally {
@@ -79,7 +79,7 @@ final class NcceAccreditedCollegesAdapter
             throw new DomainException('NCCE directory HTML could not be parsed.');
         }
 
-        $xpath = new \\DOMXPath($document);
+        $xpath = new \DOMXPath($document);
         $targetTable = null;
         foreach ($xpath->query('//table') ?: [] as $table) {
             $headers = [];
@@ -108,11 +108,11 @@ final class NcceAccreditedCollegesAdapter
             }
 
             $serialText = $this->normalizeText($cells->item(0)->textContent);
-            if (!preg_match('/^\\d+$/', $serialText)) {
+            if (!preg_match('/^\d+$/', $serialText)) {
                 continue;
             }
             $serial = (int) $serialText;
-            $name = preg_replace('/\\s+OPEN$/i', '', $this->normalizeText($cells->item(1)->textContent)) ?? '';
+            $name = preg_replace('/\s+OPEN$/i', '', $this->normalizeText($cells->item(1)->textContent)) ?? '';
             if ($serial < 1 || $name === '') {
                 throw new DomainException('NCCE directory contains an invalid serial number or blank institution name.');
             }
@@ -160,11 +160,11 @@ final class NcceAccreditedCollegesAdapter
         return ['records' => $records, 'expected_total' => $expected];
     }
 
-    private function websiteFromCell(\\DOMNode $cell): ?string
+    private function websiteFromCell(\DOMNode $cell): ?string
     {
-        $xpath = new \\DOMXPath($cell->ownerDocument);
+        $xpath = new \DOMXPath($cell->ownerDocument);
         $link = $xpath->query('.//a[@href]', $cell)?->item(0);
-        $href = $link instanceof \\DOMElement ? trim($link->getAttribute('href')) : '';
+        $href = $link instanceof \DOMElement ? trim($link->getAttribute('href')) : '';
         if ($href === '' || in_array(strtolower($href), ['#', '-', 'null', 'javascript:void(0)'], true)) {
             return null;
         }
@@ -183,6 +183,6 @@ final class NcceAccreditedCollegesAdapter
 
     private function normalizeText(string $value): string
     {
-        return trim(preg_replace('/\\s+/u', ' ', html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?? '');
+        return trim(preg_replace('/\s+/u', ' ', html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?? '');
     }
 }
