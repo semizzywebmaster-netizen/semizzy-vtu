@@ -1,5 +1,4 @@
 import { Head, router } from '@inertiajs/react';
-import CoreMobileNav from '../Components/CoreMobileNav';
 
 type NotificationItem = {
   id: string;
@@ -57,7 +56,7 @@ export default function Notifications({ notifications, unreadCount }: Props) {
             ))}
           </section>
 
-          <CoreMobileNav active="notifications" unreadCount={unreadCount} />
+
         </div>
       </main>
     </>
