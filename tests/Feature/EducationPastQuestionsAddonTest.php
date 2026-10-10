@@ -24,6 +24,8 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $referenceMigration->up();
   $adminReferenceMigration=require base_path('addons/education/database/migrations/2026_10_09_110200_add_admin_managed_education_reference_fields.php');
   $adminReferenceMigration->up();
+  $reviewMigration=require base_path('addons/education/database/migrations/2026_10_10_120000_add_education_reference_review_workflow.php');
+  $reviewMigration->up();
   $directoryExpansionMigration=require base_path('addons/education/database/migrations/2026_10_09_110300_expand_official_school_reference_catalogue.php');
   $directoryExpansionMigration->up();
   $migration=require base_path('addons/education/database/migrations/2026_10_09_110000_create_education_past_question_library.php');
@@ -45,6 +47,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertContains('addons/education/routes/web.php',$manifest['web_route_files']);
   $this->assertContains('2026_10_09_110200_add_admin_managed_education_reference_fields.php',$manifest['migrations']);
   $this->assertContains('2026_10_09_110300_expand_official_school_reference_catalogue.php',$manifest['migrations']);
+  $this->assertContains('2026_10_10_120000_add_education_reference_review_workflow.php',$manifest['migrations']);
   $this->assertSame('/admin/education/references',$manifest['admin_navigation'][1]['url']);
   $labels=array_column($manifest['navigation'],'label');
   $this->assertContains('School Past Questions',$labels);
@@ -91,8 +94,18 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $request->setUserResolver(fn()=>(object)['id'=>1]);
   $response=app(EducationReferenceImportController::class)->importCsv($request);
   $this->assertSame(302,$response->getStatusCode());
-  $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'CSV University','category'=>'private_university','created_by'=>1]);
-  $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'exam_body','name'=>'CSV Exam Board']);
+  $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'school','name'=>'CSV University','category'=>'private_university','created_by'=>1,'is_active'=>false,'review_status'=>'pending']);
+  $this->assertDatabaseHas('education_reference_catalogue',['kind'=>'exam_body','name'=>'CSV Exam Board','is_active'=>false,'review_status'=>'pending']);
+  $pending=(object) DB::table('education_reference_catalogue')->where('name','CSV University')->first();
+  $activation=Request::create('/admin/education/references/'.$pending->id,'PUT',['name'=>$pending->name,'category'=>$pending->category,'short_name'=>$pending->short_name,'state'=>$pending->state,'country'=>$pending->country,'official_url'=>$pending->official_url,'source_url'=>$pending->source_url,'is_active'=>true]);
+  $activation->setUserResolver(fn()=>(object)['id'=>1]);
+  app(\\Semizzy\\Addons\\Education\\Http\\Controllers\\EducationReferenceCatalogueController::class)->update($activation,(int)$pending->id);
+  $this->assertDatabaseHas('education_reference_catalogue',['id'=>$pending->id,'is_active'=>false,'review_status'=>'pending']);
+  $approval=Request::create('/admin/education/references/'.$pending->id.'/review','POST',['decision'=>'approve']);
+  $approval->setUserResolver(fn()=>(object)['id'=>1]);
+  $approved=app(\\Semizzy\\Addons\\Education\\Http\\Controllers\\EducationReferenceCatalogueController::class)->review($approval,(int)$pending->id);
+  $this->assertSame(302,$approved->getStatusCode());
+  $this->assertDatabaseHas('education_reference_catalogue',['id'=>$pending->id,'is_active'=>true,'review_status'=>'approved','reviewed_by'=>1]);
   $duplicate=UploadedFile::fake()->createWithContent('duplicates.csv',"kind,name,category\nschool,CSV University,private_university\n");
   $second=Request::create('/admin/education/references/import-csv','POST',[],[],['file'=>$duplicate]);
   $second->setUserResolver(fn()=>(object)['id'=>1]);
