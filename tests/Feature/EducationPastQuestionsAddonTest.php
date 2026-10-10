@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Semizzy\Addons\Education\Http\Controllers\EducationReferenceImportController;
 use Semizzy\Addons\Education\Models\EducationLibraryItem;
+use Semizzy\Addons\Education\Services\EducationInstitutionImportService;
 use Tests\TestCase;
 class EducationPastQuestionsAddonTest extends TestCase {
  private bool $createdUsersTable=false;
