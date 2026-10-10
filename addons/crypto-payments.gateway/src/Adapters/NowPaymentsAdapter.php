@@ -3,7 +3,7 @@
 namespace Semizzy\Addons\CryptoPayments\Adapters;
 
 use Illuminate\Support\Facades\Http;
-use Semizzy\Addons\CryptoPaymentsContracts\CryptoPaymentGatewayAdapter;
+use Semizzy\Addons\CryptoPayments\Contracts\CryptoPaymentGatewayAdapter;
 use Semizzy\Addons\CryptoPayments\Models\CryptoPaymentProvider;
 use RuntimeException;
 
