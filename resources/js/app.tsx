@@ -26,8 +26,10 @@ createInertiaApp({
     return (pageProps: Record<string, unknown>) => {
       const platform = pageProps.platform as Platform | undefined;
       const auth = pageProps.auth as { user?: { role?: string } } | undefined;
+      const role = auth?.user?.role ?? '';
       const isAuthenticated = !!auth?.user;
-      return <ThemeBridge platform={platform}>{isAuthenticated ? <GlobalFooterNav /> : null}<AIChatbotWidget />{isAdminPage ? <AdminLayout><ResolvedPage {...pageProps} /></AdminLayout> : <ResolvedPage {...pageProps} />}</ThemeBridge>;
+      const isAdminUser = ['ADMIN', 'STAFF', 'SUPPORT'].includes(role);
+      return <ThemeBridge platform={platform}>{isAuthenticated && !isAdminUser ? <GlobalFooterNav /> : null}<AIChatbotWidget />{isAdminPage ? <AdminLayout><ResolvedPage {...pageProps} /></AdminLayout> : <ResolvedPage {...pageProps} />}</ThemeBridge>;
     };
   },
   setup({ el, App, props }) { createRoot(el).render(<App {...props} />); },
