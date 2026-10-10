@@ -1,20 +1,20 @@
 <?php
 
-namespace Addons\\WhatsAppBot\\Http\\Controllers;
+namespace Addons\WhatsAppBot\Http\Controllers;
 
-use Addons\\CommunicationWhatsapp\\Services\\WhatsAppWebhookService;
-use Addons\\CommunicationWhatsapp\\Services\\CommunicationProviderGateway;
-use App\\Models\\Addon;
-use App\\Models\\Communication\\Conversation;
-use App\\Models\\Communication\\Message;
-use App\\Models\\Communication\\Provider;
-use App\\Models\\ServiceProduct;
-use App\\Models\\User;
-use App\\Services\\Vtu\\VtuPayloadValidator;
-use App\\Services\\Vtu\\VtuTransactionService;
-use Illuminate\\Http\\Request;
-use Illuminate\\Http\\Response;
-use Illuminate\\Support\\Facades\\Hash;
+use Addons\CommunicationWhatsapp\Services\WhatsAppWebhookService;
+use Addons\CommunicationWhatsapp\Services\CommunicationProviderGateway;
+use App\Models\Addon;
+use App\Models\Communication\Conversation;
+use App\Models\Communication\Message;
+use App\Models\Communication\Provider;
+use App\Models\ServiceProduct;
+use App\Models\User;
+use App\Services\Vtu\VtuPayloadValidator;
+use App\Services\Vtu\VtuTransactionService;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Hash;
 
 class WhatsAppBotWebhookController
 {
@@ -55,7 +55,7 @@ class WhatsAppBotWebhookController
 
         try {
             $webhook->handle($provider, $rawBody, $signature);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             return response('Webhook rejected', 400);
         }
 
@@ -102,12 +102,12 @@ class WhatsAppBotWebhookController
                     ->limit(12)
                     ->get();
 
-                $lines = $products->map(fn ($p) => '#' . $p->id . ' ' . $p->service->name . ' - ' . $p->name)->implode("\\n");
-                $reply = "SEMIZZY ONE WhatsApp Services:\\n" . $lines . "\\n\\nPurchase format:\\nBUY product_id recipient amount PIN 1234\\nExample: BUY 12 08012345678 500 PIN 1234";
+                $lines = $products->map(fn ($p) => '#' . $p->id . ' ' . $p->service->name . ' - ' . $p->name)->implode("\n");
+                $reply = "SEMIZZY ONE WhatsApp Services:\n" . $lines . "\n\nPurchase format:\nBUY product_id recipient amount PIN 1234\nExample: BUY 12 08012345678 500 PIN 1234";
             } elseif (str_starts_with($body, 'buy ')) {
-                $parts = preg_split('/\\\\s+/', trim($body));
+                $parts = preg_split('/\s+/', trim($body));
 
-                if (count($parts) < 5 || strtoupper($parts[count($parts) - 2]) !== 'PIN' || ! preg_match('/^\\\\d{4}$/', $parts[count($parts) - 1])) {
+                if (count($parts) < 5 || strtoupper($parts[count($parts) - 2]) !== 'PIN' || ! preg_match('/^\d{4}$/', $parts[count($parts) - 1])) {
                     $reply = 'Invalid purchase format. Use: BUY product_id recipient amount PIN 1234';
                 } elseif (! Hash::check($parts[count($parts) - 1], (string) $user->transaction_pin_hash)) {
                     $reply = 'Transaction PIN is invalid. Set or update your 4-digit transaction PIN on the website before using WhatsApp transactions.';
@@ -126,7 +126,7 @@ class WhatsAppBotWebhookController
                         $tx = $transactions->process($tx);
 
                         $reply = 'Transaction ' . $tx->reference . ' has been submitted. Status: ' . strtoupper($tx->status) . '. You can continue receiving updates on WhatsApp.';
-                    } catch (\\Throwable $e) {
+                    } catch (\Throwable $e) {
                         $reply = 'Transaction was not submitted: ' . substr($e->getMessage(), 0, 180);
                     }
                 }
@@ -152,7 +152,7 @@ class WhatsAppBotWebhookController
             if ($message->wasRecentlyCreated) {
                 try {
                     $gateway->send($message);
-                } catch (\\Throwable $e) {
+                } catch (\Throwable $e) {
                     // A send failure must never roll back a submitted financial transaction.
                 }
             }
