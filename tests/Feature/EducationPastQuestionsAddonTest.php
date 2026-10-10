@@ -149,4 +149,25 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertDatabaseHas('education_institutions',['external_id'=>'test:verified-university','review_status'=>'rejected','active'=>false]);
  }
 
+ public function test_external_ids_are_namespaced_by_source_and_do_not_merge_unrelated_records():void {
+  $service=app(EducationInstitutionImportService::class);
+  $service->import([['name'=>'North University','category'=>'university','state'=>'Lagos','external_id'=>'42']],'feed-a');
+  $service->import([['name'=>'South College','category'=>'college','state'=>'Oyo','external_id'=>'42']],'feed-b');
+  $this->assertSame(2,DB::table('education_institutions')->where('external_id','42')->count());
+  $this->assertDatabaseHas('education_institutions',['external_id'=>'42','import_source'=>'feed-a','name'=>'North University']);
+  $this->assertDatabaseHas('education_institutions',['external_id'=>'42','import_source'=>'feed-b','name'=>'South College']);
+ }
+ public function test_migration_rollback_refuses_to_drop_non_legacy_registry_records():void {
+  app(EducationInstitutionImportService::class)->import([['name'=>'Imported University','category'=>'university','external_id'=>'rollback-guard-test']],'rollback-test-feed');
+  $migration=require base_path('addons/education/database/migrations/2026_10_10_130000_create_canonical_education_institutions.php');
+  try {
+   $migration->down();
+   $this->fail('Rollback should refuse to drop canonical feed records.');
+  } catch (\\RuntimeException $exception) {
+   $this->assertStringContainsString('Cannot roll back the canonical institution registry',$exception->getMessage());
+  }
+  $this->assertTrue(Schema::hasTable('education_institutions'));
+  $this->assertDatabaseHas('education_institutions',['external_id'=>'rollback-guard-test','review_status'=>'pending','active'=>false]);
+ }
+
 }
