@@ -84,4 +84,16 @@ class ProviderCapabilityRegistryTest extends TestCase
         $this->assertSame('ACCEPTED', $normalizer->invoke($adapter, ['data' => []], 'catalogue_retrieval'));
     }
 
+    public function test_accepted_provider_order_stays_pending_until_requery_confirms_completion(): void
+    {
+        $adapter = new RestJsonProviderAdapter(new ProviderUrlGuard());
+        $normalizer = new \\ReflectionMethod(RestJsonProviderAdapter::class, 'normalizeStatus');
+        $normalizer->setAccessible(true);
+
+        $this->assertSame('PENDING', $normalizer->invoke($adapter, ['status' => 'accepted'], 'stock_order_create'));
+        $this->assertSame('PENDING', $normalizer->invoke($adapter, ['status' => 'approved'], 'investment_subscribe'));
+        $this->assertSame('ACCEPTED', $normalizer->invoke($adapter, ['status' => 'successful'], 'stock_order_status'));
+        $this->assertSame('ACCEPTED', $normalizer->invoke($adapter, ['status' => 'verified'], 'kyc_verification'));
+    }
+
 }
