@@ -6,11 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\ApiProvider;
 use App\Models\ProviderServiceMapping;
 use App\Models\Service;
-use App\Models\ServiceProduct;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Semizzy\Addons\ApiProviderPlatform\Services\ProductPublicationService;
-use App\Services\Audit\AuditLogger;
 use Inertia\Inertia;
 use Inertia\Response;
 
