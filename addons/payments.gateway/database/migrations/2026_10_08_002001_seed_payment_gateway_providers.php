@@ -13,7 +13,8 @@ return new class extends Migration {
             ['name' => 'Kora', 'code' => 'kora', 'driver' => 'kora'],
             ['name' => 'Squad', 'code' => 'squad', 'driver' => 'squad'],
             ['name' => 'Flutterwave', 'code' => 'flutterwave', 'driver' => 'flutterwave'],
-            ['name' => 'Payaza', 'code' => 'payaza', 'driver' => 'payaza'],\n            ['name' => 'Interswitch Payouts', 'code' => 'interswitch', 'driver' => 'interswitch', 'capabilities' => ['account_name_enquiry', 'single_payout']],
+            ['name' => 'Payaza', 'code' => 'payaza', 'driver' => 'payaza'],
+            ['name' => 'Interswitch Payouts', 'code' => 'interswitch', 'driver' => 'interswitch', 'capabilities' => ['account_name_enquiry', 'single_payout', 'bulk_payout']],
         ];
 
         $capabilities = [
