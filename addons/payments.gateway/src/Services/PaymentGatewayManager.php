@@ -60,11 +60,18 @@ class PaymentGatewayManager
                     'cooldown_until' => now()->addMinutes(min(30, max(1, $provider->failure_count))),
                 ])->save();
 
-                Log::warning('Payment gateway provider failed; trying next provider.', [
+                Log::warning('Payment gateway provider failed.', [
                     'provider' => $provider->code,
                     'capability' => $capability,
                     'error' => $e->getMessage(),
                 ]);
+
+                // Never automatically retry a payout/refund through another provider
+                // after an exception: the first provider may have accepted the request
+                // before the connection failed. Reconcile by provider reference first.
+                if (in_array($capability, ['single_payout', 'bulk_payout', 'refund'], true)) {
+                    throw $e;
+                }
             }
         }
 
