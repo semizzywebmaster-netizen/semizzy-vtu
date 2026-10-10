@@ -1,0 +1,37 @@
+<?php
+
+return [
+    'identifier' => 'api.provider-platform',
+    'name' => 'Developer & API Provider Platform',
+    'version' => '0.2.0',
+    'description' => 'Read-only Phase A service-by-service oversight of outbound providers using the existing Core provider engine.',
+    'category' => 'Platform Infrastructure',
+    'autoload_namespace' => 'Semizzy\\Addons\\ApiProviderPlatform',
+    'compatibility' => '>=2.0.0',
+    'dependencies' => [],
+    'permissions' => ['provider_platform.view'],
+    'role_permissions' => [
+        'ADMIN' => ['provider_platform.view'],
+        'STAFF' => ['provider_platform.view'],
+        'SUPPORT' => ['provider_platform.view'],
+        'USER' => [],
+    ],
+    'admin_navigation' => [[
+        'id' => 'admin-api-provider-platform',
+        'label' => 'API Provider Coverage',
+        'url' => '/admin/provider-platform',
+        'icon' => 'network',
+        'permission' => 'provider_platform.view',
+        'section' => 'addons',
+        'order' => 170,
+    ]],
+    'settings' => [['key' => 'enabled', 'type' => 'boolean', 'default' => false]],
+    'migrations' => [],
+    'web_route_files' => ['addons/api.provider-platform/routes/admin.php'],
+    'api_route_files' => [],
+    'routes' => ['/admin/provider-platform'],
+    'api_routes' => [],
+    'provider_integrations' => ['Core ApiProvider registry', 'Core ProviderServiceMapping', 'Core ProviderManager'],
+    'provider_capabilities' => [],
+    'capabilities' => ['read_only_outbound_provider_coverage', 'service_by_service_verification_visibility', 'provider_gap_reporting'],
+];
