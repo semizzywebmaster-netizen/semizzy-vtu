@@ -256,7 +256,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
 
  public function test_ncce_official_directory_adapter_rejects_incomplete_or_changed_source_layout():void {
   $adapter=app(NcceAccreditedCollegesAdapter::class);
-  $this->expectException(\\DomainException::class);
+  $this->expectException(\DomainException::class);
   $adapter->parse('<html><body><table><tr><th>Name</th><th>Data</th></tr><tr><td>Only a partial table</td><td>missing contract</td></tr></table></body></html>');
  }
 
