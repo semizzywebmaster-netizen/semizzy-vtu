@@ -103,6 +103,58 @@ final class InterswitchPaymentGatewayAdapter implements PaymentGatewayAdapter
         ]));
     }
 
+    /**
+     * Verify a Nigerian bank account using Interswitch's separate account-name
+     * validation contract. This intentionally does not use the Payouts OAuth API.
+     * Configure account_verification_url, client_id, secret_key (or client_secret),
+     * and terminal_id with the credentials issued for this product.
+     */
+    public function verifyAccount(PaymentGatewayProvider $provider, string $bankCode, string $accountNumber): array
+    {
+        $credentials = $provider->credentials;
+        $clientId = trim((string) ($credentials['client_id'] ?? ''));
+        $secret = (string) ($credentials['secret_key'] ?? $credentials['client_secret'] ?? '');
+        $terminalId = trim((string) ($credentials['terminal_id'] ?? ''));
+        if ($clientId === '' || $secret === '' || $terminalId === '') {
+            throw new RuntimeException('Interswitch account verification requires client_id, secret_key, and terminal_id.');
+        }
+        if (!preg_match('/^\\d{10}$/', $accountNumber) || trim($bankCode) === '') {
+            throw new RuntimeException('Interswitch account verification requires a bank code and a 10-digit account number.');
+        }
+
+        $url = rtrim((string) ($credentials['account_verification_url'] ?? 'https://sandbox.interswitchng.com/api/v1/nameenquiry/banks/accounts/names'), '/');
+        $query = ['bankCode' => trim($bankCode), 'accountId' => $accountNumber];
+        $endpoint = $url.'?'.http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        $timestamp = (string) time();
+        $nonce = bin2hex(random_bytes(16));
+        $signatureBase = 'GET&'.urlencode($endpoint).'&'.$timestamp.'&'.$nonce.'&'.$clientId.'&'.$secret;
+        $signature = base64_encode(sha1($signatureBase, true));
+
+        $response = Http::acceptJson()->withHeaders([
+            'Authorization' => 'InterswitchAuth '.base64_encode($clientId),
+            'Signature' => $signature,
+            'Timestamp' => $timestamp,
+            'Nonce' => $nonce,
+            'SignatureMethod' => 'SHA1',
+            'TerminalID' => $terminalId,
+        ])->timeout(20)->get($endpoint);
+
+        $body = $response->json();
+        if (!$response->successful() || !is_array($body)) {
+            throw new RuntimeException('Interswitch account verification failed; do not assume the beneficiary is valid.');
+        }
+        $code = (string) ($body['responseCode'] ?? $body['ResponseCode'] ?? $body['code'] ?? '');
+        if ($code !== '' && $code !== '00') {
+            throw new RuntimeException('Interswitch did not verify the bank account.');
+        }
+        $name = trim((string) ($body['accountName'] ?? $body['AccountName'] ?? $body['account_name'] ?? ''));
+        if ($name === '') {
+            throw new RuntimeException('Interswitch account verification returned no account name; keep the beneficiary unverified.');
+        }
+
+        return $body + ['account_name' => $name, 'account_number' => $accountNumber, 'bank_code' => trim($bankCode), 'verified' => true];
+    }
+
     public function singlePayout(PaymentGatewayProvider $provider, array $payload): array
     {
         [$credentials] = $this->credentials($provider);
