@@ -1,9 +1,8 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 
 type Wallet = { availableMinor: string; currency: string; status: string } | null;
 type FundingMethod = { key: string; name: string; description: string; available: boolean };
 type Props = { wallet: Wallet; methods: FundingMethod[]; unreadCount?: number };
-type SharedProps = { navigation?: { unreadNotifications?: number } };
 
 const money = (minor: string, currency = 'NGN') => {
   try {
@@ -15,8 +14,6 @@ const money = (minor: string, currency = 'NGN') => {
 };
 
 export default function WalletFunding({ wallet, methods, unreadCount }: Props) {
-  const shared = usePage<SharedProps>().props;
-  const badge = unreadCount ?? shared.navigation?.unreadNotifications ?? 0;
 
   return <main className="min-h-screen bg-slate-50 pb-24 text-slate-900">
     <Head title="Add Money" />
