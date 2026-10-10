@@ -57,6 +57,22 @@ class PaystackPayoutAdapterTest extends TestCase
         (new PaystackPaymentGatewayAdapter())->singlePayout($this->provider(), ['bank_code' => '044', 'account_number' => '0123456789', 'amount_minor' => 0, 'reference' => 'short']);
     }
 
+
+    public function test_bulk_payout_blocks_if_any_reference_verification_is_ambiguous(): void
+    {
+        Http::fake(['https://paystack.test/transfer/verify/semizzy_bulk_000001' => Http::response(['message' => 'temporarily unavailable'], 503)]);
+        try {
+            (new PaystackPaymentGatewayAdapter())->bulkPayout($this->provider(), ['transfers' => [
+                ['amount_minor' => 1000, 'recipient_code' => 'RCP_a', 'reference' => 'semizzy_bulk_000001'],
+            ]]);
+            $this->fail('An uncertain reference must block bulk payout submission.');
+        } catch (\\Semizzy\\Addons\\Payments\\Exceptions\\AmbiguousPaymentGatewayException $exception) {
+            $this->assertStringContainsString('uncertain state', $exception->getMessage());
+        }
+        Http::assertSentCount(1);
+        Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/transfer/bulk'));
+    }
+
     public function test_verify_payout_uses_reference_verification_endpoint(): void
     {
         Http::fake(['https://paystack.test/transfer/verify/semizzy_payout_000001' => Http::response(['status' => true, 'data' => ['reference' => 'semizzy_payout_000001', 'status' => 'success']], 200)]);

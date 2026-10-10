@@ -115,7 +115,9 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
         if ($existingResponse->status() === 408 || $existingResponse->status() === 429 || $existingResponse->status() >= 500 || $existingResponse->successful()) {
             throw new AmbiguousPaymentGatewayException('Paystack could not establish whether this transfer reference already exists; failover is suppressed.');
         }
-        if (!in_array($existingResponse->status(), [400, 404], true)) {
+        // Only a documented not-found response proves that this reference has not
+        // been used. Other 4xx responses may indicate auth/configuration problems.
+        if ($existingResponse->status() !== 404) {
             throw new RuntimeException('Paystack transfer-reference verification failed before payout initiation.');
         }
 
@@ -202,6 +204,23 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
         }
         if (count(array_unique(array_column($normalized, 'reference'))) !== count($normalized)) {
             throw new RuntimeException('Bulk transfer references must be unique within the batch.');
+        }
+
+        // Preflight every persisted reference. Existing or uncertain references block
+        // the entire batch so a retry cannot pay the same recipient twice.
+        $base = rtrim($provider->base_url ?: 'https://api.paystack.co', '/');
+        foreach ($normalized as $transfer) {
+            try {
+                $existingResponse = $this->request($provider)->get($base . '/transfer/verify/' . rawurlencode($transfer['reference']));
+            } catch (Throwable $exception) {
+                throw new AmbiguousPaymentGatewayException('Paystack could not verify every bulk reference; no batch was submitted.', 0, $exception);
+            }
+            if ($existingResponse->status() !== 404) {
+                if ($existingResponse->successful() || $existingResponse->status() === 408 || $existingResponse->status() === 429 || $existingResponse->status() >= 500) {
+                    throw new AmbiguousPaymentGatewayException('At least one Paystack bulk reference already exists or has an uncertain state; no batch was submitted.');
+                }
+                throw new RuntimeException('Paystack could not verify a bulk transfer reference; no batch was submitted.');
+            }
         }
 
         try {
