@@ -120,6 +120,12 @@ Official documentation pages explicitly describe these services for:
 4. [Infobip 2FA / SMS docs](https://www.infobip.com/docs/sms) — official docs distinguish SMS from the dedicated 2FA API; use the 2FA product for managed verification.
 5. [BulkSMSNigeria API docs](https://www.bulksmsnigeria.com/api-documentation) — documents an OTP gateway for message delivery. Count this only as OTP-message delivery unless SEMIZZY ONE manages the verification lifecycle itself.
 
+## Registry changes made after documentation review
+
+The Core preset registry now includes disabled/unverified candidate records for Kora, Interswitch, Dojah, Prembly, Sendchamp, BulkSMSNigeria, Twilio Verify and Infobip, plus a Monnify KYC service mapping. These records intentionally have empty operation capabilities and endpoint maps. New records are created disabled and paused; their mapping rows are also disabled by default. This makes the providers discoverable for admin review without pretending that the provider-specific adapters are complete.
+
+The existing telecom and education candidates are retained rather than duplicated. Documentation links and service mappings are discovery evidence only. Admins must configure the provider's real base URL/authentication and reviewed service contract before enabling any operation. Infobip in particular may require a tenant-specific base URL. BulkSMSNigeria is a documented SMS delivery candidate; it must not be treated as managed OTP verification unless SEMIZZY ONE owns the OTP generation, expiry, attempt limits and code validation lifecycle.
+
 ## Documentation review result and safe next steps
 
 - The links above resolve to official provider-controlled documentation or API reference pages, and the listed service families are supported by those pages.
