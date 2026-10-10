@@ -1,10 +1,10 @@
 <?php
 
-namespace Semizzy\\Addons\\Education\\Services;
+namespace Semizzy\Addons\Education\Services;
 
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Str;
-use Semizzy\\Addons\\Education\\Models\\EducationInstitution;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Semizzy\Addons\Education\Models\EducationInstitution;
 
 final class EducationInstitutionImportService
 {
