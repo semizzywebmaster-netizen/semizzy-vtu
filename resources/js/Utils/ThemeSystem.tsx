@@ -16,6 +16,10 @@ const commonLight = { background: '#F7F9FC', surface: '#FFFFFF', text: '#142235'
 const commonDark = { background: '#0B1020', surface: '#121A2A', text: '#F8FAFC', muted: '#94A3B8', border: '#263247', success: '#4ADE80', warning: '#FBBF24', danger: '#F87171' };
 
 export const THEMES: ThemeDefinition[] = [
+  { ...p('#2563EB','#101B3D','#14B8A6',
+    {...commonLight,background:'#F4F7FC',surface:'#FFFFFF',text:'#101B3D',muted:'#64748B',border:'#DFE7F2'},
+    {...commonDark,background:'#071126',surface:'#101D35',text:'#F8FAFC',muted:'#A8B8D0',border:'#243653'}),
+    key:'semizzy-signature', name:'SEMIZZY Signature', description:'Shared Midnight Navy, Electric Blue and Teal brand for Fresh Fintech and Enterprise Control' },
   { ...p('#10B981','#047857','#34D399',commonLight,{...commonDark,background:'#071A16',surface:'#0D2720'}), key:'opay-inspired', name:'Emerald Fintech', description:'Fresh Nigerian fintech energy with a polished, trustworthy green identity' },
   { ...p('#7C3AED','#5B21B6','#A78BFA',commonLight,{...commonDark,background:'#160C2B',surface:'#21133D'}), key:'palmpay-inspired', name:'Royal Purple', description:'Bold consumer-fintech personality with premium purple accents' },
   { ...p('#1D4ED8','#1E3A8A','#38BDF8',commonLight,{...commonDark,background:'#07142B',surface:'#10213D'}), key:'modern-corporate', name:'Ocean Corporate', description:'Professional blue enterprise theme built for trust and clarity' },
@@ -72,7 +76,7 @@ export function applyTheme(themeKey: string, skin: Skin, custom?: Record<Skin, P
   root.style.colorScheme = skin;
 }
 
-export function ThemeControls({ defaultSkin = 'light', themeKey = 'modern-corporate', custom }: { defaultSkin?: Skin; themeKey?: string; custom?: Record<Skin, Partial<Palette>> }) {
+export function ThemeControls({ defaultSkin = 'light', themeKey = 'semizzy-signature', custom }: { defaultSkin?: Skin; themeKey?: string; custom?: Record<Skin, Partial<Palette>> }) {
   const [skin,setSkin] = useState<Skin>(() => {
     if (typeof window === 'undefined') return defaultSkin;
     const saved=window.localStorage.getItem('semizzy.skin'); return saved === 'dark' || saved === 'light' ? saved : defaultSkin;
