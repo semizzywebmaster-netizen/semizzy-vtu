@@ -94,7 +94,7 @@ class SavingsController extends Controller
             $operationKey = 'savings:contribution:'.$reference.':'.$idempotency;
             $existing = SavingsMovement::where('operation_key', $operationKey)->first();
             if ($existing) {
-                $this->assertIdempotentReplay($existing, $account, $request->user()->id, 'contribution', $amount);
+                $this->assertIdempotentReplay($existing, $account, $request->user()->id, 'contribution', (string) $amountInt);
                 return response()->json(['account' => $account->fresh(), 'movement' => $existing, 'idempotent' => true]);
             }
 
