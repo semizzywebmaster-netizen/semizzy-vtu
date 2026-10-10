@@ -1,10 +1,10 @@
 <?php
 
-namespace Semizzy\\Addons\\Education\\Services;
+namespace Semizzy\Addons\Education\Services;
 
 use DomainException;
-use Illuminate\\Support\\Facades\\DB;
-use Semizzy\\Addons\\Education\\Models\\EducationInstitutionSyncRun;
+use Illuminate\Support\Facades\DB;
+use Semizzy\Addons\Education\Models\EducationInstitutionSyncRun;
 
 final class EducationInstitutionSyncRunService
 {
@@ -79,9 +79,9 @@ final class EducationInstitutionSyncRunService
 
                 return $locked;
             }
-            if ($locked->expected_total !== null && $locked->records_seen < $locked->expected_total) {
+            if ($locked->expected_total !== null && $locked->records_seen !== $locked->expected_total) {
                 $locked->status = 'incomplete';
-                $locked->error_summary = 'Observed record count was below the source-reported total; pagination may be incomplete.';
+                $locked->error_summary = 'Observed record count did not match the source-reported total; pagination may be incomplete.';
                 $locked->finished_at = now();
                 $locked->save();
 
@@ -103,8 +103,8 @@ final class EducationInstitutionSyncRunService
         if ($safeSummary === '') {
             $safeSummary = 'Synchronization failed; inspect protected server logs for details.';
         }
-        $safeSummary = preg_replace('~https?://\\S+~i', '[redacted-url]', $safeSummary) ?? 'Synchronization failed.';
-        $safeSummary = preg_replace('/(?:token|secret|password|api[_-]?key)\\s*[:=]\\s*[^\\s,;]+/i', '[redacted-credential]', $safeSummary) ?? 'Synchronization failed.';
+        $safeSummary = preg_replace('~https?://\S+~i', '[redacted-url]', $safeSummary) ?? 'Synchronization failed.';
+        $safeSummary = preg_replace('/(?:token|secret|password|api[_-]?key)\s*[:=]\s*[^\s,;]+/i', '[redacted-credential]', $safeSummary) ?? 'Synchronization failed.';
         $safeSummary = mb_substr($safeSummary, 0, 500);
 
         return DB::transaction(function () use ($run, $safeSummary): EducationInstitutionSyncRun {
