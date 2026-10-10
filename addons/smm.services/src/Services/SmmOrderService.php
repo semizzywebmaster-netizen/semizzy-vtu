@@ -55,15 +55,24 @@ final class SmmOrderService
 
  public function create(int $userId,int $serviceId,int $quantity,string $target,string $idempotencyKey): SmmOrder
  {
+  $idempotencyKey=trim($idempotencyKey);
+  if($idempotencyKey==='') throw new RuntimeException('A valid idempotency key is required.');
   $order=DB::transaction(function() use($userId,$serviceId,$quantity,$target,$idempotencyKey){
    $existing=SmmOrder::where('user_id',$userId)->where('idempotency_key',$idempotencyKey)->first();
-   if($existing) return $existing;
+   if($existing){
+    if((int)$existing->service_id!==$serviceId || (int)$existing->quantity!==$quantity || (string)$existing->target!==trim($target)){
+     throw new RuntimeException('Idempotency key has already been used for a different SMM order.');
+    }
+    return $existing;
+   }
    $service=SmmService::whereKey($serviceId)->where('active',true)->lockForUpdate()->firstOrFail();
    if($quantity<$service->min_quantity||$quantity>$service->max_quantity) throw new RuntimeException('Quantity is outside the service limits.');
    if($service->mode!=='provider_api') throw new RuntimeException('This SMM service requires an admin/manual workflow.');
    if(!preg_match('/^\d+$/',(string)$service->unit_price_minor)) throw new RuntimeException('Invalid service price.');
    $amount=$this->multiply((string)$service->unit_price_minor,(string)$quantity);
-   $order=SmmOrder::create(['user_id'=>$userId,'service_id'=>$service->id,'reference'=>'SMM-'.str()->upper(Str::random(20)),'idempotency_key'=>$idempotencyKey,'quantity'=>$quantity,'amount_minor'=>$amount,'currency'=>$service->currency,'status'=>'pending','target'=>trim($target)]);
+   $wallet=$this->wallets->walletForOrderUser($userId,(string)$service->currency);
+   $order=SmmOrder::create(['user_id'=>$userId,'wallet_account_id'=>$wallet->id,'service_id'=>$service->id,'reference'=>'SMM-'.str()->upper(Str::random(20)),'idempotency_key'=>$idempotencyKey,'quantity'=>$quantity,'amount_minor'=>$amount,'currency'=>$service->currency,'status'=>'pending','target'=>trim($target)]);
+
    $this->wallets->reserve($order);
    return $order;
   });
@@ -75,15 +84,20 @@ final class SmmOrderService
    $final=in_array($status,['SUCCESS','SUCCESSFUL','ACCEPTED','COMPLETED'],true);
    $ambiguous=in_array($status,['UNKNOWN','PENDING','PROCESSING','IN_PROGRESS'],true)||(!$result->accepted&&!$final);
    $order->provider_reference=$result->providerReference;
+   $order->provider_status=$result->status;
    $order->status=$ambiguous?'pending':strtolower($status);
-   $order->metadata=['provider_id'=>$result->providerId,'message'=>$result->message];
+   $order->processed_at=now();
+   $order->metadata=['provider_id'=>$result->providerId,'message'=>$result->message,'financial_state'=>$ambiguous?'held':'settled'];
    if($final){$order->completed_at=now();$this->wallets->settle($order,true);} elseif(!$ambiguous){$this->wallets->settle($order,false);}
    $order->save();
    return $order->fresh();
   } catch(\Throwable $e) {
    $order->refresh();
-   try{$this->wallets->settle($order,false);}catch(\Throwable $settlementError){$order->metadata=['settlement_error'=>$settlementError->getMessage()];$order->save();throw $settlementError;}
-   $order->status='failed'; $order->metadata=['error'=>$e->getMessage()]; $order->save(); throw $e;
+   $order->status='pending';
+   $order->failure_message='Provider outcome is uncertain; wallet funds remain held until requery confirms the final state.';
+   $order->metadata=array_merge((array)$order->metadata,['provider_exception'=>$e->getMessage(),'financial_state'=>'held','requery_required'=>true]);
+   $order->save();
+   return $order->fresh();
   }
  }
  private function multiply(string $a,string $b):string {
