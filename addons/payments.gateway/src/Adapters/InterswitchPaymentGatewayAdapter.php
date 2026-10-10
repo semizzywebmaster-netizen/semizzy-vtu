@@ -144,7 +144,7 @@ final class InterswitchPaymentGatewayAdapter implements PaymentGatewayAdapter, B
             throw new RuntimeException('Interswitch account verification failed; do not assume the beneficiary is valid.');
         }
         $code = (string) ($body['responseCode'] ?? $body['ResponseCode'] ?? $body['code'] ?? '');
-        if ($code !== '' && $code !== '00') {
+        if ($code !== '00') {
             throw new RuntimeException('Interswitch did not verify the bank account.');
         }
         $name = trim((string) ($body['accountName'] ?? $body['AccountName'] ?? $body['account_name'] ?? ''));
