@@ -1,11 +1,11 @@
 <?php
 
-namespace Semizzy\\Addons\\Payments\\Adapters;
+namespace Semizzy\Addons\Payments\Adapters;
 
-use Illuminate\\Support\\Facades\\Http;
+use Illuminate\Support\Facades\Http;
 use RuntimeException;
-use Semizzy\\Addons\\Payments\\Contracts\\PaymentGatewayAdapter;
-use Semizzy\\Addons\\Payments\\Models\\PaymentGatewayProvider;
+use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
+use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
 
 final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
 {
@@ -54,7 +54,7 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
 
     public function nameEnquiry(PaymentGatewayProvider $provider, string $bankCode, string $accountNumber): array
     {
-        if (!preg_match('/^\\d{10}$/', $accountNumber)) {
+        if (!preg_match('/^\d{10}$/', $accountNumber)) {
             throw new RuntimeException('Paystack Nigerian account number must contain exactly 10 digits.');
         }
 
@@ -74,7 +74,7 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
         $accountNumber = (string) ($payload['account_number'] ?? '');
         $bankCode = (string) ($payload['bank_code'] ?? '');
         $name = trim((string) ($payload['account_name'] ?? $payload['name'] ?? ''));
-        if (!preg_match('/^\\d{10}$/', $accountNumber) || $bankCode === '' || $name === '') {
+        if (!preg_match('/^\d{10}$/', $accountNumber) || $bankCode === '' || $name === '') {
             throw new RuntimeException('Paystack payout requires a 10-digit account number, bank code, and beneficiary name or a verified recipient_code.');
         }
 
