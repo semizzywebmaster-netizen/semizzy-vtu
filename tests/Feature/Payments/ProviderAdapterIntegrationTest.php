@@ -185,6 +185,50 @@ class ProviderAdapterIntegrationTest extends TestCase
         app(PaystackPaymentGatewayAdapter::class)->verifyPayout($provider, 'semizzy-test-ref-003');
     }
 
+    public function test_interswitch_account_verification_uses_the_separate_signed_name_enquiry_contract(): void
+    {
+        $provider = $this->provider('interswitch');
+        $credentials = $provider->credentials;
+        $credentials['secret_key'] = 'test-secret-key';
+        $credentials['terminal_id'] = 'SEMIZZY-TEST-001';
+        $credentials['account_verification_url'] = 'https://sandbox.interswitchng.com/api/v1/nameenquiry/banks/accounts/names';
+        $provider->credentials = $credentials;
+        $provider->save();
+
+        Http::fake(['https://sandbox.interswitchng.com/api/v1/nameenquiry/banks/accounts/names*' => Http::response([
+            'responseCode' => '00', 'accountName' => 'TEST CUSTOMER',
+        ], 200)]);
+
+        $result = app(InterswitchPaymentGatewayAdapter::class)->verifyAccount($provider, '044', '0123456789');
+
+        $this->assertSame('TEST CUSTOMER', $result['account_name']);
+        $this->assertTrue($result['verified']);
+        Http::assertSent(function ($request): bool {
+            return str_contains($request->url(), '/nameenquiry/banks/accounts/names')
+                && str_contains($request->url(), 'bankCode=044')
+                && str_contains($request->url(), 'accountId=0123456789')
+                && str_starts_with((string) $request->header('Authorization')[0], 'InterswitchAuth ')
+                && $request->hasHeader('Signature')
+                && $request->hasHeader('Timestamp')
+                && $request->hasHeader('Nonce')
+                && $request->hasHeader('TerminalID');
+        });
+    }
+
+    public function test_interswitch_account_verification_fails_closed_when_no_account_name_is_returned(): void
+    {
+        $provider = $this->provider('interswitch');
+        $credentials = $provider->credentials;
+        $credentials['secret_key'] = 'test-secret-key';
+        $credentials['terminal_id'] = 'SEMIZZY-TEST-001';
+        $provider->credentials = $credentials;
+        $provider->save();
+        Http::fake(['https://sandbox.interswitchng.com/api/v1/nameenquiry/banks/accounts/names*' => Http::response(['responseCode' => '00'], 200)]);
+
+        $this->expectException(\\RuntimeException::class);
+        app(InterswitchPaymentGatewayAdapter::class)->verifyAccount($provider, '044', '0123456789');
+    }
+
     private function provider(string $driver): PaymentGatewayProvider
     {
         $credentials = $driver === 'paystack'
