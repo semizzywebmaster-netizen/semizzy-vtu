@@ -1,10 +1,11 @@
 import { Link, usePage } from '@inertiajs/react';
-import { PropsWithChildren, useState } from 'react';
+import { PropsWithChildren, useEffect, useState } from 'react';
 
 type MenuItem = {
   id: string; label: string; url: string; icon?: string; section: string;
   addon?: string; addonName?: string;
 };
+type SearchResult = { type: string; title: string; description: string; url: string };
 type PageProps = {
   auth?: { user?: { name?: string; role?: string } | null };
   navigation?: { admin?: { items?: MenuItem[] } };
@@ -25,6 +26,43 @@ function isActive(url: string): boolean {
 export default function AdminLayout({ children }: PropsWithChildren) {
   const page = usePage<PageProps>();
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const query = search.trim();
+    if (query.length < 2) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+    setSearchLoading(true);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      fetch('/admin/global-search?q=' + encodeURIComponent(query), {
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+        signal: controller.signal,
+      }).then((response) => {
+        if (!response.ok) throw new Error('Search unavailable');
+        return response.json();
+      }).then((data: { results?: SearchResult[] }) => {
+        setSearchResults(Array.isArray(data.results) ? data.results : []);
+        setSearchLoading(false);
+      }).catch((error: unknown) => {
+        if (error instanceof Error && error.name !== 'AbortError') {
+          setSearchResults([]);
+          setSearchLoading(false);
+        }
+      });
+    }, 250);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [search]);
   const user = page.props.auth?.user;
   const items = page.props.navigation?.admin?.items ?? [];
   const siteName = page.props.platform?.platform_name || 'SEMIZZY ONE';
@@ -97,9 +135,27 @@ export default function AdminLayout({ children }: PropsWithChildren) {
       )}
 
       <div className="lg:pl-72">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-[color:var(--so-surface)]/95 px-4 py-3 backdrop-blur lg:hidden">
-          <button aria-label="Open admin menu" className="rounded-xl border border-slate-200 px-3 py-2 text-lg" onClick={() => setOpen(true)}>☰</button>
-          <div className="min-w-0"><p className="truncate text-sm font-extrabold">{siteName} Admin</p><p className="text-[11px] text-slate-500">{user?.role ?? ''}</p></div>
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-[color:var(--so-surface)]/95 px-4 py-3 backdrop-blur">
+          <button aria-label="Open admin menu" className="rounded-xl border border-slate-200 px-3 py-2 text-lg lg:hidden" onClick={() => setOpen(true)}>☰</button>
+          <div className="hidden min-w-0 shrink-0 lg:block"><p className="truncate text-sm font-extrabold">{siteName} Admin</p><p className="text-[11px] text-slate-500">{user?.role ?? ''}</p></div>
+          <div className="relative min-w-0 flex-1">
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 focus-within:border-indigo-400 focus-within:bg-white">
+              <span aria-hidden="true" className="text-slate-400">⌕</span>
+              <input value={search} onChange={(event) => { setSearch(event.target.value); setSearchOpen(true); }} onFocus={() => setSearchOpen(true)} onKeyDown={(event) => { if (event.key === 'Escape') setSearchOpen(false); }} aria-label="Search users, providers, services and support tickets" placeholder="Search users, providers, products, tickets…" className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-slate-400" />
+              {search !== '' && <button type="button" onClick={() => { setSearch(''); setSearchResults([]); setSearchOpen(false); }} aria-label="Clear search" className="text-slate-400 hover:text-slate-700">×</button>}
+            </label>
+            {searchOpen && search.trim().length >= 2 && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[70vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+                {searchLoading ? <p className="px-3 py-4 text-sm text-slate-500">Searching…</p> : searchResults.length > 0 ? searchResults.map((result, index) => (
+                  <Link key={result.type + result.url + index} href={result.url} onClick={() => { setSearchOpen(false); setSearch(''); setOpen(false); }} className="block rounded-xl px-3 py-2.5 hover:bg-slate-50">
+                    <span className="flex items-center justify-between gap-2"><span className="truncate text-sm font-semibold text-slate-900">{result.title}</span><span className="shrink-0 rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-500">{result.type}</span></span>
+                    <span className="mt-1 block truncate text-xs text-slate-500">{result.description}</span>
+                  </Link>
+                )) : <p className="px-3 py-4 text-sm text-slate-500">No matching records found.</p>}
+                <button type="button" onClick={() => setSearchOpen(false)} className="w-full border-t border-slate-100 px-3 py-2 text-left text-xs font-semibold text-indigo-700">Close results</button>
+              </div>
+            )}
+          </div>
         </header>
         <div>{children}</div>
       </div>
