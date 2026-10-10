@@ -33,7 +33,7 @@ jobs:
         run: npm run build
       - name: Commit refreshed public/build assets
         run: |
-          git add public/build
+          git add -f public/build
           if git diff --cached --quiet; then
             echo "public/build is already up to date."
             exit 0
