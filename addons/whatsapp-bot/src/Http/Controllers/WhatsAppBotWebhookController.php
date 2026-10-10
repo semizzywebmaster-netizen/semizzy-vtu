@@ -45,7 +45,7 @@ class WhatsAppBotWebhookController
                 $verifiedChallenge = $webhook->verify($provider, $mode, $token, $challenge);
 
                 return response($verifiedChallenge, 200)->header('Content-Type', 'text/plain');
-            } catch (\\Throwable $e) {
+            } catch (\Throwable $e) {
                 // Try the next configured provider token; do not expose credential details.
             }
         }
