@@ -181,7 +181,7 @@ class ProviderAdapterIntegrationTest extends TestCase
             'status' => true, 'data' => ['reference' => 'some-other-reference', 'status' => 'success'],
         ], 200)]);
 
-        $this->expectException(\\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         app(PaystackPaymentGatewayAdapter::class)->verifyPayout($provider, 'semizzy-test-ref-003');
     }
 
@@ -225,7 +225,7 @@ class ProviderAdapterIntegrationTest extends TestCase
         $provider->save();
         Http::fake(['https://sandbox.interswitchng.com/api/v1/nameenquiry/banks/accounts/names*' => Http::response(['accountName' => 'TEST CUSTOMER'], 200)]);
 
-        $this->expectException(\\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         app(InterswitchPaymentGatewayAdapter::class)->verifyAccount($provider, '044', '0123456789');
     }
 
