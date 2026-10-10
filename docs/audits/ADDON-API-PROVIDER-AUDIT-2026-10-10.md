@@ -116,7 +116,7 @@ For every provider × capability, record evidence for all applicable items:
 
 ## Recommended implementation order
 
-1. P0 — Money movement: add Fiat payout-status/requery contract and provider coverage; ensure Interswitch unsupported methods stay disabled; inspect latest CI and resolve the known P2P MySQL concurrency failure before claiming release readiness.
+1. P0 — Money movement: add Fiat payout-status/requery contract and provider coverage; ensure Interswitch unsupported methods stay disabled; inspect CI and resolve the current MySQL failure in PaymentRefundSettlementServiceTest::test_confirmed_provider_refund_with_spent_wallet_requires_manual_reconciliation (SQLSTATE 1305: SAVEPOINT trans2 does not exist) before claiming release readiness. A separate earlier Core CI run also failed a P2P MySQL concurrency test.
 2. P0 — Crypto: provider-specific webhook verification, ambiguous payment-create reconciliation, settlement replay tests and dedicated tests for NOWPayments/Binance Pay/CoinPayments.
 3. P1 — Banking: implement/test provider-specific account verification, transfer, status/requery and webhook contracts; do not show live transfers when only internal state methods exist.
 4. P1 — Communication/SMTP: provider-specific delivery semantics and ambiguity-safe retry; align WhatsApp Bot with Communication transport.
@@ -126,4 +126,4 @@ For every provider × capability, record evidence for all applicable items:
 
 ## Limitations
 
-This is a source-level audit, not certification of live connectivity. No external credentials were used and no real payments, payouts, identity checks, bookings, messages or crypto transfers were submitted. Turn findings into regression tests and fix confirmed gaps one by one.
+This is a source-level audit, not certification of live connectivity. No external credentials were used and no real payments, payouts, identity checks, bookings, messages or crypto transfers were submitted. At audit completion, the new CI run for the audit commit was still in progress; prior Core CI runs failed the MySQL financial job while frontend and PHP jobs passed. The latest inspected financial failure is a SAVEPOINT trans2 does not exist error in PaymentRefundSettlementServiceTest; a separate earlier run failed a P2P MySQL concurrency test. Turn findings into regression tests and fix confirmed gaps one by one.
