@@ -74,9 +74,12 @@ final class P2pTransferService
 
                 $recipient = $matches->first();
 
+                // Do not lock a missing idempotency row: InnoDB may take a gap lock,
+                // blocking concurrent requests before they reach the wallet locks. The unique
+                // constraint arbitrates races; the losing transaction resolves to the winner below.
                 $existing = P2pTransfer::where('sender_id', $senderId)
                     ->where('idempotency_key', $idempotencyKey)
-                    ->lockForUpdate()->first();
+                    ->first();
 
                 if ($existing) {
                     if ((string) $existing->amount_minor !== $amountMinor || (int) $existing->recipient_id !== (int) $recipient->id) {
@@ -91,9 +94,19 @@ final class P2pTransferService
                 $users = [$senderId, $recipient->id];
                 sort($users, SORT_NUMERIC);
 
-                $wallets = WalletAccount::whereIn('user_id', $users)
-                    ->where('currency', 'NGN')
-                    ->lockForUpdate()->get()->keyBy('user_id');
+                // Lock wallet rows explicitly in ascending user ID order. A WHERE IN query
+                // does not guarantee row-lock acquisition order on MySQL.
+                $wallets = collect();
+                foreach ($users as $userId) {
+                    $wallet = WalletAccount::query()
+                        ->where('user_id', $userId)
+                        ->where('currency', 'NGN')
+                        ->lockForUpdate()
+                        ->first();
+                    if ($wallet) {
+                        $wallets->put((int) $userId, $wallet);
+                    }
+                }
 
                 $sender = $wallets->get($senderId);
                 $receiver = $wallets->get($recipient->id);
