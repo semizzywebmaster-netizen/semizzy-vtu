@@ -1,13 +1,13 @@
 <?php
 
-namespace Tests\\Unit;
+namespace Tests\Unit;
 
-use App\\Models\\ApiProvider;
-use App\\Services\\Providers\\ProviderCapabilityRegistry;
-use App\\Services\\Providers\\ProviderUrlGuard;
-use App\\Services\\Providers\\RestJsonProviderAdapter;
+use App\Models\ApiProvider;
+use App\Services\Providers\ProviderCapabilityRegistry;
+use App\Services\Providers\ProviderUrlGuard;
+use App\Services\Providers\RestJsonProviderAdapter;
 use InvalidArgumentException;
-use PHPUnit\\Framework\\TestCase;
+use PHPUnit\Framework\TestCase;
 
 class ProviderCapabilityRegistryTest extends TestCase
 {
@@ -76,7 +76,7 @@ class ProviderCapabilityRegistryTest extends TestCase
     public function test_empty_transaction_status_response_remains_unknown(): void
     {
         $adapter = new RestJsonProviderAdapter(new ProviderUrlGuard());
-        $normalizer = new \\ReflectionMethod(RestJsonProviderAdapter::class, 'normalizeStatus');
+        $normalizer = new \ReflectionMethod(RestJsonProviderAdapter::class, 'normalizeStatus');
         $normalizer->setAccessible(true);
 
         $this->assertSame('UNKNOWN', $normalizer->invoke($adapter, ['data' => []], 'transaction_status'));
@@ -87,7 +87,7 @@ class ProviderCapabilityRegistryTest extends TestCase
     public function test_accepted_provider_order_stays_pending_until_requery_confirms_completion(): void
     {
         $adapter = new RestJsonProviderAdapter(new ProviderUrlGuard());
-        $normalizer = new \\ReflectionMethod(RestJsonProviderAdapter::class, 'normalizeStatus');
+        $normalizer = new \ReflectionMethod(RestJsonProviderAdapter::class, 'normalizeStatus');
         $normalizer->setAccessible(true);
 
         $this->assertSame('PENDING', $normalizer->invoke($adapter, ['status' => 'accepted'], 'stock_order_create'));
