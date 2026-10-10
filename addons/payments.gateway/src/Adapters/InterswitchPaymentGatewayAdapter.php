@@ -1,12 +1,12 @@
 <?php
 
-namespace Semizzy\\Addons\\Payments\\Adapters;
+namespace Semizzy\Addons\Payments\Adapters;
 
-use Illuminate\\Support\\Facades\\Cache;
-use Illuminate\\Support\\Facades\\Http;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use RuntimeException;
-use Semizzy\\Addons\\Payments\\Contracts\\PaymentGatewayAdapter;
-use Semizzy\\Addons\\Payments\\Models\\PaymentGatewayProvider;
+use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
+use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
 
 /**
  * Interswitch Payouts API adapter.
@@ -88,7 +88,7 @@ final class InterswitchPaymentGatewayAdapter implements PaymentGatewayAdapter
 
     public function nameEnquiry(PaymentGatewayProvider $provider, string $bankCode, string $accountNumber): array
     {
-        if (!preg_match('/^\\d{10}$/', $accountNumber)) {
+        if (!preg_match('/^\d{10}$/', $accountNumber)) {
             throw new RuntimeException('Interswitch Nigerian account number must contain exactly 10 digits.');
         }
         $reference = 'SEMIZZY-LOOKUP-'.strtoupper(bin2hex(random_bytes(8)));
@@ -115,7 +115,7 @@ final class InterswitchPaymentGatewayAdapter implements PaymentGatewayAdapter
         $bank = (string) ($payload['bank_code'] ?? '');
         $walletId = (string) ($payload['wallet_id'] ?? $credentials['wallet_id'] ?? '');
         $pin = (string) ($payload['wallet_pin'] ?? $credentials['wallet_pin'] ?? '');
-        if ($reference === '' || !preg_match('/^\\d{10}$/', $account) || $bank === '' || $walletId === '' || $pin === '') {
+        if ($reference === '' || !preg_match('/^\d{10}$/', $account) || $bank === '' || $walletId === '' || $pin === '') {
             throw new RuntimeException('Interswitch payout requires reference, 10-digit account number, bank code, wallet ID, and wallet PIN.');
         }
 
