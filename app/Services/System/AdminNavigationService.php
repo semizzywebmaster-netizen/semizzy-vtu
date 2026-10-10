@@ -4,6 +4,7 @@ namespace App\Services\System;
 
 use App\Models\Addon;
 use App\Models\User;
+use App\Models\SystemSetting;
 use Illuminate\Support\Arr;
 
 class AdminNavigationService
@@ -14,7 +15,38 @@ class AdminNavigationService
             return [];
         }
 
-        $permissions = config('semizzy.role_permissions.' . $user->role, []);
+        $allAddons = Addon::query()->get(['identifier', 'name', 'navigation', 'permissions', 'manifest', 'status']);
+        $activeAddons = $allAddons->where('status', 'active');
+        $knownAddonPermissions = $allAddons->flatMap(fn (Addon $addon) => is_array($addon->permissions) ? $addon->permissions : [])->unique()->values()->all();
+        $activeAddonPermissions = $activeAddons->flatMap(function (Addon $addon) use ($user): array {
+            $rolePermissions = data_get($addon->manifest, 'role_permissions.' . $user->role, []);
+            return is_array($rolePermissions) ? $rolePermissions : [];
+        })->unique()->values()->all();
+
+        $permissions = array_values(array_unique(array_merge(
+            array_filter(
+                config('semizzy.role_permissions.' . $user->role, []),
+                fn (string $permission): bool => ! in_array($permission, $knownAddonPermissions, true)
+                    || in_array($permission, $activeAddonPermissions, true),
+            ),
+            $activeAddonPermissions,
+        )));
+        foreach ($user->permissionOverrides()->get(['permission', 'allowed']) as $override) {
+            if (in_array($override->permission, $knownAddonPermissions, true)
+                && ! in_array($override->permission, $activeAddonPermissions, true)) {
+                continue;
+            }
+            $permissions = array_values(array_diff($permissions, [$override->permission]));
+            if ((bool) $override->allowed) {
+                $permissions[] = $override->permission;
+            }
+        }
+
+        $featureSettings = SystemSetting::query()
+            ->whereIn('key', ['vtu_enabled', 'api_enabled'])
+            ->pluck('value', 'key')
+            ->map(fn ($value) => filter_var($value, FILTER_VALIDATE_BOOL))
+            ->all();
 
         $core = [
             ['id' => 'dashboard', 'label' => 'Dashboard', 'url' => '/dashboard', 'icon' => 'home', 'section' => 'core', 'order' => 10],
@@ -26,6 +58,8 @@ class AdminNavigationService
             ['id' => 'security', 'label' => 'Security', 'url' => '/admin/security-events', 'icon' => 'shield', 'section' => 'core', 'permission' => 'security.view', 'order' => 70],
             ['id' => 'support', 'label' => 'Support', 'url' => '/support', 'icon' => 'support', 'section' => 'core', 'roles' => ['ADMIN', 'STAFF', 'SUPPORT'], 'order' => 80],
             ['id' => 'system', 'label' => 'System Health', 'url' => '/admin/health', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.view', 'order' => 90],
+            ['id' => 'runbooks', 'label' => 'Operational Runbooks', 'url' => '/admin/runbooks', 'icon' => 'support', 'section' => 'core', 'permission' => 'system.view', 'order' => 95],
+            ['id' => 'feature-rollouts', 'label' => 'Safe Rollout Controls', 'url' => '/admin/feature-rollouts', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.manage', 'roles' => ['ADMIN'], 'order' => 96],
             ['id' => 'settings', 'label' => 'System Settings', 'url' => '/admin/settings', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.manage', 'order' => 100],
             ['id' => 'smtp', 'label' => 'Email & SMTP', 'url' => '/admin/settings#smtp', 'icon' => 'bell', 'section' => 'core', 'permission' => 'system.manage', 'order' => 105],
             ['id' => 'maintenance', 'label' => 'Backup & Maintenance', 'url' => '/admin/settings#maintenance', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.manage', 'order' => 106],
@@ -38,12 +72,9 @@ class AdminNavigationService
             ['id' => 'profile', 'label' => 'Profile', 'url' => '/profile', 'icon' => 'profile', 'section' => 'account', 'order' => 1000],
         ];
 
-        $items = array_values(array_filter($core, fn (array $item) => $this->visible($item, $user, $permissions)));
+        $items = array_values(array_filter($core, fn (array $item) => $this->visible($item, $user, $permissions, $featureSettings)));
 
-        $addons = Addon::query()
-            ->where('status', 'active')
-            ->orderBy('name')
-            ->get(['identifier', 'name', 'navigation']);
+        $addons = $activeAddons->sortBy('name');
 
         foreach ($addons as $addon) {
             foreach ($this->normalizeAddonNavigation($addon->navigation) as $index => $item) {
@@ -56,8 +87,15 @@ class AdminNavigationService
                 $item['order'] = (int) ($item['order'] ?? 100);
                 $item['addon'] = $addon->identifier;
                 $item['addonName'] = $addon->name;
+                $requiredFeature = match ($addon->identifier) {
+                    'vtu.digital-services' => 'vtu_enabled',
+                    default => null,
+                };
+                if ($requiredFeature !== null && array_key_exists($requiredFeature, $featureSettings) && ! $featureSettings[$requiredFeature]) {
+                    continue;
+                }
 
-                if ($this->visible($item, $user, $permissions)) {
+                if ($this->visible($item, $user, $permissions, $featureSettings)) {
                     $items[] = $item;
                 }
             }
@@ -74,13 +112,13 @@ class AdminNavigationService
         ]), $items);
     }
 
-    private function visible(array $item, User $user, array $permissions): bool
+    private function visible(array $item, User $user, array $permissions, array $featureSettings = []): bool
     {
         if (! empty($item['roles']) && ! in_array($user->role, (array) $item['roles'], true)) {
             return false;
         }
 
-        if (! empty($item['permission']) && ! in_array($item['permission'], $permissions, true)) {
+        if (! empty($item['permission']) && ! in_array((string) $item['permission'], $permissions, true)) {
             return false;
         }
 

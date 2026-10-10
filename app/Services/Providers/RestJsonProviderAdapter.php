@@ -16,11 +16,27 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
     public function supports(string $operation): bool
     {
-        return in_array($operation, ['health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories','transaction_initiation','transaction_status','refund','reversal','sms_send','whatsapp_send','social_account_purchase','foreign_number_purchase','foreign_number_status','foreign_number_sms','kyc_verification','network_lookup'], true);
+        return in_array($operation, ['account_verification','health_check','health','status','balance_inquiry','catalogue_retrieval','catalogue','services','products','categories','transaction_initiation','transaction_status','refund','reversal','sms_send','sms_status','whatsapp_send','social_account_purchase','foreign_number_purchase','foreign_number_status','foreign_number_sms','number_reservation','number_release','kyc_verification','network_lookup'], true);
     }
 
     public function execute(ApiProvider $provider, string $operation, array $payload = [], ?string $idempotencyKey = null): ProviderResult
     {
+        if ($provider->identifier === 'interswitch' && $operation === 'account_verification') {
+            return $this->executeInterswitchAccountVerification($provider, $payload);
+        }
+        if ($provider->identifier === 'vtuagent' && in_array($operation, ['transaction_initiation', 'transaction_status', 'catalogue_retrieval'], true)) {
+            return $this->executeVtuAgent($provider, $operation, $payload, $idempotencyKey);
+        }
+        if ($provider->identifier === 'cheapdatahub' && in_array($operation, ['transaction_initiation', 'transaction_status'], true)) {
+            return $this->executeCheapDataHub($provider, $operation, $payload, $idempotencyKey);
+        }
+        if ($provider->identifier === 'vtufast' && in_array($operation, ['transaction_initiation', 'transaction_status'], true)) {
+            return new ProviderResult(false, 'UNSUPPORTED', message: 'VTUFast purchase/status routing is disabled until a documented requery contract is available.', providerId: $provider->id);
+        }
+        if ($provider->identifier === 'vtufast' && in_array($operation, ['balance_inquiry', 'catalogue_retrieval'], true)) {
+            return $this->executeVtuFastReadOnly($provider, $operation, $payload);
+        }
+
         if (!$this->supports($operation)) {
             throw new RuntimeException("Unsupported REST operation: {$operation}");
         }
@@ -138,6 +154,234 @@ class RestJsonProviderAdapter implements ProviderAdapter
                 retryable: false,
                 duplicateRisk: $operation === 'transaction_initiation'
             );
+        }
+    }
+
+    /**
+     * Interswitch's Nigerian account-name enquiry uses per-request signed auth,
+     * not a static bearer token. Keep this read-only operation provider-specific.
+     */
+    private function executeInterswitchAccountVerification(ApiProvider $provider, array $payload): ProviderResult
+    {
+        $credentials = (array) ($provider->credentials ?? []);
+        $clientId = (string) ($credentials['client_id'] ?? $credentials['clientId'] ?? '');
+        $secretKey = (string) ($credentials['secret_key'] ?? $credentials['secretKey'] ?? '');
+        $terminalId = (string) ($credentials['terminal_id'] ?? $credentials['terminalId'] ?? '');
+        $bankCode = (string) ($payload['bank_code'] ?? $payload['bankCode'] ?? '');
+        $accountNumber = (string) ($payload['account_number'] ?? $payload['accountId'] ?? '');
+
+        if ($clientId === '' || $secretKey === '' || $terminalId === '' || $bankCode === '' || $accountNumber === '') {
+            return new ProviderResult(false, 'FAILED', message: 'Interswitch account verification configuration or input is incomplete.', providerId: $provider->id);
+        }
+        if (!preg_match('/^\\d{3,10}$/', $bankCode) || !preg_match('/^\\d{6,20}$/', $accountNumber)) {
+            return new ProviderResult(false, 'FAILED', message: 'Interswitch requires a numeric bank code and account number.', providerId: $provider->id);
+        }
+
+        $url = rtrim((string) $provider->base_url, '/') . '/nameenquiry/banks/accounts/names';
+
+        try {
+            $this->guard->validate($url);
+            $timestamp = (string) time();
+            $nonce = bin2hex(random_bytes(16));
+            $signatureSource = 'GET&' . urlencode($url) . '&' . $timestamp . '&' . $nonce . '&' . $clientId . '&' . $secretKey;
+            $signature = base64_encode(sha1($signatureSource, true));
+
+            $response = Http::acceptJson()
+                ->withOptions(['allow_redirects' => false])
+                ->timeout(max(1, (int) ($provider->timeout_seconds ?: 15)))
+                ->withHeaders([
+                    'Authorization' => 'InterswitchAuth ' . base64_encode($clientId),
+                    'Content-Type' => 'application/json',
+                    'Signature' => $signature,
+                    'Timestamp' => $timestamp,
+                    'Nonce' => $nonce,
+                    'SignatureMethod' => 'SHA1',
+                    'TerminalID' => $terminalId,
+                    'bankCode' => $bankCode,
+                    'accountId' => $accountNumber,
+                ])->get($url);
+
+            $body = $response->json();
+            if ($response->successful() && is_array($body) && filled($body['accountName'] ?? null)) {
+                return new ProviderResult(true, 'ACCEPTED', data: [
+                    'account_name' => (string) $body['accountName'],
+                    'bank_code' => $bankCode,
+                    'account_number' => $accountNumber,
+                ], message: 'Bank account name resolved.', providerId: $provider->id);
+            }
+
+            $status = $response->status();
+            $uncertain = $status === 408 || $status === 429 || $status >= 500;
+            return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'Interswitch could not verify the supplied bank account.', retryable: false, providerId: $provider->id);
+        } catch (\Throwable) {
+            return new ProviderResult(false, 'UNKNOWN', message: 'Interswitch verification request failed; check provider status before retrying.', retryable: false, providerId: $provider->id);
+        }
+    }
+
+    /** VTUAgent documented v1 airtime/data, plan catalogue and status contract. */
+    private function executeVtuAgent(ApiProvider $provider, string $operation, array $payload, ?string $idempotencyKey): ProviderResult
+    {
+        $credentials = (array) ($provider->credentials ?? []);
+        $apiKey = (string) ($credentials['api_key'] ?? $credentials['token'] ?? $credentials['secret_key'] ?? '');
+        if ($apiKey === '') return new ProviderResult(false, 'FAILED', message: 'VTUAgent API key is required.', providerId: $provider->id);
+
+        $base = rtrim((string) $provider->base_url, '/');
+        $method = 'POST';
+        $path = '';
+        $body = [];
+        if ($operation === 'catalogue_retrieval') {
+            $method = 'GET';
+            $path = '/data/plans';
+        } elseif ($operation === 'transaction_status') {
+            $reference = (string) ($payload['request_ref'] ?? $payload['provider_reference'] ?? $payload['reference'] ?? $idempotencyKey ?? '');
+            if ($reference === '') return new ProviderResult(false, 'FAILED', message: 'VTUAgent request reference is required for status lookup.', providerId: $provider->id);
+            $path = '/transaction/status';
+            $body = ['request_ref' => $reference];
+        } else {
+            $reference = (string) ($payload['request_ref'] ?? $idempotencyKey ?? '');
+            if ($reference === '' || mb_strlen($reference) > 50) {
+                return new ProviderResult(false, 'FAILED', message: 'A unique VTUAgent request_ref of at most 50 characters is required.', providerId: $provider->id);
+            }
+            if (filled($payload['plan_id'] ?? null)) {
+                $path = '/data/purchase';
+                $body = ['plan_id' => (string) $payload['plan_id'], 'phone' => (string) ($payload['phone'] ?? ''), 'request_ref' => $reference];
+            } else {
+                $network = strtolower((string) ($payload['network'] ?? ''));
+                $phone = (string) ($payload['phone'] ?? '');
+                $amount = $payload['amount'] ?? null;
+                if (!in_array($network, ['mtn', 'glo', 'airtel', 'etisalat'], true) || $phone === '' || !is_numeric($amount) || (float) $amount <= 0) {
+                    return new ProviderResult(false, 'FAILED', message: 'VTUAgent airtime requires a supported network, phone and positive naira amount.', providerId: $provider->id);
+                }
+                $path = '/airtime/purchase';
+                $body = ['network' => $network, 'phone' => $phone, 'amount' => $amount, 'request_ref' => $reference];
+            }
+            if (empty($body['phone'])) return new ProviderResult(false, 'FAILED', message: 'A recipient phone number is required.', providerId: $provider->id);
+        }
+
+        $url = $base . $path;
+        try {
+            $this->guard->validate($url);
+            $request = Http::acceptJson()->withToken($apiKey)->asJson()
+                ->withOptions(['allow_redirects' => false])
+                ->timeout(max(1, (int) ($provider->timeout_seconds ?: 15)));
+            $response = $method === 'GET' ? $request->get($url, $payload) : $request->post($url, $body);
+            $responseBody = $response->json();
+            if ($response->successful()) {
+                $status = $this->normalizeStatus($responseBody, $operation);
+                if ($operation === 'catalogue_retrieval' && $status === 'UNKNOWN' && is_array($responseBody)) $status = 'ACCEPTED';
+                return new ProviderResult(
+                    $status === 'ACCEPTED', $status, $this->providerReference($responseBody), $responseBody,
+                    $status === 'ACCEPTED' ? 'VTUAgent request accepted.' : 'VTUAgent returned a non-final transaction state.',
+                    retryable: false,
+                    duplicateRisk: $operation === 'transaction_initiation' && $status === 'UNKNOWN',
+                    providerId: $provider->id,
+                );
+            }
+            $statusCode = $response->status();
+            $message = strtolower((string) data_get($responseBody, 'message', ''));
+            $duplicate = $operation === 'transaction_initiation' && str_contains($message, 'duplicate');
+            $uncertain = $statusCode === 408 || $statusCode === 429 || $statusCode >= 500 || $duplicate;
+            return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'VTUAgent request failed; inspect provider status before retry when the outcome is uncertain.', retryable: false, duplicateRisk: $operation === 'transaction_initiation' && $uncertain, providerId: $provider->id);
+        } catch (\Throwable) {
+            return new ProviderResult(false, 'UNKNOWN', message: 'VTUAgent request failed; requery the request_ref before retrying.', retryable: false, duplicateRisk: $operation === 'transaction_initiation', providerId: $provider->id);
+        }
+    }
+
+    /** CheapDataHub reseller API. Its purchase API does not document a client reference field. */
+    private function executeCheapDataHub(ApiProvider $provider, string $operation, array $payload, ?string $idempotencyKey): ProviderResult
+    {
+        $credentials = (array) ($provider->credentials ?? []);
+        $apiKey = (string) ($credentials['api_key'] ?? $credentials['token'] ?? $credentials['secret_key'] ?? '');
+        if ($apiKey === '') return new ProviderResult(false, 'FAILED', message: 'CheapDataHub API key is required.', providerId: $provider->id);
+
+        $base = rtrim((string) $provider->base_url, '/');
+        $method = 'POST';
+        $path = '';
+        $body = [];
+        if ($operation === 'transaction_status') {
+            $id = (string) ($payload['provider_reference'] ?? $payload['transaction_id'] ?? $payload['reference'] ?? '');
+            if ($id === '' || !ctype_digit($id)) return new ProviderResult(false, 'FAILED', message: 'CheapDataHub transaction ID is required for status lookup.', providerId: $provider->id);
+            $method = 'GET';
+            $path = '/transactions/' . rawurlencode($id) . '/';
+        } elseif (array_key_exists('bundle_id', $payload)) {
+            if (!ctype_digit((string) $payload['bundle_id']) || empty($payload['phone_number'] ?? $payload['phone'] ?? '')) {
+                return new ProviderResult(false, 'FAILED', message: 'CheapDataHub data purchase requires a numeric bundle_id and recipient phone.', providerId: $provider->id);
+            }
+            $path = '/data/purchase/';
+            $body = ['bundle_id' => (int) $payload['bundle_id'], 'phone_number' => (string) ($payload['phone_number'] ?? $payload['phone'])];
+        } else {
+            $providerId = $payload['provider_id'] ?? null;
+            $phone = (string) ($payload['phone_number'] ?? $payload['phone'] ?? '');
+            $amount = $payload['amount'] ?? null;
+            if (!is_numeric($providerId) || (int) $providerId < 1 || $phone === '' || !is_numeric($amount) || (float) $amount <= 0) {
+                return new ProviderResult(false, 'FAILED', message: 'CheapDataHub airtime requires provider_id, recipient phone and positive naira amount.', providerId: $provider->id);
+            }
+            $path = '/airtime/purchase/';
+            $body = ['provider_id' => (int) $providerId, 'phone_number' => $phone, 'amount' => $amount];
+        }
+
+        $url = $base . $path;
+        try {
+            $this->guard->validate($url);
+            $request = Http::acceptJson()->withToken($apiKey)->asJson()
+                ->withOptions(['allow_redirects' => false])
+                ->timeout(max(1, (int) ($provider->timeout_seconds ?: 15)));
+            if ($idempotencyKey !== null && $idempotencyKey !== '') $request = $request->withHeaders(['Idempotency-Key' => $idempotencyKey]);
+            $response = $method === 'GET' ? $request->get($url) : $request->post($url, $body);
+            $responseBody = $response->json();
+            if ($response->successful() && is_array($responseBody)) {
+                $flag = strtolower((string) ($responseBody['status'] ?? ''));
+                if (in_array($flag, ['true', '1', 'success', 'successful'], true)) {
+                    $reference = $this->providerReference($responseBody);
+                    $status = $operation === 'transaction_status' ? $this->normalizeStatus($responseBody, $operation) : 'ACCEPTED';
+                    if ($operation === 'transaction_status' && $status === 'UNKNOWN') {
+                        return new ProviderResult(false, 'UNKNOWN', $reference, $responseBody, 'CheapDataHub status response did not contain a recognized final state.', duplicateRisk: false, providerId: $provider->id);
+                    }
+                    return new ProviderResult($status === 'ACCEPTED', $status, $reference, $responseBody, 'CheapDataHub request processed.', duplicateRisk: false, providerId: $provider->id);
+                }
+                if ($flag === 'false' || $flag === '0') return new ProviderResult(false, 'FAILED', message: 'CheapDataHub rejected the request.', providerId: $provider->id);
+            }
+            $httpStatus = $response->status();
+            $duplicate = $httpStatus === 409;
+            $uncertain = $duplicate || $httpStatus === 408 || $httpStatus === 429 || $httpStatus >= 500;
+            return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'CheapDataHub request failed; requery the provider transaction before retrying if its outcome is uncertain.', retryable: false, duplicateRisk: $operation === 'transaction_initiation' && $uncertain, providerId: $provider->id);
+        } catch (\Throwable) {
+            // No client-supplied request reference is documented for purchases; never
+            // automatically fail over after a network exception that may follow a debit.
+            return new ProviderResult(false, 'UNKNOWN', message: 'CheapDataHub request outcome is uncertain; reconcile the provider transaction before retrying.', retryable: false, duplicateRisk: $operation === 'transaction_initiation', providerId: $provider->id);
+        }
+    }
+
+    /** VTUFast documented account balance and plan catalogue operations only. */
+    private function executeVtuFastReadOnly(ApiProvider $provider, string $operation, array $payload): ProviderResult
+    {
+        $credentials = (array) ($provider->credentials ?? []);
+        $apiKey = (string) ($credentials['api_key'] ?? $credentials['token'] ?? $credentials['secret_key'] ?? '');
+        if ($apiKey === '') return new ProviderResult(false, 'FAILED', message: 'VTUFast API key is required.', providerId: $provider->id);
+
+        $service = strtolower((string) ($payload['service'] ?? $payload['service_key'] ?? 'data'));
+        if ($operation === 'catalogue_retrieval' && !in_array($service, ['airtime', 'data'], true)) {
+            return new ProviderResult(false, 'FAILED', message: 'VTUFast catalogue service must be airtime or data.', providerId: $provider->id);
+        }
+        $query = $operation === 'balance_inquiry'
+            ? ['route' => 'balance']
+            : ['route' => 'plans', 'service' => $service, 'search' => (string) ($payload['search'] ?? 'ALL')];
+        $url = rtrim((string) $provider->base_url, '/');
+        if (!str_ends_with(strtolower($url), '/api.php')) $url .= '/api.php';
+
+        try {
+            $this->guard->validate($url);
+            $response = Http::acceptJson()->withToken($apiKey)->withOptions(['allow_redirects' => false])
+                ->timeout(max(1, (int) ($provider->timeout_seconds ?: 15)))->get($url, $query);
+            $body = $response->json();
+            if ($response->successful() && is_array($body) && (($body['success'] ?? false) === true || ($body['success'] ?? null) === 'true')) {
+                return new ProviderResult(true, 'ACCEPTED', data: $body['data'] ?? $body, message: 'VTUFast read-only request completed.', providerId: $provider->id);
+            }
+            $code = $response->status();
+            $uncertain = $code === 408 || $code === 429 || $code >= 500;
+            return new ProviderResult(false, $uncertain ? 'UNKNOWN' : 'FAILED', message: 'VTUFast read-only request failed.', providerId: $provider->id);
+        } catch (\Throwable) {
+            return new ProviderResult(false, 'UNKNOWN', message: 'VTUFast read-only request failed.', providerId: $provider->id);
         }
     }
 
@@ -459,6 +703,8 @@ class RestJsonProviderAdapter implements ProviderAdapter
 
         $paths = [
             ['reference'],
+            ['transaction_id'],
+            ['data','transaction_id'],
             ['transaction_reference'],
             ['transactionReference'],
             ['request_id'],

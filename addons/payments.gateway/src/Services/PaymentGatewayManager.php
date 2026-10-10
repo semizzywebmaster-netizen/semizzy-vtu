@@ -6,6 +6,7 @@ use Semizzy\Addons\Payments\Contracts\PaymentGatewayAdapter;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Semizzy\Addons\Payments\Exceptions\AmbiguousPaymentGatewayException;
 
 class PaymentGatewayManager
 {
@@ -51,6 +52,21 @@ class PaymentGatewayManager
                 ])->save();
 
                 return $result;
+            } catch (AmbiguousPaymentGatewayException $e) {
+                // Provider may already have accepted a payout. Never try another gateway
+                // until the original reference is reconciled.
+                $provider->increment('failure_count');
+                $provider->forceFill([
+                    'last_failure_at' => now(),
+                    'last_error' => mb_substr($e->getMessage(), 0, 1000),
+                    'cooldown_until' => now()->addMinutes(min(30, max(1, $provider->failure_count))),
+                ])->save();
+                Log::warning('Payment gateway payout outcome is ambiguous; failover suppressed.', [
+                    'provider' => $provider->code,
+                    'capability' => $capability,
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
             } catch (\Throwable $e) {
                 $last = $e;
                 $provider->increment('failure_count');

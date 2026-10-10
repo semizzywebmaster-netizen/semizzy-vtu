@@ -21,10 +21,12 @@ use Inertia\Response;
 
 class CatalogueController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $filters = $request->validate(['search' => ['nullable', 'string', 'max:120']]);
         return Inertia::render('Admin/Catalogue', [
             'categories' => ServiceCategory::query()->with(['services.products'])->orderBy('sort_order')->get(),
+            'search' => (string) ($filters['search'] ?? ''),
         ]);
     }
 
@@ -88,11 +90,11 @@ class CatalogueController extends Controller
 
     public function storeProduct(Request $request, AuditLogger $audit): RedirectResponse
     {
-        $data=$request->validate(['service_id'=>'required|integer|exists:services,id','key'=>'required|string|max:120','name'=>'required|string|max:200','currency'=>'required|string|size:3|regex:/^[A-Za-z]{3}$/','metadata'=>'nullable|array','enabled'=>'nullable|boolean']);
+        $data=$request->validate(['service_id'=>'required|integer|exists:services,id','key'=>'required|string|max:120','name'=>'required|string|max:200','currency'=>'required|string|size:3|regex:/^[A-Za-z]{3}$/','metadata'=>'nullable|array']);
         try {
             if(ServiceProduct::query()->where('service_id',$data['service_id'])->where('key',$data['key'])->exists()) return back()->with('error','A product with this key already exists under this service.');
             $data['currency']=strtoupper($data['currency']);
-            $product=ServiceProduct::create($data+['enabled'=>$data['enabled']??false]);
+            $product=ServiceProduct::create($data+['enabled'=>false,'publication_status'=>'draft']);
             try { $audit->record('catalogue.product.created',$product,['service_id'=>$product->service_id,'key'=>$product->key],$request); } catch (\Throwable $auditException) { report($auditException); }
             return back()->with('success','Service product created.');
         } catch (\Throwable $e) { report($e); return back()->with('error','Service product could not be created safely.'); }
@@ -184,6 +186,34 @@ class CatalogueController extends Controller
                 $mapping=ProviderServiceMapping::query()->lockForUpdate()->findOrFail($mapping->id);
                 $provider=ApiProvider::query()->lockForUpdate()->findOrFail($mapping->api_provider_id);
                 if(!$mapping->enabled && (!$provider->enabled||$provider->paused||$provider->verification_status!=='live_verified'||$provider->integration_status!=='live_verified')) return ['ok'=>false,'message'=>'A provider service mapping can only be enabled for an enabled, unpaused, live-verified provider.'];
+                if (!$mapping->enabled) {
+                    if (!in_array('transaction_initiation', (array) $mapping->capabilities, true)) {
+                        return ['ok'=>false,'message'=>'Transaction-initiation capability must be explicitly configured before enabling this route.'];
+                    }
+                    $hasSourceCost = ProviderServiceProduct::query()
+                        ->where('api_provider_id', $provider->id)
+                        ->where('enabled', true)
+                        ->whereHas('product', fn ($query) => $query->where('service_id', $mapping->service_id))
+                        ->exists();
+                    $hasActiveProductMapping = DB::table('provider_product_mappings_v2 as m')
+                        ->join('provider_services as ps', 'ps.id', '=', 'm.provider_service_id')
+                        ->join('provider_service_imports as i', function ($join): void {
+                            $join->on('i.provider_service_id', '=', 'm.provider_service_id')
+                                ->on('i.api_provider_id', '=', 'm.api_provider_id');
+                        })
+                        ->join('service_products as p', 'p.id', '=', 'm.catalogue_product_id')
+                        ->where('m.api_provider_id', $provider->id)
+                        ->where('m.enabled', true)
+                        ->where('m.mapping_status', 'active')
+                        ->where('i.approved', true)
+                        ->where('i.imported', true)
+                        ->where('ps.status', '!=', 'removed')
+                        ->where('p.service_id', $mapping->service_id)
+                        ->exists();
+                    if (!$hasSourceCost || !$hasActiveProductMapping) {
+                        return ['ok'=>false,'message'=>'Activate an approved product-level mapping with valid source cost before enabling this service route.'];
+                    }
+                }
                 $enabled=!$mapping->enabled;
                 $mapping->updateOrFail(['enabled'=>$enabled]);
                 return ['ok'=>true,'enabled'=>$enabled,'mapping_id'=>$mapping->id,'provider_id'=>$mapping->api_provider_id,'service_id'=>$mapping->service_id];
@@ -199,7 +229,7 @@ class CatalogueController extends Controller
         try { DB::transaction(function () use ($product): void {
             $product = ServiceProduct::query()->lockForUpdate()->findOrFail($product->id);
             ProviderServiceProduct::query()->where('service_product_id', $product->id)->lockForUpdate()->get()->each->update(['enabled' => false]);
-            $product->update(['enabled' => false]);
+            $product->update(['enabled' => false, 'publication_status' => 'unpublished']);
         }); } catch (\Throwable $e) { report($e); return back()->with('error','Catalogue product could not be disabled safely.'); }
         try { $audit->record('catalogue.product.disabled', $product, ['service_id' => $product->service_id], $request); } catch (\Throwable $e) { report($e); }
         return back()->with('success','Product and provider mappings disabled.');

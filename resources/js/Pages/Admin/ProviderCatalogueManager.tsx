@@ -13,7 +13,7 @@ type Provider = {
   capabilities: string[];
 };
 
-type PlatformService = { id: number; key: string; name: string; category: string };
+type PlatformService = { id: number; key: string; name: string; category: string; products: { id: number; key: string; name: string; publication_status?: string }[] };
 
 type CatalogueRow = {
   id: number;
@@ -22,6 +22,8 @@ type CatalogueRow = {
   approved: boolean;
   auto_sync_allowed: boolean;
   state: string;
+  platform_mapping?: { id: number; service_id: number; service_key: string; provider_service_id: string | null; enabled: boolean; capabilities: string[] } | null;
+  product_mapping?: { id: number; catalogue_product_id: number; enabled: boolean; mapping_status: string } | null;
   category: string | null;
   subcategory: string | null;
   service: {
@@ -39,12 +41,16 @@ type CatalogueRow = {
   } | null;
 };
 
-export default function ProviderCatalogueManager({ provider, platformServices }: { provider: Provider; platformServices: PlatformService[] }) {
+export default function ProviderCatalogueManager({ provider, platformServices, canMapProducts = false }: { provider: Provider; platformServices: PlatformService[]; canMapProducts?: boolean }) {
   const [rows, setRows] = useState<CatalogueRow[]>([]);
   const [category, setCategory] = useState('all');
   const [selected, setSelected] = useState<number[]>([]);
   const [autoSync, setAutoSync] = useState(false);
   const [platformServiceId, setPlatformServiceId] = useState('');
+  const [rowTargetServices, setRowTargetServices] = useState<Record<number, string>>({});
+  const [rowTargetProducts, setRowTargetProducts] = useState<Record<number, string>>({});
+  const [rowProviderServiceIds, setRowProviderServiceIds] = useState<Record<number, string>>({});
+  const [rowMappingCapabilities, setRowMappingCapabilities] = useState<Record<number, string[]>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -56,9 +62,9 @@ export default function ProviderCatalogueManager({ provider, platformServices }:
     return cookie ? decodeURIComponent(cookie.slice('XSRF-TOKEN='.length)) : '';
   };
 
-  const requestJson = async (url: string, data: Record<string, unknown> = {}) => {
+  const requestJson = async (url: string, data: Record<string, unknown> = {}, method: 'POST' | 'PATCH' = 'POST') => {
     const response = await fetch(url, {
-      method: 'POST',
+      method,
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
@@ -162,6 +168,99 @@ export default function ProviderCatalogueManager({ provider, platformServices }:
     }
   };
 
+  const mapRowToMyServices = async (row: CatalogueRow) => {
+    const serviceId = rowTargetServices[row.provider_service_id] || platformServiceId;
+    if (!serviceId) {
+      setError('Choose the platform service that this provider catalogue row belongs to.');
+      return;
+    }
+    if (!row.approved || !row.imported) {
+      setError('Approve and import this provider catalogue row before mapping it to My Services.');
+      return;
+    }
+    const providerServiceCode = (rowProviderServiceIds[row.provider_service_id] ?? row.platform_mapping?.provider_service_id ?? row.service?.service_type ?? '').trim();
+    if (!providerServiceCode) {
+      setError('Enter the provider service identifier documented for this platform service. The external product ID is stored separately.');
+      return;
+    }
+
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const productId = rowTargetProducts[row.provider_service_id];
+      const result = await requestJson(`/admin/providers/${provider.id}/provider-services/${row.provider_service_id}/map-to-platform`, {
+        service_id: Number(serviceId),
+        provider_service_identifier: providerServiceCode,
+        ...(productId ? { service_product_id: Number(productId) } : {}),
+      });
+      setMessage(`${result.product?.name || row.service?.name || 'Provider product'} saved as a draft. Configure tier prices and verify routing before publishing.`);
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Provider product could not be mapped.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleProductMapping = async (row: CatalogueRow) => {
+    if (!row.product_mapping) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await requestJson(`/admin/providers/${provider.id}/mappings/${row.product_mapping.id}`, {
+        enabled: !row.product_mapping.enabled,
+      }, 'PATCH');
+      setMessage(result.message || (row.product_mapping.enabled ? 'Product mapping disabled.' : 'Product mapping activated.'));
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Product mapping could not be updated.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveServiceCapabilities = async (row: CatalogueRow) => {
+    if (!row.platform_mapping) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    const capabilities = rowMappingCapabilities[row.provider_service_id] ?? row.platform_mapping.capabilities;
+    try {
+      const result = await requestJson(`/admin/providers/${provider.id}/service-mappings/${row.platform_mapping.id}/capabilities`, { capabilities }, 'PATCH');
+      setMessage(result.message || 'Service mapping capabilities saved.');
+      setRowMappingCapabilities((current) => {
+        const next = { ...current };
+        delete next[row.provider_service_id];
+        return next;
+      });
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Service mapping capabilities could not be saved.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleServiceRoute = async (row: CatalogueRow) => {
+    if (!row.platform_mapping) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await requestJson(`/admin/providers/${provider.id}/service-mappings/${row.platform_mapping.id}`, {
+        enabled: !row.platform_mapping.enabled,
+      }, 'PATCH');
+      setMessage(result.message || (row.platform_mapping.enabled ? 'Service route disabled.' : 'Service route enabled.'));
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Service route could not be updated.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
       <Head title={`${provider.display_name} — Services & Prices`} />
@@ -217,8 +316,8 @@ export default function ProviderCatalogueManager({ provider, platformServices }:
             </div>
 
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[920px] border-collapse text-left text-sm">
-                <thead><tr className="border-b border-slate-200 text-xs uppercase text-slate-500"><th className="p-3">Select</th><th className="p-3">Service / product</th><th className="p-3">Category</th><th className="p-3">Provider ID / code</th><th className="p-3">Source price</th><th className="p-3">Availability</th><th className="p-3">Import state</th><th className="p-3">Last synced</th></tr></thead>
+              <table className="w-full min-w-[1280px] border-collapse text-left text-sm">
+                <thead><tr className="border-b border-slate-200 text-xs uppercase text-slate-500"><th className="p-3">Select</th><th className="p-3">Service / product</th><th className="p-3">Category</th><th className="p-3">Provider ID / code</th><th className="p-3">Source price</th><th className="p-3">Availability</th><th className="p-3">Import state</th><th className="p-3">Last synced</th><th className="p-3">Map to My Services</th></tr></thead>
                 <tbody>
                   {filtered.map((row) => <tr key={row.provider_service_id} className="border-b border-slate-100 align-top hover:bg-slate-50">
                     <td className="p-3"><input aria-label={`Select ${row.service?.name || 'provider service'}`} type="checkbox" checked={selected.includes(row.provider_service_id)} onChange={() => setSelected((ids) => ids.includes(row.provider_service_id) ? ids.filter((id) => id !== row.provider_service_id) : [...ids, row.provider_service_id])} /></td>
@@ -229,8 +328,32 @@ export default function ProviderCatalogueManager({ provider, platformServices }:
                     <td className="p-3">{row.service?.status || 'Unknown'}</td>
                     <td className="p-3"><span className={row.imported ? 'text-emerald-700' : row.approved ? 'text-indigo-700' : 'text-amber-700'}>{row.imported ? 'Imported' : row.approved ? 'Approved, not imported' : 'Needs approval'}</span>{row.auto_sync_allowed ? <p className="mt-1 text-xs text-slate-500">Auto-sync allowed</p> : null}</td>
                     <td className="p-3 text-xs text-slate-500">{row.service?.last_synced_at ? new Date(row.service.last_synced_at).toLocaleString() : 'Not recorded'}</td>
+                    <td className="min-w-72 p-3">
+                      <div className="space-y-2">
+                        <label className="block"><span className="mb-1 block text-[11px] font-semibold text-slate-600">Provider service ID (verify against official docs)</span><input value={rowProviderServiceIds[row.provider_service_id] ?? row.platform_mapping?.provider_service_id ?? row.service?.service_type ?? ''} onChange={(event) => setRowProviderServiceIds((current) => ({ ...current, [row.provider_service_id]: event.target.value }))} placeholder="e.g. data or documented service code" className="w-full rounded-lg border border-slate-300 p-2 text-xs" /></label>
+                        <select aria-label={`Platform service for ${row.service?.name || 'provider product'}`} value={rowTargetServices[row.provider_service_id] ?? platformServiceId} onChange={(event) => { setRowTargetServices((current) => ({ ...current, [row.provider_service_id]: event.target.value })); setRowTargetProducts((current) => ({ ...current, [row.provider_service_id]: '' })); }} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs">
+                          <option value="">Choose platform service</option>
+                          {platformServices.map((service) => <option key={service.id} value={service.id}>{service.category} — {service.name}</option>)}
+                        </select>
+                        <select aria-label={`Draft product variant for ${row.service?.name || 'provider product'}`} value={rowTargetProducts[row.provider_service_id] ?? ''} onChange={(event) => setRowTargetProducts((current) => ({ ...current, [row.provider_service_id]: event.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs" disabled={!(rowTargetServices[row.provider_service_id] || platformServiceId)}>
+                          <option value="">Create new draft variant</option>
+                          {(platformServices.find((service) => String(service.id) === (rowTargetServices[row.provider_service_id] || platformServiceId))?.products ?? []).map((product) => <option key={product.id} value={product.id}>{product.name} ({product.key})</option>)}
+                        </select>
+                        <button type="button" disabled={!canMapProducts || busy || !row.approved || !row.imported || !(rowTargetServices[row.provider_service_id] || platformServiceId)} onClick={() => void mapRowToMyServices(row)} className="w-full rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50">{!canMapProducts ? 'Catalogue permission required' : row.approved && row.imported ? 'Map as Draft' : 'Approve & import first'}</button>
+                        <p className="text-[11px] leading-4 text-slate-500">Creates a disabled draft mapping only. It never publishes or enables routing.</p>
+                        {row.product_mapping && <button type="button" disabled={!canMapProducts || busy} onClick={() => void toggleProductMapping(row)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">{row.product_mapping.enabled ? 'Disable product mapping' : 'Activate product mapping'} · {row.product_mapping.mapping_status}</button>}
+                        {row.platform_mapping && <button type="button" disabled={!canMapProducts || busy} onClick={() => void toggleServiceRoute(row)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">{row.platform_mapping.enabled ? 'Disable service route' : 'Enable service route'}</button>}
+                        {row.platform_mapping && <div className="rounded-lg border border-slate-200 bg-white p-2">
+                          <p className="mb-2 text-[11px] font-bold text-slate-700">Service operations (only provider-declared capabilities)</p>
+                          {['catalogue_retrieval','transaction_initiation','transaction_status','refund','webhook'].filter((capability) => provider.capabilities.includes(capability)).length === 0
+                            ? <p className="text-[11px] text-amber-700">Declare verified provider capabilities first.</p>
+                            : ['catalogue_retrieval','transaction_initiation','transaction_status','refund','webhook'].filter((capability) => provider.capabilities.includes(capability)).map((capability) => <label key={capability} className="flex items-center gap-2 py-1 text-[11px] text-slate-700"><input type="checkbox" checked={(rowMappingCapabilities[row.provider_service_id] ?? row.platform_mapping!.capabilities).includes(capability)} disabled={!canMapProducts || busy || row.platform_mapping!.enabled} onChange={(event) => setRowMappingCapabilities((current) => ({ ...current, [row.provider_service_id]: event.target.checked ? Array.from(new Set([...(current[row.provider_service_id] ?? row.platform_mapping!.capabilities), capability])) : (current[row.provider_service_id] ?? row.platform_mapping!.capabilities).filter((item) => item !== capability) }))}/>{capability.replaceAll('_',' ')}</label>)}
+                          <button type="button" disabled={!canMapProducts || busy || row.platform_mapping.enabled} onClick={() => void saveServiceCapabilities(row)} className="mt-2 w-full rounded-lg border border-slate-300 px-2 py-2 text-[11px] font-bold text-slate-700 disabled:opacity-50">Save service capabilities</button>
+                        </div>}
+                      </div>
+                    </td>
                   </tr>)}
-                  {filtered.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-slate-500">No discovered services in this category yet. Refresh the catalogue if this provider officially supports service discovery.</td></tr>}
+                  {filtered.length === 0 && <tr><td colSpan={9} className="p-8 text-center text-slate-500">No discovered services in this category yet. Refresh the catalogue if this provider officially supports service discovery.</td></tr>}
                 </tbody>
               </table>
             </div>

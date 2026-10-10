@@ -53,6 +53,16 @@ final class SimHostingProviderAdapter
             throw new RuntimeException('A provider payload is required for this operation.');
         }
 
-        return $this->providers->execute(self::SERVICE_KEY, $operation, $payload, $idempotencyKey);
+        // The addon exposes business-facing operation names, while Core's provider
+        // registry intentionally uses a small, shared operation vocabulary.
+        $coreOperation = match ($operation) {
+            'airtime_purchase', 'data_purchase' => 'transaction_initiation',
+            'data_catalogue' => 'catalogue_retrieval',
+            'provider_balance', 'sms_balance' => 'balance_inquiry',
+            'transaction_requery' => 'transaction_status',
+            default => $operation,
+        };
+
+        return $this->providers->execute(self::SERVICE_KEY, $coreOperation, $payload, $idempotencyKey);
     }
 }

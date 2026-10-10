@@ -7,6 +7,7 @@ use App\Models\WalletAccount;
 use App\Models\WalletMovement;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
@@ -26,37 +27,71 @@ class PaymentRefundSettlementServiceTest extends TestCase
         parent::setUp();
 
         if (!Schema::hasTable('payment_gateway_providers')) {
-            Schema::create('payment_gateway_providers', function (Blueprint $table): void {
-                $table->id();
-                $table->string('name');
-                $table->string('code')->unique();
-                $table->string('driver');
-                $table->string('base_url')->nullable();
-                $table->text('credentials')->nullable();
-                $table->json('capabilities')->nullable();
-                $table->unsignedInteger('priority')->default(100);
-                $table->unsignedInteger('weight')->default(100);
-                $table->boolean('enabled')->default(false);
-                $table->boolean('paused')->default(false);
-                $table->boolean('maintenance')->default(false);
-                $table->unsignedInteger('failure_count')->default(0);
-                $table->timestamp('cooldown_until')->nullable();
-                $table->timestamp('last_health_check_at')->nullable();
-                $table->timestamp('last_success_at')->nullable();
-                $table->timestamp('last_failure_at')->nullable();
-                $table->text('last_error')->nullable();
-                $table->json('settings')->nullable();
-                $table->timestamps();
-                $table->index(['enabled', 'paused', 'maintenance', 'priority']);
-            });
+            if (DB::connection()->getDriverName() === 'mysql') {
+                // MySQL DDL on a regular table implicitly commits Laravel's
+                // RefreshDatabase transaction. A temporary table isolates this
+                // test schema without destroying the transaction savepoints.
+                DB::statement("CREATE TEMPORARY TABLE payment_gateway_providers (
+                    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    code VARCHAR(255) NOT NULL UNIQUE,
+                    driver VARCHAR(255) NOT NULL,
+                    base_url VARCHAR(255) NULL,
+                    credentials TEXT NULL,
+                    capabilities JSON NULL,
+                    priority INT UNSIGNED NOT NULL DEFAULT 100,
+                    weight INT UNSIGNED NOT NULL DEFAULT 100,
+                    enabled TINYINT(1) NOT NULL DEFAULT 0,
+                    paused TINYINT(1) NOT NULL DEFAULT 0,
+                    maintenance TINYINT(1) NOT NULL DEFAULT 0,
+                    failure_count INT UNSIGNED NOT NULL DEFAULT 0,
+                    cooldown_until TIMESTAMP NULL,
+                    last_health_check_at TIMESTAMP NULL,
+                    last_success_at TIMESTAMP NULL,
+                    last_failure_at TIMESTAMP NULL,
+                    last_error TEXT NULL,
+                    settings JSON NULL,
+                    created_at TIMESTAMP NULL,
+                    updated_at TIMESTAMP NULL,
+                    INDEX pay_gateway_state_priority_idx (enabled, paused, maintenance, priority)
+                ) ENGINE=InnoDB");
+            } else {
+                Schema::create('payment_gateway_providers', function (Blueprint $table): void {
+                    $table->id();
+                    $table->string('name');
+                    $table->string('code')->unique();
+                    $table->string('driver');
+                    $table->string('base_url')->nullable();
+                    $table->text('credentials')->nullable();
+                    $table->json('capabilities')->nullable();
+                    $table->unsignedInteger('priority')->default(100);
+                    $table->unsignedInteger('weight')->default(100);
+                    $table->boolean('enabled')->default(false);
+                    $table->boolean('paused')->default(false);
+                    $table->boolean('maintenance')->default(false);
+                    $table->unsignedInteger('failure_count')->default(0);
+                    $table->timestamp('cooldown_until')->nullable();
+                    $table->timestamp('last_health_check_at')->nullable();
+                    $table->timestamp('last_success_at')->nullable();
+                    $table->timestamp('last_failure_at')->nullable();
+                    $table->text('last_error')->nullable();
+                    $table->json('settings')->nullable();
+                    $table->timestamps();
+                    $table->index(['enabled', 'paused', 'maintenance', 'priority'], 'pay_gateway_state_priority_idx');
+                });
+            }
             $this->createdProviderTable = true;
         }
     }
 
     protected function tearDown(): void
     {
-        if ($this->createdProviderTable && Schema::hasTable('payment_gateway_providers')) {
-            Schema::drop('payment_gateway_providers');
+        if ($this->createdProviderTable) {
+            if (DB::connection()->getDriverName() === 'mysql') {
+                DB::statement('DROP TEMPORARY TABLE IF EXISTS payment_gateway_providers');
+            } elseif (Schema::hasTable('payment_gateway_providers')) {
+                Schema::drop('payment_gateway_providers');
+            }
         }
         parent::tearDown();
     }

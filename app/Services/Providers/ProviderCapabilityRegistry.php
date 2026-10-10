@@ -8,7 +8,7 @@ use InvalidArgumentException;
 class ProviderCapabilityRegistry
 {
     public const SUPPORTED_CAPABILITIES = [
-        'balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status',
+        'account_verification','balance_inquiry','catalogue_retrieval','transaction_initiation','transaction_status',
         'refund','reversal','webhook','health_check','kyc_verification',
         'number_reservation','number_release','inventory_sync','sms_send','sms_status','network_lookup','social_account_purchase','foreign_number_purchase','foreign_number_status','foreign_number_sms',
     ];

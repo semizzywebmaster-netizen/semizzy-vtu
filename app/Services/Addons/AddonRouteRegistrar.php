@@ -48,8 +48,14 @@ class AddonRouteRegistrar
                 // by an addon remains unavailable until that addon is active.
                 // Route files may add stricter middleware, but cannot accidentally
                 // omit the Core activation check.
-                Route::middleware('ensure.addon:'.(string) $manifest['identifier'])
-                    ->group(function () use ($path): void {
+                $routeMiddleware = ['ensure.addon:'.(string) $manifest['identifier']];
+                // Percentage rollout is user-based and currently applies to web routes.
+                // API-token rollout needs its authenticated principal resolved first.
+                if ($manifestKey === 'web_route_files') {
+                    $routeMiddleware[] = 'feature.rollout:'.(string) $manifest['identifier'];
+                }
+
+                Route::middleware($routeMiddleware)->group(function () use ($path): void {
                         require $path;
                     });
             }

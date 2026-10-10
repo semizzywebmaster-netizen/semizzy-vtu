@@ -316,6 +316,18 @@ class VtuAdminController extends Controller
  public function transactions(Request $r){
   $q=VtuTransaction::with(['user:id,name,email','service:id,name','product:id,name','provider:id,display_name'])->latest('created_at');
   foreach(['status','service_id','api_provider_id','user_id'] as $f)if($r->filled($f))$q->where($f,$r->input($f));
+  if ($r->filled('search')) {
+   $term = mb_substr(trim((string) $r->input('search')), 0, 80);
+   if ($term !== '') {
+    $like = '%' . addcslashes($term, '\\%_') . '%';
+    $q->where(function ($nested) use ($like): void {
+     $nested->where('reference', 'like', $like)
+      ->orWhere('provider_reference', 'like', $like)
+      ->orWhere('recipient', 'like', $like)
+      ->orWhereHas('user', fn ($user) => $user->where('name', 'like', $like)->orWhere('email', 'like', $like));
+    });
+   }
+  }
   $transactions=$q->paginate(50)->withQueryString();
   return Inertia::render('Admin/VTU/Transactions',['transactions'=>$transactions]);
  }

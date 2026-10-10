@@ -115,3 +115,100 @@ For every imported row, retain provider identity, category/subcategory, external
 Support category-level manual sync and explicit per-provider/category auto-sync approval. Incomplete or paginated catalogue responses must not trigger destructive removal. Use provider-specific auth, documented endpoint paths, pagination, rate limits and response parsing. Where a provider has no official catalogue endpoint, disclose that limitation and offer a validated manual/CSV mapping workflow if safe; never invent prices or IDs.
 
 The Core routes for discovery, provider services, sync history/summary, import preview, approval and selected import already exist. Audit/reuse these routes first and only add missing behaviour after tests establish the gap. Addon pages are contextual views over the same Core provider and service records; do not duplicate provider or price registries.
+
+
+## Addon-by-addon service inventory (repository manifest audit, 2026-10-09)
+
+The repository contains 32 addon directories. This inventory identifies each addon’s provider-relevant boundary so the provider platform can be audited without treating every addon as an external API integration. “Not yet evidenced” means the manifest/code presence is not sufficient to claim a working or verified third-party integration. Each actual provider/service pair still needs endpoint, auth, operation, price/source and test evidence.
+
+| Addon manifest identifier | Provider-relevant service / operations to inventory | Existing shared system / integration boundary | Evidence state and next check |
+|---|---|---|---|
+| `ai.chatbot` | AI model requests, embeddings/knowledge where enabled, usage/balance and provider failover | AI-specific provider configuration; avoid a duplicate outbound provider registry | Audit adapter classes, supported model APIs, auth schema, redaction and failover tests |
+| `api.provider-platform` | Cross-service provider directory, capabilities, catalogue import, service/product mapping, price sync and verification | Must reuse Core `ApiProvider`, mappings, credentials, routing, sync and audit | Admin coverage view and publication guard are implemented on the development branch. Provider catalogue discovery, sync, review, approval, import and mapping already belong to Core's ProviderEngineController/ProviderCatalogueManager; Addon #38 links into that existing workflow rather than cloning it. Provider-specific contract mapping and the full operation matrix remain incomplete |
+| `banking.financial-integrations` | Account/virtual-account operations, transfers/payouts, account resolution, reconciliation and status | Reconcile with Payments addon and Core provider engine; do not merge distinct capabilities | Inspect banking-specific adapters and official provider permissions per operation |
+| `bulk-sms.communication` | SMS send, sender IDs, delivery reports, bulk campaigns, status reconciliation | Shared SMS providers with Communication and SIM Hosting views | Verify provider adapters, DND/sender-ID behaviour, per-message pricing and delivery status |
+| `business.agent-merchant-reseller` | No inherent external provider operation; business tiers, limits and commercial pricing | Core users, tiers, price engine and audit | Normally internal; inventory only explicit provider-facing business services |
+| `cac.business-services` | Business-name/company registration, CAC search/verification, application submission, documents and order status | CAC-specific catalogue/routes plus Core provider identity and audit | CAC route/catalogue migrations exist; provider endpoint and live evidence must be confirmed |
+| `communication.whatsapp` | WhatsApp send/receive, templates, campaigns, consent, delivery status, SMS/email/push failover | Shared communication provider configuration; coordinate with Bulk SMS and Mailer | Verify each channel separately; no capability inferred from another channel |
+| `crypto-payments.gateway` | Crypto payment creation, address/quote, confirmations, webhook verification, status/reconciliation/refund if supported | Dedicated crypto payment flow plus Core payment/ledger primitives | Verify each chain/provider and webhook/replay/confirmation rules; do not assume refunds |
+| `education` | Paid educational/past-question catalogue and downloads; external provider only if a concrete fulfilment integration exists | Primarily internal content and Core wallet/pricing | No external provider count unless a documented external operation exists |
+| `escrow.protection` | Buyer/seller hold, release, cancellation, disputes and refunds | Internal wallet/ledger and P2P integration | Not an external provider by default; audit payment boundary separately |
+| `exams.results` | Result-checking tokens, exam PINs, result validation, fulfilment and requery | Core provider engine; distinct from education document downloads | Verify exam type/product IDs and provider-specific fulfilment/status support |
+| `gift.cards` | Gift-card catalogue, rates, inventory, purchase/fulfilment, balance/status and refunds when supported | Core provider engine plus wallet and audit | Inventory supported brands/countries/denominations and exact provider operations |
+| `government.registration-certificates` | Government application submission, document upload, status and certificate delivery; API or manual workflow | Government addon with explicit manual/API fulfilment boundary | Treat manual service as non-API; verify government-authorised endpoint and permitted operations before counting |
+| `insurance.protection` | Quote, eligibility, policy issuance, renewal, cancellation and claims | Insurance-specific workflows using shared provider identity where applicable | Verify insurer/underwriter and each product/operation; no generic “insurance” coverage count |
+| `investments.wealth` | Internal investment product configuration, funding, maturity, profit and redemption | Core ledger/pricing; provider only if a concrete regulated external product is integrated | Mark internal workflows separately; audit custody/partner boundary before adding provider coverage |
+| `kyc.identity-verification` | NIN/BVN/licence/passport/CAC checks as legally supported, identity match, status and audit | Core provider engine and sensitive-data controls | Zero preset-mapped KYC providers in initial register; confirm lawful access, data minimisation, vendor approval and exact document support |
+| `loans.credit` | Internal application, approval, schedule and repayment; external credit bureau/underwriting only if explicitly integrated | Core ledger and approval controls | Do not count internal loan workflow as an API provider; inventory any credit bureau integrations separately |
+| `mailer.smtp` | Transactional email send, delivery/bounce signals where supported, SMTP health and failover | Dedicated SMTP profile pool; shared communication channel | Audit TLS/auth variants, secret masking, retry/failover and delivery evidence |
+| `marketplace.commerce` | Marketplace inventory/order fulfilment; provider relevance only for external catalogue or shipping/payment integrations | Core payment/wallet and marketplace seller workflows | No provider count for seller listings alone; document any external fulfilment APIs individually |
+| `p2p.transfers` | Internal wallet transfers and trading listings/offers | Core ledger; optional Escrow addon | Internal transfer is not a third-party provider integration; reconcile external bank payout only if implemented |
+| `payments.gateway` | Payment collection, webhooks, virtual accounts, refunds and payment status | Existing payment-gateway manager; coordinate with Banking without duplicating it | Separate collection, virtual-account issuance, transfers and account verification; audit provider-specific tests |
+| `rewards.referrals-promotions` | Internal referrals, rewards, coupons and campaign rules | Core wallet/ledger and pricing | Internal engine; external providers only if explicitly used to fulfil a reward |
+| `savings.goals` | Internal goal-based savings, deposits and withdrawals | Core wallet/ledger | Not an external provider by default; inventory any external custody/partner boundary separately |
+| `sim-hosting` | SIM Hosting API operations for airtime, data and SMS | Core Provider Engine; consumed by VTU and Bulk SMS | Verify provider docs, endpoint/auth schema, catalogue IDs, balance, order status and source prices |
+| `smm.services` | Social media marketing catalogue, order creation, status/requery and cancellation where supported | Core Provider Engine | Verify each service type and vendor operation; do not assume cancellation/refund exists |
+| `social.accounts-verification` | Social account services, foreign verification numbers, SMS inbox polling and manual/API fulfilment | Shared provider engine where APIs are used; manual providers remain distinct | Audit number country/service coverage, rental duration, polling, cancel/refund and data handling |
+| `spin.to-win` | Internal weighted reward campaigns and reward fulfilment | Rewards addon and Core ledger | Internal game engine; no third-party API count unless prize fulfilment uses a real provider |
+| `travel.tickets` | Flight/bus/hotel search, quote, booking, ticketing, cancellation and refunds | Core provider/payment/notification services plus travel-specific adapters | Audit each transport and operation; confirm SOAP/session vs REST needs and certification |
+| `virtual.cards` | Card issuance, activation, freeze/unfreeze, balance, transactions, funding and closure when supported | Dedicated virtual-card lifecycle and Core payment/ledger | Verify issuer APIs, country/currency eligibility, KYC and exact lifecycle support |
+| `vtu.website-builder` | Website templates/pages/domains/publishing; provider relevance only for explicitly integrated domain or infrastructure APIs | Internal website builder | Do not count templates or hosted pages as provider coverage; inventory domain registrar APIs only if implemented |
+| `vtu.digital-services` | Airtime, data, electricity, cable TV, exam products, validation, purchase, status/requery, bulk and refunds where supported | Core ProviderManager, catalogue/mapping/routing and VTU addon workflows | Audit each service/product and provider operation separately; current presets are not proof of live adapters |
+| `whatsapp.bot` | Account-number verification, service discovery, transaction requests, receipts and transaction updates | Depends on Communication/WhatsApp and VTU services; should not own a duplicate provider registry | Verify channel webhook/signature, account binding, idempotency and handoff to Core transaction services |
+
+### Service-level evidence ledger required for every API-backed row
+
+For each concrete service and operation above, record: (1) Core/addon route and controller; (2) provider adapter/manager and auth types; (3) official docs and price source; (4) product/service identifiers and currency; (5) request/response mapping; (6) initiation, validation, status/requery, webhook, refund/reversal and reconciliation support individually; (7) fixtures/unit/feature tests; (8) sandbox result and live verification evidence; (9) upstream/backend independence; (10) known blockers and reviewer/date. Use `supported`, `unsupported`, or `unknown` per operation—never infer support from a broad capability label.
+
+This table is the addon/service-family inventory baseline, not a claim that all underlying source files and every provider operation have already been fully audited. The remaining Phase 1 work is to walk the controllers, adapters, migrations, sync jobs and tests for each API-backed row and attach evidence links per operation before calling the inventory complete.
+
+## Addon #38 implementation checkpoint — 2026-10-09
+
+Addon #38 reuses the Core-owned catalogue manager rather than introducing a second review interface or competing approval/mapping endpoints. Core already exposes provider discovery, sync history, import preview, explicit approval/import, and provider-to-catalogue mapping. The coverage dashboard links to the Core provider manager. Addon #38's remaining work is provider-specific contract mapping, verified discovery/sync adapters, and evidence for each concrete operation.
+
+### First operation-level audit queue
+
+| Service family | First operations to audit independently | Required evidence before marking supported |
+|---|---|---|
+| Airtime | Catalogue/denomination discovery, purchase, status/requery, balance | Official product IDs and auth contract; successful sandbox purchase/status fixtures |
+| Data | Catalogue/plan sync, purchase, status/requery, balance | Exact network/plan IDs, current source-price provenance and sandbox result |
+| Electricity | Meter/customer validation, vend, token/result retrieval, status/requery | Supported meter types, validation/vend contract and provider-confirmed transaction outcomes |
+| Cable TV | Smartcard/customer validation, package sync, renewal/purchase, status | Package IDs, customer-validation contract and provider-confirmed status handling |
+| Education/exam products | Product/PIN sync, purchase, fulfilment/requery, refund/reversal if supported | Exam type/product identifiers and provider-specific fulfilment/refund documentation |
+| Payment collection | Intent/session creation, webhook signature/replay, status, refund | Provider-specific webhook/signature tests, idempotency and settlement evidence |
+| Virtual accounts and transfers | Account creation, account resolution, transfer/payout, status, reconciliation | Separate permission/contract evidence per operation; do not infer payout from collection support |
+| Identity verification | Identity/document-specific check, match result, status, audit | Official eligible document list, lawful access, approved account, data-minimisation and sandbox evidence |
+| SMS/OTP | Send, delivery report, sender-ID status, balance, failover | Channel-specific auth, sender-ID rules, pricing, delivery status and retry behaviour |
+
+Every row starts as `unknown` until the matching adapter/controller, official contract, tests and authorised sandbox evidence are linked. Provider preset counts are leads only and must not be counted as successful integrations.
+
+## First code-to-contract audit — airtime/data and SIM Hosting
+
+Audit status is intentionally split into code-path evidence versus provider-contract/live evidence. A Core operation being implemented does not certify a provider integration.
+
+| Provider/service path | Operation | Code evidence | Contract / live status | Finding / next fix |
+|---|---|---|---|---|
+| Core generic REST adapter | Transaction initiation/status, catalogue, balance, SMS send | `RestJsonProviderAdapter::supports`, endpoint configuration, auth dispatch, idempotency header and safe ambiguous-state handling | Generic code path: supported; vendor-specific payload/auth mapping: unknown | Generic POST/GET is not a provider-specific adapter. Each provider still needs exact field mappings, response normalization, credentials and sandbox tests. |
+| Reloadly airtime/data | Catalogue/operators | Preset points to `GET /operators`; Core catalogue sync expects `catalogue_retrieval` | Official API docs describe bearer-token auth and operator catalogue; no authenticated sandbox run recorded | Source: https://docs.reloadly.com/airtime/Top-ups . OAuth token acquisition/refresh and response normalization remain unknown in this app. |
+| Reloadly airtime/data | Purchase | Preset points to `POST /topups`; generic adapter can dispatch the operation if the endpoint and capability are configured | Official API docs describe `operatorId`, amount, custom identifier and recipient data; no verified request mapper or sandbox evidence in this repository | Must map local network/plan identifiers to Reloadly operator IDs and normalize amount/recipient fields before enabling. |
+| Reloadly airtime/data | Status/requery | Current preset uses a generic `/transactions` status path | Official docs expose `GET /topups/{transactionId}/status`; exact path and response mapping are not represented by the simple static endpoint preset | Mark provider status as unknown until a dynamic path/endpoint adapter and fixture-backed tests are added. Refund/reversal/webhook support remains unknown. |
+| VTpass airtime/data/bills | Catalogue, purchase, requery | Preset includes `/services`, `/pay`, `/requery`; generic adapter has no VTpass-specific payload/response mapper | Official docs list airtime, data, electricity, TV and education products; the requery contract uses `request_id`. No sandbox result is recorded | Source: https://vtpass.com/documentation/introduction/ and https://vtpass.com/documentation/foreign-airtime/ . Validate auth signatures, required fields, service IDs and transaction status normalisation with fixtures before enabling. |
+| VTU.ng airtime/data/bills | Purchase/status/requery/webhook | Preset declares transaction capabilities but lacks a static `transaction_initiation` endpoint; its status preset is a generic `/api/v2/orders` path | Official docs describe airtime/data endpoints, `/api/v2/requery`, and HMAC-SHA256 webhook signatures; no verified adapter/test result recorded | Source: https://vtu.ng/api/ . This preset is not evidence of working purchase/status/webhook integration. Implement request IDs, correct endpoint mapping, requery, signature verification and status fixtures before enabling. |
+| SIM Hosting addon → Core | Airtime/data/catalogue/balance/status/requery | Addon used operation names such as `airtime_purchase`, `data_purchase`, `data_catalogue`, `provider_balance` and `transaction_requery`, which do not match Core's shared operation vocabulary. Those calls would be rejected by the Core capability registry/REST adapter. | Code defect confirmed; fix and tests are on the development branch, awaiting CI | Adapter now translates these business operation names to Core's `transaction_initiation`, `catalogue_retrieval`, `balance_inquiry`, and `transaction_status`. Core REST support for number reserve/release is also added. Do not mark this fix verified until the SIM Hosting workflow passes. |
+
+### Operation ledger rules applied
+
+- `supported` means an app code path is present and covered by a relevant test; it does not mean a vendor operation is live-verified.
+- `unsupported` means the current app explicitly rejects the operation or has no route/adapter path.
+- `unknown` means code or docs are insufficient to confirm exact operation semantics, identifiers, auth, refund behavior or live result.
+- For Reloadly and VTU.ng, refund/reversal is still `unknown`; no generic refund capability should be inferred from purchase/status.
+- For every provider, the next evidence artifacts are: official endpoint/schema link, redacted request/response fixture, test result, sandbox verification record, and a reviewer/date. No credentials or live secrets belong in this register.
+
+### Catalogue workflow safety gates — implementation checkpoint
+
+Core's existing workflow separates catalogue discovery, import preview, approval/import, and mapping. Addon #38 must continue to call these Core endpoints and avoid changing Core-owned approval or mapping state directly. Any extension should add only missing service-specific adapters or evidence—not a duplicate catalogue manager.
+
+### Core workflow reuse boundary confirmed
+
+Code inspection found these existing Core endpoints in `routes/web.php` and `ProviderEngineController`: provider discovery, provider sync/history, service catalogue listing, import preview, explicit approve/import, and mapping create/toggle. The existing `Admin/ProviderCatalogueManager.tsx` already calls the Core sync and approval/import endpoints. Addon #38 therefore links to this screen and retains only its service-by-service coverage/reporting responsibility. The short-lived duplicate catalogue review implementation was removed before this development PR is considered ready.
+

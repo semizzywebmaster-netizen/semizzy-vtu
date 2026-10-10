@@ -23,9 +23,11 @@ class DashboardTest extends TestCase
                 ->component('Dashboard')
                 ->where('role', 'ADMIN')
                 ->where('metrics.0.value', 2)
-                ->has('quickLinks', 22)
+                ->has('quickLinks', 17)
                 ->where('quickLinks.0.url', '/admin/users')
-                ->where('quickLinks.5.url', '/admin/settings')
+                ->where('quickLinks.5.url', '/admin/runbooks')
+                ->where('quickLinks.6.url', '/admin/feature-rollouts')
+                ->where('quickLinks.7.url', '/admin/settings')
             );
     }
 

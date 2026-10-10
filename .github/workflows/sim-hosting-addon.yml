@@ -54,4 +54,5 @@ jobs:
       - run: find addons/sim-hosting -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - run: cp .env.example .env
       - run: php artisan key:generate
+      - run: php artisan test tests/Feature/SimHostingProviderAdapterTest.php
       - run: php artisan test --filter='sim-hosting'

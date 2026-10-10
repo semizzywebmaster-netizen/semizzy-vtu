@@ -9,6 +9,10 @@ use App\Http\Controllers\Admin\ProviderController;
 use App\Http\Controllers\Admin\ProviderEngineController;
 use App\Http\Controllers\Admin\PricingRoutingController;
 use App\Http\Controllers\Admin\SystemHealthController;
+use App\Http\Controllers\Admin\GlobalSearchController;
+use App\Http\Controllers\Admin\OperationalRunbooksController;
+use App\Http\Controllers\Admin\FeatureRolloutController;
+use App\Http\Controllers\Admin\ProductPublicationController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\UserController;
@@ -178,6 +182,10 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/users/{user}/freeze', [UserController::class, 'freeze'])->whereNumber('user')->middleware('permission:users.security.manage')->name('admin.users.freeze');
         Route::put('/users/{user}/permissions', [UserController::class, 'permissions'])->whereNumber('user')->middleware('permission:users.manage')->name('admin.users.permissions');
         Route::post('/users/{user}/wallet-status', [UserController::class, 'walletStatus'])->whereNumber('user')->middleware('permission:users.fund')->name('admin.users.wallet-status');
+        Route::get('/global-search', GlobalSearchController::class)->middleware('throttle:60,1')->name('admin.global-search');
+        Route::get('/runbooks', OperationalRunbooksController::class)->middleware('permission:system.view')->name('admin.runbooks');
+        Route::get('/feature-rollouts', [FeatureRolloutController::class, 'index'])->middleware(['role:ADMIN','permission:system.manage'])->name('admin.feature-rollouts.index');
+        Route::put('/feature-rollouts', [FeatureRolloutController::class, 'update'])->middleware(['role:ADMIN','permission:system.manage','throttle:10,1'])->name('admin.feature-rollouts.update');
         Route::get('/health', SystemHealthController::class)->middleware('permission:system.view')->name('admin.health');
         Route::get('/platform-controls', [PlatformControlController::class, 'index'])->middleware(['role:ADMIN','permission:system.manage'])->name('admin.platform-controls.index');
         Route::patch('/platform-controls/services/{service}', [PlatformControlController::class, 'toggleService'])->whereNumber('service')->middleware(['role:ADMIN','permission:system.manage','throttle:30,1'])->name('admin.platform-controls.service-toggle');
@@ -241,11 +249,14 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/routing/rules', [PricingRoutingController::class, 'storeRoutingRule'])->middleware('permission:providers.manage');
         Route::put('/routing/rules/{rule}', [PricingRoutingController::class, 'updateRoutingRule'])->whereNumber('rule')->middleware('permission:providers.manage');
         Route::delete('/routing/rules/{rule}', [PricingRoutingController::class, 'deleteRoutingRule'])->whereNumber('rule')->middleware('permission:providers.manage');
-        Route::post('/providers/{provider}/mappings', [ProviderEngineController::class, 'createMapping'])->whereNumber('provider')->middleware('permission:providers.manage');
-        Route::patch('/providers/{provider}/mappings/{mapping}', [ProviderEngineController::class, 'toggleMapping'])->whereNumber(['provider','mapping'])->middleware(['permission:catalogue.manage','throttle:30,1'])->name('admin.providers.mappings.toggle-v2');
+        Route::post('/providers/{provider}/mappings', [ProviderEngineController::class, 'createMapping'])->whereNumber('provider')->middleware(['permission:providers.manage','permission:catalogue.manage']);
+        Route::patch('/providers/{provider}/mappings/{mapping}', [ProviderEngineController::class, 'toggleMapping'])->whereNumber(['provider','mapping'])->middleware(['permission:providers.manage','permission:catalogue.manage','throttle:30,1'])->name('admin.providers.mappings.toggle-v2');
         Route::get('/providers/{provider}/provider-services/import-preview', [ProviderEngineController::class, 'importPreview'])->whereNumber('provider')->middleware('permission:providers.view')->name('admin.providers.import-preview');
         Route::post('/providers/{provider}/provider-services/approve', [ProviderEngineController::class, 'approveImport'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.providers.approve-import');
         Route::post('/providers/{provider}/provider-services/import', [ProviderEngineController::class, 'importSelected'])->whereNumber('provider')->middleware(['permission:providers.manage','throttle:20,1'])->name('admin.providers.provider-services.import');
+        Route::post('/providers/{provider}/provider-services/{providerService}/map-to-platform', [ProviderEngineController::class, 'mapServiceToPlatform'])->whereNumber('provider')->whereNumber('providerService')->middleware(['permission:providers.manage','permission:catalogue.manage','throttle:30,1'])->name('admin.providers.provider-services.map-to-platform');
+        Route::patch('/providers/{provider}/service-mappings/{mapping}', [ProviderEngineController::class, 'togglePlatformServiceMapping'])->whereNumber(['provider','mapping'])->middleware(['permission:providers.manage','permission:catalogue.manage','throttle:20,1'])->name('admin.providers.service-mappings.toggle');
+        Route::patch('/providers/{provider}/service-mappings/{mapping}/capabilities', [ProviderEngineController::class, 'updatePlatformServiceMappingCapabilities'])->whereNumber(['provider','mapping'])->middleware(['permission:providers.manage','permission:catalogue.manage','throttle:20,1'])->name('admin.providers.service-mappings.capabilities');
 
         Route::get('/catalogue', [CatalogueController::class, 'index'])->middleware('permission:catalogue.view')->name('admin.catalogue.index');
         Route::post('/catalogue/categories', [CatalogueController::class, 'storeCategory'])->middleware('permission:catalogue.manage')->name('admin.catalogue.categories.store');
@@ -253,10 +264,13 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('/catalogue/services/generate-icons', [CatalogueController::class, 'generateServiceIcons'])->middleware('permission:catalogue.manage')->name('admin.catalogue.services.generate-icons');
         Route::post('/catalogue/services/{service}/icon', [CatalogueController::class, 'uploadServiceIcon'])->whereNumber('service')->middleware('permission:catalogue.manage')->name('admin.catalogue.services.icon');
         Route::post('/catalogue/products', [CatalogueController::class, 'storeProduct'])->middleware('permission:catalogue.manage')->name('admin.catalogue.products.store');
+        Route::get('/catalogue/products/{product}/publication-readiness', [ProductPublicationController::class, 'readiness'])->whereNumber('product')->middleware('permission:catalogue.manage')->name('admin.catalogue.products.publication-readiness');
+        Route::post('/catalogue/products/{product}/publish', [ProductPublicationController::class, 'publish'])->whereNumber('product')->middleware(['permission:catalogue.manage','throttle:20,1'])->name('admin.catalogue.products.publish');
+        Route::post('/catalogue/products/{product}/unpublish', [ProductPublicationController::class, 'unpublish'])->whereNumber('product')->middleware(['permission:catalogue.manage','throttle:20,1'])->name('admin.catalogue.products.unpublish');
         Route::post('/catalogue/products/{product}/disable', [CatalogueController::class, 'disableProduct'])->middleware('permission:catalogue.manage')->name('admin.catalogue.products.disable');
         Route::post('/catalogue/sync', [CatalogueController::class, 'syncProvider'])->middleware('permission:catalogue.manage')->name('admin.catalogue.sync');
         Route::post('/catalogue/sync-all', [CatalogueController::class, 'syncAllVerified'])->middleware('permission:catalogue.manage')->name('admin.catalogue.sync-all');
-        Route::post('/catalogue/mappings/{mapping}/toggle', [CatalogueController::class, 'toggleMapping'])->middleware('permission:catalogue.manage')->name('admin.catalogue.mappings.toggle');
+        Route::post('/catalogue/mappings/{mapping}/toggle', [CatalogueController::class, 'toggleMapping'])->middleware(['permission:providers.manage','permission:catalogue.manage'])->name('admin.catalogue.mappings.toggle');
 
         Route::get('/addons', [AddonController::class, 'index'])->middleware('permission:addons.view')->name('admin.addons.index');
         Route::post('/addons/register', [AddonController::class, 'register'])->middleware('permission:addons.manage')->name('admin.addons.register');

@@ -91,8 +91,11 @@ final class P2pTransferService
                 $users = [$senderId, $recipient->id];
                 sort($users, SORT_NUMERIC);
 
+                // Acquire row locks in a deterministic order to reduce cross-transfer deadlocks.
                 $wallets = WalletAccount::whereIn('user_id', $users)
                     ->where('currency', 'NGN')
+                    ->orderBy('user_id')
+                    ->orderBy('id')
                     ->lockForUpdate()->get()->keyBy('user_id');
 
                 $sender = $wallets->get($senderId);
@@ -140,7 +143,7 @@ final class P2pTransferService
                 ]);
 
                 return $tx->fresh();
-            });
+            }, 3);
         } catch (QueryException $e) {
             if (str_contains(strtolower($e->getMessage()), 'unique') || str_contains(strtolower($e->getMessage()), 'duplicate')) {
                 $existing = P2pTransfer::where('sender_id', $senderId)->where('idempotency_key', $idempotencyKey)->first();

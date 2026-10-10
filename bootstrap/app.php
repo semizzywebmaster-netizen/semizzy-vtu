@@ -14,6 +14,7 @@ use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\EnsureTransactionPin;
 use App\Http\Middleware\EnsureApiUser;
 use App\Http\Middleware\EnsureDeviceSession;
+use App\Http\Middleware\EnsureFeatureRollout;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'ensure.active.api' => EnsureActiveApiAccount::class,
             'security.throttle' => SecurityThrottle::class,
             'ensure.addon' => \App\Http\Middleware\EnsureAddonActive::class,
+            'feature.rollout' => EnsureFeatureRollout::class,
             'transaction.pin' => EnsureTransactionPin::class,
             'ensure.api.user' => EnsureApiUser::class,
             'device.session' => EnsureDeviceSession::class,
