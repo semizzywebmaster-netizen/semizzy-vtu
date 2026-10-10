@@ -99,11 +99,11 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $pending=(object) DB::table('education_reference_catalogue')->where('name','CSV University')->first();
   $activation=Request::create('/admin/education/references/'.$pending->id,'PUT',['name'=>$pending->name,'category'=>$pending->category,'short_name'=>$pending->short_name,'state'=>$pending->state,'country'=>$pending->country,'official_url'=>$pending->official_url,'source_url'=>$pending->source_url,'is_active'=>true]);
   $activation->setUserResolver(fn()=>(object)['id'=>1]);
-  app(\\Semizzy\\Addons\\Education\\Http\\Controllers\\EducationReferenceCatalogueController::class)->update($activation,(int)$pending->id);
+  app(\Semizzy\Addons\Education\Http\Controllers\EducationReferenceCatalogueController::class)->update($activation,(int)$pending->id);
   $this->assertDatabaseHas('education_reference_catalogue',['id'=>$pending->id,'is_active'=>false,'review_status'=>'pending']);
   $approval=Request::create('/admin/education/references/'.$pending->id.'/review','POST',['decision'=>'approve']);
   $approval->setUserResolver(fn()=>(object)['id'=>1]);
-  $approved=app(\\Semizzy\\Addons\\Education\\Http\\Controllers\\EducationReferenceCatalogueController::class)->review($approval,(int)$pending->id);
+  $approved=app(\Semizzy\Addons\Education\Http\Controllers\EducationReferenceCatalogueController::class)->review($approval,(int)$pending->id);
   $this->assertSame(302,$approved->getStatusCode());
   $this->assertDatabaseHas('education_reference_catalogue',['id'=>$pending->id,'is_active'=>true,'review_status'=>'approved','reviewed_by'=>1]);
   $duplicate=UploadedFile::fake()->createWithContent('duplicates.csv',"kind,name,category\nschool,CSV University,private_university\n");
