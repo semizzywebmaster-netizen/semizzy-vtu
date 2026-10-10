@@ -6,7 +6,7 @@ Status: initial static inventory of Core presets only. Counts below are **preset
 
 ## Selected replacement shortlist (2026-10-10)
 
-The proposed six-provider research shortlist has been narrowed to **VTU.ng and VTpass only**. Paybeta, VTUGATE, OTOBILL and VTUAgent remain research-only and must not be added as replacement presets under this decision.
+The two priority providers are **VTU.ng and VTpass**. Four additional candidates—Paybeta, VTUGATE, OTOBILL and VTUAgent—have now been added as disabled, unverified directory presets. ClubKonnect already exists in the Core preset registry, giving five additional alternatives already represented in the directory. These candidate records intentionally contain no assumed API operations or endpoint paths; they are not production integrations.
 
 Both selected providers already have Core preset records; do not create duplicate provider identities. Their presence in the registry is not proof of a completed integration. Keep both disabled/unverified until credentials, exact service-specific request/response mapping, transaction-status requery, timeout recovery, pricing/catalogue sync and sandbox/live checks pass. VTU.ng's preset requery path is corrected to the documented `POST /api/v2/requery`; its adapter contract still needs tests against the provider's documented request and response schema. VTpass documents `POST /api/requery` with `request_id` and supports transaction-update webhooks, but the existing generic preset must still be checked against VTpass's authentication and service-specific API contract.
 
@@ -82,6 +82,11 @@ These are distinct provider identifiers present in the current preset mapping—
 
 These are initial leads only; pricing, availability, documentation completeness, credentials and live behaviour must be checked before integration or production claims.
 
+
+
+## Admin provider balance dashboard
+
+The admin dashboard now lists each Core API provider's last confirmed balance snapshot and status, with an admin-only manual refresh action. Amounts are only updated when the configured read-only `balance_inquiry` operation returns a numeric balance field; missing endpoints display `Not configured`, and unconfirmed responses display `Balance unavailable`. The migration adds nullable snapshot fields. No provider credentials or raw provider response bodies are sent to the browser. Each provider still needs its own documented balance endpoint and response mapping before a balance can be refreshed.
 
 ## Service-addon usability requirements
 
