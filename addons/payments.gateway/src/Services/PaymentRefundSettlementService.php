@@ -3,6 +3,7 @@
 namespace Semizzy\Addons\Payments\Services;
 
 use App\Models\User;
+use App\Models\WalletAccount;
 use App\Models\WalletMovement;
 use App\Services\Finance\WalletReversalService;
 use Illuminate\Support\Facades\DB;
@@ -141,6 +142,28 @@ final class PaymentRefundSettlementService
                     throw new RuntimeException('The original wallet funding movement was not found; refund settlement is blocked.');
                 }
 
+                // Preflight a debit reversal while the payment row is locked.
+                // This avoids raising an insufficient-balance exception inside
+                // WalletReversalService's nested transaction/savepoint; on MySQL
+                // that nested rollback can otherwise obscure the reconciliation error.
+                $wallet = WalletAccount::query()
+                    ->whereKey($locked->wallet_account_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($wallet->status !== 'active') {
+                    throw new RuntimeException('The wallet must be active before a movement can be reversed.');
+                }
+
+                $movementBefore = (string) $movement->available_before_minor;
+                $movementAfter = (string) $movement->available_after_minor;
+                if ($this->compareMinor($movementAfter, $movementBefore) > 0) {
+                    $reversalAmount = (string) $movement->amount_minor;
+                    if ($this->compareMinor((string) $wallet->available_minor, $reversalAmount) < 0) {
+                        throw new RuntimeException('Insufficient available wallet balance to reverse the original credit.');
+                    }
+                }
+
                 app(WalletReversalService::class)->reverse(
                     $movement,
                     'Payment refund '.$providerRefundReference.': '.$reason,
@@ -192,6 +215,14 @@ final class PaymentRefundSettlementService
 
             throw $exception;
         }
+    }
+
+    private function compareMinor(string $left, string $right): int
+    {
+        $left = $this->normalizeMinor($left);
+        $right = $this->normalizeMinor($right);
+
+        return strlen($left) <=> strlen($right) ?: strcmp($left, $right);
     }
 
     private function normalizeMinor(string $minor): string
