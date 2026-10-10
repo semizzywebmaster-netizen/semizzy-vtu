@@ -28,6 +28,8 @@ jobs:
         run: composer audit --locked --format=json > composer-audit.json || true
       - name: Resolve npm dependencies and create lockfile
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Apply compatible npm security fixes without major upgrades
+        run: npm audit fix --package-lock-only --ignore-scripts --no-fund || true
       - name: Verify clean npm installation and capture security audit
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
