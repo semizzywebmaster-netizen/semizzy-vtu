@@ -146,7 +146,7 @@ class ProviderManager
                 status: 'UNKNOWN',
                 message: 'Provider execution failed; provider state must be requeried before retry.',
                 retryable: false,
-                duplicateRisk: $operation === 'transaction_initiation',
+                duplicateRisk: in_array($operation, ProviderCapabilityRegistry::IDEMPOTENT_MUTATIONS, true),
                 providerId: $provider->id,
             );
         }
