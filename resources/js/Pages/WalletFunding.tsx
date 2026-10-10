@@ -1,5 +1,4 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import CoreMobileNav from '../Components/CoreMobileNav';
 
 type Wallet = { availableMinor: string; currency: string; status: string } | null;
 type FundingMethod = { key: string; name: string; description: string; available: boolean };
@@ -39,6 +38,6 @@ export default function WalletFunding({ wallet, methods, unreadCount }: Props) {
           <div className="mt-4 space-y-3">{methods.map(method => <article key={method.key} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><div className="flex items-start justify-between gap-4"><div><h3 className="font-black">{method.name}</h3><p className="mt-1 text-sm text-slate-500">{method.description}</p></div><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">{method.available ? 'Available' : 'Unavailable'}</span></div></article>)}</div>}
       </section>
     </div>
-    <CoreMobileNav active="home" unreadCount={badge} />
+
   </main>;
 }
