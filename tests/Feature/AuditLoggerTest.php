@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\AuditEvent;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabase;\nuse Illuminate\Database\QueryException;\nuse Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Tests\TestCase;
 
@@ -67,4 +67,33 @@ class AuditLoggerTest extends TestCase
             'event' => 'immutable.audit.test',
         ]);
     }
+
+    public function test_database_rejects_direct_audit_event_updates(): void
+    {
+        $event = AuditEvent::create(['event' => 'immutable.sql.update']);
+
+        try {
+            DB::table('audit_events')->where('id', $event->id)->update(['event' => 'tampered.sql.update']);
+            $this->fail('Database trigger must reject direct audit event updates.');
+        } catch (QueryException $exception) {
+            $this->assertStringContainsString('audit_events is append-only', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('audit_events', ['id' => $event->id, 'event' => 'immutable.sql.update']);
+    }
+
+    public function test_database_rejects_direct_audit_event_deletes(): void
+    {
+        $event = AuditEvent::create(['event' => 'immutable.sql.delete']);
+
+        try {
+            DB::table('audit_events')->where('id', $event->id)->delete();
+            $this->fail('Database trigger must reject direct audit event deletes.');
+        } catch (QueryException $exception) {
+            $this->assertStringContainsString('audit_events is append-only', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('audit_events', ['id' => $event->id, 'event' => 'immutable.sql.delete']);
+    }
+
 }
