@@ -48,8 +48,7 @@ Schedule::call(function (): void {
             'catalogue', 'services', 'products', 'categories',
         ]))
         ->with(['connections' => fn ($query) => $query->where('enabled', true)->orderByDesc('is_default')])
-        ->orderBy('id')->limit(100)->get();
-
+        ->orderBy('id')->chunkById(100, function ($providers): void {
     foreach ($providers as $provider) {
         $started = microtime(true);
         $connection = $provider->connections->first();
@@ -80,6 +79,7 @@ Schedule::call(function (): void {
             ]);
         }
     }
+    });
 })->everyFiveMinutes()->name('provider-health-monitor')->withoutOverlapping(10)->onOneServer();
 
 Schedule::command('communication:campaigns')->everyMinute()->withoutOverlapping(2)->onOneServer();

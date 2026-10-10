@@ -95,7 +95,7 @@ class DashboardController extends Controller
                         'balance' => $provider->balance_amount, 'currency' => $provider->balance_currency ?: 'NGN',
                         'status' => $provider->balance_status ?: 'not_checked', 'message' => $provider->balance_message,
                         'checkedAt' => $provider->balance_checked_at?->toISOString(), 'lowThreshold' => $provider->balance_low_threshold,
-                        'lowBalance' => $balance !== null && $threshold !== null && $balance <= $threshold,
+                        'lowBalance' => $provider->balance_status === 'available' && $balance !== null && $threshold !== null && $balance <= $threshold,
                         'healthStatus' => $healthStatus, 'healthMessage' => $health?->message,
                         'healthCheckedAt' => $health?->checked_at?->toISOString(), 'responseTimeMs' => $health?->response_time_ms,
                         'failedHealthChecks24h' => (int) $provider->failed_health_checks_24h,
