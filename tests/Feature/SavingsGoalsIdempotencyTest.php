@@ -73,6 +73,27 @@ class SavingsGoalsIdempotencyTest extends TestCase
         app(SavingsController::class)->withdraw($this->request($user, 2000, 'withdraw-key'), $account->reference);
     }
 
+    public function test_savings_goals_same_withdrawal_replay_succeeds_after_balance_was_reduced(): void
+    {
+        [$user, $account] = $this->fixture(0);
+        SavingsMovement::create([
+            'savings_account_id' => $account->id,
+            'user_id' => $user->id,
+            'operation_key' => 'savings:withdrawal:'.$account->reference.':completed-key',
+            'type' => 'withdrawal',
+            'amount_minor' => 1000,
+            'currency' => 'NGN',
+            'balance_after_minor' => 0,
+            'status' => 'completed',
+            'reference' => 'SVM-WITHDRAWAL-REPLAY-1',
+        ]);
+
+        $response = app(SavingsController::class)->withdraw($this->request($user, 1000, 'completed-key'), $account->reference);
+
+        $this->assertTrue($response->getData(true)['idempotent']);
+        $this->assertSame('SVM-WITHDRAWAL-REPLAY-1', $response->getData(true)['movement']['reference']);
+    }
+
     private function fixture(int $balance = 0): array
     {
         $user = User::factory()->create(['role' => 'USER', 'status' => 'active']);
