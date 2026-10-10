@@ -1,9 +1,9 @@
 <?php
 
-namespace Semizzy\\Addons\\Education\\Models;
+namespace Semizzy\Addons\Education\Models;
 
-use Illuminate\\Database\\Eloquent\\Model;
-use Illuminate\\Database\\Eloquent\\SoftDeletes;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 final class EducationInstitution extends Model
 {
