@@ -34,7 +34,7 @@ class ProviderManager
             ->orderBy('priority')
             ->orderBy('id');
 
-        if ($operation === 'transaction_initiation') {
+        if ($this->registry->requiresLiveVerification($operation)) {
             $query->where('integration_status', 'live_verified')
                 ->where('verification_status', 'live_verified');
         } else {
@@ -79,11 +79,18 @@ class ProviderManager
             return new ProviderResult(false, 'UNSUPPORTED', message: 'Provider configuration is invalid.', providerId: $provider->id);
         }
 
-        if ($operation === 'transaction_initiation' && filled($idempotencyKey)) {
+        $providerIdempotencyKey = $idempotencyKey;
+
+        if ($this->registry->requiresIdempotency($operation)) {
+            if (! filled($idempotencyKey)) {
+                return new ProviderResult(false, 'UNSUPPORTED', message: 'A stable idempotency key is required for this provider operation.', providerId: $provider->id);
+            }
+
+            $providerIdempotencyKey = $operation . ':' . $idempotencyKey;
             // The idempotency key is provider-scoped. Once a provider call becomes
             // ambiguous, execute() stops failover; definitive failures may safely
             // continue to the next provider.
-            $reservation = $this->idempotency->reserve($provider, $idempotencyKey, $payload);
+            $reservation = $this->idempotency->reserve($provider, $providerIdempotencyKey, $payload);
 
             if (($reservation['replay'] ?? false) === true) {
                 $record = $reservation['record'];
@@ -132,7 +139,7 @@ class ProviderManager
         $started = microtime(true);
 
         try {
-            $result = $this->rest->execute($provider, $operation, $payload, $idempotencyKey);
+            $result = $this->rest->execute($provider, $operation, $payload, $providerIdempotencyKey);
         } catch (\Throwable $e) {
             $result = new ProviderResult(
                 accepted: false,
@@ -146,7 +153,7 @@ class ProviderManager
 
         $result = $this->normalizeResult($result, $provider->id);
 
-        if ($operation === 'transaction_initiation' && $reservation !== null) {
+        if ($reservation !== null) {
             if ($result->duplicateRisk || strtoupper($result->status) === 'UNKNOWN') {
                 $this->idempotency->fail(
                     $reservation['record'],
