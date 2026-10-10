@@ -35,6 +35,76 @@ class ProviderController extends Controller
         }
     }
 
+    public function checkBalance(int $provider, Request $request, \App\Services\Providers\RestJsonProviderAdapter $adapter, AuditLogger $audit): RedirectResponse
+    {
+        $model = ApiProvider::query()->findOrFail($provider);
+        try {
+            $result = $adapter->execute($model, 'balance_inquiry');
+            $body = is_array($result->data) ? $result->data : [];
+            $value = $this->findBalanceValue($body);
+            $currency = $this->findBalanceCurrency($body) ?? 'NGN';
+
+            if ($result->accepted && $value !== null) {
+                $model->forceFill([
+                    'balance_amount' => (string) $value,
+                    'balance_currency' => $currency,
+                    'balance_status' => 'available',
+                    'balance_message' => null,
+                    'balance_checked_at' => now(),
+                ])->save();
+                $audit->record('provider.balance.checked', $model, ['status' => 'available', 'currency' => $currency], $request);
+                return back()->with('success', 'Provider balance refreshed.');
+            }
+
+            $model->forceFill([
+                'balance_status' => $result->status === 'UNSUPPORTED' ? 'not_configured' : 'unavailable',
+                'balance_message' => $result->status === 'UNSUPPORTED'
+                    ? 'No verified read-only balance endpoint is configured.'
+                    : 'Balance could not be confirmed from the provider response.',
+                'balance_checked_at' => now(),
+            ])->save();
+            $audit->record('provider.balance.check_failed', $model, ['status' => $model->balance_status], $request);
+            return back()->with('error', 'Balance could not be confirmed. Check the provider balance endpoint and response mapping.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Provider balance check failed.', [
+                'provider_id' => $model->id,
+                'exception_class' => get_class($e),
+            ]);
+            $model->forceFill([
+                'balance_status' => 'unavailable',
+                'balance_message' => 'Balance check failed; see server-side diagnostics.',
+                'balance_checked_at' => now(),
+            ])->save();
+            return back()->with('error', 'Balance check failed safely.');
+        }
+    }
+
+    private function findBalanceValue(array $body): int|float|string|null
+    {
+        $keys = ['balance', 'available_balance', 'availableBalance', 'wallet_balance', 'walletBalance', 'account_balance', 'accountBalance', 'current_balance', 'currentBalance'];
+        foreach ([$body, is_array($body['data'] ?? null) ? $body['data'] : []] as $scope) {
+            foreach ($keys as $key) {
+                $value = $scope[$key] ?? null;
+                if (is_int($value) || is_float($value) || (is_string($value) && $value !== '' && is_numeric($value))) {
+                    return $value;
+                }
+            }
+        }
+        return null;
+    }
+
+    private function findBalanceCurrency(array $body): ?string
+    {
+        foreach ([$body, is_array($body['data'] ?? null) ? $body['data'] : []] as $scope) {
+            foreach (['currency', 'currency_code', 'currencyCode'] as $key) {
+                if (is_string($scope[$key] ?? null) && trim($scope[$key]) !== '') {
+                    return strtoupper(trim($scope[$key]));
+                }
+            }
+        }
+        return null;
+    }
+
     public function wizard(int $provider): Response
     {
         $model = ApiProvider::query()->findOrFail($provider);
