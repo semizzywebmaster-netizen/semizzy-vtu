@@ -2,6 +2,7 @@
 
 namespace Semizzy\Addons\Education\Services;
 
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Semizzy\Addons\Education\Models\EducationInstitution;
@@ -35,7 +36,8 @@ final class EducationInstitutionImportService
             // Generate a deterministic code from the institution's actual identity instead.\n            $code = $this->makeCode($name, $state, $category, $identity);
             $now = now();
 
-            DB::transaction(function () use ($record, $name, $externalId, $category, $state, $source, $sourceKey, $code, $now, &$counts): void {
+            try {
+                DB::transaction(function () use ($record, $name, $externalId, $category, $state, $source, $sourceKey, $code, $now, &$counts): void {
                 $institution = null;
                 if ($externalId !== '') {
                     $institution = EducationInstitution::withTrashed()->where('external_id', $externalId)->where('import_source', $source)->first();
@@ -116,7 +118,32 @@ final class EducationInstitutionImportService
                 ]));
                 $counts['created']++;
                 $counts['review_required']++;
-            });
+                });
+            } catch (QueryException $exception) {
+                // A concurrent import may win the unique-key race after our initial lookup.
+                // Reconcile only when that exact identity now exists; unrelated SQL failures still surface.
+                $raced = null;
+                if ($externalId !== '') {
+                    $raced = EducationInstitution::withTrashed()
+                        ->where('external_id', $externalId)
+                        ->where('import_source', $source)
+                        ->first();
+                }
+                if (!$raced) {
+                    $raced = EducationInstitution::withTrashed()->where('source_key', $sourceKey)->first();
+                }
+                if (!$raced) {
+                    $raced = EducationInstitution::withTrashed()->where('code', $code)->first();
+                }
+                if (!$raced) {
+                    throw $exception;
+                }
+                if ($raced->review_status === 'rejected') {
+                    $counts['rejected']++;
+                } else {
+                    $counts['skipped']++;
+                }
+            }
         }
 
         return $counts;
