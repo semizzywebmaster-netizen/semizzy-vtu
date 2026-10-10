@@ -11,6 +11,7 @@ use App\Models\Communication\Provider;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Tests\TestCase;
@@ -18,6 +19,23 @@ use Tests\TestCase;
 class WhatsAppBotProviderExecutionTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // These schemas belong to the WhatsApp addon, not the Core migration path.
+        // Run only the addon migrations required by this test; the campaigns table
+        // is already provided by the Core test schema.
+        foreach ([
+            'addons/communication.whatsapp/database/migrations/2026_10_07_050000_create_communication_providers.php',
+            'addons/communication.whatsapp/database/migrations/2026_10_07_050003_create_communication_conversations.php',
+            'addons/communication.whatsapp/database/migrations/2026_10_07_050004_create_communication_messages.php',
+            'addons/communication.whatsapp/database/migrations/2026_10_07_050006_create_communication_delivery_attempts.php',
+        ] as $migration) {
+            Artisan::call('migrate', ['--path' => $migration, '--force' => true]);
+        }
+    }
 
     public function test_webhook_signature_selects_the_provider_that_signed_the_payload(): void
     {
