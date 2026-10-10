@@ -40,6 +40,48 @@ Schedule::call(function (): void {
     }
 })->everyFiveMinutes()->name('escrow-expiry-reconciliation')->withoutOverlapping()->onOneServer();
 
+Schedule::call(function (): void {
+    $providers = \App\Models\ApiProvider::query()
+        ->whereHas('connections', fn ($query) => $query->where('enabled', true))
+        ->whereHas('endpoints', fn ($query) => $query->where('enabled', true)->whereIn('operation', [
+            'health_check', 'health', 'status', 'balance_inquiry', 'catalogue_retrieval',
+            'catalogue', 'services', 'products', 'categories',
+        ]))
+        ->with(['connections' => fn ($query) => $query->where('enabled', true)->orderByDesc('is_default')])
+        ->orderBy('id')->limit(100)->get();
+
+    foreach ($providers as $provider) {
+        $started = microtime(true);
+        $connection = $provider->connections->first();
+        try {
+            $result = app(\App\Services\Providers\ProviderTestService::class)->test($provider);
+            $apiResult = $result['result'] ?? null;
+            $successful = $apiResult && in_array($apiResult->status, ['ACCEPTED', 'SUCCESS', 'OK'], true);
+            \App\Models\ProviderHealthCheck::create([
+                'api_provider_id' => $provider->id,
+                'provider_connection_id' => $connection?->id,
+                'status' => $successful ? 'SUCCESS' : 'FAILED',
+                'response_time_ms' => (int) round((microtime(true) - $started) * 1000),
+                'message' => $successful ? 'Scheduled provider health check succeeded.' : 'Scheduled provider health check did not confirm success.',
+                'checked_at' => now(),
+            ]);
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::warning('Scheduled provider health check failed safely.', [
+                'provider_id' => $provider->id,
+                'exception_class' => get_class($exception),
+            ]);
+            \App\Models\ProviderHealthCheck::create([
+                'api_provider_id' => $provider->id,
+                'provider_connection_id' => $connection?->id,
+                'status' => 'FAILED',
+                'response_time_ms' => (int) round((microtime(true) - $started) * 1000),
+                'message' => 'Scheduled provider health check failed safely; see server diagnostics.',
+                'checked_at' => now(),
+            ]);
+        }
+    }
+})->everyFiveMinutes()->name('provider-health-monitor')->withoutOverlapping(10)->onOneServer();
+
 Schedule::command('communication:campaigns')->everyMinute()->withoutOverlapping(2)->onOneServer();
 Artisan::command('communication:campaigns',function(\Addons\CommunicationWhatsapp\Services\CommunicationCampaignService $service){$count=0; \App\Models\Communication\Campaign::query()->whereIn('status',['draft','scheduled','running'])->where(fn($q)=>$q->whereNull('scheduled_at')->orWhere('scheduled_at','<=',now()))->orderBy('id')->limit(50)->get()->each(function($campaign)use($service,&$count){$service->process($campaign,500);$count++;}); $this->info("Processed {$count} communication campaigns.");});
 

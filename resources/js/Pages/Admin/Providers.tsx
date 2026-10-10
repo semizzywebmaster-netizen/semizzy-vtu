@@ -15,6 +15,12 @@ type Provider = {
   enabled: boolean;
   paused: boolean;
   priority: number;
+  balance_low_threshold: string | null;
+  balance_amount: string | null;
+  balance_currency: string | null;
+  balance_status: string | null;
+  balance_checked_at: string | null;
+  last_successful_request_at: string | null;
   last_tested_at: string | null;
   last_test_status: string | null;
   last_test_summary: string | null;
@@ -33,6 +39,7 @@ type FormData = {
   environment: 'sandbox' | 'production';
   auth_type: 'none' | 'api_key' | 'bearer_token' | 'basic_auth' | 'oauth2' | 'custom';
   priority: number;
+  balance_low_threshold: string;
   integration_config: string;
   credentials_json: string;
   credentials_touched: boolean;
@@ -47,6 +54,7 @@ const emptyForm: FormData = {
   environment: 'sandbox',
   auth_type: 'bearer_token',
   priority: 100,
+  balance_low_threshold: '',
   integration_config: JSON.stringify({ capabilities: ['health'], endpoints: {}, service_categories: [] }, null, 2),
   credentials_json: JSON.stringify({ headers_get: {}, headers_post: {} }, null, 2),
   credentials_touched: false,
@@ -69,6 +77,7 @@ export default function Providers({ providers }: { providers: Provider[] }) {
       environment: provider.environment as FormData['environment'],
       auth_type: provider.auth_type as FormData['auth_type'],
       priority: provider.priority,
+      balance_low_threshold: provider.balance_low_threshold ?? '',
       integration_config: JSON.stringify({
         capabilities: provider.capabilities,
         endpoints: provider.endpoints,
@@ -123,6 +132,7 @@ export default function Providers({ providers }: { providers: Provider[] }) {
       environment: form.data.environment,
       auth_type: form.data.auth_type,
       priority: Number(form.data.priority),
+      balance_low_threshold: form.data.balance_low_threshold.trim() === '' ? null : Number(form.data.balance_low_threshold),
       ...config,
       ...(credentials !== undefined ? { credentials } : {}),
     };
@@ -187,6 +197,7 @@ export default function Providers({ providers }: { providers: Provider[] }) {
         <label className="block text-sm font-semibold">Environment<select className="mt-1 w-full rounded-xl border border-slate-300 p-3 font-normal" value={form.data.environment} onChange={e=>form.setData('environment',e.target.value as FormData['environment'])}><option value="sandbox">Sandbox</option><option value="production">Production</option></select></label>
         <label className="block text-sm font-semibold">Authentication type<select className="mt-1 w-full rounded-xl border border-slate-300 p-3 font-normal" value={form.data.auth_type} onChange={e=>form.setData('auth_type',e.target.value as FormData['auth_type'])}><option value="none">No authentication</option><option value="api_key">API key</option><option value="bearer_token">API token / Bearer token</option><option value="basic_auth">Username + password</option><option value="oauth2">OAuth 2 access token</option><option value="custom">Custom authorization</option></select></label>
         <label className="block text-sm font-semibold">Priority (lower is earlier)<input type="number" min={0} max={100000} className="mt-1 w-full rounded-xl border border-slate-300 p-3 font-normal" value={form.data.priority} onChange={e=>form.setData('priority',Number(e.target.value))} /></label>
+        <label className="block text-sm font-semibold">Low-balance alert threshold<input type="number" min={0} step="0.01" className="mt-1 w-full rounded-xl border border-slate-300 p-3 font-normal" placeholder="e.g. 10000" value={form.data.balance_low_threshold} onChange={e=>form.setData('balance_low_threshold',e.target.value)} /><span className="mt-1 block text-xs font-normal text-slate-500">In the provider balance currency. Leave blank to disable the low-fund alert.</span>{form.errors.balance_low_threshold && <span className="mt-1 block text-red-600">{form.errors.balance_low_threshold}</span>}</label>
       </div>
       <label className="block text-sm font-semibold">Integration configuration (JSON)<textarea rows={8} spellCheck={false} className="mt-1 w-full rounded-xl border border-slate-300 p-3 font-mono text-xs font-normal" value={form.data.integration_config} onChange={e=>form.setData('integration_config',e.target.value)} />{form.errors.integration_config && <span className="mt-1 block text-red-600">{form.errors.integration_config}</span>}<span className="mt-1 block text-xs font-normal text-slate-500">Capabilities, operation endpoints and service categories. Credentials are configured separately and stored encrypted.</span></label>
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -206,6 +217,8 @@ export default function Providers({ providers }: { providers: Provider[] }) {
       {providers.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-600">No providers registered yet. Add a provider above using its verified documentation.</div> : providers.map(provider => <article key={provider.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="mb-3 flex items-center gap-3"><input type="checkbox" aria-label={`Select ${provider.display_name}`} checked={selectedIds.includes(provider.id)} onChange={()=>toggleSelected(provider.id)} className="h-4 w-4" /><span className="text-xs font-semibold text-slate-500">Select provider</span></div>
         <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-lg font-bold text-slate-900">{provider.display_name}</h3><p className="mt-1 break-all text-xs text-slate-500">{provider.identifier} · {provider.environment} · priority {provider.priority}</p><p className="mt-2 break-all text-sm text-slate-600">{provider.base_url || 'No API base URL configured'}</p></div><div className="flex flex-wrap gap-2"><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">{provider.verification_status}</span><span className={`rounded-full px-3 py-1 text-xs font-semibold ${provider.enabled && !provider.paused ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{provider.enabled && !provider.paused ? 'Enabled' : 'Disabled / paused'}</span></div></div>
         <p className="mt-3 text-sm text-slate-600">Authentication: {provider.auth_type} · Integration: {provider.integration_status} · Capabilities: {provider.capabilities.join(', ') || 'none'}</p>
+        <p className="mt-2 text-xs text-slate-600">Balance: {provider.balance_amount !== null && provider.balance_amount !== '' ? new Intl.NumberFormat(undefined, { style: 'currency', currency: /^[A-Z]{3}$/.test(provider.balance_currency || '') ? provider.balance_currency! : 'NGN' }).format(Number(provider.balance_amount)) : provider.balance_status === 'not_configured' ? 'No verified balance endpoint' : 'Not checked'} · Low-fund threshold: {provider.balance_low_threshold ?? 'not set'}</p>
+        {provider.last_successful_request_at && <p className="mt-1 text-xs text-slate-500">Last successful API request: {new Date(provider.last_successful_request_at).toLocaleString()}</p>}
         {provider.last_tested_at && <p className="mt-2 text-xs text-slate-500">Last test: {provider.last_test_status || 'unknown'} · {new Date(provider.last_tested_at).toLocaleString()} · {provider.last_test_summary || 'No summary'}</p>}
         <div className="mt-4 flex flex-wrap gap-2"><button onClick={()=>router.get(`/admin/providers/${provider.id}/setup`)} className="rounded-lg border border-indigo-200 px-3 py-2 text-sm font-semibold text-indigo-700">Setup Wizard</button><button onClick={()=>router.get(`/admin/providers/${provider.id}/catalogue`)} className="rounded-lg border border-violet-200 px-3 py-2 text-sm font-semibold text-violet-700">Services &amp; Prices</button><button onClick={()=>beginEdit(provider)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">Edit</button><button onClick={async()=>{try{await runJson(`/admin/providers/${provider.id}/test`,{},'POST');window.location.reload();}catch(error){window.alert(error instanceof Error?error.message:'Provider test failed.')}}} className="rounded-lg border border-indigo-200 px-3 py-2 text-sm font-semibold text-indigo-700">Test connection</button><button type="button" disabled={provider.enabled || provider.verification_status!=='live_verified' || provider.integration_status!=='live_verified'} title={provider.verification_status!=='live_verified'||provider.integration_status!=='live_verified' ? 'Provider must be verified before it can be enabled.' : provider.enabled ? 'Provider is already enabled.' : 'Enable provider'} onClick={async()=>{try{await runJson(`/admin/providers/${provider.id}/toggle`,{},'POST');window.location.reload();}catch(error){window.alert(error instanceof Error?error.message:'Provider status update failed.')}}} className="rounded-lg border border-emerald-200 px-3 py-2 text-sm font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40">Enable</button><button type="button" disabled={!provider.enabled} title={!provider.enabled ? 'Provider is already disabled.' : 'Disable provider'} onClick={async()=>{try{await runJson(`/admin/providers/${provider.id}/toggle`,{},'POST');window.location.reload();}catch(error){window.alert(error instanceof Error?error.message:'Provider status update failed.')}}} className="rounded-lg border border-amber-200 px-3 py-2 text-sm font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-40">Disable</button><button onClick={()=>remove(provider)} className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700">Remove</button></div>
       </article>)}

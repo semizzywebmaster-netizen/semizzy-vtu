@@ -11,7 +11,7 @@ type TierLimit = { id: number; name: string; dailyLimitMinor: string; balanceLim
 type DashboardMessages = { greeting?: { message: string } | null; quote?: { message: string } | null; seasonal?: { message: string } | null; promotional?: { message: string } | null; seasonalSlides?: { id?: number; title?: string; message: string }[]; promotionSlides?: { id?: number; title?: string; message: string }[] };
 type RecentTransaction = { id: number; reference: string; type: string; amountMinor: string; currency: string; createdAt: string | null };
 type RequiredAction = { key: string; title: string; message: string; url: string; label: string; priority: string };
-type ProviderBalance = { id: number; identifier: string; name: string; balance: string | null; currency: string; status: string; message?: string | null; checkedAt?: string | null; enabled: boolean; paused: boolean };
+type ProviderBalance = { id: number; identifier: string; name: string; balance: string | null; currency: string; status: string; message?: string | null; checkedAt?: string | null; lowThreshold: string | null; lowBalance: boolean; healthStatus: string; healthMessage?: string | null; healthCheckedAt?: string | null; responseTimeMs: number | null; failedHealthChecks24h: number; lastSuccessfulRequestAt?: string | null; enabled: boolean; paused: boolean };
 
 const iconFor = (value: string) => {
   const key = value.toLowerCase();
@@ -163,41 +163,36 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
         </section>}
       </div>
 
-      <section className="mt-5 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-        <div className="flex items-center justify-between gap-3">
-          <div><p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Everything in one place</p><h2 className="mt-1 text-xl font-black">All available features</h2><p className="mt-1 text-sm text-slate-500">Core account, wallet, security, support and service actions.</p></div>
-          <Link href="/help" className="text-sm font-bold text-indigo-700">Help</Link>
-        </div>
-        <div className="mt-4 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-          {quickLinks.map(link => <Link key={link.url + link.label} href={link.url} className="rounded-2xl border border-slate-200 p-3 text-sm font-bold hover:border-indigo-200 hover:bg-indigo-50">{link.label}</Link>)}
-        </div>
-      </section>
-
-    </main>;
-  }
-
-  return <main className="min-h-screen bg-slate-50 p-4 text-slate-900 sm:p-8"><Head title={`Dashboard · ${siteName}`} /><div className="mx-auto max-w-7xl">
-    <header className="relative rounded-3xl bg-slate-900 p-6 text-white shadow-xl"><button type="button" onClick={() => router.post('/logout')} className="absolute right-5 top-5 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20">Logout</button><p className="text-xs font-semibold uppercase tracking-wider text-slate-300">{siteName}</p><h1 className="mt-2 text-3xl font-black">Dashboard</h1><p className="mt-2 text-sm text-slate-300">Role: {role}</p></header>
-    {metrics.length > 0 && <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{metrics.map(metric => <article key={metric.label} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{metric.label}</p><p className="mt-2 text-3xl font-black">{metric.value}</p><p className="mt-1 text-sm text-slate-500">{metric.description}</p></article>)}</section>}
-    {role === 'ADMIN' && <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Provider finance</p><h2 className="mt-1 text-xl font-black">API Provider Balances</h2><p className="mt-1 text-sm text-slate-500">Last confirmed provider wallet balances. Refresh uses each provider's configured read-only balance endpoint.</p></div><Link href="/admin/providers" className="text-sm font-bold text-indigo-700">Manage providers →</Link></div>
+      <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Provider finance &amp; reliability</p><h2 className="mt-1 text-xl font-black">API Provider Balances &amp; Health</h2><p className="mt-1 text-sm text-slate-500">Confirmed balances, configurable low-fund thresholds, latest health checks, response time and failures in the last 24 hours.</p><p className="mt-1 text-xs font-bold text-amber-700">{providerBalances.filter(provider => provider.lowBalance).length} provider(s) at or below their configured low-balance threshold</p></div><Link href="/admin/providers" className="text-sm font-bold text-indigo-700">Manage providers →</Link></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {providerBalances.map(provider => {
           const status = provider.status || 'not_checked';
           const amount = provider.balance !== null && provider.balance !== '' && Number.isFinite(Number(provider.balance))
             ? new Intl.NumberFormat(undefined, { style: 'currency', currency: /^[A-Z]{3}$/.test(provider.currency) ? provider.currency : 'NGN' }).format(Number(provider.balance))
             : null;
+          const thresholdAmount = provider.lowThreshold !== null && Number.isFinite(Number(provider.lowThreshold))
+            ? new Intl.NumberFormat(undefined, { style: 'currency', currency: /^[A-Z]{3}$/.test(provider.currency) ? provider.currency : 'NGN' }).format(Number(provider.lowThreshold))
+            : null;
           const label = status === 'available' ? 'Balance confirmed' : status === 'not_configured' ? 'Not configured' : status === 'unavailable' ? 'Balance unavailable' : 'Not checked yet';
+          const healthLabel = provider.healthStatus === 'healthy' ? 'Healthy' : provider.healthStatus === 'unhealthy' ? 'Unhealthy' : provider.healthStatus === 'stale' ? 'Stale' : 'Not checked';
           return <article key={provider.id} className="rounded-2xl border border-slate-200 p-4">
-            <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="truncate font-bold">{provider.name}</h3><p className="mt-0.5 text-xs text-slate-500">{provider.identifier} · {provider.enabled && !provider.paused ? 'Enabled' : 'Disabled / paused'}</p></div><span className={'shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ' + (status === 'available' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800')}>{label}</span></div>
+            <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="truncate font-bold">{provider.name}</h3><p className="mt-0.5 text-xs text-slate-500">{provider.identifier} · {provider.enabled && !provider.paused ? 'Enabled' : 'Disabled / paused'}</p></div><span className={'shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ' + (provider.lowBalance ? 'bg-red-100 text-red-800' : status === 'available' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800')}>{provider.lowBalance ? 'LOW BALANCE' : label}</span></div>
             <p className="mt-4 text-2xl font-black">{amount ?? '—'}</p>
-            <p className="mt-1 min-h-8 text-xs text-slate-500">{provider.checkedAt ? 'Last checked: ' + new Date(provider.checkedAt).toLocaleString() : provider.message || 'No balance has been checked yet.'}</p>
+            <p className="mt-1 text-xs text-slate-500">{thresholdAmount ? 'Alert threshold: ' + thresholdAmount : 'Low-balance alert: set a threshold in provider settings.'}</p>
+            <p className="mt-1 min-h-8 text-xs text-slate-500">{provider.checkedAt ? 'Balance checked: ' + new Date(provider.checkedAt).toLocaleString() : provider.message || 'No balance has been checked yet.'}</p>
+            <div className="mt-3 rounded-xl bg-slate-50 p-3 text-xs">
+              <div className="flex items-center justify-between gap-2"><span className="font-bold">API health</span><span className={'font-bold ' + (provider.healthStatus === 'healthy' ? 'text-emerald-700' : provider.healthStatus === 'unhealthy' ? 'text-red-700' : 'text-amber-700')}>{healthLabel}</span></div>
+              <p className="mt-1 text-slate-600">Response: {provider.responseTimeMs !== null ? provider.responseTimeMs + ' ms' : '—'} · Failed checks (24h): {provider.failedHealthChecks24h}</p>
+              <p className="mt-1 text-slate-500">{provider.healthCheckedAt ? 'Last health check: ' + new Date(provider.healthCheckedAt).toLocaleString() : provider.healthMessage || 'Waiting for the first configured health check.'}</p>
+              {provider.lastSuccessfulRequestAt && <p className="mt-1 text-slate-500">Last successful API request: {new Date(provider.lastSuccessfulRequestAt).toLocaleString()}</p>}
+            </div>
             <button type="button" onClick={() => router.post('/admin/providers/' + provider.id + '/balance')} className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold hover:bg-slate-50">Refresh balance</button>
           </article>;
         })}
         {!providerBalances.length && <p className="text-sm text-slate-500">No API provider presets have been installed yet.</p>}
       </div>
-    </section>}
+    </section>
     <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Workspace</p><h2 className="mt-1 text-xl font-black">Quick actions</h2></div><Link href="/profile" className="text-sm font-bold text-indigo-700">Profile</Link></div><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{quickLinks.map(link => <Link key={link.url + link.label} href={link.url} className="rounded-2xl border border-slate-200 p-4 font-semibold hover:border-indigo-200 hover:bg-indigo-50">{link.label}</Link>)}</div></section>
   </div></main>;
 }

@@ -71,21 +71,38 @@ class DashboardController extends Controller
         $providerBalances = [];
         if ($isAdmin) {
             $providerBalances = ApiProvider::query()
-                ->orderBy('priority')
-                ->orderBy('display_name')
-                ->get(['id', 'identifier', 'display_name', 'balance_amount', 'balance_currency', 'balance_status', 'balance_message', 'balance_checked_at', 'enabled', 'paused'])
-                ->map(fn (ApiProvider $provider): array => [
-                    'id' => $provider->id,
-                    'identifier' => $provider->identifier,
-                    'name' => $provider->display_name,
-                    'balance' => $provider->balance_amount,
-                    'currency' => $provider->balance_currency ?: 'NGN',
-                    'status' => $provider->balance_status ?: 'not_checked',
-                    'message' => $provider->balance_message,
-                    'checkedAt' => $provider->balance_checked_at?->toISOString(),
-                    'enabled' => (bool) $provider->enabled,
-                    'paused' => (bool) $provider->paused,
-                ])->values()->all();
+                ->with(['healthChecks' => fn ($query) => $query->orderByDesc('checked_at')->orderByDesc('id')->limit(1)])
+                ->select([
+                    'id', 'identifier', 'display_name', 'balance_amount', 'balance_currency',
+                    'balance_status', 'balance_message', 'balance_checked_at', 'balance_low_threshold',
+                    'last_successful_request_at', 'enabled', 'paused', 'priority',
+                ])
+                ->withCount(['healthChecks as failed_health_checks_24h' => fn ($query) => $query
+                    ->where('status', '!=', 'SUCCESS')->where('checked_at', '>=', now()->subDay())])
+                ->orderBy('priority')->orderBy('display_name')->get()
+                ->map(function (ApiProvider $provider): array {
+                    $health = $provider->healthChecks->first();
+                    $healthStatus = 'not_checked';
+                    if ($health) {
+                        $healthStatus = $health->checked_at?->lt(now()->subMinutes(15))
+                            ? 'stale'
+                            : (strtoupper((string) $health->status) === 'SUCCESS' ? 'healthy' : 'unhealthy');
+                    }
+                    $balance = is_numeric($provider->balance_amount) ? (float) $provider->balance_amount : null;
+                    $threshold = is_numeric($provider->balance_low_threshold) ? (float) $provider->balance_low_threshold : null;
+                    return [
+                        'id' => $provider->id, 'identifier' => $provider->identifier, 'name' => $provider->display_name,
+                        'balance' => $provider->balance_amount, 'currency' => $provider->balance_currency ?: 'NGN',
+                        'status' => $provider->balance_status ?: 'not_checked', 'message' => $provider->balance_message,
+                        'checkedAt' => $provider->balance_checked_at?->toISOString(), 'lowThreshold' => $provider->balance_low_threshold,
+                        'lowBalance' => $balance !== null && $threshold !== null && $balance <= $threshold,
+                        'healthStatus' => $healthStatus, 'healthMessage' => $health?->message,
+                        'healthCheckedAt' => $health?->checked_at?->toISOString(), 'responseTimeMs' => $health?->response_time_ms,
+                        'failedHealthChecks24h' => (int) $provider->failed_health_checks_24h,
+                        'lastSuccessfulRequestAt' => $provider->last_successful_request_at?->toISOString(),
+                        'enabled' => (bool) $provider->enabled, 'paused' => (bool) $provider->paused,
+                    ];
+                })->values()->all();
         }
 
         $quickLinks = [];

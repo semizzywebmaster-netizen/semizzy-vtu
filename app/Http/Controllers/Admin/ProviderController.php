@@ -82,27 +82,43 @@ class ProviderController extends Controller
     private function findBalanceValue(array $body): int|float|string|null
     {
         $keys = ['balance', 'available_balance', 'availableBalance', 'wallet_balance', 'walletBalance', 'account_balance', 'accountBalance', 'current_balance', 'currentBalance'];
-        foreach ([$body, is_array($body['data'] ?? null) ? $body['data'] : []] as $scope) {
+        $search = function (array $scope) use (&$search, $keys): int|float|string|null {
             foreach ($keys as $key) {
                 $value = $scope[$key] ?? null;
                 if (is_int($value) || is_float($value) || (is_string($value) && $value !== '' && is_numeric($value))) {
                     return $value;
                 }
             }
-        }
-        return null;
+            foreach ($scope as $nested) {
+                if (is_array($nested)) {
+                    $found = $search($nested);
+                    if ($found !== null) return $found;
+                }
+            }
+            return null;
+        };
+        return $search($body);
     }
 
     private function findBalanceCurrency(array $body): ?string
     {
-        foreach ([$body, is_array($body['data'] ?? null) ? $body['data'] : []] as $scope) {
+        $search = function (array $scope) use (&$search): ?string {
             foreach (['currency', 'currency_code', 'currencyCode'] as $key) {
-                if (is_string($scope[$key] ?? null) && trim($scope[$key]) !== '') {
-                    return strtoupper(trim($scope[$key]));
+                if (is_string($scope[$key] ?? null) && trim($scope[$key]) !== '') return strtoupper(trim($scope[$key]));
+            }
+            foreach ($scope as $key => $nested) {
+                if (is_string($key) && preg_match('/^[A-Z]{3}$/', $key) && is_array($nested)
+                    && $this->findBalanceValue($nested) !== null) return $key;
+            }
+            foreach ($scope as $nested) {
+                if (is_array($nested)) {
+                    $found = $search($nested);
+                    if ($found !== null) return $found;
                 }
             }
-        }
-        return null;
+            return null;
+        };
+        return $search($body);
     }
 
     public function wizard(int $provider): Response
@@ -170,6 +186,12 @@ class ProviderController extends Controller
                 'enabled' => (bool) $p->enabled,
                 'paused' => (bool) $p->paused,
                 'priority' => $p->priority,
+                'balance_low_threshold' => $p->balance_low_threshold,
+                'balance_amount' => $p->balance_amount,
+                'balance_currency' => $p->balance_currency,
+                'balance_status' => $p->balance_status,
+                'balance_checked_at' => $p->balance_checked_at?->toISOString(),
+                'last_successful_request_at' => $p->last_successful_request_at?->toISOString(),
                 'last_tested_at' => $p->last_tested_at?->toISOString(),
                 'last_test_status' => $p->last_test_status,
                 'last_test_summary' => match ($p->last_test_status) {
@@ -514,6 +536,7 @@ class ProviderController extends Controller
             'service_categories' => 'nullable|array',
             'credentials' => 'nullable|array',
             'priority' => 'nullable|integer|min:0|max:100000',
+            'balance_low_threshold' => 'nullable|numeric|min:0|max:9999999999999999',
         ];
 
         if ($creating) {

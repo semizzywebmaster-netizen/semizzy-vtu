@@ -13,7 +13,7 @@ class ApiProvider extends Model
 
     protected $hidden = ['credentials', 'endpoints'];
 
-    protected $fillable = ['identifier','display_name','official_website','documentation_url','service_categories','capabilities','endpoints','api_version','auth_type','environment','base_url','credentials','verification_status','integration_status','enabled','paused','priority','timeout_seconds','notes','last_tested_at','last_test_status','last_test_summary','last_successful_request_at','balance_amount','balance_currency','balance_status','balance_message','balance_checked_at'];
+    protected $fillable = ['identifier','display_name','official_website','documentation_url','service_categories','capabilities','endpoints','api_version','auth_type','environment','base_url','credentials','verification_status','integration_status','enabled','paused','priority','timeout_seconds','notes','last_tested_at','last_test_status','last_test_summary','last_successful_request_at','balance_amount','balance_currency','balance_status','balance_message','balance_checked_at','balance_low_threshold'];
 
     protected function casts(): array { return [
         'service_categories'=>'array','capabilities'=>'array','endpoints'=>'encrypted:array','credentials'=>'encrypted:array','notes'=>'array',
