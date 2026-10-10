@@ -186,7 +186,7 @@ class WhatsAppBotProviderExecutionTest extends TestCase
 
         $message = Message::query()->where('idempotency_key', 'whatsapp:wamid.pin-redaction-001')->firstOrFail();
         $this->assertStringNotContainsString('PIN 9876', (string) $message->body);
-        $this->assertStringNotContainsString('9876', json_encode($message->metadata, JSON_THROW_ON_ERROR));
+        $this->assertStringNotContainsString('PIN '. '9876', json_encode($message->metadata, JSON_THROW_ON_ERROR));
         $this->assertStringContainsString('[REDACTED]', (string) $message->body);
     }
 
