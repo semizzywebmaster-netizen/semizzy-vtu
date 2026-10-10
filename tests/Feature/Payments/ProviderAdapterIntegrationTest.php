@@ -158,6 +158,33 @@ class ProviderAdapterIntegrationTest extends TestCase
             && $request['walletDetails']['walletId'] === 'test-wallet');
     }
 
+    public function test_paystack_payout_is_reconciled_by_reference_and_remains_processing_until_confirmed(): void
+    {
+        $provider = $this->provider('paystack');
+        Http::fake(['https://api.paystack.co/transfer/verify/semizzy-test-ref-002' => Http::sequence()
+            ->push(['status' => true, 'data' => ['reference' => 'semizzy-test-ref-002', 'status' => 'processing']], 200)
+            ->push(['status' => true, 'data' => ['reference' => 'semizzy-test-ref-002', 'status' => 'success', 'transfer_code' => 'TRF_TEST']], 200)]);
+
+        $adapter = app(PaystackPaymentGatewayAdapter::class);
+        $pending = $adapter->verifyPayout($provider, 'semizzy-test-ref-002');
+        $settled = $adapter->verifyPayout($provider, 'semizzy-test-ref-002');
+
+        $this->assertSame('processing', $pending['status']);
+        $this->assertSame('success', $settled['status']);
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/transfer/verify/semizzy-test-ref-002'));
+    }
+
+    public function test_paystack_payout_verification_rejects_mismatched_reference(): void
+    {
+        $provider = $this->provider('paystack');
+        Http::fake(['https://api.paystack.co/transfer/verify/semizzy-test-ref-003' => Http::response([
+            'status' => true, 'data' => ['reference' => 'some-other-reference', 'status' => 'success'],
+        ], 200)]);
+
+        $this->expectException(\\RuntimeException::class);
+        app(PaystackPaymentGatewayAdapter::class)->verifyPayout($provider, 'semizzy-test-ref-003');
+    }
+
     private function provider(string $driver): PaymentGatewayProvider
     {
         $credentials = $driver === 'paystack'
