@@ -33,7 +33,8 @@ final class EducationInstitutionImportService
             $identity = $externalId !== '' ? 'external:' . Str::lower($source) . ':' . $externalId : 'name:' . Str::lower($name) . '|' . Str::lower($state) . '|' . $category;
             $sourceKey = substr($source . ':' . hash('sha256', $identity), 0, 180);
             // Feed-supplied codes are not trusted as identity: two unrelated sources can reuse one.
-            // Generate a deterministic code from the institution's actual identity instead.\n            $code = $this->makeCode($name, $state, $category, $identity);
+            // Generate a deterministic code from the institution's actual identity instead.
+            $code = $this->makeCode($name, $state, $category, $identity);
             $now = now();
 
             try {
