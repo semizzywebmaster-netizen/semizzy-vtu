@@ -70,7 +70,7 @@ class CryptoPaymentGatewayManager
                     'cooldown_until' => now()->addSeconds(min(300, 15 * max(1, $provider->failure_count + 1))),
                 ])->save();
 
-                Log::warning('Crypto payment provider failed; trying next provider.', [
+                Log::warning('Crypto payment provider failed.', [
                     'provider_id' => $provider->id,
                     'provider' => $provider->code,
                     'capability' => $capability,
