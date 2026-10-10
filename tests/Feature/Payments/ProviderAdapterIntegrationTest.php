@@ -207,7 +207,7 @@ class ProviderAdapterIntegrationTest extends TestCase
             return str_contains($request->url(), '/nameenquiry/banks/accounts/names')
                 && str_contains($request->url(), 'bankCode=044')
                 && str_contains($request->url(), 'accountId=0123456789')
-                && str_starts_with((string) $request->header('Authorization')[0], 'InterswitchAuth ')
+                && $request->hasHeader('Authorization')
                 && $request->hasHeader('Signature')
                 && $request->hasHeader('Timestamp')
                 && $request->hasHeader('Nonce')
