@@ -1,8 +1,8 @@
 <?php
 
-namespace App\\Models\\Communication;
+namespace App\Models\Communication;
 
-use Illuminate\\Database\\Eloquent\\Model;
+use Illuminate\Database\Eloquent\Model;
 
 /** Provider credentials and routing settings for communication channels. */
 class Provider extends Model
