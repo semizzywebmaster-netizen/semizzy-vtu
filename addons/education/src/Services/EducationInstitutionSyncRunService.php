@@ -51,7 +51,7 @@ final class EducationInstitutionSyncRunService
             $locked->records_updated += $counts['updated'];
             $locked->records_skipped += $counts['skipped'];
             $locked->records_rejected += $counts['rejected'];
-            $locked->records_seen += array_sum($counts);
+            $locked->records_seen += $counts['created'] + $counts['updated'] + $counts['skipped'] + $counts['rejected'];
             $locked->next_cursor = $nextCursor !== null ? mb_substr($nextCursor, 0, 500) : null;
             if ($expectedTotal !== null) {
                 $locked->expected_total = $expectedTotal;
