@@ -118,7 +118,7 @@ final class InterswitchPaymentGatewayAdapter implements PaymentGatewayAdapter
         if ($clientId === '' || $secret === '' || $terminalId === '') {
             throw new RuntimeException('Interswitch account verification requires client_id, secret_key, and terminal_id.');
         }
-        if (!preg_match('/^\\d{10}$/', $accountNumber) || trim($bankCode) === '') {
+        if (!preg_match('/^\d{10}$/', $accountNumber) || trim($bankCode) === '') {
             throw new RuntimeException('Interswitch account verification requires a bank code and a 10-digit account number.');
         }
 
