@@ -286,7 +286,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
 
  public function test_nuc_official_university_directory_rejects_changed_layout_or_incomplete_feed():void {
   $adapter=app(NucUniversityDirectoryAdapter::class);
-  $this->expectException(\\DomainException::class);
+  $this->expectException(\DomainException::class);
   $adapter->parse('<html><body><table><tr><th>University</th><th>Data</th></tr><tr><td>Only a partial table</td><td>missing contract</td></tr></table></body></html>');
  }
 
@@ -297,7 +297,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
    $rows.='<tr><td>'.$i.'</td><td>Mismatch Test University '.$i.'</td><td>2000</td><td>'.$ownership.'</td><td>Lagos</td><td>Explore</td></tr>';
   }
   $html='<html><body><div>76 Federal Universities</div><div>69 State Universities</div><div>182 Private Universities</div><table><thead><tr><th>#</th><th>University Name</th><th>Year Established</th><th>Ownership</th><th>State</th><th>Action</th></tr></thead><tbody>'.$rows.'</tbody></table></body></html>';
-  $this->expectException(\\DomainException::class);
+  $this->expectException(\DomainException::class);
   app(NucUniversityDirectoryAdapter::class)->parse($html);
  }
 
