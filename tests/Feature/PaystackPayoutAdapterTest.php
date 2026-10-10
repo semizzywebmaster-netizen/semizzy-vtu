@@ -66,7 +66,7 @@ class PaystackPayoutAdapterTest extends TestCase
                 ['amount_minor' => 1000, 'recipient_code' => 'RCP_a', 'reference' => 'semizzy_bulk_000001'],
             ]]);
             $this->fail('An uncertain reference must block bulk payout submission.');
-        } catch (\Semizzy\\Addons\\Payments\\Exceptions\\AmbiguousPaymentGatewayException $exception) {
+        } catch (\Semizzy\Addons\Payments\Exceptions\AmbiguousPaymentGatewayException $exception) {
             $this->assertStringContainsString('uncertain state', $exception->getMessage());
         }
         Http::assertSentCount(1);
