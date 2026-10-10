@@ -89,7 +89,11 @@ final class EducationReferenceImportController extends Controller
                     'official_url' => $row['official_url'] !== '' ? $row['official_url'] : null,
                     'source_url' => $row['source_url'] !== '' ? $row['source_url'] : null,
                     'metadata' => json_encode(['catalogue_source' => 'admin_csv_import', 'imported_by' => $request->user()->id]),
-                    'is_active' => true,
+                    'is_active' => false,
+                    'review_status' => 'pending',
+                    'reviewed_by' => null,
+                    'reviewed_at' => null,
+                    'review_notes' => null,
                     'created_by' => $request->user()->id,
                     'updated_by' => $request->user()->id,
                     'created_at' => $now,
@@ -100,7 +104,7 @@ final class EducationReferenceImportController extends Controller
         });
 
         fclose($stream);
-        $message = "CSV import finished: {$created} added, {$duplicates} duplicates skipped, {$invalid} invalid rows skipped.";
+        $message = "CSV import finished: {$created} added to pending review, {$duplicates} duplicates skipped, {$invalid} invalid rows skipped.";
         return back()->with('success', $message);
     }
 }
