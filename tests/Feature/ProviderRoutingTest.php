@@ -73,13 +73,13 @@ class ProviderRoutingTest extends TestCase
         }
 
         $adapter = Mockery::mock(\App\Services\Providers\RestJsonProviderAdapter::class);
-        $adapter->shouldReceive('execute')->once()->with(Mockery::on(fn (ApiProvider $provider): bool => $provider->id === $first->id), 'transaction_initiation', ['recipient' => '123'], 'idem-1')
+        $adapter->shouldReceive('execute')->once()->with(Mockery::on(fn (ApiProvider $provider): bool => $provider->id === $first->id), 'transaction_initiation', ['recipient' => '123'], 'transaction_initiation:idem-1')
             ->andReturn(new \App\Services\Providers\ProviderResult(false, 'UNKNOWN', duplicateRisk: true));
         $adapter->shouldReceive('execute')->never()->with(Mockery::on(fn (ApiProvider $provider): bool => $provider->id === $second->id), 'transaction_initiation', Mockery::any(), Mockery::any());
 
         $this->app->instance(\App\Services\Providers\RestJsonProviderAdapter::class, $adapter);
 
-        $result = app(ProviderManager::class)->execute('electricity', 'transaction_initiation', ['recipient' => '123'], 'idem-1');
+        $result = app(ProviderManager::class)->execute('electricity', 'transaction_initiation', ['recipient' => '123'], 'transaction_initiation:idem-1');
 
         $this->assertSame('UNKNOWN', $result->status);
         $this->assertTrue($result->duplicateRisk);
@@ -103,13 +103,13 @@ class ProviderRoutingTest extends TestCase
         }
 
         $adapter = Mockery::mock(\App\Services\Providers\RestJsonProviderAdapter::class);
-        $adapter->shouldReceive('execute')->once()->with(Mockery::on(fn (ApiProvider $provider): bool => $provider->id === $first->id), 'transaction_initiation', ['recipient' => '08000000000'], 'idem-failover')
+        $adapter->shouldReceive('execute')->once()->with(Mockery::on(fn (ApiProvider $provider): bool => $provider->id === $first->id), 'transaction_initiation', ['recipient' => '08000000000'], 'transaction_initiation:idem-failover')
             ->andReturn(new \App\Services\Providers\ProviderResult(false, 'FAILED', message: 'Rejected'));
-        $adapter->shouldReceive('execute')->once()->with(Mockery::on(fn (ApiProvider $provider): bool => $provider->id === $second->id), 'transaction_initiation', ['recipient' => '08000000000'], 'idem-failover')
+        $adapter->shouldReceive('execute')->once()->with(Mockery::on(fn (ApiProvider $provider): bool => $provider->id === $second->id), 'transaction_initiation', ['recipient' => '08000000000'], 'transaction_initiation:idem-failover')
             ->andReturn(new \App\Services\Providers\ProviderResult(true, 'SUCCESS', providerReference: 'P-2'));
 
         $this->app->instance(\App\Services\Providers\RestJsonProviderAdapter::class, $adapter);
-        $result = app(ProviderManager::class)->execute('airtime-failover', 'transaction_initiation', ['recipient' => '08000000000'], 'idem-failover');
+        $result = app(ProviderManager::class)->execute('airtime-failover', 'transaction_initiation', ['recipient' => '08000000000'], 'transaction_initiation:idem-failover');
 
         $this->assertTrue($result->accepted);
         $this->assertSame($second->id, $result->providerId);
