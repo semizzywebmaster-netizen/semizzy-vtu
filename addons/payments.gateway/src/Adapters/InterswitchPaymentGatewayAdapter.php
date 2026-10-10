@@ -209,7 +209,7 @@ final class InterswitchPaymentGatewayAdapter implements PaymentGatewayAdapter, B
             $account = (string) ($item['account_number'] ?? '');
             $bank = (string) ($item['bank_code'] ?? '');
             $reference = trim((string) ($item['reference'] ?? ''));
-            if (!is_numeric($amount) || (float) $amount <= 0 || !preg_match('/^\\d{10}$/', $account) || $bank === '' || $reference === '') {
+            if (!is_numeric($amount) || (float) $amount <= 0 || !preg_match('/^\d{10}$/', $account) || $bank === '' || $reference === '') {
                 throw new RuntimeException('Each Interswitch batch recipient requires a positive amount, 10-digit account number, bank code, and unique reference.');
             }
             $amount = round((float) $amount, 2);
