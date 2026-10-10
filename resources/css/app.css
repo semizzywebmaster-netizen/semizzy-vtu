@@ -76,8 +76,8 @@ input::placeholder,textarea::placeholder { color:var(--so-muted); }
 .so-settings-page .text-slate-700,
 .so-settings-page .text-slate-600,
 .so-settings-page .text-slate-500 { color: var(--so-muted) !important; }
-.so-settings-page .border,
-.so-settings-page .border-2 { border-color: var(--so-border); }
+.so-settings-page .border:not(.border-indigo-600):not(.border-indigo-500):not(.border-indigo-300):not(.border-indigo-200):not(.border-indigo-100),
+.so-settings-page .border-2:not(.border-indigo-600):not(.border-indigo-500):not(.border-indigo-300):not(.border-indigo-200):not(.border-indigo-100) { border-color: var(--so-border); }
 .so-settings-page input:focus-visible,
 .so-settings-page select:focus-visible,
 .so-settings-page textarea:focus-visible,
