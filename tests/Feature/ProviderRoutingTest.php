@@ -79,7 +79,7 @@ class ProviderRoutingTest extends TestCase
 
         $this->app->instance(\App\Services\Providers\RestJsonProviderAdapter::class, $adapter);
 
-        $result = app(ProviderManager::class)->execute('electricity', 'transaction_initiation', ['recipient' => '123'], 'transaction_initiation:idem-1');
+        $result = app(ProviderManager::class)->execute('electricity', 'transaction_initiation', ['recipient' => '123'], 'idem-1');
 
         $this->assertSame('UNKNOWN', $result->status);
         $this->assertTrue($result->duplicateRisk);
@@ -109,7 +109,7 @@ class ProviderRoutingTest extends TestCase
             ->andReturn(new \App\Services\Providers\ProviderResult(true, 'SUCCESS', providerReference: 'P-2'));
 
         $this->app->instance(\App\Services\Providers\RestJsonProviderAdapter::class, $adapter);
-        $result = app(ProviderManager::class)->execute('airtime-failover', 'transaction_initiation', ['recipient' => '08000000000'], 'transaction_initiation:idem-failover');
+        $result = app(ProviderManager::class)->execute('airtime-failover', 'transaction_initiation', ['recipient' => '08000000000'], 'idem-failover');
 
         $this->assertTrue($result->accepted);
         $this->assertSame($second->id, $result->providerId);
