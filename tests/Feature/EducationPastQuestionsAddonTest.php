@@ -248,7 +248,7 @@ class EducationPastQuestionsAddonTest extends TestCase {
   $this->assertSame('completed',$run->status);
   $this->assertSame(264,$run->expected_total);
   $this->assertSame(264,$run->records_seen);
-  $this->assertSame(200,DB::table('education_institutions')->where('import_source',NcceAccreditedCollegesAdapter::SOURCE)->count());
+  $this->assertSame(264,DB::table('education_institutions')->where('import_source',NcceAccreditedCollegesAdapter::SOURCE)->count());
   $this->assertSame(264,DB::table('education_institutions')->where('import_source',NcceAccreditedCollegesAdapter::SOURCE)->where('review_status','pending')->where('active',false)->count());
   $this->assertDatabaseHas('education_institutions',['name'=>'Test College 1','category'=>'college_of_education','ownership'=>'private','state'=>'Lagos','review_status'=>'pending','active'=>false]);
   Http::assertSent(fn($request)=>$request->url()===NcceAccreditedCollegesAdapter::URL);
