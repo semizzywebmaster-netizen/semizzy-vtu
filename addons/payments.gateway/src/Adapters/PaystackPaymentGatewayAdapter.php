@@ -198,6 +198,32 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
         throw new RuntimeException('Paystack did not return a refund matching the requested refund ID.');
     }
 
+    /**
+     * Reconcile a payout using Paystack's transfer verification endpoint.
+     * The returned status is provider-reported; callers must only settle on an
+     * explicitly terminal success state and must never infer success from initiation.
+     */
+    public function verifyPayout(PaymentGatewayProvider $provider, string $reference): array
+    {
+        $reference = strtolower(trim($reference));
+        if (!preg_match('/^[a-z0-9_-]{16,50}$/', $reference)) {
+            throw new RuntimeException('A valid Paystack transfer reference is required for reconciliation.');
+        }
+
+        $data = $this->result($this->request($provider)->get(
+            $this->base($provider).'/transfer/verify/'.rawurlencode($reference)
+        ));
+        $returnedReference = strtolower(trim((string) ($data['reference'] ?? '')));
+        if ($returnedReference !== '' && !hash_equals($reference, $returnedReference)) {
+            throw new RuntimeException('Paystack transfer verification returned a different reference.');
+        }
+        if (trim((string) ($data['status'] ?? '')) === '') {
+            throw new RuntimeException('Paystack transfer verification returned no status; keep the transaction unresolved.');
+        }
+
+        return $data;
+    }
+
     public function healthCheck(PaymentGatewayProvider $provider): bool
     {
         $this->result($this->request($provider)->get($this->base($provider).'/bank'));
