@@ -26,6 +26,7 @@ class AdminNavigationService
             ['id' => 'security', 'label' => 'Security', 'url' => '/admin/security-events', 'icon' => 'shield', 'section' => 'core', 'permission' => 'security.view', 'order' => 70],
             ['id' => 'support', 'label' => 'Support', 'url' => '/support', 'icon' => 'support', 'section' => 'core', 'roles' => ['ADMIN', 'STAFF', 'SUPPORT'], 'order' => 80],
             ['id' => 'system', 'label' => 'System Health', 'url' => '/admin/health', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.view', 'order' => 90],
+            ['id' => 'runbooks', 'label' => 'Operational Runbooks', 'url' => '/admin/runbooks', 'icon' => 'support', 'section' => 'core', 'permission' => 'system.view', 'order' => 95],
             ['id' => 'settings', 'label' => 'System Settings', 'url' => '/admin/settings', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.manage', 'order' => 100],
             ['id' => 'smtp', 'label' => 'Email & SMTP', 'url' => '/admin/settings#smtp', 'icon' => 'bell', 'section' => 'core', 'permission' => 'system.manage', 'order' => 105],
             ['id' => 'maintenance', 'label' => 'Backup & Maintenance', 'url' => '/admin/settings#maintenance', 'icon' => 'settings', 'section' => 'core', 'permission' => 'system.manage', 'order' => 106],
