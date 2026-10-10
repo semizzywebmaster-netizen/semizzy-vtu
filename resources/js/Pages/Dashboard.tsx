@@ -44,28 +44,28 @@ export default function Dashboard({ role, user, metrics = [], quickLinks = [], s
   const siteName = platform?.platform_name || 'SEMIZZY ONE';
   const isUser = !['ADMIN', 'STAFF', 'SUPPORT'].includes(role);
   const [refreshingProviderId, setRefreshingProviderId] = useState<number | null>(null);
+  const [showBalance, setShowBalance] = useState(true);
+  const [promotionSlide, setPromotionSlide] = useState(0);
+  const promotionSlides = dashboardMessages.promotionSlides?.length
+    ? dashboardMessages.promotionSlides
+    : [dashboardMessages.promotional].filter(Boolean) as { message: string; title?: string }[];
+
+  useEffect(() => {
+    if (promotionSlides.length < 2) return;
+    const timer = window.setInterval(() => setPromotionSlide(value => (value + 1) % promotionSlides.length), 6000);
+    return () => window.clearInterval(timer);
+  }, [promotionSlides.length]);
 
   if (isUser) {
-    const [showBalance, setShowBalance] = useState(true);
-      const [promotionSlide, setPromotionSlide] = useState(0);
     const firstName = (user?.name || user?.username || 'there').trim().split(/\s+/)[0];
     const visibleCategories = serviceCategories.filter(category => category.services.length > 0);
     const featuredServices = visibleCategories
       .flatMap(category => category.services.map(service => ({ ...service, categoryName: category.name })))
       .filter((service, index, all) => all.findIndex(item => item.key === service.key) === index)
       .slice(0, 24);
-    const promotionSlides = dashboardMessages.promotionSlides?.length
-      ? dashboardMessages.promotionSlides
-      : [dashboardMessages.promotional].filter(Boolean) as { message: string; title?: string }[];
     const initials = user?.initials || firstName.charAt(0).toUpperCase();
     const recent = recentTransactions || [];
     const required = requiredActions || [];
-
-    useEffect(() => {
-      if (promotionSlides.length < 2) return;
-      const timer = window.setInterval(() => setPromotionSlide(value => (value + 1) % promotionSlides.length), 6000);
-      return () => window.clearInterval(timer);
-    }, [promotionSlides.length]);
 
     const formatTransactionType = (value: string) => value.replace(/[_:-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const isCredit = (value: string) => ['admin_fund','funding','wallet_funding','deposit','credit','refund'].some(key => value.toLowerCase().includes(key));
