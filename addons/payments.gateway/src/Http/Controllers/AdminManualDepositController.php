@@ -73,7 +73,8 @@ final class AdminManualDepositController extends Controller
             $service->approve(ManualDeposit::query()->findOrFail($deposit), $request->user()->id, $data['admin_note'] ?? null);
             return back()->with('success','Manual deposit approved and wallet credited.');
         } catch (\Throwable $e) {
-            return back()->with('error','Manual deposit approval failed: '.$e->getMessage());
+            report($e);
+            return back()->with('error','Manual deposit approval failed. Check the audit log before retrying.');
         }
     }
 
@@ -84,7 +85,8 @@ final class AdminManualDepositController extends Controller
             $service->reject(ManualDeposit::query()->findOrFail($deposit), $request->user()->id, $data['admin_note']);
             return back()->with('success','Manual deposit rejected.');
         } catch (\Throwable $e) {
-            return back()->with('error','Manual deposit rejection failed: '.$e->getMessage());
+            report($e);
+            return back()->with('error','Manual deposit rejection failed. Check the audit log before retrying.');
         }
     }
 
