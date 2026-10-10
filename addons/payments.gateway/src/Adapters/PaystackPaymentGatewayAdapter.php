@@ -214,7 +214,7 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter, Payo
             $this->base($provider).'/transfer/verify/'.rawurlencode($reference)
         ));
         $returnedReference = strtolower(trim((string) ($data['reference'] ?? '')));
-        if ($returnedReference !== '' && !hash_equals($reference, $returnedReference)) {
+        if ($returnedReference === '' || !hash_equals($reference, $returnedReference)) {
             throw new RuntimeException('Paystack transfer verification returned a different reference.');
         }
         if (trim((string) ($data['status'] ?? '')) === '') {
