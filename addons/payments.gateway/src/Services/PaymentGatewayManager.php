@@ -69,7 +69,7 @@ class PaymentGatewayManager
                 // Never automatically retry a payout/refund through another provider
                 // after an exception: the first provider may have accepted the request
                 // before the connection failed. Reconcile by provider reference first.
-                if (in_array($capability, ['single_payout', 'bulk_payout', 'refund'], true)) {
+                if (in_array($capability, ['collect_payment', 'single_payout', 'bulk_payout', 'refund'], true)) {
                     throw $e;
                 }
             }
