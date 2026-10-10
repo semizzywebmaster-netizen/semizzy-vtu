@@ -12,7 +12,7 @@ use Semizzy\Addons\Payments\Models\PaymentGatewayProvider;
  * Interswitch Payouts API adapter.
  *
  * Uses the documented Payouts API (not the separate legacy Quickteller Send Money API).
- * Collection, refunds and bulk payouts remain explicitly unsupported until their
+ * Collection and refunds remain explicitly unsupported until their
  * exact product contracts are configured and verified.
  */
 final class InterswitchPaymentGatewayAdapter implements PaymentGatewayAdapter
