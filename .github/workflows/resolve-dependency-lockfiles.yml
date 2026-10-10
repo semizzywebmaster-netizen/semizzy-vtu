@@ -1,0 +1,45 @@
+name: Resolve and audit dependency lockfiles
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/resolve-dependency-lockfiles.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Resolve Composer dependencies and create lockfile
+        run: composer update --no-interaction --prefer-dist --no-progress
+      - name: Capture Composer security audit
+        run: composer audit --locked --format=json > composer-audit.json || true
+      - name: Resolve npm dependencies and create lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify clean npm installation and capture security audit
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm audit --json > npm-audit.json || true
+      - name: Upload lockfiles and audit reports for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: semizzy-dependency-lockfiles-and-audits
+          path: |
+            composer.lock
+            package-lock.json
+            composer-audit.json
+            npm-audit.json
+          if-no-files-found: error
+          retention-days: 7
