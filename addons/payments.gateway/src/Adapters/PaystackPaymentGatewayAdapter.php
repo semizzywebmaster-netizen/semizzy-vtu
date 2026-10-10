@@ -185,6 +185,9 @@ final class PaystackPaymentGatewayAdapter implements PaymentGatewayAdapter
         if (!empty($context['from'])) $query['from'] = $context['from'];
         if (!empty($context['to'])) $query['to'] = $context['to'];
         $data = $this->result($this->request($provider)->get($this->base($provider).'/refund', $query));
+        if (isset($data['id']) && hash_equals($refundReference, (string) $data['id'])) {
+            return $data;
+        }
         $rows = is_array($data['data'] ?? null) ? $data['data'] : $data;
         foreach (is_array($rows) ? $rows : [] as $row) {
             if (is_array($row) && hash_equals($refundReference, (string) ($row['id'] ?? $row['refund_reference'] ?? ''))) {
