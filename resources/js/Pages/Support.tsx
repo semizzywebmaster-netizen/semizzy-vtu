@@ -1,12 +1,9 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
-
-type SharedProps = { navigation?: { unreadNotifications?: number } };
+import { Head, router, useForm } from '@inertiajs/react';
 
 type Ticket = { id: number; reference: string; subject: string; category: string; priority: string; status: string; messageCount: number; updatedAt: string | null; requester: string | null };
 type Props = { tickets: { data: Ticket[]; links: { url: string | null; label: string; active: boolean }[] } };
 
 export default function Support({ tickets }: Props) {
-  const unreadCount = usePage<SharedProps>().props.navigation?.unreadNotifications ?? 0;
   const form = useForm({ subject: '', category: 'general', message: '' });
   const submit = (event: React.FormEvent) => { event.preventDefault(); form.post('/support', { preserveScroll: true, onSuccess: () => form.reset() }); };
   return <><Head title="Support" /><main className="min-h-screen bg-slate-50 p-4 pb-24 md:p-8"><div className="mx-auto max-w-4xl">
