@@ -24,7 +24,7 @@ const money = (minor: string, currency = 'NGN') => {
 
 const label = (type: string) => type.replace(/[_:-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-export default function Transactions({ transactions, unreadCount }: Props) {
+export default function Transactions({ transactions }: Props) {
 
   return <main className="min-h-screen bg-slate-50 pb-24 text-slate-900">
     <Head title="Transactions" />
