@@ -51,14 +51,14 @@ class AuditLoggerTest extends TestCase
         try {
             $event->update(['event' => 'tampered.audit.test']);
             $this->fail('Audit event updates must be rejected.');
-        } catch (\\LogicException $exception) {
+        } catch (\LogicException $exception) {
             $this->assertSame('Audit events are append-only and cannot be modified.', $exception->getMessage());
         }
 
         try {
             $event->delete();
             $this->fail('Audit event deletion must be rejected.');
-        } catch (\\LogicException $exception) {
+        } catch (\LogicException $exception) {
             $this->assertSame('Audit events are append-only and cannot be deleted.', $exception->getMessage());
         }
 
