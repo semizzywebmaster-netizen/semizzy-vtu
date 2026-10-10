@@ -73,4 +73,15 @@ class ProviderCapabilityRegistryTest extends TestCase
         $this->assertTrue($registry->supports($provider, 'stock_order_create'));
         $this->assertTrue($registry->supports($provider, 'stock_order_status'));
     }
+    public function test_empty_transaction_status_response_remains_unknown(): void
+    {
+        $adapter = new RestJsonProviderAdapter(new ProviderUrlGuard());
+        $normalizer = new \\ReflectionMethod(RestJsonProviderAdapter::class, 'normalizeStatus');
+        $normalizer->setAccessible(true);
+
+        $this->assertSame('UNKNOWN', $normalizer->invoke($adapter, ['data' => []], 'transaction_status'));
+        $this->assertSame('UNKNOWN', $normalizer->invoke($adapter, ['data' => []], 'stock_order_status'));
+        $this->assertSame('ACCEPTED', $normalizer->invoke($adapter, ['data' => []], 'catalogue_retrieval'));
+    }
+
 }
