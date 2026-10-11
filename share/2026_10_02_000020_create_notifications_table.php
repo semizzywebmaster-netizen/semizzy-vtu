@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('notifications', function (Blueprint $table): void {
+        if (! Schema::hasTable('notifications')) {
+            Schema::create('notifications', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->string('type');
             $table->morphs('notifiable');
@@ -15,8 +16,9 @@ return new class extends Migration {
             $table->timestamp('read_at')->nullable()->index();
             $table->timestamps();
 
-            $table->index(['notifiable_type', 'notifiable_id', 'created_at']);
-        });
+                $table->index(['notifiable_type', 'notifiable_id', 'created_at']);
+            });
+        }
     }
 
     public function down(): void

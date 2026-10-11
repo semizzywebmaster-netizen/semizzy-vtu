@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('dashboard_messages')) {
+            return;
+        }
+
         Schema::create('dashboard_messages', function (Blueprint $table) {
             $table->id();
             $table->string('type', 20)->index(); // greeting|quote|seasonal|promotional
