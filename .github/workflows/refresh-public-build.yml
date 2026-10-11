@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: 22
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci
       - name: Build production assets
         run: npm run build
       - name: Package public/build folder

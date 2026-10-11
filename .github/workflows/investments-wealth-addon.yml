@@ -46,7 +46,7 @@ jobs:
       - run: mkdir -p bootstrap/cache storage/app storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs
       - run: composer validate --strict
       - run: composer install --no-interaction --prefer-dist
-      - run: npm install
+      - run: npm ci
       - run: npm run typecheck
       - run: npm run build
       - run: find addons/investments.wealth -type f -name '*.php' -print0 | xargs -0 -n1 php -l

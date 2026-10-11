@@ -24,7 +24,7 @@ jobs:
       - run: mkdir -p bootstrap/cache storage/app storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs
       - run: composer validate --strict
       - run: composer install --no-interaction --prefer-dist
-      - run: npm install
+      - run: npm ci
       - run: npm run build
       - name: Upload production frontend build
         uses: actions/upload-artifact@v4
@@ -45,7 +45,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
       - run: npm run typecheck
       - run: npm run build
 
