@@ -128,8 +128,8 @@ export default function Services({ services = [] }: { services: Service[] }) {
       const body=await response.json();
       if(!response.ok) throw new Error(body.message || 'Bulk airtime could not be processed.');
       const data=body.data;
-      const items=Array.isArray(data?.items) ? data.items : [];
-      setBulkResultItems(items.map((item: any) => ({ sequence: item.sequence, recipient: item.recipient, status: item.status, reference: item.reference ?? item.transaction_reference ?? null, error_message: item.error_message ?? null })));
+      const resultItems=Array.isArray(data?.items) ? data.items : [];
+      setBulkResultItems(resultItems.map((item: any) => ({ sequence: item.sequence, recipient: item.recipient, status: item.status, reference: item.reference ?? item.transaction_reference ?? null, error_message: item.error_message ?? null })));
       setBulkResult(`Bulk ${data.reference || 'request'}: ${data.successful_items ?? 0} successful, ${data.failed_items ?? 0} failed, ${data.total_items ?? bulkRows.length} total.`);
       setBulkPin('');
     } catch(e) {
