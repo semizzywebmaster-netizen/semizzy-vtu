@@ -1,4 +1,3 @@
-import React from 'react';
 import { Head } from '@inertiajs/react';
 export default function Index({accounts,numbers,orders}:{accounts?:any;numbers?:any;orders?:any}){
  const buy=(url:string)=>{void fetch(url,{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')||'','Accept':'application/json'}}).then(()=>location.reload());};
